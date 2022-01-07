@@ -47,7 +47,7 @@ ORG CODE%
 
     ORG &70DB
 
-.Start
+.trackData
 .pydis_start
     EQUB 3  , &D1, &0C, &0F, &CF, &60, &0F, &88, &13, &CF, &0C, &3E   ; 70DB: 03 D1 0C... ...
     EQUB &CE, &12, &3D, 0  , &12, &D3, &0C, &46, &D2, &14, &47, &8A   ; 70E7: CE 12 3D... ..=
@@ -201,7 +201,14 @@ ORG CODE%
     EQUB 0  , 4  , &4B, 3  , &33, &29, 0  , 1  , 1  , 0  , &67, 0     ; 77D7: 00 04 4B... ..K
     EQUB &67, &42, &35, &2E, &2A, &A1, 0  , &A1, &68, &52, &48, &41   ; 77E3: 67 42 35... gB5
     EQUB &86, &92, &98, 4  , &28, &18, 0  , &73, &6F, &31, 0  , &8C   ; 77EF: 86 92 98... ...
-    EQUB 0  , 0  , &60, &EA, &EA, &49, &8B, &8A, &C7                  ; 77FB: 00 00 60... ..`
+    EQUB 0  , 0  , &60, &EA, &EA                                      ; 77FB: 00 00 60... ..`
+; Checksum bytes:
+; &7800 counts the number of data bytes ending in %00
+; &7801 counts the number of data bytes ending in %01
+; &7802 counts the number of data bytes ending in %10
+; &7803 counts the number of data bytes ending in %11
+    EQUB &49, &8B, &8A, &C7                                           ; 7800: 49 8B 8A... I..
+; Track name
     EQUS "REVSSilverstone"                                            ; 7804: 52 45 56... REV
     EQUB &0D                                                          ; 7813: 0D          .
 .pydis_end

@@ -48,25 +48,53 @@ ORG CODE%
 
 osbyte_read_write_escape_break_effect = &C8
 osbyte_tape = &8C
+osword_envelope = &08
 osbyte_read_adc_or_get_buffer_status = &80
 osword_read_char = &0A
 
 L0019 = &0019
+L001F = &001F
 L003C = &003C
 L003E = &003E
 L003F = &003F
 L0040 = &0040
+L004E = &004E
+L0051 = &0051
 L0058 = &0058
-L0070 = &0070
-L0071 = &0071
-L0072 = &0072
-L0073 = &0073
+P = &0070
+Q = &0071
+R = &0072
+S = &0073
 L0074 = &0074
+L0075 = &0075
+L0076 = &0076
 L0077 = &0077
+L0078 = &0078
+L0079 = &0079
+L007A = &007A
+L007B = &007B
+L007C = &007C
+L007D = &007D
+L007E = &007E
+L0083 = &0083
+L0084 = &0084
+L0085 = &0085
 L05F5 = &05F5
+L05FE = &05FE
+L0900 = &0900
+L0901 = &0901
+L0902 = &0902
+L0A00 = &0A00
+L0A01 = &0A01
+L0A02 = &0A02
+L0D00 = &0D00
 L0E50 = &0E50
 C120E = &120E
-L7800 = &7800
+L1300 = &1300
+L1500 = &1500
+L70DB = &70DB
+L7725 = &7725
+trackChecksum = &7800
 L7900 = &7900
 L79FF = &79FF
 osword = &FFF1
@@ -75,251 +103,538 @@ LFFFC = &FFFC
 
     ORG &1200
 
+; Move block from &1200-&12FF to &7900-&79FF and jump to &790E
 ; &1200 referenced 1 time by &1202
-.Start
+.Entry
 .pydis_start
     LDY #0                                                            ; 1200: A0 00       ..
 ; &1202 referenced 1 time by &1209
-.loop_C1202
-    LDA Start,Y                                                       ; 1202: B9 00 12    ...
+.entr1
+    LDA Entry,Y                                                       ; 1202: B9 00 12    ...
     STA L7900,Y                                                       ; 1205: 99 00 79    ..y
     INY                                                               ; 1208: C8          .
-    BNE loop_C1202                                                    ; 1209: D0 F7       ..
-    JMP C790E                                                         ; 120B: 4C 0E 79    L.y
+    BNE entr1                                                         ; 1209: D0 F7       ..
+    JMP SwapCode                                                      ; 120B: 4C 0E 79    L.y
 
+COPYBLOCK &1200, &120E, &7900
+CLEAR &1200, &120E
+; Disable the ESCAPE key and clear memory if the BREAK key is pressed
 ; &120E referenced 1 time by &120B
+; Disable the ESCAPE key and clear memory if the BREAK key is pressed
 ; &120E referenced 1 time by &120B
 
     ORG &790E
+; Disable the ESCAPE key and clear memory if the BREAK key is pressed
 ; &120E referenced 1 time by &120B
-.C790E
-    LDA #osbyte_read_write_escape_break_effect                        ; 120E: A9 C8       ..  :790E[1]
-    LDX #3                                                            ; 1210: A2 03       ..  :7910[1]
-    LDY #0                                                            ; 1212: A0 00       ..  :7912[1]
-    JSR osbyte                                                        ; 1214: 20 F4 FF     .. :7914[1]
-    LDA #osbyte_tape                                                  ; 1217: A9 8C       ..  :7917[1]
-    LDX #0                                                            ; 1219: A2 00       ..  :7919[1]
-    JSR osbyte                                                        ; 121B: 20 F4 FF     .. :791B[1]
-; (L0070) = &5300
-    LDA #0                                                            ; 121E: A9 00       ..  :791E[1]
-    STA L0070                                                         ; 1220: 85 70       .p  :7920[1]
-    LDA #&53 ; 'S'                                                    ; 1222: A9 53       .S  :7922[1]
-    STA L0071                                                         ; 1224: 85 71       .q  :7924[1]
-; (L0072) = &70DB, track data in Silvers
-    LDA #&DB                                                          ; 1226: A9 DB       ..  :7926[1]
-    STA L0072                                                         ; 1228: 85 72       .r  :7928[1]
-    LDA #&70 ; 'p'                                                    ; 122A: A9 70       .p  :792A[1]
-    STA L0073                                                         ; 122C: 85 73       .s  :792C[1]
-    LDY #0                                                            ; 122E: A0 00       ..  :792E[1]
+.SwapCode
+    LDA #osbyte_read_write_escape_break_effect                        ; 120E: A9 C8       ..  :790E[3]
+    LDX #3                                                            ; 1210: A2 03       ..  :7910[3]
+    LDY #0                                                            ; 1212: A0 00       ..  :7912[3]
+    JSR osbyte                                                        ; 1214: 20 F4 FF     .. :7914[3]
+; *TAPE
+    LDA #osbyte_tape                                                  ; 1217: A9 8C       ..  :7917[3]
+    LDX #0                                                            ; 1219: A2 00       ..  :7919[3]
+    JSR osbyte                                                        ; 121B: 20 F4 FF     .. :791B[3]
+; Set (Q P) = &5300 = trackData, destintion address for track data
+    LDA #0                                                            ; 121E: A9 00       ..  :791E[3]
+    STA P                                                             ; 1220: 85 70       .p  :7920[3]
+    LDA #&53 ; 'S'                                                    ; 1222: A9 53       .S  :7922[3]
+    STA Q                                                             ; 1224: 85 71       .q  :7924[3]
+; Set (S R) = &70DB, source address of track data
+    LDA #&DB                                                          ; 1226: A9 DB       ..  :7926[3]
+    STA R                                                             ; 1228: 85 72       .r  :7928[3]
+    LDA #&70 ; 'p'                                                    ; 122A: A9 70       .p  :792A[3]
+    STA S                                                             ; 122C: 85 73       .s  :792C[3]
+; Swap memory between &70DB-&7724 to &5300-&5949 and decrement
+; checksum bytes in &7800-&7803
+    LDY #0                                                            ; 122E: A0 00       ..  :792E[3]
+; Swap Y-th byte of (Q P) and (S R)
 ; &1230 referenced 2 times by &7949, &794F
-.C7930
-    LDA (L0072),Y                                                     ; 1230: B1 72       .r  :7930[1]
-    PHA                                                               ; 1232: 48          H   :7932[1]
-    LDA (L0070),Y                                                     ; 1233: B1 70       .p  :7933[1]
-    STA (L0072),Y                                                     ; 1235: 91 72       .r  :7935[1]
-    PLA                                                               ; 1237: 68          h   :7937[1]
-    STA (L0070),Y                                                     ; 1238: 91 70       .p  :7938[1]
-    AND #3                                                            ; 123A: 29 03       ).  :793A[1]
-    TAX                                                               ; 123C: AA          .   :793C[1]
-    DEC L7800,X                                                       ; 123D: DE 00 78    ..x :793D[1]
-    INY                                                               ; 1240: C8          .   :7940[1]
-    BNE C7947                                                         ; 1241: D0 04       ..  :7941[1]
-    INC L0071                                                         ; 1243: E6 71       .q  :7943[1]
-    INC L0073                                                         ; 1245: E6 73       .s  :7945[1]
+.swap1
+    LDA (R),Y                                                         ; 1230: B1 72       .r  :7930[3]
+    PHA                                                               ; 1232: 48          H   :7932[3]
+    LDA (P),Y                                                         ; 1233: B1 70       .p  :7933[3]
+    STA (R),Y                                                         ; 1235: 91 72       .r  :7935[3]
+    PLA                                                               ; 1237: 68          h   :7937[3]
+    STA (P),Y                                                         ; 1238: 91 70       .p  :7938[3]
+; Decrement the relevant checksum byte at &7800-&7803
+    AND #3                                                            ; 123A: 29 03       ).  :793A[3]
+    TAX                                                               ; 123C: AA          .   :793C[3]
+    DEC trackChecksum,X                                               ; 123D: DE 00 78    ..x :793D[3]
+; Increment loop counter
+    INY                                                               ; 1240: C8          .   :7940[3]
+; Increment high bytes to move on to next page
+    BNE swap2                                                         ; 1241: D0 04       ..  :7941[3]
+    INC Q                                                             ; 1243: E6 71       .q  :7943[3]
+    INC S                                                             ; 1245: E6 73       .s  :7945[3]
+; If we have not yet reached &7725, jump back to swap1 to keep going
 ; &1247 referenced 1 time by &7941
-.C7947
-    CPY #&25 ; '%'                                                    ; 1247: C0 25       .%  :7947[1]
-    BNE C7930                                                         ; 1249: D0 E5       ..  :7949[1]
-    LDA L0073                                                         ; 124B: A5 73       .s  :794B[1]
-    CMP #&77 ; 'w'                                                    ; 124D: C9 77       .w  :794D[1]
-    BNE C7930                                                         ; 124F: D0 DF       ..  :794F[1]
-    LDX #3                                                            ; 1251: A2 03       ..  :7951[1]
+.swap2
+    CPY #&25 ; '%'                                                    ; 1247: C0 25       .%  :7947[3]
+    BNE swap1                                                         ; 1249: D0 E5       ..  :7949[3]
+    LDA S                                                             ; 124B: A5 73       .s  :794B[3]
+    CMP #&77 ; 'w'                                                    ; 124D: C9 77       .w  :794D[3]
+    BNE swap1                                                         ; 124F: D0 DF       ..  :794F[3]
+; Now check that all three checksum bytes in &7800-&7803 are zero
+    LDX #3                                                            ; 1251: A2 03       ..  :7951[3]
 ; &1253 referenced 1 time by &7959
-.loop_C7953
-    LDA L7800,X                                                       ; 1253: BD 00 78    ..x :7953[1]
-    BNE C795D                                                         ; 1256: D0 05       ..  :7956[1]
-    DEX                                                               ; 1258: CA          .   :7958[1]
-    BPL loop_C7953                                                    ; 1259: 10 F8       ..  :7959[1]
-    BMI C7960                                                         ; 125B: 30 03       0.  :795B[1]
+.swap3
+    LDA trackChecksum,X                                               ; 1253: BD 00 78    ..x :7953[3]
+; If a checksum byte is non-zero, jump to swap4 to reset the machine
+    BNE swap4                                                         ; 1256: D0 05       ..  :7956[3]
+    DEX                                                               ; 1258: CA          .   :7958[3]
+; Loop back to check the next checksum byte
+    BPL swap3                                                         ; 1259: 10 F8       ..  :7959[3]
+; All checksum bytes are zero, so jump to swap4 to keep going
+    BMI MoveCode                                                      ; 125B: 30 03       0.  :795B[3]
+; Reset the machine
 ; &125D referenced 1 time by &7956
-.C795D
-    JMP (LFFFC)                                                       ; 125D: 6C FC FF    l.. :795D[1]
+.swap4
+    JMP (LFFFC)                                                       ; 125D: 6C FC FF    l.. :795D[3]
 
+; Move block (blockStartHi blockStartLo) - (blockEndHi blockEndLo)-1
+; to (blockToHi blockToLo)
+;   * Move &1500-&15DA to &7000-&70DA
+;   * Move &1300-&14FF to &0B00-&0CFF
+;   * Move &5A80-&645B to &0D00-&16DB
+;   * Move &64D0-&6BFF to &5FD0-&63FF
+;   * Zero &5A80-&5E3F
 ; &1260 referenced 1 time by &795B
-.C7960
-    LDX #4                                                            ; 1260: A2 04       ..  :7960[1]
-    LDY #0                                                            ; 1262: A0 00       ..  :7962[1]
+.MoveCode
+    LDX #4                                                            ; 1260: A2 04       ..  :7960[3]
+    LDY #0                                                            ; 1262: A0 00       ..  :7962[3]
 ; &1264 referenced 2 times by &7999, &79A7
-.C7964
-    LDA L79AF,X                                                       ; 1264: BD AF 79    ..y :7964[1]
-    STA L0070                                                         ; 1267: 85 70       .p  :7967[1]
-    LDA L79B4,X                                                       ; 1269: BD B4 79    ..y :7969[1]
-    STA L0071                                                         ; 126C: 85 71       .q  :796C[1]
-    LDA L79C3,X                                                       ; 126E: BD C3 79    ..y :796E[1]
-    STA L0072                                                         ; 1271: 85 72       .r  :7971[1]
-    LDA L79C8,X                                                       ; 1273: BD C8 79    ..y :7973[1]
-    STA L0073                                                         ; 1276: 85 73       .s  :7976[1]
+.move1
+    LDA blockStartLo,X                                                ; 1264: BD AF 79    ..y :7964[3]
+    STA P                                                             ; 1267: 85 70       .p  :7967[3]
+    LDA blockStartHi,X                                                ; 1269: BD B4 79    ..y :7969[3]
+    STA Q                                                             ; 126C: 85 71       .q  :796C[3]
+    LDA blockToLo,X                                                   ; 126E: BD C3 79    ..y :796E[3]
+    STA R                                                             ; 1271: 85 72       .r  :7971[3]
+    LDA blockToHi,X                                                   ; 1273: BD C8 79    ..y :7973[3]
+    STA S                                                             ; 1276: 85 73       .s  :7976[3]
 ; &1278 referenced 3 times by &798D, &7994, &799E
-.C7978
-L7979 = C7978+1
-    LDA (L0070),Y                                                     ; 1278: B1 70       .p  :7978[1]
+.move2
+L7979 = move2+1
+    LDA (P),Y                                                         ; 1278: B1 70       .p  :7978[3]
 ; &1279 referenced 1 time by &79A4
-    STA (L0072),Y                                                     ; 127A: 91 72       .r  :797A[1]
-    INC L0070                                                         ; 127C: E6 70       .p  :797C[1]
-    BNE C7982                                                         ; 127E: D0 02       ..  :797E[1]
-    INC L0071                                                         ; 1280: E6 71       .q  :7980[1]
+    STA (R),Y                                                         ; 127A: 91 72       .r  :797A[3]
+    INC P                                                             ; 127C: E6 70       .p  :797C[3]
+    BNE move3                                                         ; 127E: D0 02       ..  :797E[3]
+    INC Q                                                             ; 1280: E6 71       .q  :7980[3]
 ; &1282 referenced 1 time by &797E
-.C7982
-    INC L0072                                                         ; 1282: E6 72       .r  :7982[1]
-    BNE C7988                                                         ; 1284: D0 02       ..  :7984[1]
-    INC L0073                                                         ; 1286: E6 73       .s  :7986[1]
+.move3
+    INC R                                                             ; 1282: E6 72       .r  :7982[3]
+    BNE move4                                                         ; 1284: D0 02       ..  :7984[3]
+    INC S                                                             ; 1286: E6 73       .s  :7986[3]
 ; &1288 referenced 1 time by &7984
-.C7988
-    LDA L0070                                                         ; 1288: A5 70       .p  :7988[1]
-    CMP L79B9,X                                                       ; 128A: DD B9 79    ..y :798A[1]
-    BNE C7978                                                         ; 128D: D0 E9       ..  :798D[1]
-    LDA L0071                                                         ; 128F: A5 71       .q  :798F[1]
-    CMP L79BE,X                                                       ; 1291: DD BE 79    ..y :7991[1]
-    BNE C7978                                                         ; 1294: D0 E2       ..  :7994[1]
-    DEX                                                               ; 1296: CA          .   :7996[1]
-    BMI C79AA                                                         ; 1297: 30 11       0.  :7997[1]
-    BNE C7964                                                         ; 1299: D0 C9       ..  :7999[1]
-    LDA L79AD                                                         ; 129B: AD AD 79    ..y :799B[1]
-    STA C7978                                                         ; 129E: 8D 78 79    .xy :799E[1]
-    LDA L79AE                                                         ; 12A1: AD AE 79    ..y :79A1[1]
-    STA L7979                                                         ; 12A4: 8D 79 79    .yy :79A4[1]
-    JMP C7964                                                         ; 12A7: 4C 64 79    Ldy :79A7[1]
+.move4
+    LDA P                                                             ; 1288: A5 70       .p  :7988[3]
+    CMP blockEndLo,X                                                  ; 128A: DD B9 79    ..y :798A[3]
+    BNE move2                                                         ; 128D: D0 E9       ..  :798D[3]
+    LDA Q                                                             ; 128F: A5 71       .q  :798F[3]
+    CMP blockEndHi,X                                                  ; 1291: DD BE 79    ..y :7991[3]
+    BNE move2                                                         ; 1294: D0 E2       ..  :7994[3]
+    DEX                                                               ; 1296: CA          .   :7996[3]
+    BMI move5                                                         ; 1297: 30 11       0.  :7997[3]
+    BNE move1                                                         ; 1299: D0 C9       ..  :7999[3]
+; We get here when X = 0
+; Modify the instruction at move2 to LDA #0, so the last block move
+; actually zeroes the block
+    LDA ldaZero                                                       ; 129B: AD AD 79    ..y :799B[3]
+    STA move2                                                         ; 129E: 8D 78 79    .xy :799E[3]
+    LDA L79AE                                                         ; 12A1: AD AE 79    ..y :79A1[3]
+    STA L7979                                                         ; 12A4: 8D 79 79    .yy :79A4[3]
+; Loop back to move1 to zero the rest of the block
+    JMP move1                                                         ; 12A7: 4C 64 79    Ldy :79A7[3]
 
 ; &12AA referenced 1 time by &7997
-.C79AA
-    JMP C63BD                                                         ; 12AA: 4C BD 63    L.c :79AA[1]
+.move5
+    JMP C63BD                                                         ; 12AA: 4C BD 63    L.c :79AA[3]
 
 ; &12AD referenced 1 time by &799B
-.L79AD
-    EQUB &A9                                                          ; 12AD: A9          .   :79AD[1]
+.ldaZero
+L79AE = ldaZero+1
+    LDA #0                                                            ; 12AD: A9 00       ..  :79AD[3]
 ; &12AE referenced 1 time by &79A1
-.L79AE
-    EQUB 0                                                            ; 12AE: 00          .   :79AE[1]
 ; &12AF referenced 1 time by &7964
-.L79AF
-    EQUB &80, &D0, &80, 0  , 0                                        ; 12AF: 80 D0 80... ... :79AF[1]
+.blockStartLo
+    EQUB &80, &D0, &80, 0  , 0                                        ; 12AF: 80 D0 80... ... :79AF[3]
 ; &12B4 referenced 1 time by &7969
-.L79B4
-    EQUS "ZdZ"                                                        ; 12B4: 5A 64 5A    ZdZ :79B4[1]
-    EQUB &13, &15                                                     ; 12B7: 13 15       ..  :79B7[1]
+.blockStartHi
+    EQUB &5A, &64, &5A, &13, &15                                      ; 12B4: 5A 64 5A... ZdZ :79B4[3]
 ; &12B9 referenced 1 time by &798A
-.L79B9
-    EQUB &40, 0  , &5C, 0  , &DB                                      ; 12B9: 40 00 5C... @.\ :79B9[1]
+.blockEndLo
+    EQUB &40, 0  , &5C, 0  , &DB                                      ; 12B9: 40 00 5C... @.\ :79B9[3]
 ; &12BE referenced 1 time by &7991
-.L79BE
-    EQUS "^ld"                                                        ; 12BE: 5E 6C 64    ^ld :79BE[1]
-    EQUB &15, &15                                                     ; 12C1: 15 15       ..  :79C1[1]
+.blockEndHi
+    EQUB &5E, &6C, &64, &15, &15                                      ; 12BE: 5E 6C 64... ^ld :79BE[3]
 ; &12C3 referenced 1 time by &796E
-.L79C3
-    EQUB &80, &D0, 0  , 0  , 0                                        ; 12C3: 80 D0 00... ... :79C3[1]
+.blockToLo
+    EQUB &80, &D0, 0  , 0  , 0                                        ; 12C3: 80 D0 00... ... :79C3[3]
 ; &12C8 referenced 1 time by &7973
-.L79C8
-    EQUB &5A, &5F, &0D, &0B, &70, 9  , &B9, 2  , &50, &9D, 1  , 9     ; 12C8: 5A 5F 0D... Z_. :79C8[1]
-    EQUB &9D, &79, 9  , &B9, 3  , &50, &9D, 2  , 9  , &B9, 1  , &51   ; 12D4: 9D 79 09... .y. :79D4[1]
-    EQUB &9D, 0  , &0A, &B9, 2  , &51, &9D, 1  , &0A, &9D, &79, &0A   ; 12E0: 9D 00 0A... ... :79E0[1]
-    EQUB &B9, 3  , &51, &9D, 2  , &0A, &B9, 4  , &50, &9D, &78, 9     ; 12EC: B9 03 51... ..Q :79EC[1]
-    EQUB &B9, 6  , &50, &9D, &7A, 9  , &B9                            ; 12F8: B9 06 50... ..P :79F8[1]
-    ORG C120E + (L79FF - C790E)
-    COPYBLOCK C790E, L79FF, C120E
-    CLEAR C790E, L79FF
+.blockToHi
+    EQUB &5A, &5F, &0D, &0B, &70                                      ; 12C8: 5A 5F 0D... Z_. :79C8[3]
 
-    EQUB 4  , &10, &10, &10, &10, &10, &10, &10, &10, &10, &10, &10   ; 12FF: 04 10 10... ...
-    EQUB &10, &10, &10, &10, &10, &10, 0  , &F6, &FF, 3  , 0  , &FF   ; 130B: 10 10 10... ...
-    EQUB 0  , &11, 0  , &F6, &FF, &BB, 0  , &FF, 0  , &12, 0  , &F6   ; 1317: 00 11 00... ...
-    EQUB &FF, &28, 0  , &FF, 0  , &13, 0  , 1  , 0  , &82, 0  , &FF   ; 1323: FF 28 00... .(.
-    EQUB 0  , &10, 0  , &F6, &FF, 6  , 0  , 4  , 0  , 1  , 1  , 2     ; 132F: 00 10 00... ...
-    EQUB &FE, &FA, 4  , 1  , 1  , &0A, 0  , 0  , 0  , &48, 0  , &FF   ; 133B: FE FA 04... ...
-    EQUB &AC, &FE, 5  , &8E, &46, &0B, &0A, &0A, &0A, &18, &69, &10   ; 1347: AC FE 05... ...
-    EQUB &AA, &98, &9D, 2  , &0B, &BD, 0  , &0B, &29, 3  , &A8, &A9   ; 1353: AA 98 9D... ...
-    EQUB 7  , &99, &BD, &62, &D0, 9  , &8E, &46, &0B, &18, &69, &38   ; 135F: 07 99 BD... ...
-    EQUB &AA, &A9, 8  , &A0, &0B, &20, &F1, &FF, &AE, &46, &0B, &60   ; 136B: AA A9 08... ...
-    EQUB &A2, 1  , &BD, &3D, &5F, &0A, &0A, &85, &75, &BD, &A0, &0B   ; 1377: A2 01 BD... ...
-    EQUB &20, 0  , &0C, &18, &69, &5A, &9D, &A8, &62, &CA, &10, &EA   ; 1383: 20 00 0C...  ..
-    EQUB &AD, &3E, &5F, &0A                                           ; 138F: AD 3E 5F... .>_
-    EQUS "m>_m=_Ji<"                                                  ; 1393: 6D 3E 5F... m>_
-    EQUB &8D, &F1, &62, &60, &CD, &CD, &A9, 0  , &99, &E0, &5E, &B9   ; 139C: 8D F1 62... ..b
-    EQUS "@^8"                                                        ; 13A8: 40 5E 38    @^8
-    EQUB &ED, &D2, &62, &99, &40, &5E, &B9, &90, &5E, &ED, &E2, &62   ; 13AB: ED D2 62... ..b
-    EQUB &99, &90, &5E, &B9                                           ; 13B7: 99 90 5E... ..^
-    EQUS " _8"                                                        ; 13BB: 20 5F 38     _8
-    EQUB &E5, &4E, &99, &20, &5F, &C5, &1F, &90, 4  , &85, &1F, &84   ; 13BE: E5 4E 99... .N.
-    EQUB &51, &60, &B9, 0  , 9  , &18, &65, &74, &9D, 0  , 9  , &B9   ; 13CA: 51 60 B9... Q`.
-    EQUB 0  , &0A, &65, &83, &9D, 0  , &0A, &B9, 1  , 9  , &18, &65   ; 13D6: 00 0A 65... ..e
-    EQUB &75, &9D, 1  , 9  , &B9, 1  , &0A, &65, &84, &9D, 1  , &0A   ; 13E2: 75 9D 01... u..
-    EQUB &B9, 2  , 9  , &18, &65, &76, &9D, 2  , 9  , &B9, 2  , &0A   ; 13EE: B9 02 09... ...
-    EQUB &65, &85, &9D, 2  , &0A, &60, &85, &74, &A9, 0  , &46, &74   ; 13FA: 65 85 9D... e..
-    EQUB &90, 3  , &18                                                ; 1406: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1409: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 140E: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1411: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 1416: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1419: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 141E: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1421: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 1426: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1429: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 142E: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1431: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 1436: 90 03 18    ...
-    EQUS "eujft"                                                      ; 1439: 65 75 6A... euj
-    EQUB &90, 3  , &18                                                ; 143E: 90 03 18    ...
-    EQUS "eujft`"                                                     ; 1441: 65 75 6A... euj
-    EQUB 6  , &74, &2A, &B0, 4  , &C5, &76, &90, 3  , &E5             ; 1447: 06 74 2A... .t*
-    EQUS "v8&t*"                                                      ; 1451: 76 38 26... v8&
-    EQUB &B0, 4  , &C5, &76, &90, 3  , &E5                            ; 1456: B0 04 C5... ...
-    EQUS "v8&t*"                                                      ; 145D: 76 38 26... v8&
-    EQUB &B0, 4  , &C5, &76, &90, 3  , &E5                            ; 1462: B0 04 C5... ...
-    EQUS "v8&t*"                                                      ; 1469: 76 38 26... v8&
-    EQUB &B0, 4  , &C5, &76, &90, 3  , &E5                            ; 146E: B0 04 C5... ...
-    EQUS "v8&t*"                                                      ; 1475: 76 38 26... v8&
-    EQUB &B0, 4  , &C5, &76, &90, 3  , &E5                            ; 147A: B0 04 C5... ...
-    EQUS "v8&t*"                                                      ; 1481: 76 38 26... v8&
-    EQUB &B0, 4  , &C5, &76, &90, 3  , &E5                            ; 1486: B0 04 C5... ...
-    EQUS "v8&t*"                                                      ; 148D: 76 38 26... v8&
-    EQUB &B0, 4  , &C5, &76, &90, 3  , &E5                            ; 1492: B0 04 C5... ...
-    EQUS "v8&t*"                                                      ; 1499: 76 38 26... v8&
-    EQUB &B0, 2  , &C5                                                ; 149E: B0 02 C5    ...
-    EQUS "v&t`"                                                       ; 14A1: 76 26 74... v&t
-    EQUB &A5, &7E, &C9, &67, &B0, &17, &A5                            ; 14A5: A5 7E C9... .~.
-    EQUS "xFyjFyjFyj"                                                 ; 14AC: 78 46 79... xFy
-    EQUB &18, &65, &7A, &85, &7C, &A5                                 ; 14B6: 18 65 7A... .ez
-    EQUS "ye{"                                                        ; 14BC: 79 65 7B    ye{
-    EQUB &85                                                          ; 14BF: 85          .
-    EQUS "}`Fyfx"                                                     ; 14C0: 7D 60 46... }`F
-    EQUB &A5, &7B, &85, &74, &A5                                      ; 14C6: A5 7B 85... .{.
-    EQUS "zFtjFtjFtj"                                                 ; 14CB: 7A 46 74... zFt
-    EQUB &85, &75, &A5, &78, &18, &65, &7A, &85, &7C, &A5             ; 14D5: 85 75 A5... .u.
-    EQUS "ye{"                                                        ; 14DF: 79 65 7B    ye{
-    EQUB &85, &7D, &A5, &7C, &38, &E5, &75, &85, &7C, &A5, &7D, &E5   ; 14E2: 85 7D A5... .}.
-    EQUB &74, &85, &7D, &60, &F1, &0C, &E5, &74, &8D, &F6, &0C, &60   ; 14EE: 74 85 7D... t.}
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 14FA: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10, &30, 0  , 0     ; 1506: 00 00 00... ...
-    EQUB &10, &30, &70, &F0, &F0, &F0, &70, &F0, &F0, &F0, &F0, &E0   ; 1512: 10 30 70... .0p
-    EQUB &A1, 3  , &E1, &81, &C3, &16, &0F, &2D, &87                  ; 151E: A1 03 E1... ...
-    EQUS "--Z"                                                        ; 1527: 2D 2D 5A    --Z
-    EQUB &0F, &0F, &87, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F   ; 152A: 0F 0F 87... ...
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, 5  , &0C, &0F, &0F   ; 1536: 0F 0F 0F... ...
-    EQUB &0F, 7  , &0A, 2  , 4  , 0  , &0F, 6  , 6  , 8  , 4  , 0     ; 1542: 0F 07 0A... ...
-    EQUB &F0, 0  , 5  , &0D, 9  , 0  , &70, &30, &E1, &C3, &0D, 2     ; 154E: F0 00 05... ...
-    EQUB 0  , 0  , &F0, &87, &0F, &0E, &0B, 4  , 0  , 0  , &F0, &1E   ; 155A: 00 00 F0... ...
-    EQUB &0F, 7  , &0A, &0B, 9  , 0  , &E0, &C0, &78, &3C, &0F, 6     ; 1566: 0F 07 0A... ...
-    EQUB 6  , 1  , 2  , 0  , &F0, 0  , &0F, &0F, &0F, &0E, 5  , 4     ; 1572: 06 01 02... ...
-    EQUB 2  , 0  , &0F, &0F, &0F, &0F, &0F, &0F, &0A, 3  , &0F, &0F   ; 157E: 02 00 0F... ...
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &4B, &A5, &0F, &0F, &1E, &0F   ; 158A: 0F 0F 0F... ...
-    EQUB &0F, &0F, &78, &18, &3C, &86, &0F, &4B, &1E, &4B, &E0, &F0   ; 1596: 0F 0F 78... ..x
-    EQUB &F0, &F0, &F0, &70, &58, &0C, 0  , 0  , &80, &C0, &E0, &F0   ; 15A2: F0 F0 F0... ...
-    EQUB &F0, &F0, 0  , 0  , 0  , 0  , 0  , 0  , &80, &C0, 0  , 0     ; 15AE: F0 F0 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 15BA: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 15C6: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &20, 0  , &63   ; 15D2: 00 00 00... ...
-    EQUB &60, &A6, 3  , &10, 3  , &20, &CB, &2A, &20, &84, &50, &E4   ; 15DE: 60 A6 03... `..
-    EQUB &4D, &D0, &F6, &A2, &16, &86, &45, &20, &D1, &2A, &CA, &E0   ; 15EA: 4D D0 F6... M..
-    EQUB &14, &B0, &F6, &A6, &4D, &20, &CB                            ; 15F6: 14 B0 F6... ...
+    EQUB 9  , &B9, 2  , &50, &9D, 1  , 9  , &9D, &79, 9  , &B9, 3     ; 12CD: 09 B9 02... ... :79CD[3]
+    EQUB &50, &9D, 2  , 9  , &B9, 1  , &51, &9D, 0  , &0A, &B9, 2     ; 12D9: 50 9D 02... P.. :79D9[3]
+    EQUB &51, &9D, 1  , &0A, &9D, &79, &0A, &B9, 3  , &51, &9D, 2     ; 12E5: 51 9D 01... Q.. :79E5[3]
+    EQUB &0A, &B9, 4  , &50, &9D, &78, 9  , &B9, 6  , &50, &9D, &7A   ; 12F1: 0A B9 04... ... :79F1[3]
+    EQUB 9  , &B9                                                     ; 12FD: 09 B9       ..  :79FD[3]
+    ORG C120E + (L79FF - SwapCode)
+    COPYBLOCK SwapCode, L79FF, C120E
+    CLEAR SwapCode, L79FF
+
+    EQUB 4                                                            ; 12FF: 04          .
+; &1300 referenced 1 time by &0B58
+; &1300 referenced 1 time by &0B58
+
+    ORG &0B00
+; &1300 referenced 1 time by &0B58
+.movedFrom1300
+    EQUB &10, &10                                                     ; 1300: 10 10       ..  :0B00[2]
+; &1302 referenced 1 time by &0B55
+.L0B02
+    EQUB &10, &10, &10, &10, &10, &10, &10, &10, &10, &10, &10, &10   ; 1302: 10 10 10... ... :0B02[2]
+    EQUB &10, &10, &10, 0  , &F6, &FF, 3  , 0  , &FF, 0  , &11, 0     ; 130E: 10 10 10... ... :0B0E[2]
+    EQUB &F6, &FF, &BB, 0  , &FF, 0  , &12, 0  , &F6, &FF, &28, 0     ; 131A: F6 FF BB... ... :0B1A[2]
+    EQUB &FF, 0  , &13, 0  , 1  , 0  , &82, 0  , &FF, 0  , &10, 0     ; 1326: FF 00 13... ... :0B26[2]
+    EQUB &F6, &FF, 6  , 0  , 4  , 0  , 1  , 1  , 2  , &FE, &FA, 4     ; 1332: F6 FF 06... ... :0B32[2]
+    EQUB 1  , 1  , &0A, 0  , 0  , 0  , &48, 0                         ; 133E: 01 01 0A... ... :0B3E[2]
+; &1346 referenced 3 times by &0B4A, &0B65, &0B73
+.L0B46
+    EQUB &FF                                                          ; 1346: FF          .   :0B46[2]
+    LDY L05FE                                                         ; 1347: AC FE 05    ... :0B47[2]
+    STX L0B46                                                         ; 134A: 8E 46 0B    .F. :0B4A[2]
+    ASL A                                                             ; 134D: 0A          .   :0B4D[2]
+    ASL A                                                             ; 134E: 0A          .   :0B4E[2]
+    ASL A                                                             ; 134F: 0A          .   :0B4F[2]
+    CLC                                                               ; 1350: 18          .   :0B50[2]
+    ADC #&10                                                          ; 1351: 69 10       i.  :0B51[2]
+    TAX                                                               ; 1353: AA          .   :0B53[2]
+    TYA                                                               ; 1354: 98          .   :0B54[2]
+    STA L0B02,X                                                       ; 1355: 9D 02 0B    ... :0B55[2]
+    LDA movedFrom1300,X                                               ; 1358: BD 00 0B    ... :0B58[2]
+    AND #3                                                            ; 135B: 29 03       ).  :0B5B[2]
+    TAY                                                               ; 135D: A8          .   :0B5D[2]
+    LDA #7                                                            ; 135E: A9 07       ..  :0B5E[2]
+    STA L62BD,Y                                                       ; 1360: 99 BD 62    ..b :0B60[2]
+    BNE C0B6E                                                         ; 1363: D0 09       ..  :0B63[2]
+    STX L0B46                                                         ; 1365: 8E 46 0B    .F. :0B65[2]
+    CLC                                                               ; 1368: 18          .   :0B68[2]
+    ADC #&38 ; '8'                                                    ; 1369: 69 38       i8  :0B69[2]
+    TAX                                                               ; 136B: AA          .   :0B6B[2]
+    LDA #osword_envelope                                              ; 136C: A9 08       ..  :0B6C[2]
+; &136E referenced 1 time by &0B63
+.C0B6E
+    LDY #&0B                                                          ; 136E: A0 0B       ..  :0B6E[2]
+    JSR osword                                                        ; 1370: 20 F1 FF     .. :0B70[2]
+    LDX L0B46                                                         ; 1373: AE 46 0B    .F. :0B73[2]
+    RTS                                                               ; 1376: 60          `   :0B76[2]
+
+    LDX #1                                                            ; 1377: A2 01       ..  :0B77[2]
+; &1379 referenced 1 time by &0B8D
+.loop_C0B79
+    LDA L5F3D,X                                                       ; 1379: BD 3D 5F    .=_ :0B79[2]
+    ASL A                                                             ; 137C: 0A          .   :0B7C[2]
+    ASL A                                                             ; 137D: 0A          .   :0B7D[2]
+    STA L0075                                                         ; 137E: 85 75       .u  :0B7E[2]
+    LDA L0BA0,X                                                       ; 1380: BD A0 0B    ... :0B80[2]
+    JSR sub_C0C00                                                     ; 1383: 20 00 0C     .. :0B83[2]
+    CLC                                                               ; 1386: 18          .   :0B86[2]
+    ADC #&5A ; 'Z'                                                    ; 1387: 69 5A       iZ  :0B87[2]
+    STA L62A8,X                                                       ; 1389: 9D A8 62    ..b :0B89[2]
+    DEX                                                               ; 138C: CA          .   :0B8C[2]
+    BPL loop_C0B79                                                    ; 138D: 10 EA       ..  :0B8D[2]
+    LDA L5F3E                                                         ; 138F: AD 3E 5F    .>_ :0B8F[2]
+    ASL A                                                             ; 1392: 0A          .   :0B92[2]
+    ADC L5F3E                                                         ; 1393: 6D 3E 5F    m>_ :0B93[2]
+    ADC L5F3D                                                         ; 1396: 6D 3D 5F    m=_ :0B96[2]
+    LSR A                                                             ; 1399: 4A          J   :0B99[2]
+    ADC #&3C ; '<'                                                    ; 139A: 69 3C       i<  :0B9A[2]
+    STA L62F1                                                         ; 139C: 8D F1 62    ..b :0B9C[2]
+    RTS                                                               ; 139F: 60          `   :0B9F[2]
+
+; &13A0 referenced 1 time by &0B80
+.L0BA0
+    EQUB &CD, &CD                                                     ; 13A0: CD CD       ..  :0BA0[2]
+    LDA #0                                                            ; 13A2: A9 00       ..  :0BA2[2]
+    STA L5EE0,Y                                                       ; 13A4: 99 E0 5E    ..^ :0BA4[2]
+    LDA L5E40,Y                                                       ; 13A7: B9 40 5E    .@^ :0BA7[2]
+    SEC                                                               ; 13AA: 38          8   :0BAA[2]
+    SBC L62D2                                                         ; 13AB: ED D2 62    ..b :0BAB[2]
+    STA L5E40,Y                                                       ; 13AE: 99 40 5E    .@^ :0BAE[2]
+    LDA L5E90,Y                                                       ; 13B1: B9 90 5E    ..^ :0BB1[2]
+    SBC L62E2                                                         ; 13B4: ED E2 62    ..b :0BB4[2]
+    STA L5E90,Y                                                       ; 13B7: 99 90 5E    ..^ :0BB7[2]
+    LDA L5F20,Y                                                       ; 13BA: B9 20 5F    . _ :0BBA[2]
+    SEC                                                               ; 13BD: 38          8   :0BBD[2]
+    SBC L004E                                                         ; 13BE: E5 4E       .N  :0BBE[2]
+    STA L5F20,Y                                                       ; 13C0: 99 20 5F    . _ :0BC0[2]
+    CMP L001F                                                         ; 13C3: C5 1F       ..  :0BC3[2]
+    BCC C0BCB                                                         ; 13C5: 90 04       ..  :0BC5[2]
+    STA L001F                                                         ; 13C7: 85 1F       ..  :0BC7[2]
+    STY L0051                                                         ; 13C9: 84 51       .Q  :0BC9[2]
+; &13CB referenced 1 time by &0BC5
+.C0BCB
+    RTS                                                               ; 13CB: 60          `   :0BCB[2]
+
+    LDA L0900,Y                                                       ; 13CC: B9 00 09    ... :0BCC[2]
+    CLC                                                               ; 13CF: 18          .   :0BCF[2]
+    ADC L0074                                                         ; 13D0: 65 74       et  :0BD0[2]
+    STA L0900,X                                                       ; 13D2: 9D 00 09    ... :0BD2[2]
+    LDA L0A00,Y                                                       ; 13D5: B9 00 0A    ... :0BD5[2]
+    ADC L0083                                                         ; 13D8: 65 83       e.  :0BD8[2]
+    STA L0A00,X                                                       ; 13DA: 9D 00 0A    ... :0BDA[2]
+    LDA L0901,Y                                                       ; 13DD: B9 01 09    ... :0BDD[2]
+    CLC                                                               ; 13E0: 18          .   :0BE0[2]
+    ADC L0075                                                         ; 13E1: 65 75       eu  :0BE1[2]
+    STA L0901,X                                                       ; 13E3: 9D 01 09    ... :0BE3[2]
+    LDA L0A01,Y                                                       ; 13E6: B9 01 0A    ... :0BE6[2]
+    ADC L0084                                                         ; 13E9: 65 84       e.  :0BE9[2]
+    STA L0A01,X                                                       ; 13EB: 9D 01 0A    ... :0BEB[2]
+    LDA L0902,Y                                                       ; 13EE: B9 02 09    ... :0BEE[2]
+    CLC                                                               ; 13F1: 18          .   :0BF1[2]
+    ADC L0076                                                         ; 13F2: 65 76       ev  :0BF2[2]
+    STA L0902,X                                                       ; 13F4: 9D 02 09    ... :0BF4[2]
+    LDA L0A02,Y                                                       ; 13F7: B9 02 0A    ... :0BF7[2]
+    ADC L0085                                                         ; 13FA: 65 85       e.  :0BFA[2]
+    STA L0A02,X                                                       ; 13FC: 9D 02 0A    ... :0BFC[2]
+    RTS                                                               ; 13FF: 60          `   :0BFF[2]
+
+; &1400 referenced 1 time by &0B83
+.sub_C0C00
+    STA L0074                                                         ; 1400: 85 74       .t  :0C00[2]
+    LDA #0                                                            ; 1402: A9 00       ..  :0C02[2]
+    LSR L0074                                                         ; 1404: 46 74       Ft  :0C04[2]
+    BCC C0C0B                                                         ; 1406: 90 03       ..  :0C06[2]
+    CLC                                                               ; 1408: 18          .   :0C08[2]
+    ADC L0075                                                         ; 1409: 65 75       eu  :0C09[2]
+; &140B referenced 1 time by &0C06
+.C0C0B
+    ROR A                                                             ; 140B: 6A          j   :0C0B[2]
+    ROR L0074                                                         ; 140C: 66 74       ft  :0C0C[2]
+    BCC C0C13                                                         ; 140E: 90 03       ..  :0C0E[2]
+    CLC                                                               ; 1410: 18          .   :0C10[2]
+    ADC L0075                                                         ; 1411: 65 75       eu  :0C11[2]
+; &1413 referenced 1 time by &0C0E
+.C0C13
+    ROR A                                                             ; 1413: 6A          j   :0C13[2]
+    ROR L0074                                                         ; 1414: 66 74       ft  :0C14[2]
+    BCC C0C1B                                                         ; 1416: 90 03       ..  :0C16[2]
+    CLC                                                               ; 1418: 18          .   :0C18[2]
+    ADC L0075                                                         ; 1419: 65 75       eu  :0C19[2]
+; &141B referenced 1 time by &0C16
+.C0C1B
+    ROR A                                                             ; 141B: 6A          j   :0C1B[2]
+    ROR L0074                                                         ; 141C: 66 74       ft  :0C1C[2]
+    BCC C0C23                                                         ; 141E: 90 03       ..  :0C1E[2]
+    CLC                                                               ; 1420: 18          .   :0C20[2]
+    ADC L0075                                                         ; 1421: 65 75       eu  :0C21[2]
+; &1423 referenced 1 time by &0C1E
+.C0C23
+    ROR A                                                             ; 1423: 6A          j   :0C23[2]
+    ROR L0074                                                         ; 1424: 66 74       ft  :0C24[2]
+    BCC C0C2B                                                         ; 1426: 90 03       ..  :0C26[2]
+    CLC                                                               ; 1428: 18          .   :0C28[2]
+    ADC L0075                                                         ; 1429: 65 75       eu  :0C29[2]
+; &142B referenced 1 time by &0C26
+.C0C2B
+    ROR A                                                             ; 142B: 6A          j   :0C2B[2]
+    ROR L0074                                                         ; 142C: 66 74       ft  :0C2C[2]
+    BCC C0C33                                                         ; 142E: 90 03       ..  :0C2E[2]
+    CLC                                                               ; 1430: 18          .   :0C30[2]
+    ADC L0075                                                         ; 1431: 65 75       eu  :0C31[2]
+; &1433 referenced 1 time by &0C2E
+.C0C33
+    ROR A                                                             ; 1433: 6A          j   :0C33[2]
+    ROR L0074                                                         ; 1434: 66 74       ft  :0C34[2]
+    BCC C0C3B                                                         ; 1436: 90 03       ..  :0C36[2]
+    CLC                                                               ; 1438: 18          .   :0C38[2]
+    ADC L0075                                                         ; 1439: 65 75       eu  :0C39[2]
+; &143B referenced 1 time by &0C36
+.C0C3B
+    ROR A                                                             ; 143B: 6A          j   :0C3B[2]
+    ROR L0074                                                         ; 143C: 66 74       ft  :0C3C[2]
+    BCC C0C43                                                         ; 143E: 90 03       ..  :0C3E[2]
+    CLC                                                               ; 1440: 18          .   :0C40[2]
+    ADC L0075                                                         ; 1441: 65 75       eu  :0C41[2]
+; &1443 referenced 1 time by &0C3E
+.C0C43
+    ROR A                                                             ; 1443: 6A          j   :0C43[2]
+    ROR L0074                                                         ; 1444: 66 74       ft  :0C44[2]
+    RTS                                                               ; 1446: 60          `   :0C46[2]
+
+    ASL L0074                                                         ; 1447: 06 74       .t  :0C47[2]
+    ROL A                                                             ; 1449: 2A          *   :0C49[2]
+    BCS C0C50                                                         ; 144A: B0 04       ..  :0C4A[2]
+    CMP L0076                                                         ; 144C: C5 76       .v  :0C4C[2]
+    BCC C0C53                                                         ; 144E: 90 03       ..  :0C4E[2]
+; &1450 referenced 1 time by &0C4A
+.C0C50
+    SBC L0076                                                         ; 1450: E5 76       .v  :0C50[2]
+    SEC                                                               ; 1452: 38          8   :0C52[2]
+; &1453 referenced 1 time by &0C4E
+.C0C53
+    ROL L0074                                                         ; 1453: 26 74       &t  :0C53[2]
+    ROL A                                                             ; 1455: 2A          *   :0C55[2]
+    BCS C0C5C                                                         ; 1456: B0 04       ..  :0C56[2]
+    CMP L0076                                                         ; 1458: C5 76       .v  :0C58[2]
+    BCC C0C5F                                                         ; 145A: 90 03       ..  :0C5A[2]
+; &145C referenced 1 time by &0C56
+.C0C5C
+    SBC L0076                                                         ; 145C: E5 76       .v  :0C5C[2]
+    SEC                                                               ; 145E: 38          8   :0C5E[2]
+; &145F referenced 1 time by &0C5A
+.C0C5F
+    ROL L0074                                                         ; 145F: 26 74       &t  :0C5F[2]
+    ROL A                                                             ; 1461: 2A          *   :0C61[2]
+    BCS C0C68                                                         ; 1462: B0 04       ..  :0C62[2]
+    CMP L0076                                                         ; 1464: C5 76       .v  :0C64[2]
+    BCC C0C6B                                                         ; 1466: 90 03       ..  :0C66[2]
+; &1468 referenced 1 time by &0C62
+.C0C68
+    SBC L0076                                                         ; 1468: E5 76       .v  :0C68[2]
+    SEC                                                               ; 146A: 38          8   :0C6A[2]
+; &146B referenced 1 time by &0C66
+.C0C6B
+    ROL L0074                                                         ; 146B: 26 74       &t  :0C6B[2]
+    ROL A                                                             ; 146D: 2A          *   :0C6D[2]
+    BCS C0C74                                                         ; 146E: B0 04       ..  :0C6E[2]
+    CMP L0076                                                         ; 1470: C5 76       .v  :0C70[2]
+    BCC C0C77                                                         ; 1472: 90 03       ..  :0C72[2]
+; &1474 referenced 1 time by &0C6E
+.C0C74
+    SBC L0076                                                         ; 1474: E5 76       .v  :0C74[2]
+    SEC                                                               ; 1476: 38          8   :0C76[2]
+; &1477 referenced 1 time by &0C72
+.C0C77
+    ROL L0074                                                         ; 1477: 26 74       &t  :0C77[2]
+    ROL A                                                             ; 1479: 2A          *   :0C79[2]
+    BCS C0C80                                                         ; 147A: B0 04       ..  :0C7A[2]
+    CMP L0076                                                         ; 147C: C5 76       .v  :0C7C[2]
+    BCC C0C83                                                         ; 147E: 90 03       ..  :0C7E[2]
+; &1480 referenced 1 time by &0C7A
+.C0C80
+    SBC L0076                                                         ; 1480: E5 76       .v  :0C80[2]
+    SEC                                                               ; 1482: 38          8   :0C82[2]
+; &1483 referenced 1 time by &0C7E
+.C0C83
+    ROL L0074                                                         ; 1483: 26 74       &t  :0C83[2]
+    ROL A                                                             ; 1485: 2A          *   :0C85[2]
+    BCS C0C8C                                                         ; 1486: B0 04       ..  :0C86[2]
+    CMP L0076                                                         ; 1488: C5 76       .v  :0C88[2]
+    BCC C0C8F                                                         ; 148A: 90 03       ..  :0C8A[2]
+; &148C referenced 1 time by &0C86
+.C0C8C
+    SBC L0076                                                         ; 148C: E5 76       .v  :0C8C[2]
+    SEC                                                               ; 148E: 38          8   :0C8E[2]
+; &148F referenced 1 time by &0C8A
+.C0C8F
+    ROL L0074                                                         ; 148F: 26 74       &t  :0C8F[2]
+    ROL A                                                             ; 1491: 2A          *   :0C91[2]
+    BCS C0C98                                                         ; 1492: B0 04       ..  :0C92[2]
+    CMP L0076                                                         ; 1494: C5 76       .v  :0C94[2]
+    BCC C0C9B                                                         ; 1496: 90 03       ..  :0C96[2]
+; &1498 referenced 1 time by &0C92
+.C0C98
+    SBC L0076                                                         ; 1498: E5 76       .v  :0C98[2]
+    SEC                                                               ; 149A: 38          8   :0C9A[2]
+; &149B referenced 1 time by &0C96
+.C0C9B
+    ROL L0074                                                         ; 149B: 26 74       &t  :0C9B[2]
+    ROL A                                                             ; 149D: 2A          *   :0C9D[2]
+    BCS C0CA2                                                         ; 149E: B0 02       ..  :0C9E[2]
+    CMP L0076                                                         ; 14A0: C5 76       .v  :0CA0[2]
+; &14A2 referenced 1 time by &0C9E
+.C0CA2
+    ROL L0074                                                         ; 14A2: 26 74       &t  :0CA2[2]
+    RTS                                                               ; 14A4: 60          `   :0CA4[2]
+
+    LDA L007E                                                         ; 14A5: A5 7E       .~  :0CA5[2]
+    CMP #&67 ; 'g'                                                    ; 14A7: C9 67       .g  :0CA7[2]
+    BCS C0CC2                                                         ; 14A9: B0 17       ..  :0CA9[2]
+    LDA L0078                                                         ; 14AB: A5 78       .x  :0CAB[2]
+    LSR L0079                                                         ; 14AD: 46 79       Fy  :0CAD[2]
+    ROR A                                                             ; 14AF: 6A          j   :0CAF[2]
+    LSR L0079                                                         ; 14B0: 46 79       Fy  :0CB0[2]
+    ROR A                                                             ; 14B2: 6A          j   :0CB2[2]
+    LSR L0079                                                         ; 14B3: 46 79       Fy  :0CB3[2]
+    ROR A                                                             ; 14B5: 6A          j   :0CB5[2]
+    CLC                                                               ; 14B6: 18          .   :0CB6[2]
+    ADC L007A                                                         ; 14B7: 65 7A       ez  :0CB7[2]
+    STA L007C                                                         ; 14B9: 85 7C       .|  :0CB9[2]
+    LDA L0079                                                         ; 14BB: A5 79       .y  :0CBB[2]
+    ADC L007B                                                         ; 14BD: 65 7B       e{  :0CBD[2]
+    STA L007D                                                         ; 14BF: 85 7D       .}  :0CBF[2]
+    RTS                                                               ; 14C1: 60          `   :0CC1[2]
+
+; &14C2 referenced 1 time by &0CA9
+.C0CC2
+    LSR L0079                                                         ; 14C2: 46 79       Fy  :0CC2[2]
+    ROR L0078                                                         ; 14C4: 66 78       fx  :0CC4[2]
+    LDA L007B                                                         ; 14C6: A5 7B       .{  :0CC6[2]
+    STA L0074                                                         ; 14C8: 85 74       .t  :0CC8[2]
+    LDA L007A                                                         ; 14CA: A5 7A       .z  :0CCA[2]
+    LSR L0074                                                         ; 14CC: 46 74       Ft  :0CCC[2]
+    ROR A                                                             ; 14CE: 6A          j   :0CCE[2]
+    LSR L0074                                                         ; 14CF: 46 74       Ft  :0CCF[2]
+    ROR A                                                             ; 14D1: 6A          j   :0CD1[2]
+    LSR L0074                                                         ; 14D2: 46 74       Ft  :0CD2[2]
+    ROR A                                                             ; 14D4: 6A          j   :0CD4[2]
+    STA L0075                                                         ; 14D5: 85 75       .u  :0CD5[2]
+    LDA L0078                                                         ; 14D7: A5 78       .x  :0CD7[2]
+    CLC                                                               ; 14D9: 18          .   :0CD9[2]
+    ADC L007A                                                         ; 14DA: 65 7A       ez  :0CDA[2]
+    STA L007C                                                         ; 14DC: 85 7C       .|  :0CDC[2]
+    LDA L0079                                                         ; 14DE: A5 79       .y  :0CDE[2]
+    ADC L007B                                                         ; 14E0: 65 7B       e{  :0CE0[2]
+    STA L007D                                                         ; 14E2: 85 7D       .}  :0CE2[2]
+    LDA L007C                                                         ; 14E4: A5 7C       .|  :0CE4[2]
+    SEC                                                               ; 14E6: 38          8   :0CE6[2]
+    SBC L0075                                                         ; 14E7: E5 75       .u  :0CE7[2]
+    STA L007C                                                         ; 14E9: 85 7C       .|  :0CE9[2]
+    LDA L007D                                                         ; 14EB: A5 7D       .}  :0CEB[2]
+    SBC L0074                                                         ; 14ED: E5 74       .t  :0CED[2]
+    STA L007D                                                         ; 14EF: 85 7D       .}  :0CEF[2]
+    RTS                                                               ; 14F1: 60          `   :0CF1[2]
+
+    EQUB &F1, &0C, &E5, &74, &8D, &F6, &0C, &60, 0  , 0  , 0  , 0     ; 14F2: F1 0C E5... ... :0CF2[2]
+    EQUB 0  , 0                                                       ; 14FE: 00 00       ..  :0CFE[2]
+    ORG L1300 + (L0D00 - movedFrom1300)
+    COPYBLOCK movedFrom1300, L0D00, L1300
+    CLEAR movedFrom1300, L0D00
+
+
+    ORG &7000
+.movedFrom1500
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 1500: 00 00 00... ... :7000[1]
+    EQUB 0  , 0  , &10, &30, 0  , 0  , &10, &30, &70, &F0, &F0, &F0   ; 150C: 00 00 10... ... :700C[1]
+    EQUB &70, &F0, &F0, &F0, &F0, &E0, &A1, 3  , &E1, &81, &C3, &16   ; 1518: 70 F0 F0... p.. :7018[1]
+    EQUB &0F, &2D, &87, &2D, &2D, &5A, &0F, &0F, &87, &0F, &0F, &0F   ; 1524: 0F 2D 87... .-. :7024[1]
+    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F   ; 1530: 0F 0F 0F... ... :7030[1]
+    EQUB &0F, &0F, 5  , &0C, &0F, &0F, &0F, 7  , &0A, 2  , 4  , 0     ; 153C: 0F 0F 05... ... :703C[1]
+    EQUB &0F, 6  , 6  , 8  , 4  , 0  , &F0, 0  , 5  , &0D, 9  , 0     ; 1548: 0F 06 06... ... :7048[1]
+    EQUB &70, &30, &E1, &C3, &0D, 2  , 0  , 0  , &F0, &87, &0F, &0E   ; 1554: 70 30 E1... p0. :7054[1]
+    EQUB &0B, 4  , 0  , 0  , &F0, &1E, &0F, 7  , &0A, &0B, 9  , 0     ; 1560: 0B 04 00... ... :7060[1]
+    EQUB &E0, &C0, &78, &3C, &0F, 6  , 6  , 1  , 2  , 0  , &F0, 0     ; 156C: E0 C0 78... ..x :706C[1]
+    EQUB &0F, &0F, &0F, &0E, 5  , 4  , 2  , 0  , &0F, &0F, &0F, &0F   ; 1578: 0F 0F 0F... ... :7078[1]
+    EQUB &0F, &0F, &0A, 3  , &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F   ; 1584: 0F 0F 0A... ... :7084[1]
+    EQUB &4B, &A5, &0F, &0F, &1E, &0F, &0F, &0F, &78, &18, &3C, &86   ; 1590: 4B A5 0F... K.. :7090[1]
+    EQUB &0F, &4B, &1E, &4B, &E0, &F0, &F0, &F0, &F0, &70, &58, &0C   ; 159C: 0F 4B 1E... .K. :709C[1]
+    EQUB 0  , 0  , &80, &C0, &E0, &F0, &F0, &F0, 0  , 0  , 0  , 0     ; 15A8: 00 00 80... ... :70A8[1]
+    EQUB 0  , 0  , &80, &C0, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 15B4: 00 00 80... ... :70B4[1]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 15C0: 00 00 00... ... :70C0[1]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 15CC: 00 00 00... ... :70CC[1]
+    EQUB 0  , 0                                                       ; 15D8: 00 00       ..  :70D8[1]
+    EQUB 0                                                            ; 15DA: 00          .   :70DA[1]
+    ORG L1500 + (L70DB - movedFrom1500)
+    COPYBLOCK movedFrom1500, L70DB, L1500
+    CLEAR movedFrom1500, L70DB
+
+    EQUB &20, 0  , &63, &60, &A6, 3  , &10, 3  , &20, &CB, &2A, &20   ; 15DB: 20 00 63...  .c
+    EQUB &84, &50, &E4, &4D, &D0, &F6, &A2, &16, &86, &45, &20, &D1   ; 15E7: 84 50 E4... .P.
+    EQUB &2A, &CA, &E0, &14, &B0, &F6, &A6, &4D, &20, &CB             ; 15F3: 2A CA E0... *..
     EQUS "*` "                                                        ; 15FD: 2A 60 20    *`
     EQUB &0E, &2B, &A2, &F4, &20, &CC, &0B, &20, &0E, &2B, &A2, &FD   ; 1600: 0E 2B A2... .+.
     EQUB &20, &CC, &0B, &A9, &14, &85, &42, &A9, 2                    ; 160C: 20 CC 0B...  ..
@@ -2042,16 +2357,16 @@ L7979 = C7978+1
 ; &50D1 referenced 1 time by &50E9
 .loop_C50D1
     LDA L62C3,X                                                       ; 50D1: BD C3 62    ..b
-    STA (L0070),Y                                                     ; 50D4: 91 70       .p
+    STA (P),Y                                                         ; 50D4: 91 70       .p
     DEY                                                               ; 50D6: 88          .
     BPL C50E8                                                         ; 50D7: 10 0F       ..
-    LDA L0070                                                         ; 50D9: A5 70       .p
+    LDA P                                                             ; 50D9: A5 70       .p
     SEC                                                               ; 50DB: 38          8
     SBC #&40 ; '@'                                                    ; 50DC: E9 40       .@
-    STA L0070                                                         ; 50DE: 85 70       .p
-    LDA L0071                                                         ; 50E0: A5 71       .q
+    STA P                                                             ; 50DE: 85 70       .p
+    LDA Q                                                             ; 50E0: A5 71       .q
     SBC #1                                                            ; 50E2: E9 01       ..
-    STA L0071                                                         ; 50E4: 85 71       .q
+    STA Q                                                             ; 50E4: 85 71       .q
     LDY #7                                                            ; 50E6: A0 07       ..
 ; &50E8 referenced 1 time by &50D7
 .C50E8
@@ -2070,11 +2385,11 @@ L7979 = C7978+1
 .sub_C50FA
     ASL A                                                             ; 50FA: 0A          .
     ASL A                                                             ; 50FB: 0A          .
-    STA L0070                                                         ; 50FC: 85 70       .p
+    STA P                                                             ; 50FC: 85 70       .p
     LDA #0                                                            ; 50FE: A9 00       ..
-    ASL L0070                                                         ; 5100: 06 70       .p
+    ASL P                                                             ; 5100: 06 70       .p
     ROL A                                                             ; 5102: 2A          *
-    STA L0071                                                         ; 5103: 85 71       .q
+    STA Q                                                             ; 5103: 85 71       .q
     TYA                                                               ; 5105: 98          .
     LSR A                                                             ; 5106: 4A          J
     LSR A                                                             ; 5107: 4A          J
@@ -2082,11 +2397,11 @@ L7979 = C7978+1
     TAX                                                               ; 5109: AA          .
     LDA L3FE0,X                                                       ; 510A: BD E0 3F    ..?
     CLC                                                               ; 510D: 18          .
-    ADC L0070                                                         ; 510E: 65 70       ep
-    STA L0070                                                         ; 5110: 85 70       .p
+    ADC P                                                             ; 510E: 65 70       ep
+    STA P                                                             ; 5110: 85 70       .p
     LDA L3B06,X                                                       ; 5112: BD 06 3B    ..;
-    ADC L0071                                                         ; 5115: 65 71       eq
-    STA L0071                                                         ; 5117: 85 71       .q
+    ADC Q                                                             ; 5115: 65 71       eq
+    STA Q                                                             ; 5117: 85 71       .q
     TYA                                                               ; 5119: 98          .
     AND #7                                                            ; 511A: 29 07       ).
     TAY                                                               ; 511C: A8          .
@@ -2138,170 +2453,178 @@ L7979 = C7978+1
     EQUB &6E, &BD, &B2                                                ; 52E9: 6E BD B2    n..
     EQUS "oI0"                                                        ; 52EC: 6F 49 30    oI0
     EQUB &9D, &B2, &6F, &CA, &10, &C5, &60, &F0, &F0, &C0, &C0, &80   ; 52EF: 9D B2 6F... ..o
-    EQUB &F0, &F0, &30, &30, &10, 0  , 0  , 0  , &10, &10             ; 52FB: F0 F0 30... ..0
-    EQUS " `p"                                                        ; 5305: 20 60 70     `p
-    EQUB &C0, &80, &80, 0  , 0  , 0  , 0  , &C0, &60, &10, &10, 0     ; 5308: C0 80 80... ...
-    EQUB 0  , &30, &10, 0  , 0  , 0  , &80, &80                       ; 5314: 00 30 10... .0.
-    EQUS "@@ "                                                        ; 531C: 40 40 20    @@
-    EQUB &90, &90                                                     ; 531F: 90 90       ..
-    EQUS "@@  "                                                       ; 5321: 40 40 20... @@
-    EQUB 0  , &80, &80, &80, 0  , 8  , &0F, &0F                       ; 5325: 00 80 80... ...
-    EQUS " `@@"                                                       ; 532D: 20 60 40...  `@
-    EQUB &80, &80, &80, &0C, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5331: 80 80 80... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &80                  ; 533D: 00 00 00... ...
-    EQUS "@@@@@  "                                                    ; 5346: 40 40 40... @@@
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 534D: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10, &30   ; 5359: 00 00 00... ...
-    EQUB 0  , 0  , &10, &30, &70, &F0, &F0, &F0, &70, &F0, &F0, &F0   ; 5365: 00 00 10... ...
-    EQUB &F0, &E0, &C0, &C0, &F0, &E0, &C0, &80, 1  , 3  , 3  , &16   ; 5371: F0 E0 C0... ...
-    EQUB &52, 7  , &2D, &0F, &87, &4B, &0F, &0F, &0F, &0F, &87, &0F   ; 537D: 52 07 2D... R.-
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0B, &0A   ; 5389: 0F 0F 0F... ...
-    EQUB &0F, &0E, 7  , 4  , 8  , 0  , &30, 0  , &0A, 0  , &30, 0     ; 5395: 0F 0E 07... ...
-    EQUB &F0, 0  , &F0, 0  , &70, 0  , &F0, 0  , &F0, &10, &F0, &30   ; 53A1: F0 00 F0... ...
-    EQUB &F0, &30, &E1, &43, &86, &86, &0C, &0C, &87, &0C, 8  , 0     ; 53AD: F0 30 E1... .0.
-    EQUB 0  , 0  , &80, 0  , 0  , 0  , &10, &80, 0  , 1  , 1  , 1     ; 53B9: 00 00 80... ...
-    EQUB 0  , 0  , &80, &10, 0  , 0  , 0  , &0C, &1E, 3  , 1  , 0     ; 53C5: 00 00 80... ...
-    EQUB 0  , 0  , &10, 0  , &F0, &C0, &78, &2C, &16, &16, 3  , 3     ; 53D1: 00 00 10... ...
-    EQUB &E0, 0  , &F0, 0  , &F0, &80, &F0, &C0, 5  , 0  , &C0, 0     ; 53DD: E0 00 F0... ...
-    EQUB &F0, 0  , &F0, 0  , &0F, 7  , &0E, 2  , 1  , 0  , &C0, 0     ; 53E9: F0 00 F0... ...
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0D, 5  , &0F, &0F, &1E, &0F   ; 53F5: 0F 0F 0F... ...
-    EQUB &0F, &0F, &0F, &0F, &A4, &0E, &4B, &0F, &1E, &2D, &0F, &0F   ; 5401: 0F 0F 0F... ...
-    EQUB &F0, &70, &30, &10, 8  , &0C, &0C, &86, &E0, &F0, &F0, &F0   ; 540D: F0 70 30... .p0
-    EQUB &F0                                                          ; 5419: F0          .
-    EQUS "p00"                                                        ; 541A: 70 30 30    p00
-    EQUB 0  , 0  , &80, &C0, &E0, &F0, &F0, &F0, 0  , 0  , 0  , 0     ; 541D: 00 00 80... ...
-    EQUB 0  , 0  , &80, &C0, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5429: 00 00 80... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10                  ; 5435: 00 00 00... ...
-    EQUS "     @@"                                                    ; 543E: 20 20 20...
-    EQUB 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0               ; 5445: 00 00 00... ...
-    EQUS "@`  "                                                       ; 5455: 40 60 20... @`
-    EQUB &10, &10, &10, 3  , 0  , &10, &10, &10, 0  , 1  , &0F, &0F   ; 5459: 10 10 10... ...
-    EQUB 1  , &E0, &F0, &F0, &F0, &F0, &F0, &F0, &0F, 3  , &C1, &E0   ; 5465: 01 E0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, 0  , &0C, &0E, 7  , &83, &C1, &E1, &E0   ; 5471: F0 F0 F0... ...
-    EQUB 0  , 0  , 0  , 0  , &0F, &0F, &0F, &0F                       ; 547D: 00 00 00... ...
-    EQUS "     "                                                      ; 5485: 20 20 20...
-    EQUB &0F, &0F, &0F, 0  , 0  , 0  , 0  , 0  , 0  , &0F, &0F, 0     ; 548A: 0F 0F 0F... ...
-    EQUB 0  , 0  , &10                                                ; 5496: 00 00 10    ...
-    EQUS "0px"                                                        ; 5499: 30 70 78    0px
-    EQUB &F0, &70, &70, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0   ; 549C: F0 70 70... .pp
-    EQUB &E0, &C0, &80, 0  , 0  , &80, 0  , 0  , 1  , 1  , 3  , 3     ; 54A8: E0 C0 80... ...
-    EQUB 7  , 7  , &3C, &0F, &4B, &0F, &4B, &87, &0F, &0F, &0F, &0F   ; 54B4: 07 07 3C... ..<
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0C, &0B, &0E, &0C, 4     ; 54C0: 0F 0F 0F... ...
-    EQUB &0C, &0E, 8  , &10, 0  , &70, 0  , &F0, 0  , &F0, 0  , &F0   ; 54CC: 0C 0E 08... ...
-    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 54D8: 00 F0 00... ...
-    EQUB 0  , &E1, &21, &C3, &43, &C2, &86, &84, &84, 8  , 0  , &40   ; 54E4: 00 E1 21... ..!
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 6  , 4  , 6  , 2  , 6  , 0     ; 54F0: 00 00 00... ...
-    EQUB 0  , 1  , 1  , 0  , 0  , 0  , 0  , 0  , 0  , 4  , &0C, 0     ; 54FC: 00 01 01... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 3  , 1  , 1  , 1  , 1  , 0     ; 5508: 00 00 00... ...
-    EQUB 0  , 1  , 0  , &20, 0  , 0  , 0  , 0  , 0                    ; 5514: 00 01 00... ...
-    EQUS "xH<,4"                                                      ; 551D: 78 48 3C... xH<
-    EQUB &16, &12, &12, &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 5522: 16 12 12... ...
-    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , 7  , 1  , &80, 0  , &E0   ; 552E: 00 F0 00... ...
-    EQUB 0  , &F0, 0  , &0F, &0F, 3  , &0D, 7  , 3  , 2  , 3  , &0F   ; 553A: 00 F0 00... ...
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0E, &C3, &0F, &2D, &0F   ; 5546: 0F 0F 0F... ...
-    EQUB &2D, &1E, &0F, &10, 0  , 0  , 8  , 8  , &0C, &0C, &0E, &F0   ; 5552: 2D 1E 0F... -..
-    EQUB &F0                                                          ; 555E: F0          .
-    EQUS "pp0"                                                        ; 555F: 70 70 30    pp0
-    EQUB &10, 0  , 0  , &E0, &E0, &F0, &F0, &F0, &F0, &F0, &F0, 0     ; 5562: 10 00 00... ...
-    EQUB 0  , 0  , &80, &C0, &E0, &E1, &F0, 0  , 0  , 0  , 0  , 0     ; 556E: 00 00 80... ...
-    EQUB 0  , &0F, &0F                                                ; 557A: 00 0F 0F    ...
-    EQUS "@@@@@"                                                      ; 557D: 40 40 40... @@@
-    EQUB &0F, &0F, &0F, 0  , 0  , 0  , 0  , &0F, &0F, &0F, &0F, 0     ; 5582: 0F 0F 0F... ...
-    EQUB 3  , 7  , &0E, &1C                                           ; 558E: 03 07 0E... ...
-    EQUS "8xp"                                                        ; 5592: 38 78 70    8xp
-    EQUB &0F, &0C, &38, &70, &F0, &F0, &F0, &F0, 8  , &70, &F0, &F0   ; 5595: 0F 0C 38... ..8
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 55A1: F0 F0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 55AD: F0 F0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, &0F, 7  , &87, &87, &83, &C3, &C3, &C3   ; 55B9: F0 F0 F0... ...
-    EQUB &0F, &0F, &0F, &0F, &0F, &1E, &1E, &3C, &1E                  ; 55C5: 0F 0F 0F... ...
-    EQUS "<<x"                                                        ; 55CE: 3C 3C 78    <<x
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0, &C0   ; 55D1: F0 F0 F0... ...
-    EQUB &E0, &C0, &80, &80, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 55DD: E0 C0 80... ...
-    EQUB 1  , 1  , 1  , 3  , &25, &16, &0F, &4B, &0F, &C3, &0F, &0F   ; 55E9: 01 01 01... ...
-    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0E, &0E, &0D, &0E, &0F, &0C   ; 55F5: 0F 0F 0F... ...
-    EQUB &0E, 8  , &14, 8  , &10, 8  , &70, 0  , &F0, 0  , &F0, 0     ; 5601: 0E 08 14... ...
-    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 560D: F0 00 F0... ...
-    EQUB &F0, 0  , &F0, 0  , &F0, &10, &F0, &10, &F0, &30, &E1, &21   ; 5619: F0 00 F0... ...
-    EQUB &94, &0C, 8  , 8  , 8  , 8  , 8  , 0  , 0  , 4  , 4  , 7     ; 5625: 94 0C 08... ...
-    EQUB 2  , 2  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5631: 02 02 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 563D: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5649: 00 00 00... ...
-    EQUB 0  , 0  , 2  , 5  , 7  , 5  , 2  , 0  , &92, 3  , 1  , 1     ; 5655: 00 00 02... ...
-    EQUB 1  , 1  , 1  , 0  , &F0, &80, &F0, &80, &F0, &C0, &78, &48   ; 5661: 01 01 01... ...
-    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 566D: F0 00 F0... ...
-    EQUB &F0, 0  , &F0, 0  , &80, 1  , &E0, 0  , &F0, 0  , &F0, 0     ; 5679: F0 00 F0... ...
-    EQUB &0B, 7  , &0F, 3  , 7  , 1  , &82, 1  , &0F, &0F, &0F, &0F   ; 5685: 0B 07 0F... ...
-    EQUB &0F, &0F, 7  , 7  , &4A, &86, &0F, &2D, &0F, &3C, &0F, &0F   ; 5691: 0F 0F 07... ...
-    EQUB 0  , 0  , 0  , 0  , 8  , 8  , 8  , &0C, &70, &30, &10, &10   ; 569D: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , &F0, &F0, &F0, &F0, &F0                  ; 56A9: 00 00 00... ...
-    EQUS "pp0"                                                        ; 56B2: 70 70 30    pp0
-    EQUB &87, &C3, &C3, &E1, &F0, &F0, &F0, &F0, &0F, &0F, &0F, &0F   ; 56B5: 87 C3 C3... ...
-    EQUB &0F, &87, &87, &C3, &0F, &0E, &1E, &1E, &1C                  ; 56C1: 0F 87 87... ...
-    EQUS "<<<"                                                        ; 56CA: 3C 3C 3C    <<<
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 56CD: F0 F0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 56D9: F0 F0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 56E5: F0 F0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E1, &E0, &C0   ; 56F1: F0 F0 F0... ...
-    EQUB &87, &87, &84, &1C                                           ; 56FD: 87 87 84... ...
-    EQUS "80p"                                                        ; 5701: 38 30 70    80p
-    EQUB &F0, &78, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 5704: F0 78 F0... .x.
-    EQUB &E0, &E0, &C0, &C0, &80, &80, &80, 0  , 0  , 0  , 0  , 0     ; 5710: E0 E0 C0... ...
-    EQUB 0  , 0  , 0  , &22, 0  , 0  , 0  , &22, 0  , &12, &8B, 7     ; 571C: 00 00 00... ...
-    EQUB &AD, &0F, &4B, &0F, &2D, &0F, &0F, &87, &0F, &0F, &0F, &0F   ; 5728: AD 0F 4B... ..K
-    EQUB &0F, &0F, &0F, &0E, &0F, 8  , &0E, 8  , &0C, &30, 0  , &70   ; 5734: 0F 0F 0F... ...
-    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 5740: 00 F0 00... ...
-    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 574C: 00 F0 00... ...
-    EQUB 0  , &F0, 0  , &F0, 0  , &E1, &21, &E1, &21, &E1, &21, &E1   ; 5758: 00 F0 00... ...
-    EQUB &21, &40, 0  , 0  , 0  , 0  , 1  , &40, &41, 0  , 0  , 0     ; 5764: 21 40 00... !@.
-    EQUB 0  , 0  , 8  , 8  , 8  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5770: 00 00 08... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10, &10, 0  , 0  , 0     ; 577C: 00 00 00... ...
-    EQUB 0  , 0  , 0  , &80, &80, 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5788: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 3  , 2  , 3  , &20, 0  , 0     ; 5794: 00 00 00... ...
-    EQUB 0  , 0  , 8                                                  ; 57A0: 00 00 08    ...
-    EQUS "((xHxHxHxH"                                                 ; 57A3: 28 28 78... ((x
-    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 57AD: F0 00 F0... ...
-    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 57B9: F0 00 F0... ...
-    EQUB &C0, 0  , &E0, 0  , &F0, 0  , &F0, 0  , &0F, &0F, 7  , &0F   ; 57C5: C0 00 E0... ...
-    EQUB 1  , 7  , 1  , 3  , &0F, &0F, &1E, &0F, &0F, &0F, &0F, &0F   ; 57D1: 01 07 01... ...
-    EQUB &84, &1D, &0E, &5B, &0F, &2D, &0F, &4B, 0  , 0  , &44, 0     ; 57DD: 84 1D 0E... ...
-    EQUB 0  , 0  , &44, 0  , &10, &10, 0  , 0  , 0  , 0  , 0  , 0     ; 57E9: 00 00 44... ..D
-    EQUB &F0, &F0, &F0                                                ; 57F5: F0 F0 F0    ...
-    EQUS "pp00"                                                       ; 57F8: 70 70 30... pp0
-    EQUB &10, &E1, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &1E, &1E, &12   ; 57FC: 10 E1 F0... ...
-    EQUB &83, &C1, &C0, &E0, &F0, &F0, &F0, &F0, &F0, &F0             ; 5808: 83 C1 C0... ...
-    EQUS "xp0"                                                        ; 5812: 78 70 30    xp0
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 5815: F0 F0 F0... ...
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, 0  , 0  , 0  , 0     ; 5821: F0 F0 F0... ...
-    EQUB &F0, &E0, &C0, 0  , 0  , 0  , 0  , &10, &80, &10             ; 582D: F0 E0 C0... ...
-    EQUS "00p"                                                        ; 5837: 30 30 70    00p
-    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 583A: F0 F0 F0... ...
-    EQUB &F0, &E0, &E0, &C0, &80, &80, 0  , 0  , 0  , 0  , &22, &88   ; 5846: F0 E0 E0... ...
-    EQUB 0  , &11, 0  , 0  , &11, &88, &44, &88, &22, &11, &44, &89   ; 5852: 00 11 00... ...
-    EQUB 1  , &89, 3  , 3  , &47, &9A, 7  , &87, &0F, &0F, &C3, &0F   ; 585E: 01 89 03... ...
-    EQUB &0F, &0F, &0F, &0F, &0E, &0D, &0F, &0F, &0D, &0E, &0C, &18   ; 586A: 0F 0F 0F... ...
-    EQUB 0  , &38, 0  , &70, 0  , &70, 0  , &F0, 0  , &F0, 0  , &F0   ; 5876: 00 38 00... .8.
-    EQUB 0  , &F0, &61, &F0, 0  , &F0, 0  , &F0, 0  , &F0, &0F, &F0   ; 5882: 00 F0 61... ..a
-    EQUB 0  , &F0, 0  , &F0, 0  , &F0, &3C, &F0, 0  , &F0, 0  , &F0   ; 588E: 00 F0 00... ...
-    EQUB 0  , &F0, 0  , &E1, &21, &E1, &21, &E1, &21, &E1, &21, 0     ; 589A: 00 F0 00... ...
-    EQUB 1  , 0  , 0  , 0  , &40, 0  , 8  , 8  , 8  , 0  , 0  , 0     ; 58A6: 01 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 58B2: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 58BE: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 1  , 0     ; 58CA: 00 00 00... ...
-    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 2  , 8  , 8  , 0  , 0  , 0     ; 58D6: 00 00 00... ...
-    EQUB &20, 0  , 1                                                  ; 58E2: 20 00 01     ..
-    EQUS "xHxHxHxH"                                                   ; 58E5: 78 48 78... xHx
-    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 58ED: F0 00 F0... ...
-    EQUB &F0, 0  , &F0, &C3, &F0, 0  , &F0, 0  , &F0, 0  , &F0, &0F   ; 58F9: F0 00 F0... ...
-    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, &68, &81, 0  , &C1, 0     ; 5905: F0 00 F0... ...
-    EQUB &E0, 0  , &E0, 0  , &0F, 7  , &0B, &0F, &0F, &0B, 7  , 3     ; 5911: E0 00 E0... ...
-    EQUB &1E, &0F, &0F, &3C, &0F, &0F, &0F, &0F, &19, 8  , &19, &0C   ; 591D: 1E 0F 0F... ...
-    EQUB &0C, &2E, &95, &0E, 0  , &88, &11, &22, &11, &44, &88, &22   ; 5929: 0C 2E 95... ...
-    EQUB 0  , 0  , 0  , &44, &11, 0  , &88, 0  , &F0, &F0             ; 5935: 00 00 00... ...
-    EQUS "pp0"                                                        ; 593F: 70 70 30    pp0
-    EQUB &10, &10, 0  , &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &10   ; 5942: 10 10 00... ...
-    EQUB &80, &C0, &C0, &E0, &F0, &F0, &F0, &F0, &70, &30, 0  , 0     ; 594E: 80 C0 C0... ...
-    EQUB 0  , 0  , &80, &F0, &F0, &F0, &70, 0  , 0  , 0  , 0  , 0     ; 595A: 00 00 80... ...
-    EQUB 0  , 0  , 0  , &10, &30, &70, &F0                            ; 5966: 00 00 00... ...
+    EQUB &F0, &F0, &30, &30, &10                                      ; 52FB: F0 F0 30... ..0
+.trackData
+
+    ORG &70DB
+    EQUB 0  , 0  , 0  , &10, &10                                      ; 5300: 00 00 00... ... :70DB[4]
+    EQUS " `p"                                                        ; 5305: 20 60 70     `p :70E0[4]
+    EQUB &C0, &80, &80, 0  , 0  , 0  , 0  , &C0, &60, &10, &10, 0     ; 5308: C0 80 80... ... :70E3[4]
+    EQUB 0  , &30, &10, 0  , 0  , 0  , &80, &80                       ; 5314: 00 30 10... .0. :70EF[4]
+    EQUS "@@ "                                                        ; 531C: 40 40 20    @@  :70F7[4]
+    EQUB &90, &90                                                     ; 531F: 90 90       ..  :70FA[4]
+    EQUS "@@  "                                                       ; 5321: 40 40 20... @@  :70FC[4]
+    EQUB 0  , &80, &80, &80, 0  , 8  , &0F, &0F                       ; 5325: 00 80 80... ... :7100[4]
+    EQUS " `@@"                                                       ; 532D: 20 60 40...  `@ :7108[4]
+    EQUB &80, &80, &80, &0C, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5331: 80 80 80... ... :710C[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &80                  ; 533D: 00 00 00... ... :7118[4]
+    EQUS "@@@@@  "                                                    ; 5346: 40 40 40... @@@ :7121[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 534D: 00 00 00... ... :7128[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10, &30   ; 5359: 00 00 00... ... :7134[4]
+    EQUB 0  , 0  , &10, &30, &70, &F0, &F0, &F0, &70, &F0, &F0, &F0   ; 5365: 00 00 10... ... :7140[4]
+    EQUB &F0, &E0, &C0, &C0, &F0, &E0, &C0, &80, 1  , 3  , 3  , &16   ; 5371: F0 E0 C0... ... :714C[4]
+    EQUB &52, 7  , &2D, &0F, &87, &4B, &0F, &0F, &0F, &0F, &87, &0F   ; 537D: 52 07 2D... R.- :7158[4]
+    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0B, &0A   ; 5389: 0F 0F 0F... ... :7164[4]
+    EQUB &0F, &0E, 7  , 4  , 8  , 0  , &30, 0  , &0A, 0  , &30, 0     ; 5395: 0F 0E 07... ... :7170[4]
+    EQUB &F0, 0  , &F0, 0  , &70, 0  , &F0, 0  , &F0, &10, &F0, &30   ; 53A1: F0 00 F0... ... :717C[4]
+    EQUB &F0, &30, &E1, &43, &86, &86, &0C, &0C, &87, &0C, 8  , 0     ; 53AD: F0 30 E1... .0. :7188[4]
+    EQUB 0  , 0  , &80, 0  , 0  , 0  , &10, &80, 0  , 1  , 1  , 1     ; 53B9: 00 00 80... ... :7194[4]
+    EQUB 0  , 0  , &80, &10, 0  , 0  , 0  , &0C, &1E, 3  , 1  , 0     ; 53C5: 00 00 80... ... :71A0[4]
+    EQUB 0  , 0  , &10, 0  , &F0, &C0, &78, &2C, &16, &16, 3  , 3     ; 53D1: 00 00 10... ... :71AC[4]
+    EQUB &E0, 0  , &F0, 0  , &F0, &80, &F0, &C0, 5  , 0  , &C0, 0     ; 53DD: E0 00 F0... ... :71B8[4]
+    EQUB &F0, 0  , &F0, 0  , &0F, 7  , &0E, 2  , 1  , 0  , &C0, 0     ; 53E9: F0 00 F0... ... :71C4[4]
+    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0D, 5  , &0F, &0F, &1E, &0F   ; 53F5: 0F 0F 0F... ... :71D0[4]
+    EQUB &0F, &0F, &0F, &0F, &A4, &0E, &4B, &0F, &1E, &2D, &0F, &0F   ; 5401: 0F 0F 0F... ... :71DC[4]
+    EQUB &F0, &70, &30, &10, 8  , &0C, &0C, &86, &E0, &F0, &F0, &F0   ; 540D: F0 70 30... .p0 :71E8[4]
+    EQUB &F0                                                          ; 5419: F0          .   :71F4[4]
+    EQUS "p00"                                                        ; 541A: 70 30 30    p00 :71F5[4]
+    EQUB 0  , 0  , &80, &C0, &E0, &F0, &F0, &F0, 0  , 0  , 0  , 0     ; 541D: 00 00 80... ... :71F8[4]
+    EQUB 0  , 0  , &80, &C0, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5429: 00 00 80... ... :7204[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10                  ; 5435: 00 00 00... ... :7210[4]
+    EQUS "     @@"                                                    ; 543E: 20 20 20...     :7219[4]
+    EQUB 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0               ; 5445: 00 00 00... ... :7220[4]
+    EQUS "@`  "                                                       ; 5455: 40 60 20... @`  :7230[4]
+    EQUB &10, &10, &10, 3  , 0  , &10, &10, &10, 0  , 1  , &0F, &0F   ; 5459: 10 10 10... ... :7234[4]
+    EQUB 1  , &E0, &F0, &F0, &F0, &F0, &F0, &F0, &0F, 3  , &C1, &E0   ; 5465: 01 E0 F0... ... :7240[4]
+    EQUB &F0, &F0, &F0, &F0, 0  , &0C, &0E, 7  , &83, &C1, &E1, &E0   ; 5471: F0 F0 F0... ... :724C[4]
+    EQUB 0  , 0  , 0  , 0  , &0F, &0F, &0F, &0F                       ; 547D: 00 00 00... ... :7258[4]
+    EQUS "     "                                                      ; 5485: 20 20 20...     :7260[4]
+    EQUB &0F, &0F, &0F, 0  , 0  , 0  , 0  , 0  , 0  , &0F, &0F, 0     ; 548A: 0F 0F 0F... ... :7265[4]
+    EQUB 0  , 0  , &10                                                ; 5496: 00 00 10    ... :7271[4]
+    EQUS "0px"                                                        ; 5499: 30 70 78    0px :7274[4]
+    EQUB &F0, &70, &70, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0   ; 549C: F0 70 70... .pp :7277[4]
+    EQUB &E0, &C0, &80, 0  , 0  , &80, 0  , 0  , 1  , 1  , 3  , 3     ; 54A8: E0 C0 80... ... :7283[4]
+    EQUB 7  , 7  , &3C, &0F, &4B, &0F, &4B, &87, &0F, &0F, &0F, &0F   ; 54B4: 07 07 3C... ..< :728F[4]
+    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0C, &0B, &0E, &0C, 4     ; 54C0: 0F 0F 0F... ... :729B[4]
+    EQUB &0C, &0E, 8  , &10, 0  , &70, 0  , &F0, 0  , &F0, 0  , &F0   ; 54CC: 0C 0E 08... ... :72A7[4]
+    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 54D8: 00 F0 00... ... :72B3[4]
+    EQUB 0  , &E1, &21, &C3, &43, &C2, &86, &84, &84, 8  , 0  , &40   ; 54E4: 00 E1 21... ..! :72BF[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 6  , 4  , 6  , 2  , 6  , 0     ; 54F0: 00 00 00... ... :72CB[4]
+    EQUB 0  , 1  , 1  , 0  , 0  , 0  , 0  , 0  , 0  , 4  , &0C, 0     ; 54FC: 00 01 01... ... :72D7[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 3  , 1  , 1  , 1  , 1  , 0     ; 5508: 00 00 00... ... :72E3[4]
+    EQUB 0  , 1  , 0  , &20, 0  , 0  , 0  , 0  , 0                    ; 5514: 00 01 00... ... :72EF[4]
+    EQUS "xH<,4"                                                      ; 551D: 78 48 3C... xH< :72F8[4]
+    EQUB &16, &12, &12, &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 5522: 16 12 12... ... :72FD[4]
+    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , 7  , 1  , &80, 0  , &E0   ; 552E: 00 F0 00... ... :7309[4]
+    EQUB 0  , &F0, 0  , &0F, &0F, 3  , &0D, 7  , 3  , 2  , 3  , &0F   ; 553A: 00 F0 00... ... :7315[4]
+    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0E, &C3, &0F, &2D, &0F   ; 5546: 0F 0F 0F... ... :7321[4]
+    EQUB &2D, &1E, &0F, &10, 0  , 0  , 8  , 8  , &0C, &0C, &0E, &F0   ; 5552: 2D 1E 0F... -.. :732D[4]
+    EQUB &F0                                                          ; 555E: F0          .   :7339[4]
+    EQUS "pp0"                                                        ; 555F: 70 70 30    pp0 :733A[4]
+    EQUB &10, 0  , 0  , &E0, &E0, &F0, &F0, &F0, &F0, &F0, &F0, 0     ; 5562: 10 00 00... ... :733D[4]
+    EQUB 0  , 0  , &80, &C0, &E0, &E1, &F0, 0  , 0  , 0  , 0  , 0     ; 556E: 00 00 80... ... :7349[4]
+    EQUB 0  , &0F, &0F                                                ; 557A: 00 0F 0F    ... :7355[4]
+    EQUS "@@@@@"                                                      ; 557D: 40 40 40... @@@ :7358[4]
+    EQUB &0F, &0F, &0F, 0  , 0  , 0  , 0  , &0F, &0F, &0F, &0F, 0     ; 5582: 0F 0F 0F... ... :735D[4]
+    EQUB 3  , 7  , &0E, &1C                                           ; 558E: 03 07 0E... ... :7369[4]
+    EQUS "8xp"                                                        ; 5592: 38 78 70    8xp :736D[4]
+    EQUB &0F, &0C, &38, &70, &F0, &F0, &F0, &F0, 8  , &70, &F0, &F0   ; 5595: 0F 0C 38... ..8 :7370[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 55A1: F0 F0 F0... ... :737C[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 55AD: F0 F0 F0... ... :7388[4]
+    EQUB &F0, &F0, &F0, &F0, &0F, 7  , &87, &87, &83, &C3, &C3, &C3   ; 55B9: F0 F0 F0... ... :7394[4]
+    EQUB &0F, &0F, &0F, &0F, &0F, &1E, &1E, &3C, &1E                  ; 55C5: 0F 0F 0F... ... :73A0[4]
+    EQUS "<<x"                                                        ; 55CE: 3C 3C 78    <<x :73A9[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0, &C0   ; 55D1: F0 F0 F0... ... :73AC[4]
+    EQUB &E0, &C0, &80, &80, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 55DD: E0 C0 80... ... :73B8[4]
+    EQUB 1  , 1  , 1  , 3  , &25, &16, &0F, &4B, &0F, &C3, &0F, &0F   ; 55E9: 01 01 01... ... :73C4[4]
+    EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0E, &0E, &0D, &0E, &0F, &0C   ; 55F5: 0F 0F 0F... ... :73D0[4]
+    EQUB &0E, 8  , &14, 8  , &10, 8  , &70, 0  , &F0, 0  , &F0, 0     ; 5601: 0E 08 14... ... :73DC[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 560D: F0 00 F0... ... :73E8[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, &10, &F0, &10, &F0, &30, &E1, &21   ; 5619: F0 00 F0... ... :73F4[4]
+    EQUB &94, &0C, 8  , 8  , 8  , 8  , 8  , 0  , 0  , 4  , 4  , 7     ; 5625: 94 0C 08... ... :7400[4]
+    EQUB 2  , 2  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5631: 02 02 00... ... :740C[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 563D: 00 00 00... ... :7418[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5649: 00 00 00... ... :7424[4]
+    EQUB 0  , 0  , 2  , 5  , 7  , 5  , 2  , 0  , &92, 3  , 1  , 1     ; 5655: 00 00 02... ... :7430[4]
+    EQUB 1  , 1  , 1  , 0  , &F0, &80, &F0, &80, &F0, &C0, &78, &48   ; 5661: 01 01 01... ... :743C[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 566D: F0 00 F0... ... :7448[4]
+    EQUB &F0, 0  , &F0, 0  , &80, 1  , &E0, 0  , &F0, 0  , &F0, 0     ; 5679: F0 00 F0... ... :7454[4]
+    EQUB &0B, 7  , &0F, 3  , 7  , 1  , &82, 1  , &0F, &0F, &0F, &0F   ; 5685: 0B 07 0F... ... :7460[4]
+    EQUB &0F, &0F, 7  , 7  , &4A, &86, &0F, &2D, &0F, &3C, &0F, &0F   ; 5691: 0F 0F 07... ... :746C[4]
+    EQUB 0  , 0  , 0  , 0  , 8  , 8  , 8  , &0C, &70, &30, &10, &10   ; 569D: 00 00 00... ... :7478[4]
+    EQUB 0  , 0  , 0  , 0  , &F0, &F0, &F0, &F0, &F0                  ; 56A9: 00 00 00... ... :7484[4]
+    EQUS "pp0"                                                        ; 56B2: 70 70 30    pp0 :748D[4]
+    EQUB &87, &C3, &C3, &E1, &F0, &F0, &F0, &F0, &0F, &0F, &0F, &0F   ; 56B5: 87 C3 C3... ... :7490[4]
+    EQUB &0F, &87, &87, &C3, &0F, &0E, &1E, &1E, &1C                  ; 56C1: 0F 87 87... ... :749C[4]
+    EQUS "<<<"                                                        ; 56CA: 3C 3C 3C    <<< :74A5[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 56CD: F0 F0 F0... ... :74A8[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 56D9: F0 F0 F0... ... :74B4[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 56E5: F0 F0 F0... ... :74C0[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E1, &E0, &C0   ; 56F1: F0 F0 F0... ... :74CC[4]
+    EQUB &87, &87, &84, &1C                                           ; 56FD: 87 87 84... ... :74D8[4]
+    EQUS "80p"                                                        ; 5701: 38 30 70    80p :74DC[4]
+    EQUB &F0, &78, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 5704: F0 78 F0... .x. :74DF[4]
+    EQUB &E0, &E0, &C0, &C0, &80, &80, &80, 0  , 0  , 0  , 0  , 0     ; 5710: E0 E0 C0... ... :74EB[4]
+    EQUB 0  , 0  , 0  , &22, 0  , 0  , 0  , &22, 0  , &12, &8B, 7     ; 571C: 00 00 00... ... :74F7[4]
+    EQUB &AD, &0F, &4B, &0F, &2D, &0F, &0F, &87, &0F, &0F, &0F, &0F   ; 5728: AD 0F 4B... ..K :7503[4]
+    EQUB &0F, &0F, &0F, &0E, &0F, 8  , &0E, 8  , &0C, &30, 0  , &70   ; 5734: 0F 0F 0F... ... :750F[4]
+    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 5740: 00 F0 00... ... :751B[4]
+    EQUB 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0   ; 574C: 00 F0 00... ... :7527[4]
+    EQUB 0  , &F0, 0  , &F0, 0  , &E1, &21, &E1, &21, &E1, &21, &E1   ; 5758: 00 F0 00... ... :7533[4]
+    EQUB &21, &40, 0  , 0  , 0  , 0  , 1  , &40, &41, 0  , 0  , 0     ; 5764: 21 40 00... !@. :753F[4]
+    EQUB 0  , 0  , 8  , 8  , 8  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5770: 00 00 08... ... :754B[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10, &10, 0  , 0  , 0     ; 577C: 00 00 00... ... :7557[4]
+    EQUB 0  , 0  , 0  , &80, &80, 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 5788: 00 00 00... ... :7563[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 3  , 2  , 3  , &20, 0  , 0     ; 5794: 00 00 00... ... :756F[4]
+    EQUB 0  , 0  , 8                                                  ; 57A0: 00 00 08    ... :757B[4]
+    EQUS "((xHxHxHxH"                                                 ; 57A3: 28 28 78... ((x :757E[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 57AD: F0 00 F0... ... :7588[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 57B9: F0 00 F0... ... :7594[4]
+    EQUB &C0, 0  , &E0, 0  , &F0, 0  , &F0, 0  , &0F, &0F, 7  , &0F   ; 57C5: C0 00 E0... ... :75A0[4]
+    EQUB 1  , 7  , 1  , 3  , &0F, &0F, &1E, &0F, &0F, &0F, &0F, &0F   ; 57D1: 01 07 01... ... :75AC[4]
+    EQUB &84, &1D, &0E, &5B, &0F, &2D, &0F, &4B, 0  , 0  , &44, 0     ; 57DD: 84 1D 0E... ... :75B8[4]
+    EQUB 0  , 0  , &44, 0  , &10, &10, 0  , 0  , 0  , 0  , 0  , 0     ; 57E9: 00 00 44... ..D :75C4[4]
+    EQUB &F0, &F0, &F0                                                ; 57F5: F0 F0 F0    ... :75D0[4]
+    EQUS "pp00"                                                       ; 57F8: 70 70 30... pp0 :75D3[4]
+    EQUB &10, &E1, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &1E, &1E, &12   ; 57FC: 10 E1 F0... ... :75D7[4]
+    EQUB &83, &C1, &C0, &E0, &F0, &F0, &F0, &F0, &F0, &F0             ; 5808: 83 C1 C0... ... :75E3[4]
+    EQUS "xp0"                                                        ; 5812: 78 70 30    xp0 :75ED[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 5815: F0 F0 F0... ... :75F0[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, 0  , 0  , 0  , 0     ; 5821: F0 F0 F0... ... :75FC[4]
+    EQUB &F0, &E0, &C0, 0  , 0  , 0  , 0  , &10, &80, &10             ; 582D: F0 E0 C0... ... :7608[4]
+    EQUS "00p"                                                        ; 5837: 30 30 70    00p :7612[4]
+    EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 583A: F0 F0 F0... ... :7615[4]
+    EQUB &F0, &E0, &E0, &C0, &80, &80, 0  , 0  , 0  , 0  , &22, &88   ; 5846: F0 E0 E0... ... :7621[4]
+    EQUB 0  , &11, 0  , 0  , &11, &88, &44, &88, &22, &11, &44, &89   ; 5852: 00 11 00... ... :762D[4]
+    EQUB 1  , &89, 3  , 3  , &47, &9A, 7  , &87, &0F, &0F, &C3, &0F   ; 585E: 01 89 03... ... :7639[4]
+    EQUB &0F, &0F, &0F, &0F, &0E, &0D, &0F, &0F, &0D, &0E, &0C, &18   ; 586A: 0F 0F 0F... ... :7645[4]
+    EQUB 0  , &38, 0  , &70, 0  , &70, 0  , &F0, 0  , &F0, 0  , &F0   ; 5876: 00 38 00... .8. :7651[4]
+    EQUB 0  , &F0, &61, &F0, 0  , &F0, 0  , &F0, 0  , &F0, &0F, &F0   ; 5882: 00 F0 61... ..a :765D[4]
+    EQUB 0  , &F0, 0  , &F0, 0  , &F0, &3C, &F0, 0  , &F0, 0  , &F0   ; 588E: 00 F0 00... ... :7669[4]
+    EQUB 0  , &F0, 0  , &E1, &21, &E1, &21, &E1, &21, &E1, &21, 0     ; 589A: 00 F0 00... ... :7675[4]
+    EQUB 1  , 0  , 0  , 0  , &40, 0  , 8  , 8  , 8  , 0  , 0  , 0     ; 58A6: 01 00 00... ... :7681[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 58B2: 00 00 00... ... :768D[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 58BE: 00 00 00... ... :7699[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 1  , 0     ; 58CA: 00 00 00... ... :76A5[4]
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 2  , 8  , 8  , 0  , 0  , 0     ; 58D6: 00 00 00... ... :76B1[4]
+    EQUB &20, 0  , 1                                                  ; 58E2: 20 00 01     .. :76BD[4]
+    EQUS "xHxHxHxH"                                                   ; 58E5: 78 48 78... xHx :76C0[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0  , &F0, 0     ; 58ED: F0 00 F0... ... :76C8[4]
+    EQUB &F0, 0  , &F0, &C3, &F0, 0  , &F0, 0  , &F0, 0  , &F0, &0F   ; 58F9: F0 00 F0... ... :76D4[4]
+    EQUB &F0, 0  , &F0, 0  , &F0, 0  , &F0, &68, &81, 0  , &C1, 0     ; 5905: F0 00 F0... ... :76E0[4]
+    EQUB &E0, 0  , &E0, 0  , &0F, 7  , &0B, &0F, &0F, &0B, 7  , 3     ; 5911: E0 00 E0... ... :76EC[4]
+    EQUB &1E, &0F, &0F, &3C, &0F, &0F, &0F, &0F, &19, 8  , &19, &0C   ; 591D: 1E 0F 0F... ... :76F8[4]
+    EQUB &0C, &2E, &95, &0E, 0  , &88, &11, &22, &11, &44, &88, &22   ; 5929: 0C 2E 95... ... :7704[4]
+    EQUB 0  , 0  , 0  , &44, &11, 0  , &88, 0  , &F0, &F0             ; 5935: 00 00 00... ... :7710[4]
+    EQUS "pp0"                                                        ; 593F: 70 70 30    pp0 :771A[4]
+    EQUB &10, &10, 0  , &F0, &F0, &F0, &F0, &F0                       ; 5942: 10 10 00... ... :771D[4]
+    ORG trackData + (L7725 - L70DB)
+    COPYBLOCK L70DB, L7725, trackData
+    CLEAR L70DB, L7725
+
+    EQUB &F0, &F0, &F0, &10, &80, &C0, &C0, &E0, &F0, &F0, &F0, &F0   ; 594A: F0 F0 F0... ...
+    EQUB &70, &30, 0  , 0  , 0  , 0  , &80, &F0, &F0, &F0, &70, 0     ; 5956: 70 30 00... p0.
+    EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , &10, &30, &70, &F0        ; 5962: 00 00 00... ...
     EQUS "00p"                                                        ; 596D: 30 30 70    00p
     EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0   ; 5970: F0 F0 F0... ...
     EQUB &E0, &F0, &E0, &C0, &C0, &80, &80, 0  , 0  , 0  , 0  , &22   ; 597C: E0 F0 E0... ...
@@ -2432,17 +2755,21 @@ L7979 = C7978+1
     EQUS "v8n"                                                        ; 5E1C: 76 38 6E    v8n
     EQUB &F8, &62, &A2, &13, &20, &7C, &14, &CA, &10, &FA, &AD, &D0   ; 5E1F: F8 62 A2... .b.
     EQUB 8  , &0D, &E8, 8  , &D0, &F0, &A9, &FF, &85, &78, &D0, &18   ; 5E2B: 08 0D E8... ...
-    EQUB &A5, &76, &85, &77, &8A, &48, &BD, &3C, 1  , &AA, &20, &C3   ; 5E37: A5 76 85... .v.
-    EQUB &14, &68, &AA, &C6, &77, &10, &F1, &E8, &E0, &14, &90, &E8   ; 5E43: 14 68 AA... .h.
-    EQUB &E6, &78, &A6, &78, &E0, &14, &90, &E0, &A2, &17, &20, &7C   ; 5E4F: E6 78 A6... .x.
-    EQUB &14, &A0, &17, &A6                                           ; 5E5B: 14 A0 17... ...
+    EQUB &A5, &76, &85, &77, &8A, &48, &BD, &3C, 1                    ; 5E37: A5 76 85... .v.
+; &5E40 referenced 2 times by &0BA7, &0BAE
+.L5E40
+    EQUB &AA, &20, &C3, &14, &68, &AA, &C6, &77, &10, &F1, &E8, &E0   ; 5E40: AA 20 C3... . .
+    EQUB &14, &90, &E8, &E6, &78, &A6, &78, &E0, &14, &90, &E0, &A2   ; 5E4C: 14 90 E8... ...
+    EQUB &17, &20, &7C, &14, &A0, &17, &A6                            ; 5E58: 17 20 7C... . |
     EQUS "o8 "                                                        ; 5E5F: 6F 38 20    o8
     EQUB &AB, &27, &B0, &F1, &C9, &20, &D0, &ED, &A2, &17, &A9, &31   ; 5E62: AB 27 B0... .'.
     EQUB &85, &76, &85, &42, &20, &C3, &14, &C6, &76, &D0, &F9, &E6   ; 5E6E: 85 76 85... .v.
     EQUB &42, &20, &C3, &14, &90, &F9, &A9, &50, &A0, &13, &BE, &3C   ; 5E7A: 42 20 C3... B .
-    EQUB 1  , &49, &FF, &9D, &78, 1  , &88, &10, &F5, &A9, 0  , &85   ; 5E86: 01 49 FF... .I.
-    EQUB &24, &20, &F7, &12, &C6, &42, &D0, &F9, &4E, &F8, &62, &60   ; 5E92: 24 20 F7... $ .
-    EQUB &A5, &11, &C9, 2  , &90, &3E, &A5                            ; 5E9E: A5 11 C9... ...
+    EQUB 1  , &49, &FF, &9D, &78, 1  , &88, &10, &F5, &A9             ; 5E86: 01 49 FF... .I.
+; &5E90 referenced 2 times by &0BB1, &0BB7
+.L5E90
+    EQUB 0  , &85, &24, &20, &F7, &12, &C6, &42, &D0, &F9, &4E, &F8   ; 5E90: 00 85 24... ..$
+    EQUB &62, &60, &A5, &11, &C9, 2  , &90, &3E, &A5                  ; 5E9C: 62 60 A5... b`.
     EQUS "^ P4"                                                       ; 5EA5: 5E 20 50... ^ P
     EQUB &C9, &60, &B0, &0B, &A9, &14, &2C, &E2                       ; 5EA9: C9 60 B0... .`.
     EQUS "b P4L"                                                      ; 5EB1: 62 20 50... b P
@@ -2450,19 +2777,29 @@ L7979 = C7978+1
     EQUS " \= "                                                       ; 5EBD: 20 5C 3D...  \=
     EQUB &F6, &43, &A9, 4  , &20, &47, &0B, &A9, 0  , &A2, &1E, &9D   ; 5EC1: F6 43 A9... .C.
     EQUB &D0, &62, &CA, &10, &FA, &85, &61, &85, &26, &85, &60, &85   ; 5ECD: D0 62 CA... .b.
-    EQUB &5F, &A9, &7F, &85, &2D, &A9, &1F, &85, 9  , &60, &A9, 0     ; 5ED9: 5F A9 7F... _..
-    EQUB &85, 0  , &85, &6D, &20, &1F, &26, &A6, &6F, &20, &BE, &11   ; 5EE5: 85 00 85... ...
+    EQUB &5F, &A9, &7F, &85, &2D, &A9, &1F                            ; 5ED9: 5F A9 7F... _..
+; &5EE0 referenced 1 time by &0BA4
+.L5EE0
+    EQUB &85, 9  , &60, &A9, 0  , &85, 0  , &85, &6D, &20, &1F, &26   ; 5EE0: 85 09 60... ..`
+    EQUB &A6, &6F, &20, &BE, &11                                      ; 5EEC: A6 6F 20... .o
     EQUS " RP"                                                        ; 5EF1: 20 52 50     RP
     EQUB &A0, 0  , &20, &E5, &0E, &AD, &F4, 5                         ; 5EF4: A0 00 20... ..
     EQUS "0, "                                                        ; 5EFC: 30 2C 20    0,
     EQUB &ED, &27, &20, &92, &26, &20, &A2, &63, &A2, &13, &A5, &6C   ; 5EFF: ED 27 20... .'
     EQUB &30, &0C, &E4, &6F, &D0, &19, &AD, &DF, &62, &C9, &0E, &90   ; 5F0B: 30 0C E4... 0..
-    EQUB &D9, &60, &BD, &8C, 1  , &29, &40, &D0, 7  , &A5, &6E, &DD   ; 5F17: D9 60 BD... .`.
-    EQUB &B4, 4  , &B0, &CA, &CA, &10, &EF, &60, &E0, &14, &B0, &1E   ; 5F23: B4 04 B0... ...
-    EQUB &BD, &78, 1  , &29, &7F, 9  , &45, &9D, &14, 1  , &A9, &91   ; 5F2F: BD 78 01... .x.
-    EQUB &9D, 0  , 1  , &A5, &6E, &DD, &B4, 4  , &A9, &C0, &9D, &8C   ; 5F3B: 9D 00 01... ...
-    EQUB 1  , &90, 3  , &9D, &DC, 4  , &60, &A6, &6F, &86, &45, &86   ; 5F47: 01 90 03... ...
-    EQUB &42, &A4                                                     ; 5F53: 42 A4       B.
+    EQUB &D9, &60, &BD, &8C, 1  , &29, &40, &D0, 7                    ; 5F17: D9 60 BD... .`.
+; &5F20 referenced 2 times by &0BBA, &0BC0
+.L5F20
+    EQUB &A5, &6E, &DD, &B4, 4  , &B0, &CA, &CA, &10, &EF, &60, &E0   ; 5F20: A5 6E DD... .n.
+    EQUB &14, &B0, &1E, &BD, &78, 1  , &29, &7F, 9  , &45, &9D, &14   ; 5F2C: 14 B0 1E... ...
+    EQUB 1  , &A9, &91, &9D, 0                                        ; 5F38: 01 A9 91... ...
+; &5F3D referenced 2 times by &0B79, &0B96
+.L5F3D
+    EQUB 1                                                            ; 5F3D: 01          .
+; &5F3E referenced 2 times by &0B8F, &0B93
+.L5F3E
+    EQUB &A5, &6E, &DD, &B4, 4  , &A9, &C0, &9D, &8C, 1  , &90, 3     ; 5F3E: A5 6E DD... .n.
+    EQUB &9D, &DC, 4  , &60, &A6, &6F, &86, &45, &86, &42, &A4        ; 5F4A: 9D DC 04... ...
     EQUS '"', " 7)"                                                   ; 5F55: 22 20 37... " 7
     EQUB &A2, 2  , &BD, &FD, 9  , &9D, &80, &62, &BD, &FD, &0A, &9D   ; 5F59: A2 02 BD... ...
     EQUB &83, &62, &CA, &10, &F1, &A5, &22, &18, &69, 3  , &C9, &78   ; 5F65: 83 62 CA... .b.
@@ -2547,9 +2884,14 @@ L7979 = C7978+1
     EQUB 8  , &28, &60, &AC, &FF, 6  , &98                            ; 628B: 08 28 60... .(`
     EQUS "JJJ"                                                        ; 6292: 4A 4A 4A    JJJ
     EQUB &AA, &A5, &17, &D0, &3D, &A5, 1  , &4A, &B0, &0F, &AD, &97   ; 6295: AA A5 17... ...
-    EQUB 8  , &D9, 5  , &53, &B0, &0B, &BD, &B0, &5F, 9  , &40, &D0   ; 62A1: 08 D9 05... ...
-    EQUB &45, &A5, &20, &30, 6  , &98, &18, &69, 8  , &A8, &E8, &B9   ; 62AD: 45 A5 20... E.
-    EQUB 0  , &59, &29, 1  , &F0, &E8, &B9, 5  , &53, &85             ; 62B9: 00 59 29... .Y)
+    EQUB 8  , &D9, 5  , &53, &B0, &0B, &BD                            ; 62A1: 08 D9 05... ...
+; &62A8 referenced 1 time by &0B89
+.L62A8
+    EQUB &B0, &5F, 9  , &40, &D0, &45, &A5, &20, &30, 6  , &98, &18   ; 62A8: B0 5F 09... ._.
+    EQUB &69, 8  , &A8, &E8, &B9, 0  , &59, &29, 1                    ; 62B4: 69 08 A8... i..
+; &62BD referenced 1 time by &0B60
+.L62BD
+    EQUB &F0, &E8, &B9, 5  , &53, &85                                 ; 62BD: F0 E8 B9... ...
 ; &62C3 referenced 5 times by &508C, &50B0, &50C0, &50D1, &50F2
 .L62C3
     EQUB &17, &F0, &E1, &B9, 7  , &53, &85, &20, &29                  ; 62C3: 17 F0 E1... ...
@@ -2558,13 +2900,21 @@ L7979 = C7978+1
     EQUB &7F                                                          ; 62CC: 7F          .
 ; &62CD referenced 2 times by &42D9, &50C6
 .L62CD
-    EQUB &85, &18, &BD, &B0, &5F, &85, &16, &4C, &73, &15, &C6, &17   ; 62CD: 85 18 BD... ...
-    EQUB &A5, &17                                                     ; 62D9: A5 17       ..
+    EQUB &85, &18, &BD, &B0, &5F                                      ; 62CD: 85 18 BD... ...
+; &62D2 referenced 1 time by &0BAB
+.L62D2
+    EQUB &85, &16, &4C, &73, &15, &C6, &17, &A5, &17                  ; 62D2: 85 16 4C... ..L
     EQUS "JJJ"                                                        ; 62DB: 4A 4A 4A    JJJ
-    EQUB &85, &74, &A5, &17, &38, &E5, &18, &B0, 6  , &65, &74, &A9   ; 62DE: 85 74 A5... .t.
-    EQUB 0  , &B0, 6  , &A5, &16, &B0, 2  , &49, &80, &A4, &24, &99   ; 62EA: 00 B0 06... ...
-    EQUB 1  , 7  , &60, &A9, 0  , &85, &76, &85, &74, &85, &58, &A2   ; 62F6: 01 07 60... ..`
-    EQUB &9D, &20, &50, &0E, 8  , &2C, &F5, 5  , &10, &27, &A2, 1     ; 6302: 9D 20 50... . P
+    EQUB &85, &74, &A5, &17                                           ; 62DE: 85 74 A5... .t.
+; &62E2 referenced 1 time by &0BB4
+.L62E2
+    EQUB &38, &E5, &18, &B0, 6  , &65, &74, &A9, 0  , &B0, 6  , &A5   ; 62E2: 38 E5 18... 8..
+    EQUB &16, &B0, 2                                                  ; 62EE: 16 B0 02    ...
+; &62F1 referenced 1 time by &0B9C
+.L62F1
+    EQUB &49, &80, &A4, &24, &99, 1  , 7  , &60, &A9, 0  , &85, &76   ; 62F1: 49 80 A4... I..
+    EQUB &85, &74, &85, &58, &A2, &9D, &20, &50, &0E, 8  , &2C, &F5   ; 62FD: 85 74 85... .t.
+    EQUB 5  , &10, &27, &A2, 1                                        ; 6309: 05 10 27... ..'
     EQUS " ?P"                                                        ; 630E: 20 3F 50     ?P
     EQUB &85, &75, &20, 0  , &0C, &28, &F0, 6                         ; 6311: 85 75 20... .u
     EQUS "JftJft"                                                     ; 6319: 4A 66 74... Jft
@@ -3015,86 +3365,178 @@ L7979 = C7978+1
     EQUB 0  , 0  , 0  , 0  , 0  , 0  , &80, &80, 0  , 0  , 0  , 0     ; 6FE0: 00 00 00... ...
     EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0     ; 6FEC: 00 00 00... ...
     EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0                         ; 6FF8: 00 00 00... ...
+COPYBLOCK &7900, &790E, &1200
 .pydis_end
 
 ; Label references by decreasing frequency:
-;     L0070:       14
-;     L0071:       10
-;     L0072:        6
-;     L0073:        5
-;     L62C3:        5
-;     L0077:        4
-;     L0E50:        4
-;     osbyte:       4
-;     L0019:        3
-;     L0040:        3
-;     L0074:        3
-;     C1278:        3
-;     L62CC:        3
-;     C63F8:        3
-;     C6401:        3
-;     C6437:        3
-;     L003E:        2
-;     L003F:        2
-;     L05F5:        2
-;     C1230:        2
-;     C1264:        2
-;     sub_C508C:    2
-;     L62CD:        2
-;     C643B:        2
-;     C6456:        2
-;     C645B:        2
-;     L7800:        2
-;     L003C:        1
-;     L0058:        1
-;     Start:        1
-;     loop_C1202:   1
-;     C120E:        1
-;     C1247:        1
-;     C1253:        1
-;     C125D:        1
-;     C1260:        1
-;     L1279:        1
-;     C1282:        1
-;     C1288:        1
-;     C12AA:        1
-;     L12AD:        1
-;     L12AE:        1
-;     L12AF:        1
-;     L12B4:        1
-;     L12B9:        1
-;     L12BE:        1
-;     L12C3:        1
-;     L12C8:        1
-;     L3779:        1
-;     L3B06:        1
-;     L3FE0:        1
-;     sub_C42D0:    1
-;     sub_C503F:    1
-;     C504F:        1
-;     C509D:        1
-;     loop_C50B0:   1
-;     C50BC:        1
-;     C50C0:        1
-;     C50C6:        1
-;     loop_C50D1:   1
-;     C50E8:        1
-;     sub_C50FA:    1
-;     C63BD:        1
-;     C63D8:        1
-;     C63DE:        1
-;     C63E7:        1
-;     C63EB:        1
-;     C63F4:        1
-;     C6423:        1
-;     C6431:        1
-;     C643D:        1
-;     C6454:        1
-;     L7900:        1
-;     osword:       1
-;     LFFFC:        1
+;     L0074:          28
+;     L0076:          16
+;     P:              14
+;     L0075:          12
+;     Q:              10
+;     R:               6
+;     L0079:           6
+;     S:               5
+;     L62C3:           5
+;     L0077:           4
+;     L007C:           4
+;     L007D:           4
+;     L0E50:           4
+;     osbyte:          4
+;     L0019:           3
+;     L0040:           3
+;     L0078:           3
+;     L007A:           3
+;     L007B:           3
+;     C1278:           3
+;     L1346:           3
+;     L62CC:           3
+;     C63F8:           3
+;     C6401:           3
+;     C6437:           3
+;     L001F:           2
+;     L003E:           2
+;     L003F:           2
+;     L05F5:           2
+;     L0900:           2
+;     L0901:           2
+;     L0902:           2
+;     L0A00:           2
+;     L0A01:           2
+;     L0A02:           2
+;     C1230:           2
+;     C1264:           2
+;     sub_C508C:       2
+;     L5E40:           2
+;     L5E90:           2
+;     L5F20:           2
+;     L5F3D:           2
+;     L5F3E:           2
+;     L62CD:           2
+;     C643B:           2
+;     C6456:           2
+;     C645B:           2
+;     trackChecksum:   2
+;     osword:          2
+;     L003C:           1
+;     L004E:           1
+;     L0051:           1
+;     L0058:           1
+;     L007E:           1
+;     L0083:           1
+;     L0084:           1
+;     L0085:           1
+;     L05FE:           1
+;     Entry:           1
+;     entr1:           1
+;     C120E:           1
+;     C1247:           1
+;     C1253:           1
+;     C125D:           1
+;     C1260:           1
+;     L1279:           1
+;     C1282:           1
+;     C1288:           1
+;     C12AA:           1
+;     C12AD:           1
+;     L12AE:           1
+;     L12AF:           1
+;     L12B4:           1
+;     L12B9:           1
+;     L12BE:           1
+;     L12C3:           1
+;     L12C8:           1
+;     L1300:           1
+;     L1302:           1
+;     C136E:           1
+;     C1379:           1
+;     L13A0:           1
+;     C13CB:           1
+;     sub_C1400:       1
+;     C140B:           1
+;     C1413:           1
+;     C141B:           1
+;     C1423:           1
+;     C142B:           1
+;     C1433:           1
+;     C143B:           1
+;     C1443:           1
+;     C1450:           1
+;     C1453:           1
+;     C145C:           1
+;     C145F:           1
+;     C1468:           1
+;     C146B:           1
+;     C1474:           1
+;     C1477:           1
+;     C1480:           1
+;     C1483:           1
+;     C148C:           1
+;     C148F:           1
+;     C1498:           1
+;     C149B:           1
+;     C14A2:           1
+;     C14C2:           1
+;     L3779:           1
+;     L3B06:           1
+;     L3FE0:           1
+;     sub_C42D0:       1
+;     sub_C503F:       1
+;     C504F:           1
+;     C509D:           1
+;     loop_C50B0:      1
+;     C50BC:           1
+;     C50C0:           1
+;     C50C6:           1
+;     loop_C50D1:      1
+;     C50E8:           1
+;     sub_C50FA:       1
+;     L5EE0:           1
+;     L62A8:           1
+;     L62BD:           1
+;     L62D2:           1
+;     L62E2:           1
+;     L62F1:           1
+;     C63BD:           1
+;     C63D8:           1
+;     C63DE:           1
+;     C63E7:           1
+;     C63EB:           1
+;     C63F4:           1
+;     C6423:           1
+;     C6431:           1
+;     C643D:           1
+;     C6454:           1
+;     L7900:           1
+;     LFFFC:           1
 
 ; Automatically generated labels:
+;     C0B6E
+;     C0BCB
+;     C0C0B
+;     C0C13
+;     C0C1B
+;     C0C23
+;     C0C2B
+;     C0C33
+;     C0C3B
+;     C0C43
+;     C0C50
+;     C0C53
+;     C0C5C
+;     C0C5F
+;     C0C68
+;     C0C6B
+;     C0C74
+;     C0C77
+;     C0C80
+;     C0C83
+;     C0C8C
+;     C0C8F
+;     C0C98
+;     C0C9B
+;     C0CA2
+;     C0CC2
 ;     C120E
 ;     C1230
 ;     C1247
@@ -3106,6 +3548,34 @@ L7979 = C7978+1
 ;     C1282
 ;     C1288
 ;     C12AA
+;     C12AD
+;     C136E
+;     C1379
+;     C13CB
+;     C140B
+;     C1413
+;     C141B
+;     C1423
+;     C142B
+;     C1433
+;     C143B
+;     C1443
+;     C1450
+;     C1453
+;     C145C
+;     C145F
+;     C1468
+;     C146B
+;     C1474
+;     C1477
+;     C1480
+;     C1483
+;     C148C
+;     C148F
+;     C1498
+;     C149B
+;     C14A2
+;     C14C2
 ;     C504F
 ;     C509D
 ;     C50BC
@@ -3128,32 +3598,43 @@ L7979 = C7978+1
 ;     C6454
 ;     C6456
 ;     C645B
-;     C790E
-;     C7930
-;     C7947
-;     C795D
-;     C7960
-;     C7964
-;     C7978
-;     C7982
-;     C7988
-;     C79AA
 ;     L0019
+;     L001F
 ;     L003C
 ;     L003E
 ;     L003F
 ;     L0040
+;     L004E
+;     L0051
 ;     L0058
-;     L0070
-;     L0071
-;     L0072
-;     L0073
 ;     L0074
+;     L0075
+;     L0076
 ;     L0077
+;     L0078
+;     L0079
+;     L007A
+;     L007B
+;     L007C
+;     L007D
+;     L007E
+;     L0083
+;     L0084
+;     L0085
 ;     L05F5
+;     L05FE
+;     L0900
+;     L0901
+;     L0902
+;     L0A00
+;     L0A01
+;     L0A02
+;     L0B02
+;     L0B46
+;     L0BA0
+;     L0D00
 ;     L0E50
 ;     L1279
-;     L12AD
 ;     L12AE
 ;     L12AF
 ;     L12B4
@@ -3161,29 +3642,40 @@ L7979 = C7978+1
 ;     L12BE
 ;     L12C3
 ;     L12C8
+;     L1300
+;     L1302
+;     L1346
+;     L13A0
+;     L1500
 ;     L3779
 ;     L3B06
 ;     L3FE0
+;     L5E40
+;     L5E90
+;     L5EE0
+;     L5F20
+;     L5F3D
+;     L5F3E
+;     L62A8
+;     L62BD
 ;     L62C3
 ;     L62CC
 ;     L62CD
-;     L7800
+;     L62D2
+;     L62E2
+;     L62F1
+;     L70DB
+;     L7725
 ;     L7900
 ;     L7979
-;     L79AD
 ;     L79AE
-;     L79AF
-;     L79B4
-;     L79B9
-;     L79BE
-;     L79C3
-;     L79C8
 ;     L79FF
 ;     LFFFC
-;     loop_C1202
+;     loop_C0B79
 ;     loop_C50B0
 ;     loop_C50D1
-;     loop_C7953
+;     sub_C0C00
+;     sub_C1400
 ;     sub_C42D0
 ;     sub_C503F
 ;     sub_C508C
@@ -3193,6 +3685,7 @@ L7979 = C7978+1
     ASSERT osbyte_read_adc_or_get_buffer_status == &80
     ASSERT osbyte_read_write_escape_break_effect == &C8
     ASSERT osbyte_tape == &8C
+    ASSERT osword_envelope == &08
     ASSERT osword_read_char == &0A
 
 SAVE "3-assembled-output/Revs.bin", pydis_start, pydis_end
