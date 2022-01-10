@@ -33,17 +33,9 @@ GUARD &7C00             \ Guard against assembling over screen memory
 
 LOAD% = &1200           \ The load address of the main code binary
 
+LOAD_END% = &7000       \ The address of the end of the main code binary
+
 CODE% = &0B00           \ The address of the main game code
-
-\ ******************************************************************************
-\
-\ REVS MAIN GAME CODE
-\
-\ Produces the binary file Revs.bin that contains the main game code.
-\
-\ ******************************************************************************
-
-ORG CODE%
 
 osword_envelope = &08
 osbyte_inkey = &81
@@ -57,6 +49,39 @@ osbyte_select_input_stream = &02
 osbyte_acknowledge_escape = &7E
 osbyte_read_write_escape_break_effect = &C8
 osbyte_tape = &8C
+
+crtc_horz_total = &FE00
+crtc_horz_displayed = &FE01
+video_ula_control = &FE20
+video_ula_palette = &FE21
+system_via_t1c_h = &FE45
+system_via_t1l_l = &FE46
+system_via_t1l_h = &FE47
+system_via_acr = &FE4B
+system_via_ifr = &FE4D
+system_via_ier = &FE4E
+user_via_t1c_l = &FE64
+user_via_t1c_h = &FE65
+user_via_t1l_l = &FE66
+user_via_t1l_h = &FE67
+user_via_t2c_l = &FE68
+user_via_t2c_h = &FE69
+user_via_acr = &FE6B
+user_via_ifr = &FE6D
+user_via_ier = &FE6E
+osrdch = &FFE0
+oswrch = &FFEE
+osword = &FFF1
+osbyte = &FFF4
+LFFFC = &FFFC
+
+\ ******************************************************************************
+\
+\ REVS MAIN GAME CODE
+\
+\ Produces the binary file Revs.bin that contains the main game code.
+\
+\ ******************************************************************************
 
 L0000 = &0000
 L0001 = &0001
@@ -320,30 +345,161 @@ L7BE2 = &7BE2
 L7C79 = &7C79
 L7E85 = &7E85
 L7FC5 = &7FC5
-crtc_horz_total = &FE00
-crtc_horz_displayed = &FE01
-video_ula_control = &FE20
-video_ula_palette = &FE21
-system_via_t1c_h = &FE45
-system_via_t1l_l = &FE46
-system_via_t1l_h = &FE47
-system_via_acr = &FE4B
-system_via_ifr = &FE4D
-system_via_ier = &FE4E
-user_via_t1c_l = &FE64
-user_via_t1c_h = &FE65
-user_via_t1l_l = &FE66
-user_via_t1l_h = &FE67
-user_via_t2c_l = &FE68
-user_via_t2c_h = &FE69
-user_via_acr = &FE6B
-user_via_ifr = &FE6D
-user_via_ier = &FE6E
-osrdch = &FFE0
-oswrch = &FFEE
-osword = &FFF1
-osbyte = &FFF4
-LFFFC = &FFFC
+
+
+ORG &1200
+
+; Move block from &1200-&12FF to &7900-&79FF and jump to &790E
+.Entry
+    LDY #0
+.entr1
+    LDA &1200,Y
+    STA &7900,Y
+    INY
+    BNE entr1
+    JMP SwapCode
+
+COPYBLOCK &1200, &120E, &7900
+CLEAR &1200, &120E
+
+ORG &790E
+
+; Disable the ESCAPE key and clear memory if the BREAK key is pressed
+.SwapCode
+    LDA #osbyte_read_write_escape_break_effect
+    LDX #3
+    LDY #0
+    JSR osbyte
+; *TAPE
+    LDA #osbyte_tape
+    LDX #0
+    JSR osbyte
+; Set (Q P) = &5300 = trackData, destintion address for track data
+    LDA #0
+    STA P
+    LDA #&53 ; 'S'
+    STA Q
+; Set (S R) = &70DB, source address of track data
+    LDA #&DB
+    STA R
+    LDA #&70 ; 'p'
+    STA S
+; Swap memory between &70DB-&7724 to &5300-&5949 and decrement
+; checksum bytes in &7800-&7803
+    LDY #0
+; Swap Y-th byte of (Q P) and (S R)
+.swap1
+    LDA (R),Y
+    PHA
+    LDA (P),Y
+    STA (R),Y
+    PLA
+    STA (P),Y
+; Decrement the relevant checksum byte at &7800-&7803
+    AND #3
+    TAX
+    DEC trackChecksum,X
+; Increment loop counter
+    INY
+; Increment high bytes to move on to next page
+    BNE swap2
+    INC Q
+    INC S
+; If we have not yet reached &7725, jump back to swap1 to keep going
+.swap2
+    CPY #&25 ; '%'
+    BNE swap1
+    LDA S
+    CMP #&77 ; 'w'
+    BNE swap1
+; Now check that all three checksum bytes in &7800-&7803 are zero
+    LDX #3
+.swap3
+    LDA trackChecksum,X
+; If a checksum byte is non-zero, jump to swap4 to reset the machine
+    BNE swap4
+    DEX
+; Loop back to check the next checksum byte
+    BPL swap3
+; All checksum bytes are zero, so jump to swap4 to keep going
+    BMI MoveCode
+; Reset the machine
+.swap4
+    JMP (LFFFC)
+
+; Move block (blockStartHi blockStartLo) - (blockEndHi blockEndLo)-1
+; to (blockToHi blockToLo)
+;   * Move &1500-&15DA to &7000-&70DA
+;   * Move &1300-&14FF to &0B00-&0CFF
+;   * Move &5A80-&645B to &0D00-&16DB
+;   * Move &64D0-&6BFF to &5FD0-&63FF
+;   * Zero &5A80-&5E3F
+.MoveCode
+    LDX #4
+    LDY #0
+.move1
+    LDA blockStartLo,X
+    STA P
+    LDA blockStartHi,X
+    STA Q
+    LDA blockToLo,X
+    STA R
+    LDA blockToHi,X
+    STA S
+.move2
+L7979 = move2+1
+    LDA (P),Y
+    STA (R),Y
+    INC P
+    BNE move3
+    INC Q
+.move3
+    INC R
+    BNE move4
+    INC S
+.move4
+    LDA P
+    CMP blockEndLo,X
+    BNE move2
+    LDA Q
+    CMP blockEndHi,X
+    BNE move2
+    DEX
+    BMI move5
+    BNE move1
+; We get here when X = 0
+; Modify the instruction at move2 to LDA #0, so the last block move
+; actually zeroes the block
+    LDA ldaZero
+    STA move2
+    LDA L79AE
+    STA L7979
+; Loop back to move1 to zero the rest of the block
+    JMP move1
+
+.move5
+    JMP C63BD
+
+.ldaZero
+L79AE = ldaZero+1
+    LDA #0
+.blockStartLo
+    EQUB &80, &D0, &80, 0  , 0  
+.blockStartHi
+    EQUB &5A, &64, &5A, &13, &15
+.blockEndLo
+    EQUB &40, 0  , &5C, 0  , &DB
+.blockEndHi
+    EQUB &5E, &6C, &64, &15, &15
+.blockToLo
+    EQUB &80, &D0, 0  , 0  , 0  
+.blockToHi
+    EQUB &5A, &5F, &0D, &0B, &70
+    EQUB 9  , &B9, 2  , &50, &9D, 1  , 9  , &9D, &79, 9  , &B9, 3  
+    EQUB &50, &9D, 2  , 9  , &B9, 1  , &51, &9D, 0  , &0A, &B9, 2  
+    EQUB &51, &9D, 1  , &0A, &9D, &79, &0A, &B9, 3  , &51, &9D, 2  
+    EQUB &0A, &B9, 4  , &50, &9D, &78, 9  , &B9, 6  , &50, &9D, &7A
+    EQUB 9  , &B9, 4  
 
     ORG &0B00
 
@@ -5351,7 +5507,11 @@ L1DDE = C1DDD+1
     LDY L001B
     RTS
 
-    EQUB &A5, &53, &F0, &EB, &20, &12, &2F, &4C, &FC, &2C
+    LDA L0053                                                         ; 2D0D: A5 53       .S
+    BEQ C2CFC                                                         ; 2D0F: F0 EB       ..
+    JSR C2F12                                                         ; 2D11: 20 12 2F     ./
+    JMP C2CFC                                                         ; 2D14: 4C FC 2C    L.,
+
 .sub_C2D17
     LDA L3E50,X
     STA L2D28
@@ -8375,7 +8535,9 @@ L3878 = sub_C3877+1
     CLD
     RTS
 
-    EQUB &EA, &EA
+    NOP
+    NOP
+
 .sub_C5011
     LDA #0
     STA L06B4,X
@@ -9448,8 +9610,12 @@ L5907 = L5300+1543
 
 .C63BD
     JMP C3850
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
 
-    EQUB &EA, &EA, &EA, &EA, &EA
 .sub_C63C5
     PHA
     LDA L05F8
@@ -9881,8 +10047,6 @@ L5907 = L5300+1543
     JSR sub_C2ACB
     RTS
 
-    EQUB 0
-
     ORG &6C00
 
 .L6C00
@@ -9998,156 +10162,20 @@ L7000 = L6C00+1024
     EQUB 0  , 0  , 0  , 0  , 0  , 0  
     EQUB 0
 
-    ORG &7900
 
-; Move block from &1200-&12FF to &7900-&79FF and jump to &790E
-.Entry
-    LDY #0
-.entr1
-    LDA C1200,Y
-    STA Entry,Y
-    INY
-    BNE entr1
-    JMP SwapCode
+                              \ Game addr to file addr
+COPYBLOCK &5FD0, &6700, &64D0 \ 5fd0-66ff to 64d0-6bff
+COPYBLOCK &0D00, &16DC, &5A80 \ 0d00-16db to 5a80-645b
+COPYBLOCK &7000, &70DB, &1500 \ 7000-70da to 1500-15da
+COPYBLOCK &0B00, &0D00, &1300 \ 0b00-0cff to 1300-14ff
+COPYBLOCK &7900, &7A00, &1200 \ 7900-79ff to 1200-12ff
 
-; Disable the ESCAPE key and clear memory if the BREAK key is pressed
-.SwapCode
-    LDA #osbyte_read_write_escape_break_effect
-    LDX #3
-    LDY #0
-    JSR osbyte
-; *TAPE
-    LDA #osbyte_tape
-    LDX #0
-    JSR osbyte
-; Set (Q P) = &5300 = trackData, destintion address for track data
-    LDA #0
-    STA P
-    LDA #&53 ; 'S'
-    STA Q
-; Set (S R) = &70DB, source address of track data
-    LDA #&DB
-    STA R
-    LDA #&70 ; 'p'
-    STA S
-; Swap memory between &70DB-&7724 to &5300-&5949 and decrement
-; checksum bytes in &7800-&7803
-    LDY #0
-; Swap Y-th byte of (Q P) and (S R)
-.swap1
-    LDA (R),Y
-    PHA
-    LDA (P),Y
-    STA (R),Y
-    PLA
-    STA (P),Y
-; Decrement the relevant checksum byte at &7800-&7803
-    AND #3
-    TAX
-    DEC trackChecksum,X
-; Increment loop counter
-    INY
-; Increment high bytes to move on to next page
-    BNE swap2
-    INC Q
-    INC S
-; If we have not yet reached &7725, jump back to swap1 to keep going
-.swap2
-    CPY #&25 ; '%'
-    BNE swap1
-    LDA S
-    CMP #&77 ; 'w'
-    BNE swap1
-; Now check that all three checksum bytes in &7800-&7803 are zero
-    LDX #3
-.swap3
-    LDA trackChecksum,X
-; If a checksum byte is non-zero, jump to swap4 to reset the machine
-    BNE swap4
-    DEX
-; Loop back to check the next checksum byte
-    BPL swap3
-; All checksum bytes are zero, so jump to swap4 to keep going
-    BMI MoveCode
-; Reset the machine
-.swap4
-    JMP (LFFFC)
+CLEAR &645C, &64D0            \ Zeroes in 645c-64cf
 
-; Move block (blockStartHi blockStartLo) - (blockEndHi blockEndLo)-1
-; to (blockToHi blockToLo)
-;   * Move &1500-&15DA to &7000-&70DA
-;   * Move &1300-&14FF to &0B00-&0CFF
-;   * Move &5A80-&645B to &0D00-&16DB
-;   * Move &64D0-&6BFF to &5FD0-&63FF
-;   * Zero &5A80-&5E3F
-.MoveCode
-    LDX #4
-    LDY #0
-.move1
-    LDA blockStartLo,X
-    STA P
-    LDA blockStartHi,X
-    STA Q
-    LDA blockToLo,X
-    STA R
-    LDA blockToHi,X
-    STA S
-.move2
-L7979 = move2+1
-    LDA (P),Y
-    STA (R),Y
-    INC P
-    BNE move3
-    INC Q
-.move3
-    INC R
-    BNE move4
-    INC S
-.move4
-    LDA P
-    CMP blockEndLo,X
-    BNE move2
-    LDA Q
-    CMP blockEndHi,X
-    BNE move2
-    DEX
-    BMI move5
-    BNE move1
-; We get here when X = 0
-; Modify the instruction at move2 to LDA #0, so the last block move
-; actually zeroes the block
-    LDA ldaZero
-    STA move2
-    LDA L79AE
-    STA L7979
-; Loop back to move1 to zero the rest of the block
-    JMP move1
+ORG &15DB
+CLEAR &15DB, &16DC
 
-.move5
-    JMP C63BD
-
-.ldaZero
-L79AE = ldaZero+1
-    LDA #0
-.blockStartLo
-    EQUB &80, &D0, &80, 0  , 0  
-.blockStartHi
-    EQUB &5A, &64, &5A, &13, &15
-.blockEndLo
-    EQUB &40, 0  , &5C, 0  , &DB
-.blockEndHi
-    EQUB &5E, &6C, &64, &15, &15
-.blockToLo
-    EQUB &80, &D0, 0  , 0  , 0  
-.blockToHi
-    EQUB &5A, &5F, &0D, &0B, &70
-    EQUB 9  , &B9, 2  , &50, &9D, 1  , 9  , &9D, &79, 9  , &B9, 3  
-    EQUB &50, &9D, 2  , 9  , &B9, 1  , &51, &9D, 0  , &0A, &B9, 2  
-    EQUB &51, &9D, 1  , &0A, &9D, &79, &0A, &B9, 3  , &51, &9D, 2  
-    EQUB &0A, &B9, 4  , &50, &9D, &78, 9  , &B9, 6  , &50, &9D, &7A
-    EQUB 9  , &B9, 4  
-
-    ORG &8000
+\ Add noise into 15db-16db
 
     EQUB &20, 0  , &63, &60, &A6, 3  , &10, 3  , &20, &CB, &2A, &20
     EQUB &84, &50, &E4, &4D, &D0, &F6, &A2, &16, &86, &45, &20, &D1
@@ -10173,16 +10201,7 @@ L79AE = ldaZero+1
     EQUB 6  , &74, &2A
     EQUB &18, &69
 
-                              \ Game addr to file addr
-COPYBLOCK &5FD0, &6700, &64D0 \ 5fd0-66ff to 64d0-6bff
-COPYBLOCK &0D00, &16DC, &5A80 \ 0d00-16db to 5a80-645b
-COPYBLOCK &7000, &70DB, &1500 \ 7000-70da to 1500-15da
-COPYBLOCK &0B00, &0D00, &1300 \ 0b00-0cff to 1300-14ff
-COPYBLOCK &7900, &7A00, &1200 \ 7900-79ff to 1200-12ff
 
-COPYBLOCK &8000, &8101, &15DB \ Restore noise in 15db-16db
-
-CLEAR &645C, &64D0            \ Zeroes in 645c-64cf
 
 \ ******************************************************************************
 \
@@ -10190,4 +10209,4 @@ CLEAR &645C, &64D0            \ Zeroes in 645c-64cf
 \
 \ ******************************************************************************
 
-SAVE "3-assembled-output/Revs.bin", LOAD%, &7000
+SAVE "3-assembled-output/Revs.bin", LOAD%, LOAD_END%
