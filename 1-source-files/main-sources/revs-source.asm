@@ -305,6 +305,7 @@ L5F40 = &5F40
 L5F48 = &5F48
 L5F60 = &5F60
 L5FB0 = &5FB0
+L70F8 = &70F8
 L713D = &713D
 L7205 = &7205
 L77DB = &77DB
@@ -8207,7 +8208,7 @@ L3878 = sub_C3877+1
     DEX
     BPL loop_C4EE9
     STX L4F43
-    JSR L52A4
+    JSR sub_C52A4
     LDA #&FF
     STA user_via_t2c_h
     LDA #&16
@@ -8792,15 +8793,51 @@ L3878 = sub_C3877+1
 .C52A3
     RTS
 
-.L52A4
-    EQUB &EE, &F7, &62, &A5, &63, &18, &69, &30, &6D, &FA, &62, &8D
-    EQUB &FA, &62, &90, &41, &A5, 0  , &F0, &3D, &A2, 4  , &BD, &C0
-    EQUB &6F, &5D, &F6, &52, &9D, &C0, &6F, &BD, &F8, &70, &5D, &FB
-    EQUB &52, &9D, &F8, &70, &E0, 3  , &B0, &12, &BD, &85, &6E, &49
-    EQUB &F0, &9D, &85, &6E, &BD, &BD, &6F, &49, &F0, &9D, &BD, &6F
-    EQUB &D0, &10, &BD, &8A, &6E, &49, &C0, &9D, &8A, &6E, &BD, &B2
-    EQUB &6F, &49, &30, &9D, &B2, &6F, &CA, &10, &C5, &60, &F0, &F0
-    EQUB &C0, &C0, &80, &F0, &F0, &30, &30, &10
+.sub_C52A4
+    INC L62F7
+    LDA L0063
+    CLC
+    ADC #&30 ; '0'
+    ADC L62FA
+    STA L62FA
+    BCC C52F5
+    LDA L0000
+    BEQ C52F5
+    LDX #4
+.C52BA
+    LDA L6FC0,X
+    EOR L52F6,X
+    STA L6FC0,X
+    LDA L70F8,X
+    EOR L52FB,X
+    STA L70F8,X
+    CPX #3
+    BCS C52E2
+    LDA L6E85,X
+    EOR #&F0
+    STA L6E85,X
+    LDA L6FBD,X
+    EOR #&F0
+    STA L6FBD,X
+    BNE C52F2
+.C52E2
+    LDA L6E8A,X
+    EOR #&C0
+    STA L6E8A,X
+    LDA L6FB2,X
+    EOR #&30 ; '0'
+    STA L6FB2,X
+.C52F2
+    DEX
+    BPL C52BA
+.C52F5
+    RTS
+
+.L52F6
+    EQUB &F0, &F0, &C0, &C0, &80
+.L52FB
+    EQUB &F0, &F0, &30, &30, &10
+
 .L5300
 L5301 = L5300+1
 L5302 = L5300+2
@@ -9274,7 +9311,9 @@ L5907 = L5300+1543
 .L62F8
     EQUB 0
 .L62F9
-    EQUB 0, 0
+    EQUB 0
+.L62FA
+    EQUB 0
 .L62FB
     EQUB 0
 .L62FC
@@ -9847,6 +9886,11 @@ L5907 = L5300+1543
     ORG &6C00
 
 .L6C00
+L6E85 = L6C00+645
+L6E8A = L6C00+650
+L6FB2 = L6C00+946
+L6FBD = L6C00+957
+L6FC0 = L6C00+960
 L7000 = L6C00+1024
     EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  
     EQUB 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  
