@@ -200,6 +200,7 @@ ORG CODE%
     EQUB &86, &92, &98, 4  , &28, &18, 0  , &73, &6F, &31, 0  , &8C
     EQUB 0  , 0  , &60, &EA, &EA
 
+.trackChecksum
 ; Checksum bytes:
 ; &7800 counts the number of data bytes ending in %00
 ; &7801 counts the number of data bytes ending in %01
