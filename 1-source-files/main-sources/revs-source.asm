@@ -47,6 +47,8 @@ LOAD% = &1200           \ The load address of the main code binary
 
 LOAD_END% = &7000       \ The address of the end of the main code binary
 
+TRACK_LOAD% = &70DB     \ The load address of the track data file
+
 CODE% = &0B00           \ The address of the main game code
 
 \ ******************************************************************************
@@ -203,14 +205,6 @@ L008D = &008D
 L008E = &008E
 L008F = &008F
 
-\ ******************************************************************************
-\
-\ REVS MAIN GAME CODE
-\
-\ Produces the binary file Revs.bin that contains the main game code.
-\
-\ ******************************************************************************
-
 L0100 = &0100
 L0101 = &0101
 L0114 = &0114
@@ -322,6 +316,14 @@ L5F40 = &5F40
 L5F48 = &5F48
 L5F60 = &5F60
 L5FB0 = &5FB0
+
+L6E85 = &6E85
+L6E8A = &6E8A
+L6FB2 = &6FB2
+L6FBD = &6FBD
+L6FC0 = &6FC0
+
+L7000 = &7000
 L70F8 = &70F8
 L713D = &713D
 L7205 = &7205
@@ -342,229 +344,286 @@ L7FC5 = &7FC5
 
 \ ******************************************************************************
 \
+\ REVS MAIN GAME CODE
+\
+\ Produces the binary file Revs.bin that contains the main game code.
+\
+\ ******************************************************************************
+
+\ ******************************************************************************
+\
 \       Name: Entry
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: The main entry point for the game: move code into upper memory and
+\             call it
 \
 \ ******************************************************************************
 
 ORG &1200
 
-; Move block from &1200-&12FF to &7900-&79FF and jump to &790E
-
 .Entry
 
- LDY #0
-
+ LDY #0                 \ We start by copying the following block in memory:
+                        \
+                        \   * &1200-&12FF is copied to &7900-&79FF
+                        \
+                        \ so we set up a byte counter in Y
 .entr1
 
- LDA &1200,Y
+ LDA &1200,Y            \ Copy the Y-th byte of &1200 to the Y-th byte of &7900
  STA &7900,Y
- INY
- BNE entr1
- JMP SwapCode
 
-COPYBLOCK &1200, &120E, &7900
-CLEAR &1200, &120E
+ INY                    \ Increment the loop counter
+
+ BNE entr1              \ Loop back until we have copied a whole page of bytes
+
+ JMP SwapCode           \ Jump to the routine that we just moved to continue the
+                        \ setup process
+
+\ Code between &7900 and &79FF starts out at &1200 before being moved
+
+COPYBLOCK &1200, &12FF, &7900
+CLEAR &1200, &12FF
 
 \ ******************************************************************************
 \
 \       Name: SwapCode
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Move the track data to the right place and run a checksum on it
 \
 \ ******************************************************************************
 
 ORG &790E
 
-; Disable the ESCAPE key and clear memory if the BREAK key is pressed
-
 .SwapCode
 
- LDA #200               \ osbyte_read_write_escape_break_effect
- LDX #3
- LDY #0
+ LDA #200               \ Call OSBYTE with A = 200, X = 3 and Y = 0 to disable
+ LDX #3                 \ the ESCAPE key and clear memory if the BREAK key is
+ LDY #0                 \ pressed
  JSR OSBYTE
-; *TAPE
- LDA #140               \ osbyte_tape
- LDX #0
+
+ LDA #140               \ Call OSBYTE with A = 140 and X = 0 to select the tape
+ LDX #0                 \ filing system (i.e. do a *TAPE command)
  JSR OSBYTE
-; Set (Q P) = &5300 = trackData, destintion address for track data
- LDA #0
- STA P
- LDA #&53
+
+                        \ We now want to move the track data from TRACK_LOAD%
+                        \ (which is where the loading process loads the track
+                        \ file) to trackData (which is where the game expects
+                        \ to find the track data)
+                        \
+                        \ At the same time, we also want to move the data that
+                        \ is currently at trackData, which is part of the
+                        \ dashboard image, into screen memory at TRACK_LOAD%
+                        \
+                        \ TRACK_LOAD% is &70DB and trackData is &5300, so we
+                        \ want to do the following:
+                        \
+                        \   * Swap &70DB-&7724 and &5300-&5949
+                        \
+                        \ At the same time, we want to perform a checksum on the
+                        \ track data and compare the results with the four
+                        \ checksum bytes in trackChecksum
+
+ LDA #LO(trackData)     \ Set (Q P) = trackData
+ STA P                  \
+ LDA #HI(trackData)     \ so that's one address for the swap
  STA Q
-; Set (S R) = &70DB, source address of track data
- LDA #&DB
- STA R
- LDA #&70
+
+ LDA #LO(TRACK_LOAD%)   \ Set (S R) = TRACK_LOAD%
+ STA R                  \
+ LDA #HI(TRACK_LOAD%)   \ so that's the other address for the swap
  STA S
-; Swap memory between &70DB-&7724 to &5300-&5949 and decrement
-; checksum bytes in &7800-&7803
- LDY #0
-; Swap Y-th byte of (Q P) and (S R)
+
+ LDY #0                 \ Set a byte counter in Y for the swap
 
 .swap1
 
- LDA (R),Y
+ LDA (R),Y              \ Swap the Y-th bytes of (Q P) and (S R)
  PHA
  LDA (P),Y
  STA (R),Y
  PLA
  STA (P),Y
-; Decrement the relevant checksum byte at &7800-&7803
- AND #3
- TAX
- DEC trackChecksum,X
-; Increment loop counter
- INY
-; Increment high bytes to move on to next page
- BNE swap2
- INC Q
+
+ AND #3                 \ Decrement the relevant checksum byte
+ TAX                    \
+ DEC trackChecksum,X    \ The checksum bytes work like this:
+                        \
+                        \   * trackChecksum+0 counts the number of data bytes
+                        \     ending in %00
+                        \
+                        \   * trackChecksum+1 counts the number of data bytes
+                        \     ending in %01
+                        \
+                        \   * trackChecksum+2 counts the number of data bytes
+                        \     ending in %10
+                        \
+                        \   * trackChecksum+3 counts the number of data bytes
+                        \     ending in %11
+                        \
+                        \ This code checks off the relevant checksum byte for
+                        \ the data byte in A, so if all the data is correct,
+                        \ this will eventually decrement all four bytes to zero
+
+ INY                    \ Increment the loop counter
+
+ BNE swap2              \ If we have just crossed a page boundary, increment the
+ INC Q                  \ high bytes to move on to next page
  INC S
-; If we have not yet reached &7725, jump back to swap1 to keep going
 
 .swap2
 
- CPY #&25
- BNE swap1
- LDA S
+ CPY #&25               \ If we have not yet reached address &7725, which is the
+ BNE swap1              \ address after the end of the track data,  jump back to
+ LDA S                  \ swap1 to keep swapping data
  CMP #&77
  BNE swap1
-; Now check that all three checksum bytes in &7800-&7803 are zero
- LDX #3
+
+                        
+
+ LDX #3                 \ The data swap is done, so we now check that all three
+                        \ checksum bytes at trackChecksum are zero, so set a
+                        \ counter in X to work through the four bytes
 
 .swap3
 
- LDA trackChecksum,X
-; If a checksum byte is non-zero, jump to swap4 to reset the machine
- BNE swap4
- DEX
-; Loop back to check the next checksum byte
- BPL swap3
-; All checksum bytes are zero, so jump to swap4 to keep going
- BMI MoveCode
-; Reset the machine
+ LDA trackChecksum,X    \ If the X-th checksum byte is non-zero, the checksum
+ BNE swap4              \ has failed, so jump to swap4 to reset the machine
+
+ DEX                    \ Decrement the checksum byte counter
+
+ BPL swap3              \ Loop back to check the next checksum byte
+
+ BMI MoveCode           \ If we get here then all four checksum bytes are zero,
+                        \ so jump to swap4 to keep going (this BMI is
+                        \ effectively a JMP as we just passed through a BPL)
 
 .swap4
 
- JMP (&FFFC)
+ JMP (&FFFC)            \ The checksum has failed, so reset the machine
 
 \ ******************************************************************************
 \
 \       Name: MoveCode
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Move and reset various blocks around in memory
 \
 \ ******************************************************************************
 
-; Move block (blockStartHi blockStartLo) - (blockEndHi blockEndLo)-1
-; to (blockToHi blockToLo)
-;   * Move &1500-&15DA to &7000-&70DA
-;   * Move &1300-&14FF to &0B00-&0CFF
-;   * Move &5A80-&645B to &0D00-&16DB
-;   * Move &64D0-&6BFF to &5FD0-&63FF
-;   * Zero &5A80-&5E3F
-
 .MoveCode
 
- LDX #4
- LDY #0
+                        \ We are going to process the five memory blocks defined
+                        \ in (blockStartHi blockStartLo)-(blockEndHi blockEndLo)
+                        \ and either zero the memory block (for the first block
+                        \ in the table only), or move them to the address in
+                        \ (blockToHi blockToLo)
+                        \
+                        \ We work through the blocks from the last entry to the
+                        \ first, so we end up doing this:
+                        \
+                        \   * Move &1500-&15DA to &7000-&70DA
+                        \   * Move &1300-&14FF to &0B00-&0CFF
+                        \   * Move &5A80-&645B to &0D00-&16DB
+                        \   * Move &64D0-&6BFF to &5FD0-&63FF
+                        \   * Zero &5A80-&5E3F
+
+ LDX #4                 \ Set a block counter in X to work through the five
+                        \ memory blocks, starting with the block defined at
+                        \ the end of the block tables
+
+ LDY #0                 \ Set Y as a byte counter
 
 .move1
 
- LDA blockStartLo,X
- STA P
+ LDA blockStartLo,X     \ Set (Q P) to the X-th address from (blockStartHi
+ STA P                  \ blockStartLo)
  LDA blockStartHi,X
  STA Q
- LDA blockToLo,X
- STA R
+
+ LDA blockToLo,X        \ Set (S R) to the X-th address from (blockToHi
+ STA R                  \ blockToLo)
  LDA blockToHi,X
  STA S
 
 .move2
 
-L7979 = move2+1
- LDA (P),Y
- STA (R),Y
- INC P
- BNE move3
+ LDA (P),Y              \ Copy the Y-th byte of (Q P) to the Y-th byte of (S R)
+ STA (R),Y              \
+                        \ The LDA (P),Y instruction gets modified to LDA #0 for
+                        \ the last block that we process, when X = 0
+
+ INC P                  \ Increment the address in (Q P), starting with the low
+                        \ byte
+
+ BNE move3              \ Increment the high byte if we cross a page boundary
  INC Q
 
 .move3
 
- INC R
- BNE move4
+ INC R                  \ Increment the address in (S R), starting with the low
+                        \ byte
+
+ BNE move4              \ Increment the high byte if we cross a page boundary
  INC S
 
 .move4
 
- LDA P
- CMP blockEndLo,X
+ LDA P                  \ If (Q P) <> (blockEndHi blockEndLo) then jump back to
+ CMP blockEndLo,X       \ move2 to copy or zero the next byte in the block
  BNE move2
  LDA Q
  CMP blockEndHi,X
  BNE move2
- DEX
- BMI move5
- BNE move1
-; We get here when X = 0
-; Modify the instruction at move2 to LDA #0, so the last block move
-; actually zeroes the block
- LDA ldaZero
- STA move2
- LDA L79AE
- STA L7979
-; Loop back to move1 to zero the rest of the block
- JMP move1
+
+ DEX                    \ We have finished copying or zeroing a block, so
+                        \ decrement the block counter in X to move on to the
+                        \ next block (i.e. the previous entry in the table)
+
+ BMI move5              \ If X < 0 then we have finished processing all five
+                        \ blocks, so jump to move5
+
+ BNE move1              \ If X <> 0 then jump up to move1 to move the next block
+
+ LDA ldaZero            \ We get here when X = 0, which means we have reached
+ STA move2              \ the last block defined in the block tables
+ LDA ldaZero+1          \
+ STA move2+1            \ We don't want to copy this block, we want to zero it,
+                        \ so wodify the instruction at move2 to LDA #0, so the
+                        \ code zeroes the block rather than moving it
+
+ JMP move1              \ Jump back to move1 to zero the final block
 
 .move5
 
- JMP C63BD
+ JMP Decrypt            \ If we get here we have moved and zeroed all the blocks
+                        \ in the block tables, so jump to Decrypt to continue
+                        \ setting up the game
 
 \ ******************************************************************************
 \
 \       Name: ldaZero
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Contains code that's used for modifying the MoveCode routine
 \
 \ ******************************************************************************
 
 .ldaZero
 
-L79AE = ldaZero+1
- LDA #0
+ LDA #0                 \ The instruction at move2 in the MoveCode routine is
+                        \ modified to this instruction so the routine zeroes a
+                        \ block of memory rather than moving it
 
 \ ******************************************************************************
 \
 \       Name: blockStartLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Low byte of the start address of blocks moved by the MoveCode
+\             routine
 \
 \ ******************************************************************************
 
@@ -576,12 +635,9 @@ L79AE = ldaZero+1
 \
 \       Name: blockStartHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: High byte of the start address of blocks moved by the MoveCode
+\             routine
 \
 \ ******************************************************************************
 
@@ -593,12 +649,9 @@ L79AE = ldaZero+1
 \
 \       Name: blockEndLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Low byte of the end address of blocks moved by the MoveCode
+\             routine
 \
 \ ******************************************************************************
 
@@ -610,18 +663,25 @@ L79AE = ldaZero+1
 \
 \       Name: blockEndHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: High byte of the end address of blocks moved by the MoveCode
+\             routine
 \
 \ ******************************************************************************
 
 .blockEndHi
 
  EQUB &5E, &6C, &64, &15, &15
+
+\ ******************************************************************************
+\
+\       Name: blockToLo
+\       Type: Variable
+\   Category: Setup
+\    Summary: Low byte of the destination address of blocks moved by the
+\             MoveCode routine
+\
+\ ******************************************************************************
 
 .blockToLo
 
@@ -631,23 +691,42 @@ L79AE = ldaZero+1
 \
 \       Name: blockToHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: High byte of the destination address of blocks moved by the
+\             MoveCode routine
 \
 \ ******************************************************************************
 
 .blockToHi
 
  EQUB &5A, &5F, &0D, &0B, &70
- EQUB &09, &B9, &02, &50, &9D, &01, &09, &9D, &79, &09, &B9, &03
- EQUB &50, &9D, &02, &09, &B9, &01, &51, &9D, &00, &0A, &B9, &02
- EQUB &51, &9D, &01, &0A, &9D, &79, &0A, &B9, &03, &51, &9D, &02
- EQUB &0A, &B9, &04, &50, &9D, &78, &09, &B9, &06, &50, &9D, &7A
- EQUB &09, &B9, &04
+
+ EQUB &09, &B9          \ These bytes appear to be unused
+ EQUB &02, &50
+ EQUB &9D, &01
+ EQUB &09, &9D
+ EQUB &79, &09
+ EQUB &B9, &03
+ EQUB &50, &9D
+ EQUB &02, &09
+ EQUB &B9, &01
+ EQUB &51, &9D
+ EQUB &00, &0A
+ EQUB &B9, &02
+ EQUB &51, &9D
+ EQUB &01, &0A
+ EQUB &9D, &79
+ EQUB &0A, &B9
+ EQUB &03, &51
+ EQUB &9D, &02
+ EQUB &0A, &B9
+ EQUB &04, &50
+ EQUB &9D, &78
+ EQUB &09, &B9
+ EQUB &06, &50
+ EQUB &9D, &7A
+ EQUB &09, &B9
+ EQUB &04
 
 \ ******************************************************************************
 \
@@ -666,13 +745,6 @@ ORG &0B00
 
 .soundEnvelopes
 
-L0B02 = soundEnvelopes+2
-L0B1C = soundEnvelopes+28
-L0B24 = soundEnvelopes+36
-L0B2C = soundEnvelopes+44
-L0B44 = soundEnvelopes+68
-L0B46 = soundEnvelopes+70
-L0B47 = soundEnvelopes+71
  EQUB &10, &10, &10, &10, &10, &10, &10, &10
  EQUB &10, &10, &10, &10, &10, &10, &10, &10
  EQUB &10, &00, &F6, &FF, &03, &00, &FF, &00
@@ -681,8 +753,24 @@ L0B47 = soundEnvelopes+71
  EQUB &13, &00, &01, &00, &82, &00, &FF, &00
  EQUB &10, &00, &F6, &FF, &06, &00, &04, &00
  EQUB &01, &01, &02, &FE, &FA, &04, &01, &01
- EQUB &0A, &00, &00, &00, &48, &00, &FF, &AC
- EQUB &FE, &05
+ EQUB &0A, &00, &00, &00, &48, &00, &FF
+
+\ ******************************************************************************
+\
+\       Name: sub_C0B47
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C0B47
+
+ LDY L05FE
 
 \ ******************************************************************************
 \
@@ -699,7 +787,7 @@ L0B47 = soundEnvelopes+71
 
 .sub_C0B4A
 
- STX L0B46
+ STX soundEnvelopes+70
  ASL A
  ASL A
  ASL A
@@ -707,7 +795,7 @@ L0B47 = soundEnvelopes+71
  ADC #&10
  TAX
  TYA
- STA L0B02,X
+ STA soundEnvelopes+2,X
  LDA soundEnvelopes,X
  AND #3
  TAY
@@ -730,7 +818,7 @@ L0B47 = soundEnvelopes+71
 
 .sub_C0B65
 
- STX L0B46
+ STX soundEnvelopes+70
  CLC
  ADC #&38
  TAX
@@ -740,7 +828,7 @@ L0B47 = soundEnvelopes+71
 
  LDY #&0B
  JSR OSWORD
- LDX L0B46
+ LDX soundEnvelopes+70
  RTS
 
 \ ******************************************************************************
@@ -1558,7 +1646,7 @@ L0B47 = soundEnvelopes+71
  AND #3
  CLC
  ADC #&82
- STA L0B2C
+ STA soundEnvelopes+44
  LDA #3
  LDY #1
  JSR sub_C0B4A
@@ -1587,7 +1675,7 @@ L0B47 = soundEnvelopes+71
  BCS C0EB8
  PHA
  LDA #0
- JSR L0B47
+ JSR sub_C0B47
  PLA
  CLC
  ADC #&BB
@@ -1602,7 +1690,7 @@ L0B47 = soundEnvelopes+71
 
 .C0EC0
 
- STA L0B1C
+ STA soundEnvelopes+28
  LDA #1
  JSR sub_C0B4A
  LDY L05FE
@@ -1616,7 +1704,7 @@ L0B47 = soundEnvelopes+71
 
 .C0ED8
 
- STA L0B24
+ STA soundEnvelopes+36
 
 .C0EDB
 
@@ -1724,7 +1812,7 @@ L0B47 = soundEnvelopes+71
  ASL A
  ASL A
  ASL A
- STA L0B44
+ STA soundEnvelopes+68
  LDA #0
  JSR sub_C0B65
  INC L0060
@@ -1809,8 +1897,8 @@ L0B47 = soundEnvelopes+71
 
 .C0FBA
 
- LDA L3864,X
- SBC L3864,Y
+ LDA loop_C3862+2,X
+ SBC loop_C3862+2,Y
  STA L0075
  LDA L39E4,X
  SBC L39E4,Y
@@ -2099,7 +2187,7 @@ L0B47 = soundEnvelopes+71
  JSR sub_C3D5C
  JSR sub_C43F6
  LDA #4
- JSR L0B47
+ JSR sub_C0B47
  LDA #0
  LDX #&1E
 
@@ -2298,17 +2386,17 @@ L0B47 = soundEnvelopes+71
 
 .sub_C1208
 
- LDA L5901,Y
+ LDA trackData+1537,Y
  STA L0900,X
- LDA L5902,Y
+ LDA trackData+1538,Y
  STA L0901,X
- LDA L5903,Y
+ LDA trackData+1539,Y
  STA L0902,X
- LDA L5301,Y
+ LDA trackData+1,Y
  STA L0A00,X
- LDA L5302,Y
+ LDA trackData+2,Y
  STA L0A01,X
- LDA L5303,Y
+ LDA trackData+3,Y
  STA L0A02,X
  RTS
 
@@ -2328,15 +2416,15 @@ L0B47 = soundEnvelopes+71
 .sub_C122D
 
  JSR sub_C1208
- LDA L5904,Y
+ LDA trackData+1540,Y
  STA L0978,X
- LDA L5906,Y
+ LDA trackData+1542,Y
  STA L097A,X
- LDA L5304,Y
+ LDA trackData+4,Y
  STA L0A78,X
- LDA L5306,Y
+ LDA trackData+6,Y
  STA L0A7A,X
- LDA L5905,Y
+ LDA trackData+1541,Y
  STA L0002
 
 \ ******************************************************************************
@@ -2415,7 +2503,7 @@ L0B47 = soundEnvelopes+71
  BMI C1284
  LDY L06FF
  JSR sub_C122D
- LDA L5300,Y
+ LDA trackData,Y
  JMP C128E
 
 .C1284
@@ -2430,7 +2518,7 @@ L0B47 = soundEnvelopes+71
  AND #7
  STA L0007
  LDY L06FF
- LDA L5900,Y
+ LDA trackData+1536,Y
  STA L0001
  LDA #0
  STA L0702,X
@@ -2642,7 +2730,7 @@ L0B47 = soundEnvelopes+71
 
  STA L0077
  LDY L06FF
- LDA L5907,Y
+ LDA trackData+1543,Y
  PLP
  BCC C1365
  LSR A
@@ -2684,7 +2772,7 @@ L0B47 = soundEnvelopes+71
  LDA #0
  STA L0083
  STA L0085
- LDA L5700,Y
+ LDA trackData+1024,Y
  BPL C1398
  DEC L0083
 
@@ -2700,7 +2788,7 @@ L0B47 = soundEnvelopes+71
  LDA L0083
  ADC L0A00,X
  STA L0A78,X
- LDA L5800,Y
+ LDA trackData+1280,Y
  BPL C13B4
  DEC L0085
 
@@ -2912,21 +3000,21 @@ L0B47 = soundEnvelopes+71
  STA L0083
  STA L0084
  STA L0085
- LDA L5400,Y
+ LDA trackData+256,Y
  STA L0074
  BPL C1453
  DEC L0083
 
 .C1453
 
- LDA L5500,Y
+ LDA trackData+512,Y
  STA L0075
  BPL C145C
  DEC L0084
 
 .C145C
 
- LDA L5600,Y
+ LDA trackData+768,Y
  STA L0076
  BPL C1465
  DEC L0085
@@ -2972,7 +3060,7 @@ L0B47 = soundEnvelopes+71
  LDA L0880,X
  CLC
  ADC #1
- CMP L5907,Y
+ CMP trackData+1543,Y
  PHP
  BCC C149B
  TYA
@@ -3041,7 +3129,7 @@ L0B47 = soundEnvelopes+71
  SBC #8
  STA L06E8,X
  TAY
- LDA L5907,Y
+ LDA trackData+1543,Y
  SEC
 
 .C14DD
@@ -3101,7 +3189,7 @@ L0B47 = soundEnvelopes+71
  LSR A
  BCS C152E
  LDA L0897
- CMP L5305,Y
+ CMP trackData+5,Y
  BCS C1532
 
 .C1527
@@ -3125,13 +3213,13 @@ L0B47 = soundEnvelopes+71
 
 .C1538
 
- LDA L5900,Y
+ LDA trackData+1536,Y
  AND #1
  BEQ C1527
- LDA L5305,Y
+ LDA trackData+5,Y
  STA L0017
  BEQ C1527
- LDA L5307,Y
+ LDA trackData+7,Y
  STA L0020
  AND #&7F
  STA L0018
@@ -3726,7 +3814,7 @@ L0B47 = soundEnvelopes+71
  STA L0164,X
  STA L0150,X
  STA L0100,X
- STA C3850,X
+ STA Setup,X
  LDA #&FF
  STA L01A4,X
  DEX
@@ -3947,7 +4035,7 @@ L0B47 = soundEnvelopes+71
 
 .sub_C193E
 
- STA L1970
+ STA loop_C196F+1
  STY L004B
  DEY
  STY L0075
@@ -3984,7 +4072,6 @@ L0B47 = soundEnvelopes+71
 
 .loop_C196F
 
-L1970 = loop_C196F+1
  STA L0400,Y
  DEY
 
@@ -4068,11 +4155,11 @@ L1970 = loop_C196F+1
  ADC L30FC,Y
  STA L004F
  LDA L2B1E,Y
- STA L2F50
- STA L2F92
+ STA sub_C2F4E+2
+ STA sub_C2F90+2
  LDA L2B22,Y
- STA L2F4F
- STA L2F91
+ STA sub_C2F4E+1
+ STA sub_C2F90+1
  LDX L004F
  LDY L004C
  SEC
@@ -4535,7 +4622,7 @@ L1970 = loop_C196F+1
  STA L62A6
  STA L62A7
  LDA #4
- JSR L0B47
+ JSR sub_C0B47
 
 .C1C1B
 
@@ -4857,9 +4944,9 @@ L1970 = loop_C196F+1
 
 .sub_C1DA6
 
- STX L1DDE
- STY L1DD5
- STA L1DDC
+ STX C1DDD+1
+ STY sub_C1DD4+1
+ STA sub_C1DDB+1
 
 \ ******************************************************************************
 \
@@ -4911,7 +4998,6 @@ L1970 = loop_C196F+1
 
 .sub_C1DD4
 
-L1DD5 = sub_C1DD4+1
  BNE C1DDF
  JSR sub_C1E9E
  BNE C1DDD
@@ -4931,12 +5017,10 @@ L1DD5 = sub_C1DD4+1
 
 .sub_C1DDB
 
-L1DDC = sub_C1DDB+1
  LDA #&55
 
 .C1DDD
 
-L1DDE = C1DDD+1
  STA (P),Y
 
 .C1DDF
@@ -6957,9 +7041,9 @@ L1DDE = C1DDD+1
 
  CMP #5
  BCS C26E6
- LDA C3850,X
+ LDA Setup,X
  CLC
- SBC C3850,Y
+ SBC Setup,Y
  LDA L0150,X
  SBC L0150,Y
  ROR L0076
@@ -7193,7 +7277,7 @@ L1DDE = C1DDD+1
  LDA L0100,X
  BMI C285B
  LDY L06E8,X
- LDA L5900,Y
+ LDA trackData+1536,Y
  BPL C280D
  LDA L0150,X
  CMP L01A4,X
@@ -7204,7 +7288,7 @@ L1DDE = C1DDD+1
 
  LSR A
  BCS C282F
- LDA L5307,Y
+ LDA trackData+7,Y
  STA L01A4,X
  CLC
  SBC L0150,X
@@ -7215,7 +7299,7 @@ L1DDE = C1DDD+1
  STA L0074
  LDA L0880,X
  SEC
- SBC L5305,Y
+ SBC trackData+5,Y
  BCS C287F
  CMP L0074
  BCS C285B
@@ -7269,14 +7353,14 @@ L1DDE = C1DDD+1
  ASL A
  ROL L0075
  CLC
- ADC C3850,X
- STA C3850,X
+ ADC Setup,X
+ STA Setup,X
  LDA L0075
  ADC L0150,X
  CMP #&BE
  BCC C287C
  LDA #0
- STA C3850,X
+ STA Setup,X
 
 .C287C
 
@@ -7436,11 +7520,11 @@ L1DDE = C1DDD+1
  STA L0084
  LDA L0178,X
  STA L0085
- LDA L5400,Y
+ LDA trackData+256,Y
  STA L0086
- LDA L5500,Y
+ LDA trackData+512,Y
  STA L0087
- LDA L5600,Y
+ LDA trackData+768,Y
  STA L0088
  LDX #0
  LDA L0084
@@ -7489,9 +7573,9 @@ L1DDE = C1DDD+1
  CPX #3
  BNE C2960
  LDY L000C
- LDA L5700,Y
+ LDA trackData+1024,Y
  STA L0086
- LDA L5800,Y
+ LDA trackData+1280,Y
  STA L0088
  LDX #0
  LDA L0085
@@ -8254,7 +8338,7 @@ L1DDE = C1DDD+1
 .sub_C2D17
 
  LDA L3E50,X
- STA L2D28
+ STA sub_C2D27+1
  LDX #&80
  LDA L0083
  EOR #&FF
@@ -8277,7 +8361,6 @@ L1DDE = C1DDD+1
 
 .sub_C2D27
 
-L2D28 = sub_C2D27+1
  BCC C2D29
 
 .C2D29
@@ -8375,7 +8458,7 @@ L2D28 = sub_C2D27+1
 .sub_C2D9A
 
  LDA L40D0,X
- STA L2DAB
+ STA sub_C2DAA+1
  LDX #&80
  LDA L0083
  EOR #&FF
@@ -8398,7 +8481,6 @@ L2D28 = sub_C2D27+1
 
 .sub_C2DAA
 
-L2DAB = sub_C2DAA+1
  BCC C2DAC
 
 .C2DAC
@@ -8497,7 +8579,7 @@ L2DAB = sub_C2DAA+1
 .sub_C2E20
 
  LDA L3ED0,X
- STA L2E2F
+ STA sub_C2E2E+1
  LDA L0084
  EOR #&FF
  CLC
@@ -8519,7 +8601,6 @@ L2DAB = sub_C2DAA+1
 
 .sub_C2E2E
 
-L2E2F = sub_C2E2E+1
  BCC C2E30
 
 .C2E30
@@ -8611,7 +8692,7 @@ L2E2F = sub_C2E2E+1
 .sub_C2E99
 
  LDA L3ED8,X
- STA L2EA8
+ STA sub_C2EA7+1
  LDA L0084
  EOR #&FF
  CLC
@@ -8633,7 +8714,6 @@ L2E2F = sub_C2E2E+1
 
 .sub_C2EA7
 
-L2EA8 = sub_C2EA7+1
  BCC C2EA9
 
 .C2EA9
@@ -8793,8 +8873,6 @@ L2EA8 = sub_C2EA7+1
 
 .sub_C2F4E
 
-L2F4F = sub_C2F4E+1
-L2F50 = sub_C2F4E+2
  STA L7000,Y
  LDA (R),Y
  BNE C2F63
@@ -8886,8 +8964,6 @@ L2F50 = sub_C2F4E+2
 
 .sub_C2F90
 
-L2F91 = sub_C2F90+1
-L2F92 = sub_C2F90+2
  STA L7000,Y
  LDA (P),Y
  BNE C2FA5
@@ -9443,12 +9519,59 @@ L2F92 = sub_C2F90+2
 
 .L3458
 
-L3468 = L3458+16
-L3478 = L3458+32
-L347C = L3458+36
  EQUB &07, &17, &47, &57, &23, &33, &63, &73, &80, &90, &C0, &D0
- EQUB &A5, &B5, &E5, &F5, &03, &13, &23, &33, &43, &53, &63, &73
- EQUB &84, &94, &A4, &B4, &C4, &D4, &E4, &F4, &26, &36, &66, &76
+ EQUB &A5, &B5, &E5, &F5
+
+\ ******************************************************************************
+\
+\       Name: L3468
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3468
+
+ EQUB &03, &13, &23, &33, &43, &53, &63, &73, &84, &94, &A4, &B4
+ EQUB &C4, &D4, &E4, &F4
+
+\ ******************************************************************************
+\
+\       Name: L3478
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3478
+
+ EQUB &26, &36, &66, &76
+
+\ ******************************************************************************
+\
+\       Name: L347C
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L347C
+
  EQUB &A1, &B1, &E1, &F1, &1F, &0D, &12
  EQUS "front"
  EQUB &A2, &85, &D8, &FF, &81, &81, &81, &81, &70, &BC, &00, &39
@@ -9803,6 +9926,19 @@ L347C = L3458+36
 
  RTS
 
+\ ******************************************************************************
+\
+\       Name: L37FF
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
  EQUB &FF, &FE, &EC, &DA, &D5, &ED, &DB, &D5, &EE, &DC, &D5, &EB
  EQUB &D2
  EQUS "DURATION OF QUALIFYING LAPS"
@@ -9813,28 +9949,49 @@ L347C = L3458+36
  EQUB &A0, &20, &91, &70, &BC, &80, &32, &F0, &08, &A9, &00, &9D
  EQUB &80
 
-.C3850
+\ ******************************************************************************
+\
+\       Name: Setup
+\       Type: Subroutine
+\   Category: Setup
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.Setup
 
  LDA #4                 \ osbyte_set_cursor_editing
  LDY #0
  LDX #1
  JSR OSBYTE
+
  JSR sub_C4F39
+
  LDX #9
+
  LDA #0
  STA L0069
 
 .loop_C3862
 
-L3864 = loop_C3862+2
  STA L05F4,X
+
  DEX
+
  BPL loop_C3862
- LDA #&F6
+
+ LDA #246
  STA L05FE
+
  TSX
  STX L006B
+
  JSR sub_C5A22
+
  LDA #190               \ osbyte_read_write_adc_conversion_type
  LDY #0
 
@@ -9853,10 +10010,23 @@ L3864 = loop_C3862+2
 
 .sub_C3877
 
-L3878 = sub_C3877+1
- LDX #&20
+ LDX #32
  JSR OSBYTE
+
  JMP C63E0
+
+\ ******************************************************************************
+\
+\       Name: L387F
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
  EQUB &FF, &EC
  EQUS "PRACTICE"
@@ -10550,6 +10720,19 @@ L3878 = sub_C3877+1
  ADC #&50
  RTS
 
+\ ******************************************************************************
+\
+\       Name: L3D00
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
  EQUB &FE, &EC, &D3
  EQUS "ANOTHER"
  EQUB &D4, &ED
@@ -10929,6 +11112,20 @@ L3878 = sub_C3877+1
 
  EQUB &4F, &44, &39, &2E, &21, &16, &0B, &00
 
+\ ******************************************************************************
+\
+\       Name: C3EE0
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+
 .C3EE0
 
  LDA #&74
@@ -10949,6 +11146,19 @@ L3878 = sub_C3877+1
 .C3EF9
 
  RTS
+
+\ ******************************************************************************
+\
+\       Name: L3EFA
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
  EQUB &AA, &AC, &B0, &B0, &AC, &AA, &1F, &05, &12, &84, &9D, &86
  EQUB &32, &A2, &9C, &A5, &83, &FF, &81, &81, &81, &81, &FF, &44
@@ -11131,6 +11341,19 @@ L3878 = sub_C3877+1
  STA L06D0,X
  RTS
 
+\ ******************************************************************************
+\
+\       Name: L40F9
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
  EQUB &77, &C2, &C0, &BC, &BC, &C0, &C2, &81, &81, &81, &0F, &0F
  EQUB &0F, &0D, &0E, &0F, &0F, &0E, &0E, &0E, &29, &21, &61, &43
  EQUB &42, &42, &C2, &86, &08, &08, &00, &41, &00, &01, &01, &01
@@ -11181,6 +11404,19 @@ L3878 = sub_C3877+1
  LDX #&21
  JSR sub_C4D7E
  RTS
+
+\ ******************************************************************************
+\
+\       Name: L41FB
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
  EQUB &79, &7B, &7C, &7D, &7E, &A5, &FB, &A6, &FF, &81, &81, &81
  EQUB &81, &81, &81, &81, &81, &81, &81, &81, &81, &81, &81, &81
@@ -11252,6 +11488,19 @@ L3878 = sub_C3877+1
  BPL loop_C42EE
  RTS
 
+\ ******************************************************************************
+\
+\       Name: L42F5
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
  EQUB &85, &52, &83, &45, &86, &56, &82, &53, &FF, &75, &75, &FE
  EQUB &EB, &A6, &D2
  EQUS "NUMBER OF LAPS"
@@ -11302,7 +11551,7 @@ L3878 = sub_C3877+1
 
 .C43EA
 
- LDA L3864,X
+ LDA loop_C3862+2,X
  JSR sub_C37D6
  LDA #1
  JSR sub_C3D50
@@ -11498,16 +11747,16 @@ L3878 = sub_C3877+1
  LDY L0700,X
  LDA L000D
  STA L0076
- LDA L5400,Y
- EOR L5600,Y
+ LDA trackData+256,Y
+ EOR trackData+768,Y
  PHP
- LDA L5600,Y
+ LDA trackData+768,Y
  PHP
  JSR sub_C3450
  CMP #&3C
  PHP
  BCC C454F
- LDA L5400,Y
+ LDA trackData+256,Y
  JSR sub_C3450
 
 .C454F
@@ -11667,10 +11916,10 @@ L3878 = sub_C3877+1
 .sub_C4610
 
  STA L0075
- LDA L5500,Y
+ LDA trackData+512,Y
  EOR L0025
  PHP
- LDA L5500,Y
+ LDA trackData+512,Y
  JSR sub_C3450
  JSR sub_C0C00
  PLP
@@ -13223,7 +13472,7 @@ L3878 = sub_C3877+1
 
  LDX L006F
  LDY L06E8,X
- LDA L5300,Y
+ LDA trackData,Y
  LSR A
  LSR A
  LSR A
@@ -13239,13 +13488,13 @@ L3878 = sub_C3877+1
  TAX
  LDY #2
  STY L0077
- LDA L53E0,X
+ LDA trackData+224,X
  JSR sub_C4D21
  LDY #4
- LDA L53F0,X
+ LDA trackData+240,X
  JSR sub_C4D21
  LDY #2
- LDA L53D0,X
+ LDA trackData+208,X
  JSR sub_C4D21
  LDA L59EA,X
  AND #7
@@ -13358,7 +13607,7 @@ L3878 = sub_C3877+1
  STA L04A0,X
  JSR sub_C635D
  LDA #0
- STA L3864,X
+ STA loop_C3862+2,X
  STA L39E4,X
  STA L04F0,X
  TXA
@@ -13525,7 +13774,7 @@ L3878 = sub_C3877+1
  SEC
  ROR L62D2
  LDA #4
- JSR L0B47
+ JSR sub_C0B47
  RTS
 
 \ ******************************************************************************
@@ -14359,8 +14608,8 @@ L3878 = sub_C3877+1
  PHA
  TYA
  PHA
- LDY #>(L62C3)
- LDX #<(L62C3)
+ LDY #HI(L62C3)
+ LDX #LO(L62C3)
  LDA #10                \ osword_read_char
  JSR OSWORD
  LDA L0077
@@ -14928,7 +15177,7 @@ L3878 = sub_C3877+1
 
 \ ******************************************************************************
 \
-\       Name: L5300
+\       Name: trackData
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14939,31 +15188,8 @@ L3878 = sub_C3877+1
 \
 \ ******************************************************************************
 
-.L5300
+.trackData
 
-L5301 = L5300+1
-L5302 = L5300+2
-L5303 = L5300+3
-L5304 = L5300+4
-L5305 = L5300+5
-L5306 = L5300+6
-L5307 = L5300+7
-L53D0 = L5300+208
-L53E0 = L5300+224
-L53F0 = L5300+240
-L5400 = L5300+256
-L5500 = L5300+512
-L5600 = L5300+768
-L5700 = L5300+1024
-L5800 = L5300+1280
-L5900 = L5300+1536
-L5901 = L5300+1537
-L5902 = L5300+1538
-L5903 = L5300+1539
-L5904 = L5300+1540
-L5905 = L5300+1541
-L5906 = L5300+1542
-L5907 = L5300+1543
  EQUB &00, &00, &00, &10, &10, &20, &60, &70, &C0, &80, &80, &00
  EQUB &00, &00, &00, &C0, &60, &10, &10, &00, &00, &30, &10, &00
  EQUB &00, &00, &80, &80, &40, &40, &20, &90, &90, &40, &40, &20
@@ -15436,7 +15662,7 @@ L5907 = L5300+1543
 .sub_C5A25
 
  LDA #0
- STA L3878,X
+ STA sub_C3877+1,X
  STA L39F8,X
  STA L0075
  LDY L013C,X
@@ -15482,8 +15708,8 @@ L5907 = L5300+1543
 
  LDA L3DF7,X
  CLC
- ADC L3878,X
- STA L3878,X
+ ADC sub_C3877+1,X
+ STA sub_C3877+1,X
  LDA L39F8,X
  ADC #0
  STA L39F8,X
@@ -17193,23 +17419,20 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: C63BD
+\       Name: Decrypt
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Decrypt the game code (disabled)
 \
 \ ******************************************************************************
 
-.C63BD
+.Decrypt
 
- JMP C3850
- NOP
- NOP
- NOP
+ JMP Setup              \ Continue setting up the game
+
+ NOP                    \ Presumably this contained some kind of copy protection
+ NOP                    \ or decryption code that has been replaced by NOPs in
+ NOP                    \ this unprotected version of the game
  NOP
  NOP
 
@@ -17805,10 +18028,10 @@ ORG &5FD0
 .sub_C6698
 
  SED
- LDA L3864,Y
+ LDA loop_C3862+2,Y
  CLC
- ADC L3878,X
- STA L3864,Y
+ ADC sub_C3877+1,X
+ STA loop_C3862+2,Y
  LDA L39E4,Y
  ADC L39F8,X
  STA L39E4,Y
@@ -17932,12 +18155,6 @@ ORG &6C00
 
 .L6C00
 
-L6E85 = L6C00+645
-L6E8A = L6C00+650
-L6FB2 = L6C00+946
-L6FBD = L6C00+957
-L6FC0 = L6C00+960
-L7000 = L6C00+1024
  EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
  EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
  EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
