@@ -201,6 +201,7 @@ L008C = &008C
 L008D = &008D
 L008E = &008E
 L008F = &008F
+L00FC = &00FC
 L0100 = &0100
 L0101 = &0101
 L0114 = &0114
@@ -320,6 +321,7 @@ L7E85 = &7E85
 L7FC5 = &7FC5
 crtc_horz_total = &FE00
 crtc_horz_displayed = &FE01
+video_ula_control = &FE20
 video_ula_palette = &FE21
 system_via_t1c_h = &FE45
 system_via_t1l_l = &FE46
@@ -332,7 +334,9 @@ user_via_t1c_h = &FE65
 user_via_t1l_l = &FE66
 user_via_t1l_h = &FE67
 user_via_t2c_l = &FE68
+user_via_t2c_h = &FE69
 user_via_acr = &FE6B
+user_via_ifr = &FE6D
 user_via_ier = &FE6E
 osrdch = &FFE0
 oswrch = &FFEE
@@ -5998,6 +6002,10 @@ L2F92 = sub_C2F90+2
 .C3457
     RTS
 
+.L3458
+L3468 = L3458+16
+L3478 = L3458+32
+L347C = L3458+36
     EQUB 7  , &17, &47, &57, &23, &33, &63, &73, &80, &90, &C0, &D0
     EQUB &A5, &B5, &E5, &F5, 3  , &13, &23, &33, &43, &53, &63, &73
     EQUB &84, &94, &A4, &B4, &C4, &D4, &E4, &F4, &26, &36, &66, &76
@@ -8115,22 +8123,105 @@ L3878 = sub_C3877+1
     CLI
     RTS
 
-    EQUB &6C, &1D, &4F, &AD, &6D, &FE, &29, &40, &F0, &F6, &8D, &6D
-    EQUB &FE, &8A, &48, &D8, &AD, &43, &4F, &F0, &0E, &30, &22, &C9
-    EQUB 2  , &90, &27, &F0, &4D, &C9, 3  , &F0, &5C, &B0, &6B, &A9
-    EQUB &88, &8D, &20, &FE, &A2, &0F, &BD, &68, &34, &8D, &21, &FE
-    EQUB &CA, &10, &F7, &A9, &C4, &A2, &0F, &D0, &6F, &C9, &FF, &D0
-    EQUB &74, &EE, &43, &4F, &F0, &F1, &A9, &C4, &8D, &20, &FE, &18
-    EQUB &A9, 3  , &8D, &21, &FE, &69, &10, &90, &F9, &A9, &3C, &38
-    EQUB &ED, &1F, &4F, &8D, &21, &4F, &A9, &15, &ED, &20, &4F, &8D
-    EQUB &22, &4F, &AD, &1F, &4F, &AE, &20, &4F, &B0, &3E, &A2, &0F
-    EQUB &BD, &58, &34, &8D, &21, &FE, &CA, &10, &F7, &AD, &21, &4F
-    EQUB &AE, &22, &4F, &D0, &2B, &A2, 3  , &BD, &78, &34, &8D, &21
-    EQUB &FE, &CA, &10, &F7, &A9, 0  , &A2, &1E, &D0, &1A, &A2, 3  
-    EQUB &BD, &7C, &34, &8D, &21, &FE, &CA, &10, &F7, &8E, &43, &4F
-    EQUB &20, &A4, &52, &A9, &FF, &8D, &69, &FE, &A9, &16, &A2, &0B
-    EQUB &8E, &67, &FE, &8D, &66, &FE, &EE, &43, &4F, &68, &AA, &A5
-    EQUB &FC, &40
+.loop_C4E59
+    JMP (L4F1D)
+
+    LDA user_via_ifr
+    AND #&40 ; '@'
+    BEQ loop_C4E59
+    STA user_via_ifr
+    TXA
+    PHA
+    CLD
+    LDA L4F43
+    BEQ C4E7C
+    BMI C4E92
+    CMP #2
+    BCC C4E9B
+    BEQ C4EC3
+    CMP #3
+    BEQ C4ED6
+    BCS C4EE7
+.C4E7C
+    LDA #&88
+    STA video_ula_control
+    LDX #&0F
+.loop_C4E83
+    LDA L3468,X
+    STA video_ula_palette
+    DEX
+    BPL loop_C4E83
+.loop_C4E8C
+    LDA #&C4
+    LDX #&0F
+    BNE C4F01
+.C4E92
+    CMP #&FF
+    BNE C4F0A
+    INC L4F43
+    BEQ loop_C4E8C
+.C4E9B
+    LDA #&C4
+    STA video_ula_control
+    CLC
+    LDA #3
+.loop_C4EA3
+    STA video_ula_palette
+    ADC #&10
+    BCC loop_C4EA3
+    LDA #&3C ; '<'
+    SEC
+    SBC L4F1F
+    STA L4F21
+    LDA #&15
+    SBC L4F20
+    STA L4F22
+    LDA L4F1F
+    LDX L4F20
+    BCS C4F01
+.C4EC3
+    LDX #&0F
+.loop_C4EC5
+    LDA L3458,X
+    STA video_ula_palette
+    DEX
+    BPL loop_C4EC5
+    LDA L4F21
+    LDX L4F22
+    BNE C4F01
+.C4ED6
+    LDX #3
+.loop_C4ED8
+    LDA L3478,X
+    STA video_ula_palette
+    DEX
+    BPL loop_C4ED8
+    LDA #0
+    LDX #&1E
+    BNE C4F01
+.C4EE7
+    LDX #3
+.loop_C4EE9
+    LDA L347C,X
+    STA video_ula_palette
+    DEX
+    BPL loop_C4EE9
+    STX L4F43
+    JSR L52A4
+    LDA #&FF
+    STA user_via_t2c_h
+    LDA #&16
+    LDX #&0B
+.C4F01
+    STX user_via_t1l_h
+    STA user_via_t1l_l
+    INC L4F43
+.C4F0A
+    PLA
+    TAX
+    LDA L00FC
+    RTI
+
 .L4F0F
     EQUB &3F, &28, &31, &24, &26, 0  , &1A, &20, 1  , 7  , &67, 8  
     EQUB &0B, &50
@@ -8141,7 +8232,11 @@ L3878 = sub_C3877+1
 .L4F1F
     EQUB &D8
 .L4F20
-    EQUB 4  , &64, &10
+    EQUB 4
+.L4F21
+    EQUB &64
+.L4F22
+    EQUB &10
 .sub_C4F23
     SEI
     LDA L4F1D
@@ -8697,6 +8792,7 @@ L3878 = sub_C3877+1
 .C52A3
     RTS
 
+.L52A4
     EQUB &EE, &F7, &62, &A5, &63, &18, &69, &30, &6D, &FA, &62, &8D
     EQUB &FA, &62, &90, &41, &A5, 0  , &F0, &3D, &A2, 4  , &BD, &C0
     EQUB &6F, &5D, &F6, &52, &9D, &C0, &6F, &BD, &F8, &70, &5D, &FB
