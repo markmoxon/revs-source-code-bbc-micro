@@ -47,9 +47,9 @@ LOAD% = &1200           \ The load address of the main code binary
 
 LOAD_END% = &7000       \ The address of the end of the main code binary
 
-TRACK_LOAD% = &70DB     \ The load address of the track data file
-
 CODE% = &0B00           \ The address of the main game code
+
+trackLoad = &70DB       \ The load address of the track data file
 
 \ ******************************************************************************
 \
@@ -161,7 +161,7 @@ L0060 = &0060
 L0061 = &0061
 L0062 = &0062
 L0063 = &0063
-L0064 = &0064
+printMode = &0064
 L0065 = &0065
 L0066 = &0066
 L0067 = &0067
@@ -177,10 +177,10 @@ P = &0070
 Q = &0071
 R = &0072
 S = &0073
-L0074 = &0074
-L0075 = &0075
-L0076 = &0076
-L0077 = &0077
+T = &0074
+U = &0075
+V = &0076
+W = &0077
 L0078 = &0078
 L0079 = &0079
 L007A = &007A
@@ -368,13 +368,13 @@ ORG &1200
                         \
                         \   * &1200-&12FF is copied to &7900-&79FF
                         \
-                        \ so we set up a byte counter in Y
+                        \ so set up a byte counter in Y
 .entr1
 
  LDA &1200,Y            \ Copy the Y-th byte of &1200 to the Y-th byte of &7900
  STA &7900,Y
 
- INY                    \ Increment the loop counter
+ INY                    \ Increment the byte counter
 
  BNE entr1              \ Loop back until we have copied a whole page of bytes
 
@@ -408,16 +408,16 @@ ORG &790E
  LDX #0                 \ filing system (i.e. do a *TAPE command)
  JSR OSBYTE
 
-                        \ We now want to move the track data from TRACK_LOAD%
+                        \ We now want to move the track data from trackLoad
                         \ (which is where the loading process loads the track
                         \ file) to trackData (which is where the game expects
                         \ to find the track data)
                         \
                         \ At the same time, we also want to move the data that
                         \ is currently at trackData, which is part of the
-                        \ dashboard image, into screen memory at TRACK_LOAD%
+                        \ dashboard image, into screen memory at trackLoad
                         \
-                        \ TRACK_LOAD% is &70DB and trackData is &5300, so we
+                        \ trackLoad is &70DB and trackData is &5300, so we
                         \ want to do the following:
                         \
                         \   * Swap &70DB-&7724 and &5300-&5949
@@ -431,9 +431,9 @@ ORG &790E
  LDA #HI(trackData)     \ so that's one address for the swap
  STA Q
 
- LDA #LO(TRACK_LOAD%)   \ Set (S R) = TRACK_LOAD%
+ LDA #LO(trackLoad)     \ Set (S R) = trackLoad
  STA R                  \
- LDA #HI(TRACK_LOAD%)   \ so that's the other address for the swap
+ LDA #HI(trackLoad)     \ so that's the other address for the swap
  STA S
 
  LDY #0                 \ Set a byte counter in Y for the swap
@@ -470,22 +470,20 @@ ORG &790E
  INY                    \ Increment the loop counter
 
  BNE swap2              \ If we have just crossed a page boundary, increment the
- INC Q                  \ high bytes to move on to next page
+ INC Q                  \ high bytes of (Q P) and (S R) to move on to next page
  INC S
 
 .swap2
 
  CPY #&25               \ If we have not yet reached address &7725, which is the
- BNE swap1              \ address after the end of the track data,  jump back to
+ BNE swap1              \ address after the end of the track data, jump back to
  LDA S                  \ swap1 to keep swapping data
  CMP #&77
  BNE swap1
 
-                        
-
- LDX #3                 \ The data swap is done, so we now check that all three
-                        \ checksum bytes at trackChecksum are zero, so set a
-                        \ counter in X to work through the four bytes
+ LDX #3                 \ The data swap is now done, so we now check that all
+                        \ three checksum bytes at trackChecksum are zero, so set
+                        \ a counter in X to work through the four bytes
 
 .swap3
 
@@ -511,15 +509,78 @@ ORG &790E
 \   Category: Setup
 \    Summary: Move and reset various blocks around in memory
 \
+\ ------------------------------------------------------------------------------
+\
+\ This routine moves another batch of memory blocks, as well as zeroing a
+\ section of memory. Together with the Entry and SwapCode routines, the various
+\ memory-moving routines implement the following operations:
+\
+\   * Main code loads at:   &1200-&6FFF
+\   * Track data loads at:  &70DB-&7813
+\
+\   * The Entry routine does the following:
+\
+\     * Move &1200-&12FF to &7900-&79FF
+\
+\   * The SwapCode routine does the following:
+\
+\     * Swap memory between &70DB-&7724 and &5300-&5949
+\
+\   * The MoveCode routine does the following:
+\
+\     * Move &1500-&15DA to &7000-&70DA
+\     * Move &1300-&14FF to &0B00-&0CFF
+\     * Move &5A80-&645B to &0D00-&16DB
+\     * Move &64D0-&6BFF to &5FD0-&63FF
+\     * Zero &5A80-&5E3F
+\
+\ Put together, these routines reorganise the game binary, which has the
+\ following file structure:
+\
+\   * &1200-&12FF   moves to &7900-&79FF in memory
+\   * &1300-&14FF   moves to &0B00-&0CFF in memory
+\   * &1500-&15da   moves to &7000-&70DA in memory
+\   * &15DB-&16DB   contains workspace noise
+\   * &16DC-&5A7F   stays put
+\   * &5300-&5949   swaps with track data at &70DB-&7724 in memory
+\   * &594A-&5A79   stays put
+\   * &5A80-&645B   moves to &0D00-&16DB in memory
+\   * &645C-&64CF   stays put (this just contains zeroes)
+\   * &64D0-&6BFF   moves to &5FD0-&63FF in memory
+\   * &6C00-&6FFF   stays put
+\
+\ and with the following for the track binary:
+\
+\   * &70DB-&7724   swaps with game data at &5300-&5949 in memory
+\
+\ The routines move, swap and reset various parts of the file, to give the
+\ following in-memory layout for when the game is running:
+\
+\   * &0B00-&0CFF   moves from &1300-&14FF in the game binary
+\   * &0D00-&16DB   moves from &5A80-&645B in the game binary
+\   * &16DC-&52FF   stays put
+\   * &5300-&5949   swaps with &70DB-&7724 in the track binary
+\   * &594A-&5FCF   stays put
+\   * &5FD0-&66FF   moves from &64D0-&6BFF in the game binary
+\   * &6700-&6FFF   stays put
+\   * &7000-&70DA   moves from &1500-&15DA in the game binary
+\   * &70DB-&7724   swaps with &5300-&5949 in the game binary
+\   * &7725-&78FF   not used
+\   * &7900-&79FF   moves from &1200-&12FF in the game binary
+\
+\ For details on the workspace noise in the final game binary at &15DB-&16DB,
+\ see the "Save Revs.bin" section at the end of this source file.
+
 \ ******************************************************************************
 
 .MoveCode
 
                         \ We are going to process the five memory blocks defined
                         \ in (blockStartHi blockStartLo)-(blockEndHi blockEndLo)
-                        \ and either zero the memory block (for the first block
-                        \ in the table only), or move them to the address in
-                        \ (blockToHi blockToLo)
+                        \
+                        \ We will either zero the memory block (for the first
+                        \ block in the table), or move the block to the address
+                        \ in (blockToHi blockToLo)
                         \
                         \ We work through the blocks from the last entry to the
                         \ first, so we end up doing this:
@@ -553,7 +614,7 @@ ORG &790E
  LDA (P),Y              \ Copy the Y-th byte of (Q P) to the Y-th byte of (S R)
  STA (R),Y              \
                         \ The LDA (P),Y instruction gets modified to LDA #0 for
-                        \ the last block that we process, when X = 0
+                        \ the last block that we process, i.e. when X = 0
 
  INC P                  \ Increment the address in (Q P), starting with the low
                         \ byte
@@ -572,35 +633,37 @@ ORG &790E
 .move4
 
  LDA P                  \ If (Q P) <> (blockEndHi blockEndLo) then jump back to
- CMP blockEndLo,X       \ move2 to copy or zero the next byte in the block
+ CMP blockEndLo,X       \ move2 to process the next byte in the block
  BNE move2
  LDA Q
  CMP blockEndHi,X
  BNE move2
 
- DEX                    \ We have finished copying or zeroing a block, so
-                        \ decrement the block counter in X to move on to the
-                        \ next block (i.e. the previous entry in the table)
+ DEX                    \ We have finished processing a block, so decrement the
+                        \ block counter in X to move on to the next block (i.e.
+                        \ the previous entry in the table)
 
  BMI move5              \ If X < 0 then we have finished processing all five
                         \ blocks, so jump to move5
 
- BNE move1              \ If X <> 0 then jump up to move1 to move the next block
+ BNE move1              \ If X <> 0, i.e. X > 0, then jump up to move1 to move
+                        \ the next block
 
  LDA ldaZero            \ We get here when X = 0, which means we have reached
- STA move2              \ the last block defined in the block tables
- LDA ldaZero+1          \
- STA move2+1            \ We don't want to copy this block, we want to zero it,
-                        \ so wodify the instruction at move2 to LDA #0, so the
-                        \ code zeroes the block rather than moving it
+ STA move2              \ the last block to process (i.e. the first entry in the
+ LDA ldaZero+1          \ block tables)
+ STA move2+1            \
+                        \ We don't want to copy this block, we want to zero it,
+                        \ so we modify the instruction at move2 to LDA #0, so
+                        \ the code zeroes the block rather than moving it
 
  JMP move1              \ Jump back to move1 to zero the final block
 
 .move5
 
- JMP Decrypt            \ If we get here we have moved and zeroed all the blocks
-                        \ in the block tables, so jump to Decrypt to continue
-                        \ setting up the game
+ JMP Protect            \ If we get here we have processed all the blocks in the
+                        \ block tables, so jump to Protect to continue setting
+                        \ up the game
 
 \ ******************************************************************************
 \
@@ -753,7 +816,24 @@ ORG &0B00
  EQUB &13, &00, &01, &00, &82, &00, &FF, &00
  EQUB &10, &00, &F6, &FF, &06, &00, &04, &00
  EQUB &01, &01, &02, &FE, &FA, &04, &01, &01
- EQUB &0A, &00, &00, &00, &48, &00, &FF
+ EQUB &0A, &00, &00, &00, &48, &00
+
+\ ******************************************************************************
+\
+\       Name: L0B46
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L0B46
+
+ EQUB &FF
 
 \ ******************************************************************************
 \
@@ -787,7 +867,7 @@ ORG &0B00
 
 .sub_C0B4A
 
- STX soundEnvelopes+70
+ STX L0B46
  ASL A
  ASL A
  ASL A
@@ -818,7 +898,7 @@ ORG &0B00
 
 .sub_C0B65
 
- STX soundEnvelopes+70
+ STX L0B46
  CLC
  ADC #&38
  TAX
@@ -828,7 +908,7 @@ ORG &0B00
 
  LDY #&0B
  JSR OSWORD
- LDX soundEnvelopes+70
+ LDX L0B46
  RTS
 
 \ ******************************************************************************
@@ -853,7 +933,7 @@ ORG &0B00
  LDA L5F3D,X
  ASL A
  ASL A
- STA L0075
+ STA U
  LDA L0BA0,X
  JSR sub_C0C00
  CLC
@@ -941,21 +1021,21 @@ ORG &0B00
 
  LDA L0900,Y
  CLC
- ADC L0074
+ ADC T
  STA L0900,X
  LDA L0A00,Y
  ADC L0083
  STA L0A00,X
  LDA L0901,Y
  CLC
- ADC L0075
+ ADC U
  STA L0901,X
  LDA L0A01,Y
  ADC L0084
  STA L0A01,X
  LDA L0902,Y
  CLC
- ADC L0076
+ ADC V
  STA L0902,X
  LDA L0A02,Y
  ADC L0085
@@ -977,7 +1057,7 @@ ORG &0B00
 
 .sub_C0C00
 
- STA L0074
+ STA T
 
 \ ******************************************************************************
 \
@@ -995,71 +1075,71 @@ ORG &0B00
 .sub_C0C02
 
  LDA #0
- LSR L0074
+ LSR T
  BCC C0C0B
  CLC
- ADC L0075
+ ADC U
 
 .C0C0B
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C13
  CLC
- ADC L0075
+ ADC U
 
 .C0C13
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C1B
  CLC
- ADC L0075
+ ADC U
 
 .C0C1B
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C23
  CLC
- ADC L0075
+ ADC U
 
 .C0C23
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C2B
  CLC
- ADC L0075
+ ADC U
 
 .C0C2B
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C33
  CLC
- ADC L0075
+ ADC U
 
 .C0C33
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C3B
  CLC
- ADC L0075
+ ADC U
 
 .C0C3B
 
  ROR A
- ROR L0074
+ ROR T
  BCC C0C43
  CLC
- ADC L0075
+ ADC U
 
 .C0C43
 
  ROR A
- ROR L0074
+ ROR T
  RTS
 
 \ ******************************************************************************
@@ -1077,105 +1157,105 @@ ORG &0B00
 
 .sub_C0C47
 
- ASL L0074
+ ASL T
  ROL A
  BCS C0C50
- CMP L0076
+ CMP V
  BCC C0C53
 
 .C0C50
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C53
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0C5C
- CMP L0076
+ CMP V
  BCC C0C5F
 
 .C0C5C
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C5F
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0C68
- CMP L0076
+ CMP V
  BCC C0C6B
 
 .C0C68
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C6B
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0C74
- CMP L0076
+ CMP V
  BCC C0C77
 
 .C0C74
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C77
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0C80
- CMP L0076
+ CMP V
  BCC C0C83
 
 .C0C80
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C83
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0C8C
- CMP L0076
+ CMP V
  BCC C0C8F
 
 .C0C8C
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C8F
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0C98
- CMP L0076
+ CMP V
  BCC C0C9B
 
 .C0C98
 
- SBC L0076
+ SBC V
  SEC
 
 .C0C9B
 
- ROL L0074
+ ROL T
  ROL A
  BCS C0CA2
- CMP L0076
+ CMP V
 
 .C0CA2
 
- ROL L0074
+ ROL T
  RTS
 
 \ ******************************************************************************
@@ -1216,15 +1296,15 @@ ORG &0B00
  LSR L0079
  ROR L0078
  LDA L007B
- STA L0074
+ STA T
  LDA L007A
- LSR L0074
+ LSR T
  ROR A
- LSR L0074
+ LSR T
  ROR A
- LSR L0074
+ LSR T
  ROR A
- STA L0075
+ STA U
  LDA L0078
  CLC
  ADC L007A
@@ -1234,10 +1314,10 @@ ORG &0B00
  STA L007D
  LDA L007C
  SEC
- SBC L0075
+ SBC U
  STA L007C
  LDA L007D
- SBC L0074
+ SBC T
  STA L007D
  RTS
 
@@ -1260,10 +1340,10 @@ ORG &0B00
 .sub_C0D01
 
  STA L007B
- STX L0074
+ STX T
  JSR sub_C0DB3
  STA L0078
- LDA L0075
+ LDA U
  STA L0079
  LDX #1
  STX L0042
@@ -1287,18 +1367,18 @@ ORG &0B00
  LDA #&AB
  JSR sub_C0C00
  JSR sub_C0C00
- STA L0076
+ STA V
  JSR sub_C0DBF
  LDA L0078
  SEC
- SBC L0074
- STA L0074
+ SBC T
+ STA T
  LDA L0079
- SBC L0075
- ASL L0074
+ SBC U
+ ASL T
  ROL A
  STA L62A3,X
- LDA L0074
+ LDA T
  AND #&FE
  STA L62A0,X
  JMP C0D7F
@@ -1308,21 +1388,21 @@ ORG &0B00
  LDA #0
  SEC
  SBC L0078
- STA L0074
+ STA T
  LDA #&C9
  SBC L0079
- STA L0075
- STA L0076
+ STA U
+ STA V
  JSR sub_C0DBF
- ASL L0074
- ROL L0075
+ ASL T
+ ROL U
  LDA #0
  SEC
- SBC L0074
+ SBC T
  AND #&FE
  STA L62A0,X
  LDA #0
- SBC L0075
+ SBC U
  BCC C0D7C
  LDA #&FE
  STA L62A0,X
@@ -1344,7 +1424,7 @@ ORG &0B00
  LDA #&C9
  SBC L0079
  STA L0079
- STA L0075
+ STA U
  JMP C0D1B
 
 .C0D97
@@ -1384,13 +1464,13 @@ ORG &0B00
 
 .sub_C0DB3
 
- ASL L0074
+ ASL T
  ROL A
- ASL L0074
+ ASL T
  ROL A
- STA L0076
+ STA V
  LDA #&C9
- STA L0075
+ STA U
 
 \ ******************************************************************************
 \
@@ -1408,16 +1488,16 @@ ORG &0B00
 .sub_C0DBF
 
  JSR sub_C0C02
- STA L0077
- LDA L0076
+ STA W
+ LDA V
  JSR sub_C0C00
- STA L0075
- LDA L0077
+ STA U
+ LDA W
  CLC
- ADC L0074
- STA L0074
+ ADC T
+ STA T
  BCC C0DD6
- INC L0075
+ INC U
 
 .C0DD6
 
@@ -1463,42 +1543,42 @@ ORG &0B00
 .C0DFA
 
  LDA L0081
- STA L0075
+ STA U
  LDA L0082
  JSR sub_C0C00
- STA L0077
- LDA L0074
+ STA W
+ LDA T
  CLC
  ADC #&80
- STA L0076
+ STA V
  BCC C0E10
- INC L0077
+ INC W
 
 .C0E10
 
  LDA L0083
  JSR sub_C0C00
  STA L0078
- LDA L0074
+ LDA T
  CLC
- ADC L0077
- STA L0077
+ ADC W
+ STA W
  BCC C0E22
  INC L0078
 
 .C0E22
 
  LDA L0080
- STA L0075
+ STA U
  LDA L0083
  JSR sub_C0C00
- STA L0075
- LDA L0074
+ STA U
+ LDA T
  CLC
- ADC L0076
- LDA L0075
- ADC L0077
- STA L0074
+ ADC V
+ LDA U
+ ADC W
+ STA T
  BCC C0E3C
  INC L0078
 
@@ -1539,7 +1619,7 @@ ORG &0B00
 
 .sub_C0E42
 
- STA L0075
+ STA U
 
 \ ******************************************************************************
 \
@@ -1558,10 +1638,10 @@ ORG &0B00
 
  LDA #0
  SEC
- SBC L0074
- STA L0074
+ SBC T
+ STA T
  LDA #0
- SBC L0075
+ SBC U
 
 .C0E4F
 
@@ -1735,26 +1815,26 @@ ORG &0B00
 
 .sub_C0EE5
 
- STY L0074
+ STY T
  LDX #&FF
  JSR sub_C0E50
  BNE C0F63
- LDY L0074
+ LDY T
 
 .loop_C0EF0
 
- STY L0074
+ STY T
  LDX L3DE2,Y
  JSR sub_C0E50
  BEQ C0F01
- LDY L0074
+ LDY T
  DEY
  BPL loop_C0EF0
  BMI C0F11
 
 .C0F01
 
- LDY L0074
+ LDY T
  LDA L39D4,Y
  AND #&0F
  TAX
@@ -1847,13 +1927,13 @@ ORG &0B00
 .C0F67
 
  LDX #0
- STX L0076
+ STX V
  STX L0100
  INX
 
 .C0F6F
 
- STX L0077
+ STX W
  LDY L013C,X
  TXA
  STA L0100,X
@@ -1865,7 +1945,7 @@ ORG &0B00
  BMI C0FD4
  LDA L06A0,Y
  SBC L06A0,X
- STA L0075
+ STA U
  LDA L06B8,Y
  SBC L06B8,X
  STA L0079
@@ -1875,21 +1955,21 @@ ORG &0B00
 
 .C0F9B
 
- ORA L0075
+ ORA U
  ORA L0079
  BNE C0FAA
- LDX L0077
+ LDX W
  DEX
  LDA L0100,X
  STA L0101,X
 
 .C0FAA
 
- LDX L0077
+ LDX W
  INX
  CPX #&14
  BCC C0F6F
- LDA L0076
+ LDA V
  BNE C0F67
  CLD
  JSR sub_C63A2
@@ -1897,9 +1977,9 @@ ORG &0B00
 
 .C0FBA
 
- LDA loop_C3862+2,X
- SBC loop_C3862+2,Y
- STA L0075
+ LDA setp1+2,X
+ SBC setp1+2,Y
+ STA U
  LDA L39E4,X
  SBC L39E4,Y
  STA L0079
@@ -1912,7 +1992,7 @@ ORG &0B00
 
  LDA L0898,Y
  SBC L0898,X
- STA L0075
+ STA U
  LDA L08AC,Y
  SBC L08AC,X
  STA L0079
@@ -1922,13 +2002,13 @@ ORG &0B00
 
 .C0FEC
 
- STX L0074
- LDX L0077
+ STX T
+ LDX W
  TYA
  STA L013B,X
- LDA L0074
+ LDA T
  STA L013C,X
- DEC L0076
+ DEC V
  JMP C0FAA
 
 \ ******************************************************************************
@@ -2058,7 +2138,7 @@ ORG &0B00
 
 .sub_C109B
 
- STA L0076
+ STA V
  SEC
  ROR L62F8
 
@@ -2080,8 +2160,8 @@ ORG &0B00
 
 .C10B7
 
- LDA L0076
- STA L0077
+ LDA V
+ STA W
 
 .loop_C10BB
 
@@ -2092,7 +2172,7 @@ ORG &0B00
  JSR sub_C14C3
  PLA
  TAX
- DEC L0077
+ DEC W
  BPL loop_C10BB
  INX
  CPX #&14
@@ -2118,13 +2198,13 @@ ORG &0B00
  BNE C10D7
  LDX #&17
  LDA #&31
- STA L0076
+ STA V
  STA L0042
 
 .loop_C10F2
 
  JSR sub_C14C3
- DEC L0076
+ DEC V
  BNE loop_C10F2
 
 .loop_C10F9
@@ -2728,14 +2808,14 @@ ORG &0B00
 
 .C134F
 
- STA L0077
+ STA W
  LDY L06FF
  LDA trackData+1543,Y
  PLP
  BCC C1365
  LSR A
  TAY
- LDA L0077
+ LDA W
  CPY L0897
  BEQ C137C
  BNE C1378
@@ -2745,7 +2825,7 @@ ORG &0B00
  SEC
  SBC L0897
  TAY
- LDA L0077
+ LDA W
  CPY #7
  BEQ C137C
  CPY #&0E
@@ -3001,21 +3081,21 @@ ORG &0B00
  STA L0084
  STA L0085
  LDA trackData+256,Y
- STA L0074
+ STA T
  BPL C1453
  DEC L0083
 
 .C1453
 
  LDA trackData+512,Y
- STA L0075
+ STA U
  BPL C145C
  DEC L0084
 
 .C145C
 
  LDA trackData+768,Y
- STA L0076
+ STA V
  BPL C1465
  DEC L0085
 
@@ -3029,8 +3109,8 @@ ORG &0B00
 
  LDA #0
  SEC
- SBC L0074,X
- STA L0074,X
+ SBC T,X
+ STA T,X
  LDA #0
  SBC L0083,X
  STA L0083,X
@@ -3234,12 +3314,12 @@ ORG &0B00
  LSR A
  LSR A
  LSR A
- STA L0074
+ STA T
  LDA L0017
  SEC
  SBC L0018
  BCS C156D
- ADC L0074
+ ADC T
  LDA #0
  BCS C1573
 
@@ -3271,8 +3351,8 @@ ORG &0B00
 .sub_C1579
 
  LDA #0
- STA L0076
- STA L0074
+ STA V
+ STA T
  STA L0058
  LDX #&9D
  JSR sub_C0E50
@@ -3281,25 +3361,25 @@ ORG &0B00
  BPL C15B3
  LDX #1
  JSR sub_C503F
- STA L0075
+ STA U
  JSR sub_C0C00
  PLP
  BEQ C159F
  LSR A
- ROR L0074
+ ROR T
  LSR A
- ROR L0074
+ ROR T
 
 .C159F
 
- STA L0075
- LDA L0074
+ STA U
+ LDA T
  AND #&FE
- STA L0074
+ STA T
  TXA
- ORA L0074
- STA L0074
- LDA L0075
+ ORA T
+ STA T
+ LDA U
  JMP C1EE9
 
  EQUB &EA, &EA
@@ -3310,19 +3390,19 @@ ORG &0B00
  JSR sub_C0E50
  BNE C15BE
  LDA #2
- STA L0076
+ STA V
 
 .C15BE
 
  LDX #&A8
  JSR sub_C0E50
  BNE C15C7
- INC L0076
+ INC V
 
 .C15C7
 
  LDA #3
- STA L0075
+ STA U
  PLP
  BEQ C15DF
  LDA #0
@@ -3333,13 +3413,13 @@ ORG &0B00
 
 .C15D9
 
- STA L0075
+ STA U
  LDA #&80
- STA L0074
+ STA T
 
 .C15DF
 
- LDA L0076
+ LDA V
  BEQ C15F4
  CMP #3
  BEQ C163B
@@ -3353,19 +3433,19 @@ ORG &0B00
 
  LDA L62DA
  AND #&F0
- STA L0074
+ STA T
  LDA L62EA
  JSR sub_C0E40
  LSR A
- ROR L0074
+ ROR T
  LSR A
- ROR L0074
+ ROR T
  CMP L62A5
  JSR sub_C1F9B
 
 .C160D
 
- STA L0075
+ STA U
 
 .C160F
 
@@ -3374,18 +3454,18 @@ ORG &0B00
 .C1612
 
  SEC
- SBC L0074
- STA L0074
+ SBC T
+ STA T
  LDA L62A5
- SBC L0075
+ SBC U
  CMP #&C8
  BCC C162D
  JSR sub_C0E42
- STA L0075
- LDA L0074
+ STA U
+ LDA T
  EOR #1
- STA L0074
- LDA L0075
+ STA T
+ LDA U
 
 .C162D
 
@@ -3396,7 +3476,7 @@ ORG &0B00
 .C1633
 
  STA L62A5
- LDA L0074
+ LDA T
  STA L62A2
 
 .C163B
@@ -3408,10 +3488,10 @@ ORG &0B00
  LDX #2
  JSR sub_C503F
  BCC C1678
- STA L0074
- LSR L0074
+ STA T
+ LSR T
  ASL A
- ADC L0074
+ ADC T
  BCS C1658
  CMP #&FA
  BCC C1681
@@ -3544,7 +3624,7 @@ ORG &0B00
 
  JSR sub_C4DDD
  LDA #0
- STA L0064
+ STA printMode
  JSR sub_C18EA
  JSR L7BE2
  BIT L05F4
@@ -3814,7 +3894,7 @@ ORG &0B00
  STA L0164,X
  STA L0150,X
  STA L0100,X
- STA Setup,X
+ STA SetupGame,X
  LDA #&FF
  STA L01A4,X
  DEX
@@ -3925,7 +4005,7 @@ ORG &0B00
 
 .sub_C18EA
 
- STA L0074
+ STA T
  LDX #3
 
 .loop_C18EE
@@ -3940,11 +4020,11 @@ ORG &0B00
 
  LDY #&4F
  LDA #0
- STA L0076
+ STA V
 
 .loop_C18FE
 
- BIT L0074
+ BIT T
  BMI C1906
  LDA (P),Y
  STA (R),Y
@@ -3953,14 +4033,14 @@ ORG &0B00
 
  LDA (R),Y
  STA (P),Y
- INC L0076
+ INC V
  DEY
  TYA
  CMP L3900,X
  BNE loop_C18FE
  LDA R
  SEC
- SBC L0076
+ SBC V
  STA R
  BCS C191E
  DEC S
@@ -4017,7 +4097,7 @@ ORG &0B00
  CLC
  ADC #&14
  CMP #&28
- ROR L0076
+ ROR V
  RTS
 
 \ ******************************************************************************
@@ -4038,14 +4118,14 @@ ORG &0B00
  STA loop_C196F+1
  STY L004B
  DEY
- STY L0075
+ STY U
  JSR sub_C1933
  LDY L001F
  JMP C1977
 
 .C194E
 
- LDA L0076
+ LDA V
  BPL C1955
  JSR sub_C1933
 
@@ -4054,7 +4134,7 @@ ORG &0B00
  LDA L5F20,X
  CMP #&50
  BCS C1980
- BIT L0076
+ BIT V
  BPL C1965
  CMP L5F21,X
  BEQ C19A5
@@ -4088,7 +4168,7 @@ ORG &0B00
 
  INX
  BMI C1996
- CPX L0075
+ CPX U
  BCC C194E
 
 .C1980
@@ -4117,7 +4197,7 @@ ORG &0B00
  LDA L5EE0,X
  BPL C19A2
  INX
- CPX L0075
+ CPX U
  BCC loop_C1998
 
 .C19A2
@@ -4318,7 +4398,7 @@ ORG &0B00
 .sub_C1A98
 
  STX L0088
- STA L0075
+ STA U
  DEC L004B
  LDA L62F2
  CMP #&28
@@ -4336,14 +4416,14 @@ ORG &0B00
  CMP #&14
  BEQ C1AC4
  LDA L5EA0,X
- STA L0077
+ STA W
  LDA L5E90,X
  JMP C1ACC
 
 .C1AC4
 
  LDA L5E90,X
- STA L0077
+ STA W
  LDA L5EA0,X
 
 .C1ACC
@@ -4351,7 +4431,7 @@ ORG &0B00
  CLC
  ADC #&14
  BMI C1B03
- LDA L0077
+ LDA W
  CLC
  ADC #&14
  BPL C1B03
@@ -4361,21 +4441,21 @@ ORG &0B00
  LDA L5EE1,X
  BPL C1AE4
  INX
- INC L0075
+ INC U
  CPX L004B
  BCC loop_C1AD8
 
 .C1AE4
 
  LDA L5F60,Y
- STA L0074
+ STA T
  LDA L5F60,Y
  BEQ C1AF9
  AND #&1C
  CMP L0088
  BEQ C1AF9
  ROR A
- EOR L0074
+ EOR T
  BMI C1B03
 
 .C1AF9
@@ -4387,11 +4467,11 @@ ORG &0B00
 
 .C1B03
 
- INC L0075
+ INC U
 
 .C1B05
 
- LDX L0075
+ LDX U
  CPX L004B
  BCC C1AA7
 
@@ -4434,16 +4514,16 @@ ORG &0B00
 .C1B29
 
  LDA L62BA,Y
- STA L0075
+ STA U
  LDA L62B7,Y
  ASL A
- ROL L0075
- STA L0074
+ ROL U
+ STA T
  CLC
  ADC L5E40,X
- STA L0076
+ STA V
  LDA L5E90,X
- ADC L0075
+ ADC U
  CMP #&18
  BCC C1B49
  CMP #&E8
@@ -4451,9 +4531,9 @@ ORG &0B00
 
 .C1B49
 
- ASL L0076
+ ASL V
  ROL A
- ASL L0076
+ ASL V
  ROL A
  CLC
  ADC #&50
@@ -4464,11 +4544,11 @@ ORG &0B00
 
 .loop_C1B5B
 
- ASL L0074
- ROL L0075
+ ASL T
+ ROL U
  DEY
  BNE loop_C1B5B
- LDA L0075
+ LDA U
  BPL C1B6B
  EOR #&FF
  CLC
@@ -4563,7 +4643,7 @@ ORG &0B00
  LDA #0
  STA L0068
  SEC
- ROR L0076
+ ROR V
  LDA #&25
  SEC
  SBC L0041
@@ -4573,7 +4653,7 @@ ORG &0B00
 .C1BCD
 
  ASL A
- STA L0075
+ STA U
  LDX L0067
  LDY L006F
  CMP #&28
@@ -4658,7 +4738,7 @@ ORG &0B00
  LSR A
  TAX
  LDA L628F,X
- STA L0076
+ STA V
  LDA #0
  STA P
  CPY #1
@@ -4719,7 +4799,7 @@ ORG &0B00
 
  LDA L0085
  CMP #&14
- ROL L0074
+ ROL T
  LSR A
  ROR P
  CLC
@@ -4757,14 +4837,14 @@ ORG &0B00
  BEQ C1CC3
  TYA
  BEQ C1CC3
- EOR L0074
+ EOR T
  AND #1
  BEQ C1CC3
  LDA L0084
  AND #3
  TAX
  LDA L628F,X
- STA L0076
+ STA V
 
 .C1CC3
 
@@ -4773,18 +4853,18 @@ ORG &0B00
  TAX
  LDA L3FE8,X
  EOR #&FF
- AND L0076
- STA L0076
+ AND V
+ STA V
  CPY #1
  BCS C1D15
  LDA L337C,X
  AND L0078
- STA L0074
+ STA T
  LDA L0079
  AND L33FC,X
- ORA L0074
+ ORA T
  AND L3FE8,X
- ORA L0076
+ ORA V
  STA L007A
  LDA L0048
  BEQ C1CFD
@@ -4824,7 +4904,7 @@ ORG &0B00
  EOR #&FF
  AND L0079
  AND L3FE8,X
- ORA L0076
+ ORA V
 
 .C1D25
 
@@ -4845,7 +4925,7 @@ ORG &0B00
  EOR #&FF
  AND L0078
  AND L3FE8,X
- ORA L0076
+ ORA V
 
 .C1D44
 
@@ -5138,15 +5218,15 @@ ORG &0B00
 
 .C1E3E
 
- STA L0076
+ STA V
  LDA #&7F
  SEC
  SBC L007F
- STA L0074
+ STA T
  ADC L0047
  STA L0086
  LDA L0085
- STA L0075
+ STA U
  CLC
  ADC #&5F
  LSR A
@@ -5155,7 +5235,7 @@ ORG &0B00
  LDA #0
  ROR A
  SEC
- SBC L0074
+ SBC T
  STA P
  EOR #&80
  STA R
@@ -5173,14 +5253,14 @@ ORG &0B00
 
 .C1E6D
 
- LDY L0075
+ LDY U
  LDA L3F4F,Y
  DEY
  DEY
- STY L0075
+ STY U
  CMP L0047
  BCC C1E84
- ADC L0074
+ ADC T
  TAY
  BPL C1E86
  CPX #2
@@ -5193,7 +5273,7 @@ ORG &0B00
 
 .C1E86
 
- LDA L0076
+ LDA V
  CPX #2
  BCC C1E98
 
@@ -5323,7 +5403,7 @@ ORG &0B00
  JSR sub_C63C5
  BEQ C1F05
  BCS C1F05
- LDA L0076
+ LDA V
  BNE C1F11
 
 .C1F05
@@ -5332,7 +5412,7 @@ ORG &0B00
 
 .C1F08
 
- LDA L0074
+ LDA T
  EOR #1
  LSR A
  LDA #3
@@ -5348,14 +5428,14 @@ ORG &0B00
 .C1F19
 
  LDA L62A2
- STA L0076
+ STA V
  LSR A
  LDA L62A5
  BCC C1F30
  LDA #0
  SEC
- SBC L0076
- STA L0076
+ SBC V
+ STA V
  LDA #0
  SBC L62A5
 
@@ -5369,16 +5449,16 @@ ORG &0B00
 
 .C1F39
 
- STA L0077
+ STA W
  LDA L5E40,X
  SEC
- SBC L0076
- STA L0074
+ SBC V
+ STA T
  LDA L5E90,X
- SBC L0077
+ SBC W
  PHP
  JSR sub_C0E40
- STA L0076
+ STA V
  LDY L0022
  LDA #&3C
  SEC
@@ -5390,7 +5470,7 @@ ORG &0B00
 
  ASL A
  ADC #&20
- STA L0075
+ STA U
  LDA L0701,Y
  AND #&7F
  CMP #&40
@@ -5409,25 +5489,25 @@ ORG &0B00
  ASL A
  ASL A
  ASL A
- CMP L0075
+ CMP U
  BCC C1F79
- STA L0075
+ STA U
 
 .C1F79
 
  JSR sub_C0DBF
- LDA L0075
+ LDA U
  PLP
  JSR sub_C0E40
- STA L0075
- LDA L0074
+ STA U
+ LDA T
  AND #&FE
- STA L0074
+ STA T
  LDA L62A2
  LSR A
  BCS C1F95
  JSR sub_C0E44
- STA L0075
+ STA U
 
 .C1F95
 
@@ -5452,7 +5532,7 @@ ORG &0B00
  BCC C1FA7
  LDA L62A2
  AND #&FE
- STA L0074
+ STA T
  LDA L62A5
 
 .C1FA7
@@ -5500,7 +5580,7 @@ ORG &0B00
 
 .sub_C1FB4
 
- STX L0074
+ STX T
  LDX #3
 
 .loop_C1FB8
@@ -5511,7 +5591,7 @@ ORG &0B00
  BPL loop_C1FB8
  LDA #&F0
  STA L38FE
- LDA L0074
+ LDA T
  CMP #&17
  BEQ C1FDE
  CMP #&14
@@ -5605,7 +5685,7 @@ ORG &0B00
  STA L5FFF
  LDY L0081
  LDX #0
- STX L0077
+ STX W
 
 .C2049
 
@@ -5614,9 +5694,9 @@ ORG &0B00
  AND #7
  TAX
  LDA L5FF8,X
- STA L0074
+ STA T
  LDA L4480,Y
- STA L0075
+ STA U
  LSR A
  LSR A
  LSR A
@@ -5624,8 +5704,8 @@ ORG &0B00
  TAX
  LDA L5FF8,X
  CLC
- ADC L0074
- BIT L0075
+ ADC T
+ BIT U
  BVC C2076
  CLC
  ADC L5FFB
@@ -5650,14 +5730,14 @@ ORG &0B00
 
 .C2080
 
- LDX L0077
+ LDX W
  STA L5EF8,X
  EOR #&FF
  BPL C2098
  CLC
  ADC #1
  STA L5F00,X
- INC L0077
+ INC W
  INY
  CPY L008A
  BNE C2049
@@ -5905,16 +5985,16 @@ ORG &0B00
  ROL A
  BCC loop_C21BD
  ROR A
- STA L0076
+ STA V
  LDA L0082
- STA L0074
+ STA T
  LDA L0085
- CMP L0076
+ CMP V
  BEQ C220D
  JSR sub_C0C47
  LDA #0
  STA L008A
- LDY L0074
+ LDY T
  LDA L6100,Y
  STA L007E
  LSR A
@@ -5994,16 +6074,16 @@ ORG &0B00
  ROL A
  BCC loop_C2235
  ROR A
- STA L0076
+ STA V
  LDA L0080
- STA L0074
+ STA T
  LDA L0083
- CMP L0076
+ CMP V
  BEQ C220D
  JSR sub_C0C47
  LDA #0
  STA L008A
- LDY L0074
+ LDY T
  LDA L6100,Y
  STA L007E
  LSR A
@@ -6124,23 +6204,23 @@ ORG &0B00
  ROL A
  BCC loop_C22C5
  ROR A
- STA L0076
+ STA V
  STY L002B
  TAY
  LDA L6180,Y
  STA L002A
  LDA L0081
- STA L0074
+ STA T
  LDA L0084
  JSR sub_C0C47
- LDA L0074
+ LDA T
  CMP #&80
  BCS C22FE
  BIT L0087
  BPL C22F5
  LDA #&3C
  SEC
- SBC L0074
+ SBC T
  JMP C22F8
 
 .C22F5
@@ -6193,13 +6273,13 @@ ORG &0B00
 
  CPY L0008
  BEQ C232B
- STY L0074
+ STY T
  TYA
  CLC
  ADC #&28
  TAY
  JSR sub_C0BA2
- LDY L0074
+ LDY T
  JSR sub_C0BA2
 
 .C232B
@@ -6218,12 +6298,12 @@ ORG &0B00
  ASL A
  BIT L0025
  BPL C234F
- STA L0074
+ STA T
  LDA L06FF
  CLC
  ADC #8
  SEC
- SBC L0074
+ SBC T
  BCS C235B
  ADC L59FA
  JMP C235B
@@ -6405,16 +6485,16 @@ ORG &0B00
 .C2408
 
  LDA #0
- STA L0075
+ STA U
  LDY L0014
- STX L0077
+ STX W
 
 .C2410
 
  LDA L0900,X
  SEC
  SBC L0900,Y
- STA L0074
+ STA T
  LDA L0A00,X
  SBC L0A00,Y
  CLC
@@ -6425,27 +6505,27 @@ ORG &0B00
 
  PHP
  ROR A
- ROR L0074
+ ROR T
  PLP
  ROR A
- ROR L0074
- STA L0076
- LDX L0075
+ ROR T
+ STA V
+ LDX U
  LDA L0900,Y
  CLC
- ADC L0074
+ ADC T
  STA L09FA,X
  LDA L0A00,Y
- ADC L0076
+ ADC V
  STA L0AFA,X
  INX
  CPX #3
  BEQ C2450
- STX L0075
- LDX L0077
+ STX U
+ LDX W
  INY
  INX
- STX L0077
+ STX W
  JMP C2410
 
 .C2450
@@ -6501,11 +6581,11 @@ ORG &0B00
  CPY #&12
  BCS C24B8
  LDA L3DD0,Y
- STA L0074
+ STA T
  TXA
  SEC
  SBC L000E
- CMP L0074
+ CMP T
  BCS C24B0
  TXA
  CLC
@@ -6519,7 +6599,7 @@ ORG &0B00
 .C24B1
 
  SEC
- SBC L0074
+ SBC T
  TAX
  JMP C23D8
 
@@ -6722,11 +6802,11 @@ ORG &0B00
 .C2573
 
  AND L306C,Y
- STA L0077
+ STA W
  AND #7
  TAY
  LDA L306E,Y
- STA L0076
+ STA V
  LDA L0042
  CMP #3
  BCS C2589
@@ -6739,7 +6819,7 @@ ORG &0B00
  SBC L3076,Y
  TAY
  LDA #0
- STA L0075
+ STA U
  LDA L002A
  DEY
  BEQ C25A9
@@ -6747,7 +6827,7 @@ ORG &0B00
 
 .loop_C259B
 
- LSR L0075
+ LSR U
  ROR A
  INY
  BNE loop_C259B
@@ -6756,13 +6836,13 @@ ORG &0B00
 .C25A3
 
  ASL A
- ROL L0075
+ ROL U
  DEY
  BNE C25A3
 
 .C25A9
 
- STA L0074
+ STA T
  LDA L0049
  LSR A
  ROR A
@@ -6770,23 +6850,23 @@ ORG &0B00
  BPL C25C0
  LDA #0
  SEC
- SBC L0074
- STA L0074
+ SBC T
+ STA T
  LDA #0
- SBC L0075
- STA L0075
+ SBC U
+ STA U
 
 .C25C0
 
  LDY L0012
  LDA L5E40,Y
  CLC
- ADC L0074
+ ADC T
  STA L5E50,Y
  LDA L5E90,Y
- ADC L0075
+ ADC U
  STA L5EA0,Y
- LDA L0077
+ LDA W
  AND #&18
  BEQ C25FD
  LDY L0057
@@ -6794,18 +6874,18 @@ ORG &0B00
  BCS C25FD
  LDA L0012
  STA L62B4,Y
- LDA L0077
+ LDA W
  STA L6299,Y
  AND #1
  BEQ C25F1
- LSR L0075
- ROR L0074
+ LSR U
+ ROR T
 
 .C25F1
 
- LDA L0074
+ LDA T
  STA L62B7,Y
- LDA L0075
+ LDA U
  STA L62BA,Y
  INC L0057
 
@@ -6819,7 +6899,7 @@ ORG &0B00
 
 .C2606
 
- LDA L0076
+ LDA V
 
 .C2608
 
@@ -6883,7 +6963,7 @@ ORG &0B00
 
 .C262F
 
- DEC L0074
+ DEC T
  BNE C262F
  DEX
  BNE C262F
@@ -6959,11 +7039,11 @@ ORG &0B00
 .sub_C267F
 
  LDA L013C,X
- STA L0074
+ STA T
  LDA L013C,Y
  STA L013C,X
  TAX
- LDA L0074
+ LDA T
  STA L013C,Y
  TAY
  RTS
@@ -6987,14 +7067,14 @@ ORG &0B00
 
 .C2694
 
- STX L0077
+ STX W
  LDA L013C,X
- STA L0074
+ STA T
  JSR sub_C507E
  LDA L013C,X
  STX L0078
  TAY
- LDX L0074
+ LDX T
  LDA #0
  STA L007F
  STA L0114,X
@@ -7003,7 +7083,7 @@ ORG &0B00
  BPL C26E9
  CMP #&F6
  BCC C26E6
- LDX L0077
+ LDX W
  LDY L0078
  JSR sub_C267F
  SEC
@@ -7021,14 +7101,14 @@ ORG &0B00
 
 .C26D1
 
- STA L0074
+ STA T
  LDA L04B4,Y
  ROL L0079
  SBC L04B4,X
  BNE C26E6
  SED
  CLC
- LDA L0074
+ LDA T
  ADC L002F
  STA L002F
  CLD
@@ -7041,12 +7121,12 @@ ORG &0B00
 
  CMP #5
  BCS C26E6
- LDA Setup,X
+ LDA SetupGame,X
  CLC
- SBC Setup,Y
+ SBC SetupGame,Y
  LDA L0150,X
  SBC L0150,Y
- ROR L0076
+ ROR V
  BPL C26E6
  LSR A
  CMP #&1E
@@ -7062,7 +7142,7 @@ ORG &0B00
 .C270B
 
  STA L0083
- LDA L0074
+ LDA T
  CMP #4
  LDA L0100,Y
  AND #&40
@@ -7075,7 +7155,7 @@ ORG &0B00
  STA L007F
  LDA L0178,X
  CMP L0178,Y
- ROR L0074
+ ROR T
  JMP C277D
 
 .C2729
@@ -7085,7 +7165,7 @@ ORG &0B00
  STA L007F
  LDA L0178,Y
  CMP L0178,X
- ROR L0074
+ ROR T
  AND #&FF
  JSR sub_C3450
  CMP #&3C
@@ -7094,12 +7174,12 @@ ORG &0B00
 
 .C2742
 
- LSR L0076
+ LSR V
 
 .C2744
 
  LDA L0178,Y
- STA L0074
+ STA T
 
 .C2749
 
@@ -7108,7 +7188,7 @@ ORG &0B00
  LDA VIA+&68            \ user_via_t2c_l
  AND #&1F
  BNE C278C
- LDA L0076
+ LDA V
  AND #&80
  ORA L007F
  JMP C278A
@@ -7129,14 +7209,14 @@ ORG &0B00
  BCS C2786
  CMP #&3C
  BCS C277D
- LDA L0076
+ LDA V
  AND #&80
  ORA L007F
  STA L007F
 
 .C277D
 
- LDA L0074
+ LDA T
  AND #&80
  ORA L0083
  STA L0114,X
@@ -7160,7 +7240,7 @@ ORG &0B00
 
 .C2797
 
- LDX L0077
+ LDX W
  JSR sub_C5084
  CPX L0003
  BEQ C27A3
@@ -7206,7 +7286,7 @@ ORG &0B00
 
  LDA L08D0,Y
  SBC L08D0,X
- STA L0074
+ STA T
  LDA L08E8,Y
  SBC L08E8,X
  PHP
@@ -7215,7 +7295,7 @@ ORG &0B00
 
 .C27BF
 
- STA L0075
+ STA U
  SEC
  BEQ C27D8
  PLA
@@ -7223,23 +7303,23 @@ ORG &0B00
  PHP
  LDA L59FC
  SEC
- SBC L0074
- STA L0074
+ SBC T
+ STA T
  LDA L59FD
- SBC L0075
+ SBC U
  BNE C27EA
  CLC
 
 .C27D8
 
  ROR L0079
- LDA L0074
+ LDA T
  CMP #&80
  BCS C27EA
  PLP
  JSR sub_C3450
- STA L0074
- LDA L0074
+ STA T
+ LDA T
  CLC
  RTS
 
@@ -7296,12 +7376,12 @@ ORG &0B00
  LSR A
  LSR A
  ORA #&C0
- STA L0074
+ STA T
  LDA L0880,X
  SEC
  SBC trackData+5,Y
  BCS C287F
- CMP L0074
+ CMP T
  BCS C285B
 
 .C282F
@@ -7313,7 +7393,7 @@ ORG &0B00
 
 .C2838
 
- STA L0074
+ STA T
  LDA L0100,X
  AND #&40
  BEQ C2843
@@ -7331,36 +7411,36 @@ ORG &0B00
 
  LDY #0
  SEC
- SBC L0074
+ SBC T
  BCS C2856
  DEY
 
 .C2856
 
- STY L0075
+ STY U
  JMP C2861
 
 .C285B
 
  LDA #&FF
- STA L0075
+ STA U
  LDA #0
 
 .C2861
 
  ASL A
- ROL L0075
+ ROL U
  ASL A
- ROL L0075
+ ROL U
  CLC
- ADC Setup,X
- STA Setup,X
- LDA L0075
+ ADC SetupGame,X
+ STA SetupGame,X
+ LDA U
  ADC L0150,X
  CMP #&BE
  BCC C287C
  LDA #0
- STA Setup,X
+ STA SetupGame,X
 
 .C287C
 
@@ -7369,7 +7449,7 @@ ORG &0B00
 .C287F
 
  LDA #1
- STA L0076
+ STA V
 
 .loop_C2883
 
@@ -7382,7 +7462,7 @@ ORG &0B00
 
 .C2892
 
- DEC L0076
+ DEC V
  BPL loop_C2883
  LDA L018C,X
  ASL A
@@ -7476,9 +7556,9 @@ ORG &0B00
  BCS C2911
  EOR L0025
  BMI C2911
- LDA L0074
+ LDA T
  JSR sub_C3450
- STA L0074
+ STA T
  CMP #&28
  BCC C2914
 
@@ -7490,7 +7570,7 @@ ORG &0B00
 
  ASL A
  CLC
- ADC L0074
+ ADC T
  EOR #&FF
  SEC
  ADC L0024
@@ -7514,7 +7594,7 @@ ORG &0B00
 
  LDA L0700,Y
  STA L000C
- STY L0074
+ STY T
  TAY
  LDA L0164,X
  STA L0084
@@ -7528,13 +7608,13 @@ ORG &0B00
  STA L0088
  LDX #0
  LDA L0084
- STA L0075
- LDY L0074
+ STA U
+ LDY T
 
 .C2960
 
  LDA #0
- STA L0076
+ STA V
  LDA L0086,X
  BPL C297B
  EOR #&FF
@@ -7545,7 +7625,7 @@ ORG &0B00
  CLC
  ADC #1
  BCS C297E
- DEC L0076
+ DEC V
  BCC C297E
 
 .C297B
@@ -7566,7 +7646,7 @@ ORG &0B00
 .C298F
 
  PLP
- ADC L0076
+ ADC V
  STA L0AFD,X
  INY
  INX
@@ -7579,12 +7659,12 @@ ORG &0B00
  STA L0088
  LDX #0
  LDA L0085
- STA L0075
+ STA U
 
 .C29AD
 
  LDA #0
- STA L0076
+ STA V
  LDA L0086,X
  BPL C29C8
  EOR #&FF
@@ -7595,7 +7675,7 @@ ORG &0B00
  CLC
  ADC #1
  BCS C29CB
- DEC L0076
+ DEC V
  BCC C29CB
 
 .C29C8
@@ -7605,14 +7685,14 @@ ORG &0B00
 .C29CB
 
  ASL A
- ROL L0076
+ ROL V
  ASL A
- ROL L0076
+ ROL V
  CLC
  ADC L09FD,X
  STA L09FD,X
  LDA L0AFD,X
- ADC L0076
+ ADC V
  STA L0AFD,X
  INX
  INX
@@ -7876,7 +7956,7 @@ ORG &0B00
  LDA L0380,X
  SEC
  SBC L000A
- STA L0074
+ STA T
  LDA L0398,X
  SBC L000B
  BPL C2AEF
@@ -7891,9 +7971,9 @@ ORG &0B00
 
 .C2AF3
 
- ASL L0074
+ ASL T
  ROL A
- ASL L0074
+ ASL T
  ROL A
  CLC
  ADC #&50
@@ -7936,7 +8016,7 @@ ORG &0B00
 .C2B16
 
  ROR L0083,X
- ROR L0074,X
+ ROR T,X
  DEX
  BPL loop_C2B10
  RTS
@@ -8011,16 +8091,16 @@ ORG &0B00
 
  ROR L0088
  LDA L5E90,X
- STA L0077
+ STA W
  LDA L5E40,X
  ASL A
- ROL L0077
+ ROL W
  ASL A
- ROL L0077
- LDA L0077
+ ROL W
+ LDA W
  CLC
  ADC #&80
- STA L0077
+ STA W
  LDA L5F20,Y
  STA L0082
  STX L0045
@@ -8032,11 +8112,11 @@ ORG &0B00
  BMI C2BCA
  LDX L007E
  LDY L007F
- LDA L0077
+ LDA W
  STA L007E
  LDA L0082
  STA L007F
- STX L0077
+ STX W
  STY L0082
  DEC L001E
 
@@ -8062,18 +8142,18 @@ ORG &0B00
  LDA L5E40,Y
  SEC
  SBC L5E40,X
- STA L0074
+ STA T
  LDA L5E90,Y
  SBC L5E90,X
  STA L0086
  JSR sub_C0E40
  CMP #&40
  BCS C2BB9
- ASL L0074
+ ASL T
  ROL A
  CMP #&40
  BCS C2BBB
- ASL L0074
+ ASL T
  ROL A
  BPL C2BBD
 
@@ -8102,7 +8182,7 @@ ORG &0B00
 
  LDA L007E
  SEC
- SBC L0077
+ SBC W
  ROR L0086
  BMI C2BDB
  EOR #&FF
@@ -8167,13 +8247,13 @@ ORG &0B00
  ASL A
  ASL A
  ASL A
- STA L0074
+ STA T
  LDA L628F
  LSR A
  LSR A
  LSR A
  AND #3
- ORA L0074
+ ORA T
  ORA #&40
  STA L0034
  LDA L628F
@@ -8194,7 +8274,7 @@ ORG &0B00
 .C2C53
 
  ORA #&80
- ORA L0074
+ ORA T
  STA L0033
  LDA L001B
  CLC
@@ -8218,7 +8298,7 @@ ORG &0B00
  LDA L007E
  SEC
  SBC #&30
- STA L0075
+ STA U
  LSR A
  LSR A
  STA L0085
@@ -8232,7 +8312,7 @@ ORG &0B00
  CLC
  ADC #1
  STA L008F
- LDA L0075
+ LDA U
  AND #7
  TAX
  LDY L007F
@@ -8306,7 +8386,7 @@ ORG &0B00
 
  LDA L001E
  BMI C2D08
- LDA L0077
+ LDA W
  STA L007E
  LDA L0082
  STA L007F
@@ -8317,10 +8397,10 @@ ORG &0B00
  LDY L001B
  RTS
 
- LDA L0053                                                         ; 2D0D: A5 53       .S
- BEQ C2CFC                                                         ; 2D0F: F0 EB       ..
- JSR C2F12                                                         ; 2D11: 20 12 2F     ./
- JMP C2CFC                                                         ; 2D14: 4C FC 2C    L.,
+ LDA L0053
+ BEQ C2CFC
+ JSR C2F12
+ JMP C2CFC
 
 \ ******************************************************************************
 \
@@ -8819,10 +8899,10 @@ ORG &0B00
  LDX L62F2
  CPX #&28
  BCC C2F41
- STA L0074
+ STA T
  AND #3
  CMP #3
- LDA L0074
+ LDA T
  BCS C2F41
  AND #&FC
 
@@ -9065,8 +9145,8 @@ ORG &0B00
 
 .sub_C2FEE
 
- STA L0074
- STX L0075
+ STA T
+ STX U
  LDX L0085
  TYA
  CMP L3900,X
@@ -9075,8 +9155,8 @@ ORG &0B00
 
 .C2FFB
 
- LDA L0074
- LDX L0075
+ LDA T
+ LDX U
  RTS
 
  EQUB &FE, &1F, &0A, &0C, &83
@@ -9244,9 +9324,9 @@ ORG &0B00
 .C31EB
 
  DEY
- CPY L0075
+ CPY U
  BNE loop_C31D2
- INC L0074
+ INC T
  LDA P
  EOR #&80
  STA P
@@ -9287,7 +9367,7 @@ ORG &0B00
 .loop_C3256
 
  LDA (R),Y
- JSR sub_C5092
+ JSR PrintCharacter
  INY
  CPY #&0C
  BNE loop_C3256
@@ -9335,7 +9415,7 @@ ORG &0B00
  LDX L006B
  TXS
  ROR L001C
- JMP C63E0
+ JMP StartGame
 
 .C327B
 
@@ -9368,7 +9448,7 @@ ORG &0B00
 
 .sub_C32D0
 
- LDA L0074
+ LDA T
  CMP #&20
  BNE C32D8
  LDA #&30
@@ -9379,22 +9459,22 @@ ORG &0B00
  SBC #&30
  CMP #&0A
  BCS C32FB
- STA L0074
- LDX L0075
+ STA T
+ LDX U
  CPX #&20
  CLC
  BEQ C32FB
  ASL A
  ASL A
- ADC L0074
+ ADC T
  ASL A
- STA L0074
+ STA T
  TXA
  SEC
  SBC #&30
  CMP #&0A
  BCS C32FB
- ADC L0074
+ ADC T
  CMP #&29
 
 .C32FB
@@ -9615,7 +9695,7 @@ ORG &0B00
 
  STA L0078
  LDX #&1E
- JSR sub_C4D7E
+ JSR PrintToken
 
 .loop_C34D9
 
@@ -9907,7 +9987,7 @@ ORG &0B00
 
  CLC
  ADC #&30
- JSR sub_C5092
+ JSR PrintCharacter
  ASL L0078
  PLA
  ASL L0078
@@ -9920,7 +10000,7 @@ ORG &0B00
 
  CLC
  ADC #&30
- JSR sub_C5092
+ JSR PrintCharacter
 
 .C37FE
 
@@ -9951,69 +10031,52 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: Setup
+\       Name: SetupGame
 \       Type: Subroutine
 \   Category: Setup
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Set the screen mode, clear various variables and start the game
 \
 \ ******************************************************************************
 
-.Setup
+.SetupGame
 
- LDA #4                 \ osbyte_set_cursor_editing
- LDY #0
+ LDA #4                 \ Call OSBYTE with A = 4, X = 1 and Y = 0 to disable
+ LDY #0                 \ cursor editing
  LDX #1
  JSR OSBYTE
 
- JSR sub_C4F39
+ JSR SetScreenMode7     \ Change to screen mode 7 and hide the cursor
 
- LDX #9
+ LDX #9                 \ We now zero the ten bytes at L05F4-L05FD, so set a
+                        \ loop counter in X
 
- LDA #0
+ LDA #0                 \ Set L0069 = 0
  STA L0069
 
-.loop_C3862
+.setp1
 
- STA L05F4,X
+ STA L05F4,X            \ Zero the X-th byte at L05F4
+                        \
+                        \ The address in this instruction gets modified
 
- DEX
+ DEX                    \ Decrement the loop counter
 
- BPL loop_C3862
+ BPL setp1              \ Loop back until we have zeroed all ten bytes
 
- LDA #246
+ LDA #246               \ Set L05FE = 246
  STA L05FE
 
- TSX
+ TSX                    \ Set L006B to the stack pointer
  STX L006B
 
- JSR sub_C5A22
+ JSR sub_C5A22          \ Contains BRK, must get changed first ???
 
- LDA #190               \ osbyte_read_write_adc_conversion_type
- LDY #0
-
-\ ******************************************************************************
-\
-\       Name: sub_C3877
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C3877
-
- LDX #32
+ LDA #190               \ Call OSBYTE with A = 190, X = 32 and Y = 0 to set the
+ LDY #0                 \ ADC conversion type to 32-bit conversion (though only
+ LDX #32                \ values of 8 and 12 are supported, so this is odd)
  JSR OSBYTE
 
- JMP C63E0
+ JMP StartGame          \ Jump to StartGame to start the game
 
 \ ******************************************************************************
 \
@@ -10295,7 +10358,7 @@ ORG &0B00
 .loop_C3A52
 
  LDA L3A71,Y
- STA L0074
+ STA T
  LDX L3A6F,Y
  LDA #&97
  STA L7C79,X
@@ -10306,7 +10369,7 @@ ORG &0B00
  INX
  STA L7C79,X
  LDA #&E6
- CPX L0074
+ CPX T
  BNE loop_C3A61
  DEY
  BPL loop_C3A52
@@ -10356,7 +10419,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3AD0
+\       Name: tokenLo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -10367,12 +10430,20 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.L3AD0
+.tokenLo
 
  EQUB &00, &00, &1D, &87, &15, &80, &80, &80, &00, &07, &80, &00
  EQUB &88, &91, &97, &9D, &28, &93, &00, &80, &00, &80, &00, &00
- EQUB &00, &80, &00, &00, &00, &00, &00, &80, &A6, &E0, &13, &22
- EQUB &8A, &00, &9D, &80, &80, &80, &80, &80, &94, &A8, &F3, &00
+ EQUB &00, &80, &00, &00, &00, &00, &00, &80, &A6
+
+ EQUB &E0               \ Token 33
+
+ EQUB &13, &22
+ EQUB &8A, &00, &9D, &80, &80, &80, &80, &80, &94, &A8
+ 
+ EQUB LO(token46)        \ Token 46
+ 
+ EQUB &00
  EQUB &97, &A5, &7A, &08, &F5, &73
 
 \ ******************************************************************************
@@ -10400,7 +10471,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3B50
+\       Name: tokenHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -10411,12 +10482,20 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.L3B50
+.tokenHi
 
  EQUB &36, &42, &3A, &35, &30, &43, &3C, &3F, &35, &3E, &3E, &34
  EQUB &3E, &3C, &3C, &3C, &38, &36, &32, &32, &33, &3D, &38, &37
- EQUB &3C, &34, &30, &3D, &43, &3E, &3A, &35, &39, &40, &3D, &37
- EQUB &43, &3F, &3A, &38, &42, &3A, &36, &37, &37, &37, &3B, &00
+ EQUB &3C, &34, &30, &3D, &43, &3E, &3A, &35, &39
+
+ EQUB &40               \ Token 33
+ 
+ EQUB &3D, &37
+ EQUB &43, &3F, &3A, &38, &42, &3A, &36, &37, &37, &37
+
+ EQUB HI(token46)        \ Token 46
+
+ EQUB &00
  EQUB &38, &38, &3C, &35, &42, &3A
 
 \ ******************************************************************************
@@ -10541,8 +10620,21 @@ ORG &0B00
 
 .L3BEC
 
- EQUB &83, &83, &87, &87, &7F, &84, &87, &16, &07, &17, &00, &0A
- EQUB &20, &00, &00, &00, &00, &00, &00, &FF, &EB, &D2
+ EQUB &83, &83, &87, &87, &7F, &84, &87
+
+.token46
+
+ EQUB 22, 7             \ Switch to screen mode 7 with VDU 22, 7
+
+ EQUB 23, 0, 10, 32     \ Set 6845 register R10 = 32
+ EQUB 0, 0, 0           \
+ EQUB 0, 0, 0           \ This is the "cursor start" register, so this sets the
+                        \ cursor start line at 32, effectively disabling the
+                        \ cursor
+
+ EQUB 255               \ End token
+ 
+ EQUB &EB, &D2
  EQUS "WING SETTINGS"
  EQUB &D8
  EQUS "range 0 to 40"
@@ -10571,11 +10663,11 @@ ORG &0B00
  LDX #5
  JSR sub_C41D0
  LDX #&18
- JSR sub_C4D7E
+ JSR PrintToken
  JSR C3EE0
  STA L5F3E
  LDX #&19
- JSR sub_C4D7E
+ JSR PrintToken
  JSR C3EE0
  STA L5F3D
  JSR sub_C34D0
@@ -10600,7 +10692,7 @@ ORG &0B00
  CLC
  ADC #7
  TAX
- JSR sub_C4D7E
+ JSR PrintToken
  RTS
 
  EQUB &1F, &18, &02
@@ -10713,10 +10805,10 @@ ORG &0B00
  AND #3
  ASL A
  ASL A
- STA L0074
+ STA T
  ASL A
  CLC
- ADC L0074
+ ADC T
  ADC #&50
  RTS
 
@@ -10803,19 +10895,26 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   0-39 (from recursive token number 160-199)
+\
+\ Returns:
+\
+\   Z flag              Set (so a BEQ following the routine call will always
+\                       branch)
 \
 \ ******************************************************************************
 
 .sub_C3D50
 
- STA L0074
+ STA T
 
 .loop_C3D52
 
  LDA #&20
- JSR sub_C5092
- DEC L0074
+ JSR PrintCharacter
+ DEC T
  BNE loop_C3D52
 
 .loop_C3D5B
@@ -10839,18 +10938,18 @@ ORG &0B00
 
  LDA #0
  STA L0000
- STA L0074
+ STA T
  STA P
  LDA #&30
  STA Q
 
 .C3D68
 
- LDX L0074
+ LDX T
  CPX #&28
  BEQ loop_C3D5B
  LDA L3900,X
- STA L0075
+ STA U
  LDY #&46
  JMP C31D0
 
@@ -11381,7 +11480,11 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   Offset:
+\
+\                         * 0 when printing token 160+54
 \
 \ ******************************************************************************
 
@@ -11397,13 +11500,16 @@ ORG &0B00
  STA L3D14
  LDA L3BEC,X
  STA L3D16
- TXA
+
+ TXA                    \ Set L3D17 = X + 200
  CLC
- ADC #&C8
+ ADC #200
  STA L3D17
- LDX #&21
- JSR sub_C4D7E
- RTS
+
+ LDX #33                \ Print token 33
+ JSR PrintToken
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -11453,14 +11559,14 @@ ORG &0B00
 
  LDA #&22
  STA L62CC
- STA L0077
+ STA W
  LDA #&D7
  STA L62CD
  LDX L0040
  LDA L3779,X
  JSR sub_C508C
  LDX #&FF
- STX L0077
+ STX W
  JSR sub_C508C
  RTS
 
@@ -11551,7 +11657,7 @@ ORG &0B00
 
 .C43EA
 
- LDA loop_C3862+2,X
+ LDA setp1+2,X
  JSR sub_C37D6
  LDA #1
  JSR sub_C3D50
@@ -11647,7 +11753,7 @@ ORG &0B00
 
  LDA L5A14,X
  STA L5F40
- STA L0075
+ STA U
  LDA L59FA
  LSR A
  LSR A
@@ -11746,7 +11852,7 @@ ORG &0B00
  LDX L0022
  LDY L0700,X
  LDA L000D
- STA L0076
+ STA V
  LDA trackData+256,Y
  EOR trackData+768,Y
  PHP
@@ -11761,10 +11867,10 @@ ORG &0B00
 
 .C454F
 
- STA L0074
+ STA T
  LSR A
  CLC
- ADC L0074
+ ADC T
  LSR A
  LSR A
  PLP
@@ -11797,10 +11903,10 @@ ORG &0B00
 
  STA L62F2
  EOR #&3F
- STA L0074
+ STA T
  LSR A
  CLC
- ADC L0074
+ ADC T
  JSR sub_C4610
  CLC
  ADC L005D
@@ -11819,10 +11925,10 @@ ORG &0B00
  ROR A
  STA L000D
  SEC
- SBC L0076
+ SBC V
  STA L004E
  LDA #0
- STA L0077
+ STA W
  LDA L0026
  SEC
  SBC #4
@@ -11861,15 +11967,15 @@ ORG &0B00
 
  STA L002D
  ASL A
- ROL L0077
+ ROL W
  ASL A
- ROL L0077
- STA L0076
+ ROL W
+ STA V
  LDX L006F
  LDA L0164,X
  JSR sub_C4610
  BPL C45DF
- DEC L0077
+ DEC W
 
 .C45DF
 
@@ -11881,22 +11987,22 @@ ORG &0B00
  ADC #&AC
  PHP
  CLC
- ADC L0076
+ ADC V
  STA L6281
  LDA L0A01,Y
- ADC L0077
+ ADC W
  PLP
  ADC #0
  PLP
  ADC #0
  STA L6284
  LDA L0063
- STA L0075
+ STA U
  LDA #&21
  JSR sub_C0C00
- ASL L0075
+ ASL U
  CLC
- ADC L0075
+ ADC U
  STA L0150,X
  RTS
 
@@ -11915,7 +12021,7 @@ ORG &0B00
 
 .sub_C4610
 
- STA L0075
+ STA U
  LDA trackData+512,Y
  EOR L0025
  PHP
@@ -12011,10 +12117,10 @@ ORG &0B00
 .sub_C4676
 
  JSR sub_C4687
- STA L0075
+ STA U
  TYA
  JSR sub_C0C00
- STA L0075
+ STA U
  LDA L0010
  JSR sub_C0C00
  RTS
@@ -12052,10 +12158,10 @@ ORG &0B00
 
 .C4699
 
- STA L0074
+ STA T
  ASL A
  CLC
- ADC L0074
+ ADC T
  ASL A
  RTS
 
@@ -12083,11 +12189,11 @@ ORG &0B00
  LDA L62E8
  STA L0039
  LDA L62D9
- STA L0074
+ STA T
  LDA L62E9
  JSR sub_C0E40
  STA L0063
- LDA L0074
+ LDA T
  STA L002E
  LDY L0063
  BNE C46CD
@@ -12156,21 +12262,21 @@ ORG &0B00
 .sub_C4729
 
  LDA L62D2
- STA L0074
+ STA T
  LDY #&58
  LDA L62E2
  JSR sub_C4753
- STA L0075
+ STA U
  LDA L62D8
  SEC
- SBC L0074
+ SBC T
  STA L62D8
  LDA L62E8
- SBC L0075
+ SBC U
  STA L62E8
  JSR sub_C4765
  STA L003B
- LDA L0074
+ LDA T
  STA L003A
  RTS
 
@@ -12191,10 +12297,10 @@ ORG &0B00
 
  PHP
  JSR sub_C0E40
- STA L0076
- STY L0075
+ STA V
+ STY U
  JSR sub_C0DBF
- LDA L0075
+ LDA U
  PLP
  JSR sub_C0E40
  RTS
@@ -12214,7 +12320,7 @@ ORG &0B00
 
 .sub_C4765
 
- LDA L0075
+ LDA U
  CLC
  BPL C476B
  SEC
@@ -12223,13 +12329,13 @@ ORG &0B00
 
  ROR A
  PHA
- LDA L0074
+ LDA T
  ROR A
  CLC
- ADC L0074
- STA L0074
+ ADC T
+ STA T
  PLA
- ADC L0075
+ ADC U
  RTS
 
 \ ******************************************************************************
@@ -12385,12 +12491,12 @@ ORG &0B00
  LDA L62DA
  SEC
  SBC L62DB
- STA L0074
+ STA T
  LDA L62EA
  SBC L62EB
  JSR sub_C4753
  STA L62E5
- LDA L0074
+ LDA T
  STA L62D5
  LDY #1
 
@@ -12420,24 +12526,24 @@ ORG &0B00
 .C4832
 
  LDA L62DB,X
- STA L0074
+ STA T
  LDA L62EB,X
- STA L0075
+ STA U
  JSR sub_C4765
- STA L0075
- LDA L0074
+ STA U
+ LDA T
  CLC
  ADC L62DA,X
- STA L0074
+ STA T
  LDY #&CD
- LDA L0075
+ LDA U
  ADC L62EA,X
  JSR sub_C4753
- ASL L0074
+ ASL T
  ROL A
  LDY L0078
  STA L62E6,Y
- LDA L0074
+ LDA T
  STA L62D6,Y
  DEC L0078
  DEX
@@ -12494,13 +12600,13 @@ ORG &0B00
  LDA L62A3,X
  STA L0083
  JSR sub_C0DD7
- STA L0075
+ STA U
  LDY L007C
  BIT L0079
  BVS C48A7
- LDA L0074
+ LDA T
  STA L62D0,Y
- LDA L0075
+ LDA U
  STA L62E0,Y
  RTS
 
@@ -12521,16 +12627,16 @@ ORG &0B00
 
  BMI C48A7
  JSR sub_C0E44
- STA L0075
+ STA U
 
 .C48A7
 
  LDA L62D0,Y
  CLC
- ADC L0074
+ ADC T
  STA L62D0,Y
  LDA L62E0,Y
- ADC L0075
+ ADC U
  STA L62E0,Y
  RTS
 
@@ -12617,27 +12723,27 @@ ORG &0B00
 .C48F3
 
  LDA #0
- STA L0076
+ STA V
  LDA L62D0,X
- STA L0074
+ STA T
  LDA L62E0,X
  BPL C4903
- DEC L0076
+ DEC V
 
 .C4903
 
- ASL L0074
+ ASL T
  ROL A
- ROL L0076
- STA L0075
+ ROL V
+ STA U
  LDA L62B1,Y
- ADC L0074
+ ADC T
  STA L62B1,Y
  LDA L6280,Y
- ADC L0075
+ ADC U
  STA L6280,Y
  LDA L6283,Y
- ADC L0076
+ ADC V
  STA L6283,Y
  DEY
  DEY
@@ -12672,12 +12778,12 @@ ORG &0B00
 .C4939
 
  LDA #0
- STA L0076
+ STA V
  LDA L62D3,X
- STA L0074
+ STA T
  LDA L62E3,X
  BPL C4949
- DEC L0076
+ DEC V
 
 .C4949
 
@@ -12688,21 +12794,21 @@ ORG &0B00
 
 .C4951
 
- ASL L0074
+ ASL T
  ROL A
- ROL L0076
+ ROL V
  DEY
  BNE C4951
- STA L0075
+ STA U
  LDA L62AE,X
  CLC
- ADC L0074
+ ADC T
  STA L62AE,X
  LDA L62D0,X
- ADC L0075
+ ADC U
  STA L62D0,X
  LDA L62E0,X
- ADC L0076
+ ADC V
  STA L62E0,X
  DEX
  BPL C4939
@@ -12781,11 +12887,11 @@ ORG &0B00
 
 .C49BB
 
- STA L0074
+ STA T
  LDA VIA+&68            \ user_via_t2c_l
  AND #7
  CLC
- ADC L0074
+ ADC T
 
 .C49C5
 
@@ -12822,26 +12928,26 @@ ORG &0B00
  DEY
  BEQ C499F
  LDA L002E
- STA L0074
+ STA T
  LDA L0063
- ASL L0074
+ ASL T
  ROL A
  PHP
  BMI C49EE
- ASL L0074
+ ASL T
  ROL A
 
 .C49EE
 
- STA L0075
+ STA U
  LDX L0040
  LDA L5A06,X
  JSR sub_C0C00
- ASL L0074
+ ASL T
  ROL A
  PLP
  BPL C4A01
- ASL L0074
+ ASL T
  ROL A
 
 .C4A01
@@ -12949,7 +13055,7 @@ ORG &0B00
 
 .C4A7F
 
- STA L0075
+ STA U
  LDA L5A0D,X
  JSR sub_C0C00
 
@@ -12978,7 +13084,7 @@ ORG &0B00
 .sub_C4A91
 
  LDA L62D8
- STA L0074
+ STA T
  ORA L62E8
  PHP
  LDA L62E8
@@ -12987,7 +13093,7 @@ ORG &0B00
 
 .loop_C4AA2
 
- ASL L0074
+ ASL T
  ROL A
  DEY
  BNE loop_C4AA2
@@ -13000,7 +13106,7 @@ ORG &0B00
 
 .C4AB4
 
- LDA L0074
+ LDA T
  STA L62DA,X
  JSR sub_C4B88
  BCC C4ACF
@@ -13016,12 +13122,12 @@ ORG &0B00
  JSR sub_C4B42
  LDA L62EC,X
  JSR sub_C3450
- STA L0074
+ STA T
  LDA L62EA,X
  JSR sub_C3450
- CMP L0074
+ CMP T
  BCC C4AE9
- LSR L0074
+ LSR T
  JMP C4AEA
 
 .C4AE9
@@ -13031,7 +13137,7 @@ ORG &0B00
 .C4AEA
 
  CLC
- ADC L0074
+ ADC T
 
 .C4AED
 
@@ -13068,7 +13174,7 @@ ORG &0B00
  EOR #&80
  STA L0079
  LDA #0
- STA L0074
+ STA T
  LDA L62AC,X
  STX L0078
  JSR sub_C4B47
@@ -13077,7 +13183,7 @@ ORG &0B00
  CMP L62AC,X
  BCC C4B3E
  LDA #0
- STA L0074
+ STA T
  LDA L62AC,X
  JSR sub_C4B42
  LDY L003E
@@ -13135,7 +13241,7 @@ ORG &0B00
  CMP L008F
  BCC C4B51
  LDA L008E
- STA L0074
+ STA T
  LDA L008F
 
 .C4B51
@@ -13144,7 +13250,7 @@ ORG &0B00
  JSR sub_C0E40
  LDY L0078
  STA L62EA,Y
- LDA L0074
+ LDA T
  STA L62DA,Y
  RTS
 
@@ -13244,14 +13350,14 @@ ORG &0B00
 
 .C4BBC
 
- STA L0075
+ STA U
  LDA L003F
  JSR sub_C0C00
  LDY L003E
  DEY
  BNE C4BCB
  LSR A
- ROR L0074
+ ROR T
 
 .C4BCB
 
@@ -13298,11 +13404,11 @@ ORG &0B00
  ADC #1
  STA L0078
  LDA L0063
- STA L0075
+ STA U
  LDX #0
  LDA L713D
  AND L7205
- STA L0077
+ STA W
  LDA L713D
  CMP #&FF
  BEQ C4C06
@@ -13344,7 +13450,7 @@ ORG &0B00
 
 .C4C30
 
- STA L0075
+ STA U
  LDA L62A8,X
  JSR sub_C0C00
  BIT L62E9
@@ -13352,8 +13458,8 @@ ORG &0B00
  CLC
  ADC L4C61,X
  LDY #&F3
- STY L0075
- LDY L0077
+ STY U
+ LDY W
  CPY #&FF
  BNE C4C51
  LDA L4C63,X
@@ -13421,7 +13527,7 @@ ORG &0B00
 
  LDA L0039
  JSR sub_C3450
- STA L0075
+ STA U
  CMP L0063
  BCS C4C72
  LDA L0063
@@ -13434,21 +13540,21 @@ ORG &0B00
 
 .C4C77
 
- STA L0077
+ STA W
  JSR sub_C0C00
- STA L0075
+ STA U
  LDY #6
  LDA L0039
  JSR sub_C48A0
  LDA L0063
- STA L0075
+ STA U
  LDA L62F1
  JSR sub_C0C00
  CLC
  ADC #8
- STA L0076
- LDA L0077
- STA L0075
+ STA V
+ LDA W
+ STA U
  JSR sub_C0DBF
  LDY #7
  LDA L62E9
@@ -13487,7 +13593,7 @@ ORG &0B00
 
  TAX
  LDY #2
- STY L0077
+ STY W
  LDA trackData+224,X
  JSR sub_C4D21
  LDY #4
@@ -13554,28 +13660,28 @@ ORG &0B00
 
  PHA
  LDA #0
- STA L0074
- STA L0076
+ STA T
+ STA V
  PLA
  BPL C4D2D
- DEC L0076
+ DEC V
 
 .C4D2D
 
- LSR L0076
+ LSR V
  ROR A
- ROR L0074
+ ROR T
  DEY
  BNE C4D2D
- STA L0075
- LDY L0077
- DEC L0077
+ STA U
+ LDY W
+ DEC W
  LDA L6280,Y
  SEC
- SBC L0074
+ SBC T
  STA L6286,Y
  LDA L6283,Y
- SBC L0075
+ SBC U
  STA L6289,Y
  RTS
 
@@ -13607,7 +13713,7 @@ ORG &0B00
  STA L04A0,X
  JSR sub_C635D
  LDA #0
- STA loop_C3862+2,X
+ STA setp1+2,X
  STA L39E4,X
  STA L04F0,X
  TXA
@@ -13652,87 +13758,120 @@ ORG &0B00
 .C4D76
 
  STA L62CD
- LDA #1
+
+ LDA #1                 \ Set L62CC = 1
  STA L62CC
 
 \ ******************************************************************************
 \
-\       Name: sub_C4D7E
+\       Name: PrintToken
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print a recursive token
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Addresses of token strings are in the (tokenHi tokenLo) table.
+\
+\ Arguments:
+\
+\   X                   The token number (0 to 54)
 \
 \ ******************************************************************************
 
-.sub_C4D7E
+.PrintToken
 
- LDY #0
+ LDY #0                 \ We are about to work our way through the token, one
+                        \ byte at a time, so set a byte counter in Y
 
-.C4D80
+.toke1
 
- LDA L3B50,X
- STA S
- LDA L3AD0,X
+ LDA tokenHi,X          \ Set (S R) = the X-th entry in (tokenHi tokenLo), which
+ STA S                  \ points to the string of bytes in token X
+ LDA tokenLo,X
  STA R
 
-.C4D8A
+.toke2
 
- LDA (R),Y
- CMP #&FF
- BEQ C4DC8
- CMP #&C8
- BCC C4DB6
- SEC
- SBC #&C8
- STA L0074
- TXA
- PHA
+ LDA (R),Y              \ Set A to the Y-th byte at (S R), which contains the
+                        \ next character in the token
+
+ CMP #255               \ If A = 255 then we have reached the end of the token,
+ BEQ toke8              \ so jump to toke8 to return from the subroutine
+
+ CMP #200               \ If A < 200 then this byte is not another token, so
+ BCC toke5              \ jump to toke5
+
+ SEC                    \ A >= 200, so this is a pointer to another token
+ SBC #200               \ embedded in the current token, so subtract 200 to get
+                        \ the embedded token's number
+
+ STA T                  \ Store the embedded token's number in T
+
+ TXA                    \ Store X and Y on the stack so we can retrieve them
+ PHA                    \ after printing the embedded token
  TYA
  PHA
- LDX L0074
- CPX #&36
- BNE C4DAB
- LDX #0
+
+ LDX T                  \ Set X to the number of the embedded token we need to
+                        \ print
+
+ CPX #54                \ If X <> 54, jump to toke3 to skip the following three
+ BNE toke3              \ instructions and print the embedded token
+
+ LDX #0                 \ X = 54, so ???
  JSR sub_C41D0
- JMP C4DAE
 
-.C4DAB
+ JMP toke4              \ Skip the following instruction
 
- JSR sub_C4D7E
+.toke3
 
-.C4DAE
+ JSR PrintToken         \ Print the embedded token in X recursively (so if it
+                        \ also contains embedded tokens, they will also be
+                        \ expanded and printed)
 
- PLA
+.toke4
+
+ PLA                    \ Retrieve X and Y from the stack
  TAY
  PLA
  TAX
- INY
- JMP C4D80
 
-.C4DB6
+ INY                    \ Increment the byte counter
 
- CMP #&A0
- BCC C4DC1
- SBC #&A0
- JSR sub_C3D50
- BEQ C4DC4
+ JMP toke1              \ Loop back to print the next byte in the token, making
+                        \ sure to recalculate (S R) as it will have been
+                        \ corrupted by the call to PrintToken
 
-.C4DC1
+.toke5
 
- JSR sub_C5092
+                        \ If we get here then A < 200, so this byte is not
+                        \ another token
 
-.C4DC4
+ CMP #160               \ If A < 160, jump to toke6 to skip the following three
+ BCC toke6              \ instructions
 
- INY
- JMP C4D8A
+ SBC #160               \ A is in the range 160 to 199, so subtract 160 to get
+                        \ the range 0 to 39
 
-.C4DC8
+ JSR sub_C3D50          \ Print token 160-199 ???
 
- RTS
+ BEQ toke7              \ Skip the following instruction (this BNE is
+                        \ effectively a JMP as sub_C3D50 sets the Z flag)
+
+.toke6
+
+ JSR PrintCharacter     \ Print character 0-159 ???
+
+.toke7
+
+ INY                    \ Increment the byte counter
+
+ JMP toke2              \ Loop back to print the next byte in the token
+
+.toke8
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14143,24 +14282,22 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C4F39
+\       Name: SetScreenMode7
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Change to screen mode 7 and hide the cursor
 \
 \ ******************************************************************************
 
-.sub_C4F39
+.SetScreenMode7
 
- LDA #&80
- STA L0064
- LDX #&2E
- JSR sub_C4D7E
- RTS
+ LDA #128               \ Set printMode = 128 so the call to PrintToken prints
+ STA printMode          \ characters using OSWRCH (for mode 7)
+
+ LDX #46                \ Print token 46, which changes to screen mode 7 and
+ JSR PrintToken         \ hides the cursor
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14214,19 +14351,19 @@ ORG &0B00
 .C4F5B
 
  PHP
- STA L0075
+ STA U
  LDA #0
- ROR L0075
+ ROR U
  ROR A
  PLP
- ROR L0075
+ ROR U
  ROR A
  SEI
  CLC
  ADC #&D8
  STA L4F1F
  LDA #4
- ADC L0075
+ ADC U
  STA L4F20
  CLI
  RTS
@@ -14303,7 +14440,7 @@ ORG &0B00
  SEC
  LDA L06B4
  SBC L0898,X
- STA L0074
+ STA T
  LDA L06CC
  SBC L08AC,X
  BCS C4FCC
@@ -14312,23 +14449,23 @@ ORG &0B00
 
 .C4FCC
 
- STA L0075
+ STA U
  LDA L06E4
  SBC L04DC,X
  STA L0079
  BCC C4FFB
  SEC
- LDA L0074
+ LDA T
  SBC L06A0,X
- LDA L0075
+ LDA U
  SBC L06B8,X
  LDA L0079
  SBC L06D0,X
  BCS C4FFB
- LDA L0074
+ LDA T
  AND #&F0
  STA L06A0,X
- LDA L0075
+ LDA U
  STA L06B8,X
  LDA L0079
  STA L06D0,X
@@ -14579,77 +14716,92 @@ ORG &0B00
 .sub_C508C
 
  STA L62C3
- JMP C509D
+ JMP char1
 
 \ ******************************************************************************
 \
-\       Name: sub_C5092
+\       Name: PrintCharacter
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print a character on-screen
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   Character number (0 to 159)
+\
+\   printMode           Bit 7 determines how the character is printed on-screen:
+\
+\                         * 0 = poke the character directly into screen memory
+\
+\                         * 1 = print the character with OSWRCH (for mode 7)
+\
+\   (Q P)               The screen address to print the character when bit 7 of
+\                       printMode is clear
 \
 \ ******************************************************************************
 
-.sub_C5092
+.PrintCharacter
 
- BIT L0064
- BMI C50F6
+ BIT printMode          \ If bit 7 of printMode is set, jump to char8 to print
+ BMI char8              \ the character in A with OSWRCH
+
  STA L62C3
- LDA #0
- STA L0077
 
-.C509D
+ LDA #0
+ STA W
+
+.char1
 
  TXA
  PHA
  TYA
  PHA
+
  LDY #HI(L62C3)
  LDX #LO(L62C3)
- LDA #10                \ osword_read_char
+ LDA #10                \ Read definition of char in L62C3 into L62C3+1..8
  JSR OSWORD
- LDA L0077
- BEQ C50C6
+
+ LDA W
+ BEQ char5
  LDX #8
 
-.loop_C50B0
+.char2
 
  LDA L62C3,X
- BIT L0077
- BMI C50BC
+ BIT W
+ BMI char3
  AND #&F0
- JMP C50C0
+ JMP char4
 
-.C50BC
+.char3
 
  ASL A
  ASL A
  ASL A
  ASL A
 
-.C50C0
+.char4
 
  STA L62C3,X
  DEX
- BNE loop_C50B0
+ BNE char2
 
-.C50C6
+.char5
 
  LDY L62CD
  LDA L62CC
  JSR sub_C50FA
  LDX #8
 
-.loop_C50D1
+.char6
 
  LDA L62C3,X
  STA (P),Y
  DEY
- BPL C50E8
+ BPL char7
  LDA P
  SEC
  SBC #&40
@@ -14659,35 +14811,28 @@ ORG &0B00
  STA Q
  LDY #7
 
-.C50E8
+.char7
 
  DEX
- BNE loop_C50D1
+
+ BNE char6
+
  INC L62CC
+
  PLA
  TAY
  PLA
  TAX
+
  LDA L62C3
- RTS
 
-\ ******************************************************************************
-\
-\       Name: C50F6
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ RTS                    \ Return from the subroutine
 
-.C50F6
+.char8
 
- JSR OSWRCH
- RTS
+ JSR OSWRCH             \ Print the character in A
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14798,7 +14943,7 @@ ORG &0B00
  JSR sub_C511E
  JSR sub_C51A8
  LDA L62A2
- STA L0074
+ STA T
  LSR A
  PHP
  LDA #2
@@ -14807,9 +14952,9 @@ ORG &0B00
 
 .C514D
 
- STA L0076
+ STA V
  LDA L62A5
- ASL L0074
+ ASL T
  ROL A
  BCS C515F
  CMP #&26
@@ -14826,7 +14971,7 @@ ORG &0B00
  EOR #&FF
  ADC #&4C
  TAY
- STY L0074
+ STY T
  LDX L3980,Y
  STX L0083
  JMP C517E
@@ -14834,10 +14979,10 @@ ORG &0B00
 .C5170
 
  TAX
- STX L0074
- LDA L0076
+ STX T
+ LDA V
  EOR #1
- STA L0076
+ STA V
  LDA L3980,X
  STA L0083
 
@@ -14857,17 +15002,17 @@ ORG &0B00
 
  CLC
  ADC #&50
- STA L0077
+ STA W
  AND #&FC
  JSR sub_C50FC
- LDA L0077
+ LDA W
  ASL A
  AND #7
- STA L0077
+ STA W
  LDA #4
  STA L0079
  LDA #6
- STA L0075
+ STA U
  JSR sub_C5204
  RTS
 
@@ -14895,10 +15040,10 @@ ORG &0B00
 
 .C51B4
 
- STA L0074
+ STA T
  LSR A
  CLC
- ADC L0074
+ ADC T
  ROR A
  SEC
  SBC #&4C
@@ -14927,23 +15072,23 @@ ORG &0B00
 .C51D8
 
  TAY
- STY L0074
+ STY T
  TXA
  AND #3
  TAX
  TXA
  ROL A
- STA L0076
+ STA V
  AND #&FC
  BEQ C51E9
  LDA #7
 
 .C51E9
 
- STA L0077
+ STA W
  LDA L3100,Y
  STA L0083
- STA L0075
+ STA U
  LDA L32FC,X
  AND #&F8
  STA P
@@ -14968,12 +15113,12 @@ ORG &0B00
 
 .sub_C5204
 
- LDX L0076
+ LDX V
  LDA L3B86,X
  STA C5220
  LDA L3B8E,X
  STA C529B
- LDX L0077
+ LDX W
  LDA #0
  SEC
  SBC L0083
@@ -14981,7 +15126,7 @@ ORG &0B00
 
 .C521A
 
- ADC L0074
+ ADC T
  BCC C5221
  SBC L0083
 
@@ -14996,7 +15141,7 @@ ORG &0B00
  LSR A
  AND #3
  ORA L0079
- STA L0076
+ STA V
  TXA
  BPL C523D
  LDX #7
@@ -15022,7 +15167,7 @@ ORG &0B00
 
 .C524E
 
- STX L0077
+ STX W
  LDX L0069
  TYA
  BPL C5267
@@ -15060,18 +15205,18 @@ ORG &0B00
  LDA (P),Y
  STA L0780,X
  INC L0069
- LDX L0076
+ LDX V
  AND L3FE8,X
  ORA L34F8,X
  STA (P),Y
- LDX L0077
+ LDX W
  LDA L008A
  CLC
 
 .C529B
 
  INX
- DEC L0075
+ DEC U
  BMI C52A3
  JMP C521A
 
@@ -15190,153 +15335,26 @@ ORG &0B00
 
 .trackData
 
- EQUB &00, &00, &00, &10, &10, &20, &60, &70, &C0, &80, &80, &00
- EQUB &00, &00, &00, &C0, &60, &10, &10, &00, &00, &30, &10, &00
- EQUB &00, &00, &80, &80, &40, &40, &20, &90, &90, &40, &40, &20
- EQUB &20, &00, &80, &80, &80, &00, &08, &0F, &0F, &20, &60, &40
- EQUB &40, &80, &80, &80, &0C, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &80, &40, &40
- EQUB &40, &40, &40, &20, &20, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &10, &30, &00, &00, &10, &30, &70, &F0, &F0
- EQUB &F0, &70, &F0, &F0, &F0, &F0, &E0, &C0, &C0, &F0, &E0, &C0
- EQUB &80, &01, &03, &03, &16, &52, &07, &2D, &0F, &87, &4B, &0F
- EQUB &0F, &0F, &0F, &87, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &0F, &0F, &0F, &0B, &0A, &0F, &0E, &07, &04, &08, &00, &30
- EQUB &00, &0A, &00, &30, &00, &F0, &00, &F0, &00, &70, &00, &F0
- EQUB &00, &F0, &10, &F0, &30, &F0, &30, &E1, &43, &86, &86, &0C
- EQUB &0C, &87, &0C, &08, &00, &00, &00, &80, &00, &00, &00, &10
- EQUB &80, &00, &01, &01, &01, &00, &00, &80, &10, &00, &00, &00
- EQUB &0C, &1E, &03, &01, &00, &00, &00, &10, &00, &F0, &C0, &78
- EQUB &2C, &16, &16, &03, &03, &E0, &00, &F0, &00, &F0, &80, &F0
- EQUB &C0, &05, &00, &C0, &00, &F0, &00, &F0, &00, &0F, &07, &0E
- EQUB &02, &01, &00, &C0, &00, &0F, &0F, &0F, &0F, &0F, &0F, &0D
- EQUB &05, &0F, &0F, &1E, &0F, &0F, &0F, &0F, &0F, &A4, &0E, &4B
- EQUB &0F, &1E, &2D, &0F, &0F, &F0, &70, &30, &10, &08, &0C, &0C
- EQUB &86, &E0, &F0, &F0, &F0, &F0, &70, &30, &30, &00, &00, &80
- EQUB &C0, &E0, &F0, &F0, &F0, &00, &00, &00, &00, &00, &00, &80
- EQUB &C0, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &10, &20, &20, &20, &20, &20, &40
- EQUB &40, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &40, &60, &20, &20, &10, &10, &10
- EQUB &03, &00, &10, &10, &10, &00, &01, &0F, &0F, &01, &E0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &0F, &03, &C1, &E0, &F0, &F0, &F0
- EQUB &F0, &00, &0C, &0E, &07, &83, &C1, &E1, &E0, &00, &00, &00
- EQUB &00, &0F, &0F, &0F, &0F, &20, &20, &20, &20, &20, &0F, &0F
- EQUB &0F, &00, &00, &00, &00, &00, &00, &0F, &0F, &00, &00, &00
- EQUB &10, &30, &70, &78, &F0, &70, &70, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &E0, &E0, &C0, &80, &00, &00, &80, &00, &00
- EQUB &01, &01, &03, &03, &07, &07, &3C, &0F, &4B, &0F, &4B, &87
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0C
- EQUB &0B, &0E, &0C, &04, &0C, &0E, &08, &10, &00, &70, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &E1, &21, &C3, &43, &C2, &86, &84
- EQUB &84, &08, &00, &40, &00, &00, &00, &00, &00, &00, &06, &04
- EQUB &06, &02, &06, &00, &00, &01, &01, &00, &00, &00, &00, &00
- EQUB &00, &04, &0C, &00, &00, &00, &00, &00, &00, &00, &03, &01
- EQUB &01, &01, &01, &00, &00, &01, &00, &20, &00, &00, &00, &00
- EQUB &00, &78, &48, &3C, &2C, &34, &16, &12, &12, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &07, &01, &80, &00, &E0, &00, &F0, &00, &0F, &0F, &03
- EQUB &0D, &07, &03, &02, &03, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &0F, &0E, &C3, &0F, &2D, &0F, &2D, &1E, &0F, &10, &00, &00
- EQUB &08, &08, &0C, &0C, &0E, &F0, &F0, &70, &70, &30, &10, &00
- EQUB &00, &E0, &E0, &F0, &F0, &F0, &F0, &F0, &F0, &00, &00, &00
- EQUB &80, &C0, &E0, &E1, &F0, &00, &00, &00, &00, &00, &00, &0F
- EQUB &0F, &40, &40, &40, &40, &40, &0F, &0F, &0F, &00, &00, &00
- EQUB &00, &0F, &0F, &0F, &0F, &00, &03, &07, &0E, &1C, &38, &78
- EQUB &70, &0F, &0C, &38, &70, &F0, &F0, &F0, &F0, &08, &70, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &0F, &07, &87, &87, &83, &C3, &C3
- EQUB &C3, &0F, &0F, &0F, &0F, &0F, &1E, &1E, &3C, &1E, &3C, &3C
- EQUB &78, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0
- EQUB &C0, &E0, &C0, &80, &80, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &01, &01, &01, &03, &25, &16, &0F, &4B, &0F, &C3, &0F
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0E, &0E, &0D, &0E, &0F
- EQUB &0C, &0E, &08, &14, &08, &10, &08, &70, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &10, &F0, &10, &F0, &30, &E1
- EQUB &21, &94, &0C, &08, &08, &08, &08, &08, &00, &00, &04, &04
- EQUB &07, &02, &02, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &02, &05, &07, &05, &02, &00, &92, &03, &01
- EQUB &01, &01, &01, &01, &00, &F0, &80, &F0, &80, &F0, &C0, &78
- EQUB &48, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &80, &01, &E0, &00, &F0, &00, &F0
- EQUB &00, &0B, &07, &0F, &03, &07, &01, &82, &01, &0F, &0F, &0F
- EQUB &0F, &0F, &0F, &07, &07, &4A, &86, &0F, &2D, &0F, &3C, &0F
- EQUB &0F, &00, &00, &00, &00, &08, &08, &08, &0C, &70, &30, &10
- EQUB &10, &00, &00, &00, &00, &F0, &F0, &F0, &F0, &F0, &70, &70
- EQUB &30, &87, &C3, &C3, &E1, &F0, &F0, &F0, &F0, &0F, &0F, &0F
- EQUB &0F, &0F, &87, &87, &C3, &0F, &0E, &1E, &1E, &1C, &3C, &3C
- EQUB &3C, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E1, &E0
- EQUB &C0, &87, &87, &84, &1C, &38, &30, &70, &F0, &78, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0, &C0, &C0
- EQUB &80, &80, &80, &00, &00, &00, &00, &00, &00, &00, &00, &22
- EQUB &00, &00, &00, &22, &00, &12, &8B, &07, &AD, &0F, &4B, &0F
- EQUB &2D, &0F, &0F, &87, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0E
- EQUB &0F, &08, &0E, &08, &0C, &30, &00, &70, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &E1, &21, &E1, &21, &E1, &21, &E1, &21, &40, &00, &00
- EQUB &00, &00, &01, &40, &41, &00, &00, &00, &00, &00, &08, &08
- EQUB &08, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &10, &10, &00, &00, &00, &00, &00, &00, &80
- EQUB &80, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &03, &02, &03, &20, &00, &00, &00, &00, &08, &28
- EQUB &28, &78, &48, &78, &48, &78, &48, &78, &48, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &C0, &00, &E0
- EQUB &00, &F0, &00, &F0, &00, &0F, &0F, &07, &0F, &01, &07, &01
- EQUB &03, &0F, &0F, &1E, &0F, &0F, &0F, &0F, &0F, &84, &1D, &0E
- EQUB &5B, &0F, &2D, &0F, &4B, &00, &00, &44, &00, &00, &00, &44
- EQUB &00, &10, &10, &00, &00, &00, &00, &00, &00, &F0, &F0, &F0
- EQUB &70, &70, &30, &30, &10, &E1, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &1E, &1E, &12, &83, &C1, &C0, &E0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &78, &70, &30, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &E0, &00, &00, &00, &00, &F0, &E0, &C0, &00, &00, &00, &00
- EQUB &10, &80, &10, &30, &30, &70, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0, &C0, &80, &80
- EQUB &00, &00, &00, &00, &22, &88, &00, &11, &00, &00, &11, &88
- EQUB &44, &88, &22, &11, &44, &89, &01, &89, &03, &03, &47, &9A
- EQUB &07, &87, &0F, &0F, &C3, &0F, &0F, &0F, &0F, &0F, &0E, &0D
- EQUB &0F, &0F, &0D, &0E, &0C, &18, &00, &38, &00, &70, &00, &70
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &61, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &0F, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &3C, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &E1, &21, &E1
- EQUB &21, &E1, &21, &E1, &21, &00, &01, &00, &00, &00, &40, &00
- EQUB &08, &08, &08, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &01, &00, &00, &00, &00, &00, &00, &00
- EQUB &02, &08, &08, &00, &00, &00, &20, &00, &01, &78, &48, &78
- EQUB &48, &78, &48, &78, &48, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &00, &F0, &00, &F0, &C3, &F0, &00, &F0
- EQUB &00, &F0, &00, &F0, &0F, &F0, &00, &F0, &00, &F0, &00, &F0
- EQUB &68, &81, &00, &C1, &00, &E0, &00, &E0, &00, &0F, &07, &0B
- EQUB &0F, &0F, &0B, &07, &03, &1E, &0F, &0F, &3C, &0F, &0F, &0F
- EQUB &0F, &19, &08, &19, &0C, &0C, &2E, &95, &0E, &00, &88, &11
- EQUB &22, &11, &44, &88, &22, &00, &00, &00, &44, &11, &00, &88
- EQUB &00, &F0, &F0, &70, &70, &30, &10, &10, &00, &F0, &F0, &F0
- EQUB &F0
- EQUB &F0, &F0, &F0, &F0, &10, &80, &C0, &C0, &E0, &F0, &F0, &F0
- EQUB &F0, &70, &30, &00, &00, &00, &00, &80, &F0, &F0, &F0, &70
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &10, &30, &70, &F0
- EQUS "00p"
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &E0, &F0, &E0, &C0, &C0, &80, &80, &00, &00, &00, &00, &22
- EQUB &88, &22, &22, &00, &44, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
+ SKIP 1610
+
+\ ******************************************************************************
+\
+\       Name: L594A
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L594A
+
+INCBIN "1-source-files/images/dashboard2.bin"
+
+ SKIP 67
 
 \ ******************************************************************************
 \
@@ -15662,9 +15680,9 @@ ORG &0B00
 .sub_C5A25
 
  LDA #0
- STA sub_C3877+1,X
+ STA SetupGame+40,X
  STA L39F8,X
- STA L0075
+ STA U
  LDY L013C,X
  CPX #6
  BNE C5A39
@@ -15685,10 +15703,10 @@ ORG &0B00
 
 .C5A4D
 
- STA L0075
+ STA U
  LDA L5F38
  JSR sub_C0C00
- STA L0075
+ STA U
  JMP C5A61
 
 .C5A5A
@@ -15698,7 +15716,7 @@ ORG &0B00
 
 .C5A5F
 
- STA L0074
+ STA T
 
 .C5A61
 
@@ -15708,14 +15726,14 @@ ORG &0B00
 
  LDA L3DF7,X
  CLC
- ADC sub_C3877+1,X
- STA sub_C3877+1,X
+ ADC SetupGame+40,X
+ STA SetupGame+40,X
  LDA L39F8,X
  ADC #0
  STA L39F8,X
- DEC L0074
+ DEC T
  BNE C5A62
- DEC L0075
+ DEC U
  BPL C5A62
  JSR sub_C6698
  RTS
@@ -17239,7 +17257,7 @@ ORG &5FD0
 
  STA P
  STY Q
- STX L0077
+ STX W
  LDA #2                 \ osbyte_select_input_stream
  LDX #0
  JSR OSBYTE
@@ -17274,7 +17292,7 @@ ORG &5FD0
 
 .C6334
 
- CPY L0077
+ CPY W
  BNE C633C
  LDA #7
  BNE C633F
@@ -17305,7 +17323,7 @@ ORG &5FD0
 
 .C6352
 
- CPY L0077
+ CPY W
  BNE C6357
  RTS
 
@@ -17360,7 +17378,7 @@ ORG &5FD0
  ASL A
  SEC
  SBC L04A0,X
- STA L0074
+ STA T
  LDY L5F3A
  DEY
  BEQ C6395
@@ -17370,7 +17388,7 @@ ORG &5FD0
 
 .C6392
 
- ROL L0074
+ ROL T
  ROR A
 
 .C6395
@@ -17419,16 +17437,16 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: Decrypt
+\       Name: Protect
 \       Type: Subroutine
 \   Category: Setup
 \    Summary: Decrypt the game code (disabled)
 \
 \ ******************************************************************************
 
-.Decrypt
+.Protect
 
- JMP Setup              \ Continue setting up the game
+ JMP SetupGame          \ Jump to SetupGame to continue setting up the game
 
  NOP                    \ Presumably this contained some kind of copy protection
  NOP                    \ or decryption code that has been replaced by NOPs in
@@ -17468,7 +17486,7 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: C63E0
+\       Name: StartGame
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -17479,7 +17497,7 @@ ORG &5FD0
 \
 \ ******************************************************************************
 
-.C63E0
+.StartGame
 
  LDX #0
  STX L05F4
@@ -17488,7 +17506,7 @@ ORG &5FD0
  JSR sub_C41D0
  JSR sub_C3A50
  LDX #&27
- JSR sub_C4D7E
+ JSR PrintToken
  LDX #2
  JSR sub_C6571
  CPX #1
@@ -17504,7 +17522,7 @@ ORG &5FD0
  LDA #0
  STA L5F3C
  LDX #&15
- JSR sub_C4D7E
+ JSR PrintToken
  LDX #3
  JSR sub_C6571
  STX L5F3A
@@ -17513,7 +17531,7 @@ ORG &5FD0
 .C641F
 
  LDX #&16
- JSR sub_C4D7E
+ JSR PrintToken
  LDX #3
  JSR sub_C6571
  LDA L3DF0,X
@@ -17541,13 +17559,13 @@ ORG &5FD0
 .C6457
 
  LDX #&17
- JSR sub_C4D7E
+ JSR PrintToken
  JSR sub_C66D4
  JSR sub_C655A
  LDX L006F
  BEQ C6474
  LDX #&1B
- JSR sub_C4D7E
+ JSR PrintToken
  LDX #2
  JSR sub_C6571
  CPX #0
@@ -17586,7 +17604,7 @@ ORG &5FD0
  LDX L5F3A
  JSR sub_C44C6
  LDX #&1A
- JSR sub_C4D7E
+ JSR PrintToken
  JSR sub_C3C6F
  JSR sub_C34D0
 
@@ -17615,7 +17633,7 @@ ORG &5FD0
  LDA L5F3C
  BNE C64F2
  LDX #&1C
- JSR sub_C4D7E
+ JSR PrintToken
  LDA #&14
  SEC
  SBC L5F39
@@ -17749,30 +17767,30 @@ ORG &5FD0
 .sub_C6571
 
  LDY #0
- STY L0077
- STX L0075
+ STY W
+ STX U
 
 .C6577
 
  JSR sub_C3261
- LDY L0075
+ LDY U
 
 .loop_C657C
 
- STY L0076
+ STY V
  LDX L39E0,Y
  JSR sub_C0E50
  BEQ C658D
- LDY L0076
+ LDY V
  DEY
  BPL loop_C657C
  BMI C6577
 
 .C658D
 
- LDY L0076
+ LDY V
  BNE C659E
- LDA L0077
+ LDA W
  BEQ C6577
  LDA #&98
  STA L7FC5
@@ -17783,11 +17801,11 @@ ORG &5FD0
 .C659E
 
  STY L0078
- LDA L0077
+ LDA W
  BNE C65AB
  LDX #&1E
- STX L0077
- JSR sub_C4D7E
+ STX W
+ JSR PrintToken
 
 .C65AB
 
@@ -17809,7 +17827,7 @@ ORG &5FD0
  ADC #&50
  TAX
  INY
- CPY L0075
+ CPY U
  BCC C65AF
  BEQ C65AF
  BNE C6577
@@ -17868,7 +17886,7 @@ ORG &5FD0
  STA L0078
  JSR sub_C3E60
  LDX #&20
- JSR sub_C4D7E
+ JSR PrintToken
  LDY L001B
  LDA L0100,Y
  BIT L006C
@@ -17880,11 +17898,11 @@ ORG &5FD0
  JSR sub_C65C8
  JSR sub_C37D6
  LDX #&1F
- JSR sub_C4D7E
+ JSR PrintToken
  LDY L001B
  JSR sub_C667B
  LDX #&1F
- JSR sub_C4D7E
+ JSR PrintToken
  LDX L0045
  PLA
  PHA
@@ -17934,14 +17952,14 @@ ORG &5FD0
  LDA L006C
  BPL C666E
  LDX #&31
- JSR sub_C4D7E
+ JSR PrintToken
  JSR sub_C3C6F
  LDA L5F3F
  CLC
  ADC #&DA
  STA L3C7D
  LDX #&32
- JSR sub_C4D7E
+ JSR PrintToken
 
 .C666E
 
@@ -18005,7 +18023,7 @@ ORG &5FD0
 .sub_C6687
 
  LDX #&1D
- JSR sub_C4D7E
+ JSR PrintToken
  LDX L006F
  JSR sub_C3CEB
  JSR sub_C3250
@@ -18028,10 +18046,10 @@ ORG &5FD0
 .sub_C6698
 
  SED
- LDA loop_C3862+2,Y
+ LDA setp1+2,Y
  CLC
- ADC sub_C3877+1,X
- STA loop_C3862+2,Y
+ ADC SetupGame+40,X
+ STA setp1+2,Y
  LDA L39E4,Y
  ADC L39F8,X
  STA L39E4,Y
@@ -18138,142 +18156,75 @@ ORG &5FD0
  JSR sub_C2ACB
  RTS
 
-ORG &6C00
-
 \ ******************************************************************************
 \
-\       Name: L6C00
+\       Name: dashboard
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Dashboard
+\    Summary: Dashboard image
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The dashboard image from &6C00 to &7724 in memory is sliced up and spread
+\ throughout the game binary:
+\
+\   * &6C00-&6FFF is at &6C00-&6FFF in file - very top of dashboard
+\   * &7000-&70DA is at &1500-&15DA in file - top section of steering wheel
+\   * &70DB-&7724 is at &5300-&5949 in file - middle section of dashboard
+\
+\ The bottom of the dashboard appears to be spread around even more.
+\
+\ There is a also a segment of tyre at &7725-&7768.
 \
 \ ******************************************************************************
 
+ORG &6C00
+
 .L6C00
 
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &30, &30, &40, &00, &00, &00, &00, &00, &F0, &F0, &00
- EQUB &00, &00, &00, &00, &00, &F0, &F0, &00, &00, &00, &00, &00
- EQUB &00, &F0, &F0, &00, &00, &00, &00, &00, &00, &F0, &F0, &00
- EQUB &00, &00, &00, &00, &00, &F0, &F0, &00, &00, &00, &00, &00
- EQUB &00, &F0, &F0, &00, &00, &00, &00, &00, &00, &F0, &F0, &00
- EQUB &00, &00, &00, &00, &00, &F0, &F0, &00, &00, &00, &00, &00
- EQUB &00, &F0, &F0, &00, &00, &00, &00, &00, &00, &F0, &F0, &00
- EQUB &00, &00, &00, &00, &00, &F0, &F0, &00, &00, &00, &00, &00
- EQUB &00, &F0, &F0, &00, &00, &00, &00, &00, &00, &C0, &C0, &20
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &10, &10, &10, &70, &40, &F0, &80, &F0, &00, &F0, &00
- EQUB &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00, &F0, &00
- EQUB &F0, &00, &E1, &16, &F0, &00, &F0, &00, &C3, &2D, &5A, &C3
- EQUB &F0, &00, &F0, &07, &78, &A5, &87, &1E, &F0, &00, &0F, &B4
- EQUB &D2, &0F, &2D, &0F, &F0, &07, &78, &F0, &4B, &1E, &4B, &0F
- EQUB &F0, &0E, &E1, &F0, &2D, &87, &2D, &0F, &F0, &00, &0F, &D2
- EQUB &B4, &0F, &4B, &0F, &F0, &00, &F0, &0E, &E1, &5A, &1E, &87
- EQUB &F0, &00, &F0, &00, &3C, &4B, &A5, &3C, &F0, &00, &F0, &00
- EQUB &F0, &00, &78, &86, &F0, &00, &F0, &00, &F0, &00, &F0, &00
- EQUB &E0, &20, &F0, &10, &F0, &00, &F0, &00, &00, &00, &00, &00
- EQUB &00, &80, &80, &80, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &A0, &50, &B0
- EQUB &00, &00, &00, &00, &00, &D0, &A0, &40, &00, &00, &00, &00
- EQUB &00, &F0, &10, &00, &00, &00, &00, &00, &00, &00, &80, &C0
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &10, &30, &30, &20, &30, &40, &70, &C0, &F0, &80
- EQUB &F0, &00, &F0, &00, &E1, &03, &96, &0F, &F0, &01, &87, &3C
- EQUB &4B, &C3, &87, &4B, &2D, &69, &87, &1E, &0F, &87, &0F, &0F
- EQUB &87, &4B, &0F, &0F, &0F, &0F, &0F, &0F, &87, &0F, &0F, &0F
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0E, &01, &0F, &0F, &0F, &0F
- EQUB &0F, &0F, &07, &08, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &1E, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &1E, &2D, &0F, &0F
- EQUB &0F, &0F, &0F, &0F, &4B, &69, &1E, &87, &0F, &1E, &0F, &0F
- EQUB &F0, &08, &1E, &C3, &2D, &3C, &1E, &2D, &F0, &00, &F0, &00
- EQUB &78, &0C, &96, &0F, &C0, &40, &C0, &20, &E0, &30, &F0, &10
- EQUB &00, &00, &00, &00, &00, &00, &80, &C0, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &10, &30
- EQUB &00, &00, &00, &00, &00, &F0, &80, &00, &00, &00, &00, &00
- EQUB &00, &B0, &50, &20, &00, &00, &00, &00, &00, &50, &A0, &D0
- EQUB &20, &40, &90, &90, &20, &20, &40, &40, &C0, &80, &00, &00
- EQUB &00, &10, &10, &20, &00, &00, &30, &60, &80, &80, &00, &00
- EQUB &40, &60, &E0, &30, &10, &10, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &80, &80, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &10, &30, &00, &00, &10, &30
- EQUB &70, &F0, &F0, &F0, &70, &F0, &F0, &F0, &F0, &E0, &A1, &03
- EQUB &E1, &81, &C3, &16, &0F, &2D, &87, &2D, &2D, &5A, &0F, &0F
- EQUB &87, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &05, &0C, &0F, &0F, &0F, &07
- EQUB &0A, &02, &04, &00, &0F, &06, &06, &08, &04, &00, &F0, &00
- EQUB &05, &0D, &09, &00, &70, &30, &E1, &C3, &0D, &02, &00, &00
- EQUB &F0, &87, &0F, &0E, &0B, &04, &00, &00, &F0, &1E, &0F, &07
- EQUB &0A, &0B, &09, &00, &E0, &C0, &78, &3C, &0F, &06, &06, &01
- EQUB &02, &00, &F0, &00, &0F, &0F, &0F, &0E, &05, &04, &02, &00
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0A, &03, &0F, &0F, &0F, &0F
- EQUB &0F, &0F, &0F, &0F, &4B, &A5, &0F, &0F, &1E, &0F, &0F, &0F
- EQUB &78, &18, &3C, &86, &0F, &4B, &1E, &4B, &E0, &F0, &F0, &F0
- EQUB &F0, &70, &58, &0C, &00, &00, &80, &C0, &E0, &F0, &F0, &F0
- EQUB &00, &00, &00, &00, &00, &00, &80, &C0, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00
- EQUB 0
+INCBIN "1-source-files/images/dashboard1.bin"
 
-                           \ Game addr to file addr
-COPYBLOCK &5FD0, &6700, &64D0 \ 5fd0-66ff to 64d0-6bff
-COPYBLOCK &0D00, &16DC, &5A80 \ 0d00-16db to 5a80-645b
-COPYBLOCK &7000, &70DB, &1500 \ 7000-70da to 1500-15da
-COPYBLOCK &0B00, &0D00, &1300 \ 0b00-0cff to 1300-14ff
-COPYBLOCK &7900, &7A00, &1200 \ 7900-79ff to 1200-12ff
+\ ******************************************************************************
+\
+\ Save Revs.bin
+\
+\ ******************************************************************************
 
-CLEAR &645C, &64D0            \ Zeroes in 645c-64cf
+\ We now move all the game code from where it runs (i.e. where it's been
+\ assembled by the above source code) to its position in the game binary file
+\
+\ So the following commands move blocks of code from the address when the game
+\ is running, to the address within the binary game file
+\
+\ This is effectively the reverse of the Entry, SwapCode and MoveCode routines;
+\ they unpack the code from the game binary into memory, while the following
+\ does the opposite and packs the code from memory into the game binary
+
+COPYBLOCK &5FD0, &6700, &64D0   \ &5FD0-&66FF to &64D0-&6BFF
+COPYBLOCK &0D00, &16DC, &5A80   \ &0D00-&16DB to &5A80-&645B
+COPYBLOCK &7000, &70DB, &1500   \ &7000-&70DA to &1500-&15DA
+COPYBLOCK &70DB, &7725, &5300   \ &70DB-&7724 to &5300-&5949
+COPYBLOCK &0B00, &0D00, &1300   \ &0B00-&0CFF to &1300-&14FF
+COPYBLOCK &7900, &7A00, &1200   \ &7900-&79FF to &1200-&12FF
+CLEAR &645C, &64D0              \ Reset &645C-&64CF to zero
+
+\ The second COPYBLOCK above moves code out of &0D00-&16DB
+\
+\ This vacated block then gets filled by further COPYBLOCK commands that copy
+\ code into &1200-&12FF, &1300-&14FF and &1500-&15DA
+\
+\ We are going to save the binary file from address &1200 onwards, as that's
+\ where the game binary loads, so we can ignore anything before &1200, but this
+\ still leaves a gap at &15DB-&16DB which has had code assembled into it, but
+\ that code has been moved elsewhere as part of the binary file packing process
+\
+\ In the original game binary this block contains background noise from the
+\ compilation process, which doesn't have any effect on the game, but if we want
+\ to assemble a file that matches the original game binary, we need to put this
+\ noise back, as follows
 
 ORG &15DB
 CLEAR &15DB, &16DC
-
-\ Add noise into 15db-16db
 
  EQUB &20, &00, &63, &60, &A6, &03, &10, &03, &20, &CB, &2A, &20
  EQUB &84, &50, &E4, &4D, &D0, &F6, &A2, &16, &86, &45, &20, &D1
@@ -18296,13 +18247,6 @@ CLEAR &15DB, &16DC
  EQUB &8C, &01, &30, &35, &29, &0F, &85, &37, &BD, &80, &03, &38
  EQUB &E5, &0A, &85, &74, &BD, &98, &03, &E5, &0B, &10, &06, &C9
  EQUB &E0, &90, &1E, &B0, &04, &C9, &20, &B0, &18, &06, &74, &2A
- EQUB &06, &74, &2A
- EQUB &18, &69
-
-\ ******************************************************************************
-\
-\ Save Revs.bin
-\
-\ ******************************************************************************
+ EQUB &06, &74, &2A, &18, &69
 
 SAVE "3-assembled-output/Revs.bin", LOAD%, LOAD_END%
