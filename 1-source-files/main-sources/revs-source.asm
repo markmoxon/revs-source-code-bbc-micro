@@ -9177,7 +9177,7 @@ ORG &0B00
  LDX U
  RTS
 
-.token27
+.token26
 
  EQUB &FE, &1F, &0A, &0C, &83
  EQUS "STANDARD OF"
@@ -9185,7 +9185,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
-.token5
+.token4
 
  EQUB &FC, &A3, &FC, &A3, &FC, &A1
 
@@ -9369,7 +9369,7 @@ ORG &0B00
 
  EQUB &00
 
-.token19
+.token18
 
  EQUS " 5"
 
@@ -9465,7 +9465,7 @@ ORG &0B00
 
  EQUB &00, &00
 
-.token20
+.token19
 
  EQUS "10"
 
@@ -9544,7 +9544,7 @@ ORG &0B00
 
  EQUB &66, &67, &5F, &5E
 
-.token21
+.token20
 
  EQUS "20"
 
@@ -9606,7 +9606,7 @@ ORG &0B00
 
  EQUB &FF, &77, &33, &11
 
-.token12
+.token11
 
  EQUS "ENTER "
 
@@ -9714,7 +9714,7 @@ ORG &0B00
 
  EQUB &A1, &B1, &E1, &F1
 
-.token26
+.token25
 
  EQUB &1F, &0D, &12
  EQUS "front"
@@ -9805,7 +9805,7 @@ ORG &0B00
 
  EQUB &80, &40, &20, &10, &00, &00, &00, &00
 
-.token9
+.token8
 
  EQUS "Amateur"
 
@@ -9846,14 +9846,14 @@ ORG &0B00
  EQUB &04, &0A, &00, &01, &0C, &0C, &02, &01, &01, &0A, &03, &04
  EQUB &00, &01, &03, &01, &03, &00, &80, &C0, &40, &60, &E0, &20
 
-.token32
+.token31
 
  EQUS "  " 
  EQUB &9C, &86, &9D, &84
 
  EQUB 255               \ End token
 
-.token4
+.token3
 
  EQUS "ACCUMULATED"
  EQUB &FB
@@ -9889,7 +9889,7 @@ ORG &0B00
  EQUB &06, &09, &02, &0C, &0A, &0A, &08, &02, &0A, &08, &04, &0A
  EQUB &03, &03, &0A, &03, &0A, &00, &10, &30, &20, &60, &70, &40
 
-.token1
+.token0
 
  EQUS "FORMULA 3  CHAMPIONSHIP"
 
@@ -9931,7 +9931,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
-.token18
+.token17
 
  EQUS "PRESS "
 
@@ -9963,7 +9963,7 @@ ORG &0B00
  EQUB &02, &00, &01, &00, &0B, &01, &03, &01, &00, &03, &00, &09
  EQUB &00, &01, &09, &00, &00, &FF, &EE, &CC, &CC, &88, &88, &88
 
-.token24
+.token23
 
  EQUB &FE, &EB, &A7, &D3
  EQUS "NAME OF"
@@ -9973,7 +9973,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
-.token36
+.token35
 
  EQUB &1F, &02, &0A, &86
 
@@ -10116,14 +10116,14 @@ ORG &0B00
 
  EQUB &FF
 
-.token23
+.token22
 
  EQUB &FE, &EC, &DA, &D5, &ED, &DB, &D5, &EE, &DC, &D5, &EB, &D2
  EQUS "DURATION OF QUALIFYING LAPS"
 
  EQUB 255               \ End token
 
-.token17
+.token16
 
  EQUS " ] "
 
@@ -10176,7 +10176,8 @@ ORG &0B00
  TSX                    \ Set L006B to the stack pointer
  STX L006B
 
- JSR ProtectTrack       \ Check that the track file has not been tampered with
+ JSR CallTrackHook      \ Call the hook code in the track file (for Silverstone
+                        \ the hook routine is just an RTS, so this does nothing)
 
  LDA #190               \ Call OSBYTE with A = 190, X = 32 and Y = 0 to set the
  LDY #0                 \ ADC conversion type to 32-bit conversion (though only
@@ -10200,7 +10201,7 @@ ORG &0B00
 
  EQUB &FF
 
-.token40
+.token39
 
  EQUB &EC
  EQUS "PRACTICE"
@@ -10210,7 +10211,7 @@ ORG &0B00
 
  EQUB &FF
 
-.token49
+.token48
 
  EQUB &AD
  EQUS "PLEASE"
@@ -10364,7 +10365,7 @@ ORG &0B00
  EQUB &2F, &2F, &2E, &2E, &2D, &2D, &2C, &2C, &2B, &2A, &29, &28
  EQUB &27, &26
 
-.token33
+.token32
 
  EQUB &A2, &9C, &08, &08, &E7
 
@@ -10461,7 +10462,7 @@ ORG &0B00
 
  EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE
 
-.token31
+.token30
 
  EQUB &1F, &05, &18, &86, &D9
  EQUS "SPACE BAR TO CONTINUE"
@@ -10472,7 +10473,7 @@ ORG &0B00
 
  EQUB &45, &FF
 
-.token3
+.token2
 
  EQUS "GRID POSITIONS"
 
@@ -10564,7 +10565,7 @@ ORG &0B00
  EQUS "Less than one minute to go"
  EQUB &A6, &FF
 
-.token39
+.token38
 
  EQUB &1F, &05, &14, &84, &9D, &86, &33, &A2, &9C, &A5, &83
 
@@ -10590,6 +10591,7 @@ ORG &0B00
 
 .tokenLo
 
+ EQUB LO(token0)
  EQUB LO(token1)
  EQUB LO(token2)
  EQUB LO(token3)
@@ -10629,16 +10631,15 @@ ORG &0B00
  EQUB LO(token37)
  EQUB LO(token38)
  EQUB LO(token39)
- EQUB LO(token40)
  EQUB &80
  EQUB &80
  EQUB &80
  EQUB &80
  EQUB &94
  EQUB &A8
- EQUB LO(token47)
+ EQUB LO(token46)
  EQUB &00
- EQUB LO(token49)
+ EQUB LO(token48)
  EQUB &A5
  EQUB &7A
  EQUB &08
@@ -10683,6 +10684,7 @@ ORG &0B00
 
 .tokenHi
 
+ EQUB HI(token0)
  EQUB HI(token1)
  EQUB HI(token2)
  EQUB HI(token3)
@@ -10722,16 +10724,15 @@ ORG &0B00
  EQUB HI(token37)
  EQUB HI(token38)
  EQUB HI(token39)
- EQUB HI(token40)
  EQUB &42
  EQUB &3A
  EQUB &36
  EQUB &37
  EQUB &37
  EQUB &37
- EQUB HI(token47)
+ EQUB HI(token46)
  EQUB &00
- EQUB HI(token49)
+ EQUB HI(token48)
  EQUB &38
  EQUB &3C
  EQUB &35
@@ -10864,7 +10865,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: token47
+\       Name: token46
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -10875,7 +10876,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.token47
+.token46
 
  EQUB 22, 7             \ Switch to screen mode 7 with VDU 22, 7
 
@@ -10887,7 +10888,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
-.token25
+.token24
 
  EQUB &EB, &D2
  EQUS "WING SETTINGS"
@@ -10973,7 +10974,7 @@ ORG &0B00
 
  EQUB &DA, &D6, &FF
 
-.token7
+.token6
 
  EQUB &A2
  EQUS "BEST LAP TIMES"
@@ -10981,19 +10982,19 @@ ORG &0B00
 
  EQUB 255               \ End token
 
-.token14
+.token13
 
  EQUS " mins"
 
  EQUB 255               \ End token
 
-.token15
+.token14
 
  EQUS " laps"
 
  EQUB 255               \ End token
 
-.token16
+.token15
 
  EQUS " RACE"
 
@@ -11097,7 +11098,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: token28
+\       Name: token27
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -11108,7 +11109,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.token28
+.token27
 
  EQUB &FE, &EC, &D3
  EQUS "ANOTHER"
@@ -11118,7 +11119,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
-.token35
+.token34
 
  EQUB &8D, &81, &9D, &83, &C8, &A2, &9C
 
@@ -11231,7 +11232,7 @@ ORG &0B00
 
  EQUB &0A, &07, &0A, &0D
 
-.token22
+.token21
 
  EQUB &FE, &EC, &CF, &ED, &D0, &EE, &D1, &EB, &A4, &D2
  EQUS "THE CLASS OF"
@@ -11333,13 +11334,13 @@ ORG &0B00
 
  EQUB &09, &06, &04, &03, &02, &01, &01, &00, &00
 
-.token30
+.token29
 
  EQUB &FE, &EB, &A5, &82, &D4, &D8
 
  EQUB 255               \ End token
 
-.token10
+.token9
 
  EQUS "Professional"
 
@@ -11391,9 +11392,9 @@ ORG &0B00
  ADC L0042
  TAX
  LDA L3E74,X
- STA token32+5
+ STA token31+5
  LDA L3E76,X
- STA token32+3
+ STA token31+3
  RTS
 
 \ ******************************************************************************
@@ -11430,13 +11431,13 @@ ORG &0B00
 
  EQUB &86, &87, &81, &84, &83, &82, &83, &84, &81, &87
 
-.token11
+.token10
 
  EQUS "SELECT "
 
  EQUB 255               \ End token
 
-.token13
+.token12
 
  EQUS " DRIVER"
 
@@ -11535,7 +11536,7 @@ ORG &0B00
 
  EQUB &AA, &AC, &B0, &B0, &AC, &AA
 
-.token38
+.token37
  
  EQUB &1F, &05, &12, &84, &9D, &86, &32, &A2, &9C, &A5, &83
 
@@ -11570,7 +11571,7 @@ ORG &0B00
  EQUB &1B, &17, &13, &0F, &0B, &06, &02, &02, &02, &03, &15, &1B
  EQUB &1B, &1B, &20, &20, &20, &42, &65, &68, &69
 
-.token8
+.token7
 
  EQUS "Novice"
 
@@ -11656,7 +11657,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: token34
+\       Name: token33
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -11667,7 +11668,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.token34
+.token33
 
  EQUB &0C, &1F, &04, &03, &EA, &AA, &EA, &1F, &24, &02
 
@@ -11746,20 +11747,20 @@ ORG &0B00
 .sub_C41D0
 
  LDA L3BD0,X
- STA token34+2
+ STA token33+2
  LDA L3BD7,X
- STA token34+3
+ STA token33+3
  LDA L3BDE,X
- STA token34+5
+ STA token33+5
  LDA L3BE5,X
- STA token35+1
+ STA token34+1
  LDA L3BEC,X
- STA token35+3
+ STA token34+3
 
- TXA                    \ Set token35+4 = X + 200
+ TXA                    \ Set token34+4 = X + 200
  CLC
  ADC #200
- STA token35+4
+ STA token34+4
 
  LDX #33                \ Print token 33
  JSR PrintToken
@@ -11781,7 +11782,7 @@ ORG &0B00
 
  EQUB &79, &7B, &7C, &7D, &7E
 
-.token2
+.token1
 
  EQUB &A5, &FB, &A6
 
@@ -11876,7 +11877,7 @@ ORG &0B00
 
  EQUB &85, &52, &83, &45, &86, &56, &82, &53, &FF, &75, &75
 
-.token29
+.token28
 
  EQUB &FE, &EB, &A6, &D2
  EQUS "NUMBER OF LAPS"
@@ -11892,13 +11893,13 @@ ORG &0B00
  EQUB &F0, &80
  EQUS "Harry Fume  Dan DipstickWilma Cargo Miles Behind"
 
-.token6
+.token5
 
  EQUS "THE  PITS"
 
  EQUB 255               \ End token
 
-.token37
+.token36
 
  EQUB &1F, &04, &0E, &88, &86, &D9, &1F, &05, &10, &84, &9D
  EQUB &86, &31, &A2, &9C, &A5, &83
@@ -15629,22 +15630,35 @@ INCBIN "1-source-files/images/dashboard2.bin"
 
 \ ******************************************************************************
 \
-\       Name: ProtectTrack
+\       Name: CallTrackHook
 \       Type: Subroutine
 \   Category: Setup
-\    Summary: Checks that the track file has not been tampered with
+\    Summary: The track file's hook code
 \
 \ ******************************************************************************
 
-.ProtectTrack
+.CallTrackHook
 
  BRK                    \ The SwapCode routine replaces these three bytes with
  BRK                    \ the three bytes from just before the trackChecksum in
- BRK                    \ the track file, which contain RTS:NOP:NOP, so if the
-                        \ track file has not been tampered with, this routine
-                        \ will simply return when called, but if the track file
-                        \ has been tampered with and does not contain an RTS in
-                        \ the right location, then the game will terminate
+ BRK                    \ the track file, which contain the three bytes of hook
+                        \ code for the track
+                        \
+                        \ In the default Silverstone track that comes with the
+                        \ original version of Revs, the three bytes of hook code
+                        \ contain the following:
+                        \
+                        \   RTS
+                        \   NOP
+                        \   NOP
+                        \
+                        \ so calling this routine does nothing (see the track
+                        \ source in the revs-silverstone.asm file for details)
+                        \
+                        \ Other track files, such as those in the Revs 4 Tracks
+                        \ expansion pack, contain JMP instructions in their hook
+                        \ code, which allows the track authors to hook in entire
+                        \ routines that get called when those tracks are loaded
 
 \ ******************************************************************************
 \
