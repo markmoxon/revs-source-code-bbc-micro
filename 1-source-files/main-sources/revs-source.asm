@@ -420,11 +420,29 @@ ORG &790E
                         \ trackLoad is &70DB and trackData is &5300, so we
                         \ want to do the following:
                         \
-                        \   * Swap &70DB-&7724 and &5300-&5949
+                        \   * Swap &70DB-&77FF and &5300-&5A24
                         \
                         \ At the same time, we want to perform a checksum on the
                         \ track data and compare the results with the four
                         \ checksum bytes in trackChecksum
+                        \
+                        \ The following does this in batches of 256 bytes, using
+                        \ Y as an index that goes from 0 to 255. The checks are
+                        \ done at the end of the loop, and they check the value
+                        \ of Y first (against &25), and then the high byte of the
+                        \ higher address (against &77) but only if the Y test
+                        \ fails, so the swaps end up being:
+                        \
+                        \   * Swap &5300 + 0-255 with &70DB + 0-255
+                        \   * Swap &5400 + 0-255 with &71DB + 0-255
+                        \   * Swap &5500 + 0-255 with &72DB + 0-255
+                        \   * Swap &5600 + 0-255 with &73DB + 0-255
+                        \   * Swap &5700 + 0-255 with &74DB + 0-255
+                        \   * Swap &5800 + 0-255 with &75DB + 0-255
+                        \   * Swap &5900 + 0-255 with &76DB + 0-255
+                        \   * Swap &5A00 + 0-&24 with &77DB + 0-&24
+                        \
+                        \ So the last operation swaps &5A24 and &77FF
 
  LDA #LO(trackData)     \ Set (Q P) = trackData
  STA P                  \
@@ -469,15 +487,15 @@ ORG &790E
 
  INY                    \ Increment the loop counter
 
- BNE swap2              \ If we have just crossed a page boundary, increment the
- INC Q                  \ high bytes of (Q P) and (S R) to move on to next page
- INC S
+ BNE swap2              \ If we have finshed swapping a page of bytes, increment
+ INC Q                  \ the high bytes of (Q P) and (S R) to move on to next
+ INC S                  \ page
 
 .swap2
 
- CPY #&25               \ If we have not yet reached address &7725, which is the
- BNE swap1              \ address after the end of the track data, jump back to
- LDA S                  \ swap1 to keep swapping data
+ CPY #&25               \ If we have not yet reached addresses &5A24 and &77FF,
+ BNE swap1              \ jump back to swap1 to keep swapping data
+ LDA S
  CMP #&77
  BNE swap1
 
@@ -524,7 +542,7 @@ ORG &790E
 \
 \   * The SwapCode routine does the following:
 \
-\     * Swap memory between &70DB-&7724 and &5300-&5949
+\     * Swap memory between &70DB-&77FF and &5300-&5A24
 \
 \   * The MoveCode routine does the following:
 \
@@ -542,8 +560,8 @@ ORG &790E
 \   * &1500-&15da   moves to &7000-&70DA in memory
 \   * &15DB-&16DB   contains workspace noise
 \   * &16DC-&5A7F   stays put
-\   * &5300-&5949   swaps with track data at &70DB-&7724 in memory
-\   * &594A-&5A79   stays put
+\   * &5300-&5A24   swaps with track data at &70DB-&77FF in memory
+\   * &5A25-&5A79   stays put
 \   * &5A80-&645B   moves to &0D00-&16DB in memory
 \   * &645C-&64CF   stays put (this just contains zeroes)
 \   * &64D0-&6BFF   moves to &5FD0-&63FF in memory
@@ -564,8 +582,8 @@ ORG &790E
 \   * &5FD0-&66FF   moves from &64D0-&6BFF in the game binary
 \   * &6700-&6FFF   stays put
 \   * &7000-&70DA   moves from &1500-&15DA in the game binary
-\   * &70DB-&7724   swaps with &5300-&5949 in the game binary
-\   * &7725-&78FF   not used
+\   * &70DB-&77FF   swaps with &5300-&5A24 in the game binary
+\   * &7800-&78FF   not used
 \   * &7900-&79FF   moves from &1200-&12FF in the game binary
 \
 \ For details on the workspace noise in the final game binary at &15DB-&16DB,
@@ -2763,7 +2781,7 @@ ORG &0B00
  LDX #&17
  LDA L0025
  BMI C1326
- LDA L59FA
+ LDA trackData+1786
  LSR A
  AND #&F8
  CMP L06E8,X
@@ -2933,7 +2951,7 @@ ORG &0B00
  BMI C13F0
  LDY L0002
  INY
- CPY L59FB
+ CPY trackData+1787
  BNE C13F8
  LDY #0
  BEQ C13F8
@@ -2942,7 +2960,7 @@ ORG &0B00
 
  LDY L0002
  BNE C13F7
- LDY L59FB
+ LDY trackData+1787
 
 .C13F7
 
@@ -3146,7 +3164,7 @@ ORG &0B00
  TYA
  CLC
  ADC #8
- CMP L59FA
+ CMP trackData+1786
  BCC C1496
  LDA #0
 
@@ -3165,10 +3183,10 @@ ORG &0B00
 .C14A6
 
  LDA L08D0,X
- CMP L59FC
+ CMP trackData+1788
  BNE C14C1
  LDA L08E8,X
- CMP L59FD
+ CMP trackData+1789
  BNE C14C1
  LDA #0
  STA L08D0,X
@@ -3201,7 +3219,7 @@ ORG &0B00
  BNE C14DD
  TYA
  BNE C14D2
- LDA L59FA
+ LDA trackData+1786
 
 .C14D2
 
@@ -3225,9 +3243,9 @@ ORG &0B00
  BNE C1509
  DEC L08E8,X
  BPL C1509
- LDA L59FC
+ LDA trackData+1788
  STA L08D0,X
- LDA L59FD
+ LDA trackData+1789
  STA L08E8,X
  CPX L006F
  BNE C14E4
@@ -3769,7 +3787,7 @@ ORG &0B00
  SED
  LDA #9
  LDY L0046
- CPY L5A19
+ CPY trackData+1817
  BNE C17CF
  LDA #&18
 
@@ -3859,9 +3877,9 @@ ORG &0B00
 
 .loop_C181E
 
- LDA L59FF
+ LDA trackData+1791
  STA L08E8,X
- LDA L59FE
+ LDA trackData+1790
  STA L08D0,X
  LDA #0
  STA L06E8,X
@@ -3872,11 +3890,11 @@ ORG &0B00
  LDA #1
  BIT L006C
  BMI C184C
- LDX L5A17
+ LDX trackData+1815
  LDY L0003
  JSR sub_C267F
  JSR sub_C63A2
- LDA L5A18
+ LDA trackData+1816
 
 .C184C
 
@@ -6305,16 +6323,16 @@ ORG &0B00
  SEC
  SBC T
  BCS C235B
- ADC L59FA
+ ADC trackData+1786
  JMP C235B
 
 .C234F
 
  CLC
  ADC L06FF
- CMP L59FA
+ CMP trackData+1786
  BCC C235B
- SBC L59FA
+ SBC trackData+1786
 
 .C235B
 
@@ -7301,11 +7319,11 @@ ORG &0B00
  PLA
  EOR #&80
  PHP
- LDA L59FC
+ LDA trackData+1788
  SEC
  SBC T
  STA T
- LDA L59FD
+ LDA trackData+1789
  SBC U
  BNE C27EA
  CLC
@@ -7405,7 +7423,7 @@ ORG &0B00
  ADC L0128,X
  BIT L006C
  BPL C284E
- SBC L5A1A
+ SBC trackData+1818
 
 .C284E
 
@@ -10069,7 +10087,7 @@ ORG &0B00
  TSX                    \ Set L006B to the stack pointer
  STX L006B
 
- JSR sub_C5A22          \ Contains BRK, must get changed first ???
+ JSR ProtectTrack       \ Check that the track file has not been tampered with
 
  LDA #190               \ Call OSBYTE with A = 190, X = 32 and Y = 0 to set the
  LDY #0                 \ ADC conversion type to 32-bit conversion (though only
@@ -11751,10 +11769,10 @@ ORG &0B00
 
 .sub_C44C6
 
- LDA L5A14,X
+ LDA trackData+1812,X
  STA L5F40
  STA U
- LDA L59FA
+ LDA trackData+1786
  LSR A
  LSR A
  LSR A
@@ -11762,7 +11780,7 @@ ORG &0B00
 
 .loop_C44D5
 
- LDA L59D0,Y
+ LDA trackData+1744,Y
  LSR A
  PHP
  LSR A
@@ -12941,7 +12959,7 @@ ORG &0B00
 
  STA U
  LDX L0040
- LDA L5A06,X
+ LDA trackData+1798,X
  JSR sub_C0C00
  ASL T
  ROL A
@@ -13056,7 +13074,7 @@ ORG &0B00
 .C4A7F
 
  STA U
- LDA L5A0D,X
+ LDA trackData+1805,X
  JSR sub_C0C00
 
 .C4A87
@@ -13602,12 +13620,12 @@ ORG &0B00
  LDY #2
  LDA trackData+208,X
  JSR sub_C4D21
- LDA L59EA,X
+ LDA trackData+1770,X
  AND #7
  CLC
  ADC #7
  STA L0037
- LDA L59EA,X
+ LDA trackData+1770,X
  AND #&F8
  TAY
  LDX #&FD
@@ -14615,7 +14633,7 @@ ORG &0B00
 
  LDX L0046
  BNE C505C
- LDX L5A19
+ LDX trackData+1817
  INX
  BEQ C505F
 
@@ -15324,12 +15342,12 @@ ORG &0B00
 \
 \       Name: trackData
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: This is where the track data gets loaded
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The dashboard2.bin file loads at address &594A.
 \
 \ ******************************************************************************
 
@@ -15337,332 +15355,28 @@ ORG &0B00
 
  SKIP 1610
 
-\ ******************************************************************************
-\
-\       Name: L594A
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L594A
-
 INCBIN "1-source-files/images/dashboard2.bin"
 
- SKIP 67
+ SKIP 149
 
 \ ******************************************************************************
 \
-\       Name: L59D0
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59D0
-
- EQUB 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
- EQUB 0, 0, 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L59EA
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59EA
-
- EQUB 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L59FA
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59FA
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L59FB
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59FB
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L59FC
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59FC
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L59FD
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59FD
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L59FE
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59FE
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L59FF
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59FF
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L5A00
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A00
-
- EQUB 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L5A03
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A03
-
- EQUB 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L5A06
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A06
-
- EQUB 0, 0, 0, 0, 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L5A0D
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A0D
-
- EQUB 0, 0, 0, 0, 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L5A14
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A14
-
- EQUB 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L5A17
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A17
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L5A18
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A18
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L5A19
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A19
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L5A1A
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5A1A
-
- EQUB 0, 0, 0, 0, 0, 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: sub_C5A22
+\       Name: ProtectTrack
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Setup
+\    Summary: Checks that the track file has not been tampered with
 \
 \ ******************************************************************************
 
-.sub_C5A22
+.ProtectTrack
 
- BRK
- EQUB 0, 0
+ BRK                    \ The SwapCode routine replaces these three bytes with
+ BRK                    \ the three bytes from just before the trackChecksum in
+ BRK                    \ the track file, which contain RTS:NOP:NOP, so if the
+                        \ track file has not been tampered with, this routine
+                        \ will simply return when called, but if the track file
+                        \ has been tampered with and does not contain an RTS in
+                        \ the right location, then the game will terminate
 
 \ ******************************************************************************
 \
@@ -15673,7 +15387,8 @@ INCBIN "1-source-files/images/dashboard2.bin"
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The memory taken up by the SetupGame routine is reused in this routine, as we
+\ no longer need it.
 \
 \ ******************************************************************************
 
@@ -17586,9 +17301,9 @@ ORG &5FD0
  BCC C64A2
  LDA L06B8,Y
  SEC
- SBC L5A00,X
+ SBC trackData+1792,X
  LDA L06D0,Y
- SBC L5A03,X
+ SBC trackData+1795,X
  BCS C649A
  INX
  BNE loop_C6480
@@ -18039,7 +17754,8 @@ ORG &5FD0
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The memory taken up by the SetupGame routine is reused in this routine, as we
+\ no longer need it.
 \
 \ ******************************************************************************
 
