@@ -9188,25 +9188,17 @@ ORG &0B00
 
 .token26
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &1F
+ EQUB 31, 10, 12        \ Move text cursor to column 10, row 12
 
- EQUB &0A
-
- EQUB &0C
-
- EQUB &83
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
  EQUS "STANDARD OF"
 
- EQUB &D7
+ EQUB 200 + 15          \ Print token 15
 
- EQUB &1F
-
- EQUB &0E
-
- EQUB &0E
+ EQUB 31, 14, 14        \ Move text cursor to column 14, row 14
 
  EQUB 255               \ End token
 
@@ -9221,17 +9213,17 @@ ORG &0B00
 
 .token4
 
- EQUB &FC
+ EQUB 200 + 52          \ Print token 52
 
- EQUB &A3
+ EQUB 160 + 3           \ Print 3 spaces
 
- EQUB &FC
+ EQUB 200 + 52          \ Print token 52
 
- EQUB &A3
+ EQUB 160 + 3           \ Print 3 spaces
 
- EQUB &FC
+ EQUB 200 + 52          \ Print token 52
 
- EQUB &A1
+ EQUB 160 + 1           \ Print 1 space
 
  EQUB 255               \ End token
 
@@ -9879,19 +9871,15 @@ ORG &0B00
 
 .token25
 
- EQUB &1F
-
- EQUB &0D
-
- EQUB &12
+ EQUB 31, 13, 18        \ Move text cursor to column 13, row 18
 
  EQUS "front"
 
- EQUB &A2
+ EQUB 160 + 2           \ Print 2 spaces
 
- EQUB &85
+ EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB &D8
+ EQUB 200 + 16          \ Print token 16
 
  EQUB 255               \ End token
 
@@ -10078,13 +10066,11 @@ ORG &0B00
 
  EQUS "  "
 
- EQUB &9C
+ EQUB 156               \ Set background colour to black
 
- EQUB &86
+ EQUB 134, 157          \ Set background colour to cyan
 
- EQUB &9D
-
- EQUB &84
+ EQUB 132               \ Set foreground colour to blue alphanumeric
 
  EQUB 255               \ End token
 
@@ -10100,7 +10086,8 @@ ORG &0B00
 .token3
 
  EQUS "ACCUMULATED"
- EQUB &FB
+
+ EQUB 200 + 51          \ Print token 51
 
  EQUB 255               \ End token
 
@@ -10213,11 +10200,11 @@ ORG &0B00
 
 .token42
 
- EQUB &AB
+ EQUB 160 + 11          \ Print 11 spaces
 
  EQUS "YOUR TIME IS UP!"
 
- EQUB &AB
+ EQUB 160 + 11          \ Print 11 spaces
 
  EQUB 255               \ End token
 
@@ -10288,37 +10275,29 @@ ORG &0B00
 
 .token23
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &EB
+ EQUB 200 + 35          \ Print token 35
 
- EQUB &A7
+ EQUB 160 + 7           \ Print 7 spaces
 
- EQUB &D3
+ EQUB 200 + 11          \ Print token 11
 
  EQUS "NAME OF"
 
- EQUB &D4
+ EQUB 200 + 12          \ Print token 12
 
- EQUB &1F
+ EQUB 31, 12, 17        \ Move text cursor to column 12, row 17
 
- EQUB &0C
-
- EQUB &11
-
- EQUB &83
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
  EQUS "____________"
 
- EQUB &1F
+ EQUB 31, 9, 16         \ Move text cursor to column 9, row 16
 
- EQUB &09
+ EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB &10
-
- EQUB &85
-
- EQUB &D8
+ EQUB 200 + 16          \ Print token 16
 
  EQUB 255               \ End token
 
@@ -10333,13 +10312,9 @@ ORG &0B00
 
 .token35
 
- EQUB &1F
+ EQUB 31, 2, 10         \ Move text cursor to column 2, row 10
 
- EQUB &02
-
- EQUB &0A
-
- EQUB &86
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
  EQUB 255               \ End token
 
@@ -10414,11 +10389,11 @@ ORG &0B00
 
  EQUS "Position"
 
- EQUB &A8
+ EQUB 160 + 8           \ Print 8 spaces
 
  EQUS "In front:"
 
- EQUB &AD
+ EQUB 160 + 13          \ Print 13 spaces
 
  EQUB 255               \ End token
 
@@ -10435,11 +10410,11 @@ ORG &0B00
 
  EQUS "Laps to go"
 
- EQUB &A8
+ EQUB 160 + 8           \ Print 8 spaces
 
  EQUS "Behind:"
 
- EQUB &B2
+ EQUB 160 + 18          \ Print 18 spaces
 
  EQUB 255               \ End token
 
@@ -10454,7 +10429,7 @@ ORG &0B00
 
 .token45
 
- EQUB &C6
+ EQUB 160 + 38          \ Print 38 spaces
 
  EQUB 255               \ End token
 
@@ -10573,29 +10548,29 @@ ORG &0B00
 
 .token22
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &EC
+ EQUB 200 + 36          \ Print token 36
 
- EQUB &DA
+ EQUB 200 + 18          \ Print token 18
 
- EQUB &D5
+ EQUB 200 + 13          \ Print token 13
 
- EQUB &ED
+ EQUB 200 + 37          \ Print token 37
 
- EQUB &DB
+ EQUB 200 + 19          \ Print token 19
 
- EQUB &D5
+ EQUB 200 + 13          \ Print token 13
 
- EQUB &EE
+ EQUB 200 + 38          \ Print token 38
 
- EQUB &DC
+ EQUB 200 + 20          \ Print token 20
 
- EQUB &D5
+ EQUB 200 + 13          \ Print token 13
 
- EQUB &EB
+ EQUB 200 + 35          \ Print token 35
 
- EQUB &D2
+ EQUB 200 + 10          \ Print token 10
 
  EQUS "DURATION OF QUALIFYING LAPS"
 
@@ -10699,11 +10674,11 @@ ORG &0B00
 
 .token39
 
- EQUB &EC
+ EQUB 200 + 36          \ Print token 36
 
  EQUS "PRACTICE"
 
- EQUB &ED
+ EQUB 200 + 37          \ Print token 37
 
  EQUS "COMPETITION"
 
@@ -10722,15 +10697,15 @@ ORG &0B00
 
 .token48
 
- EQUB &AD
+ EQUB 160 + 13          \ Print 13 spaces
 
  EQUS "PLEASE"
 
- EQUB &A2
+ EQUB 160 + 2           \ Print 2 spaces
 
  EQUS "WAIT"
 
- EQUB &AD
+ EQUB 160 + 13          \ Print 13 spaces
 
  EQUB 255               \ End token
 
@@ -10745,11 +10720,7 @@ ORG &0B00
 
 .token49
 
- EQUB &1F
-
- EQUB &09
-
- EQUB &02
+ EQUB 31, 9, 2          \ Move text cursor to column 9, row 2
 
  EQUB 255               \ End token
 
@@ -10921,15 +10892,13 @@ ORG &0B00
 
 .token32
 
- EQUB &A2
+ EQUB 160 + 2           \ Print 2 spaces
 
- EQUB &9C
+ EQUB 156               \ Set background colour to black
 
- EQUB &08
+ EQUB 8, 8              \ Backspace to the left by two characters
 
- EQUB &08
-
- EQUB &E7
+ EQUB 200 + 31          \ Print token 31
 
  EQUB 255               \ End token
 
@@ -11050,15 +11019,11 @@ ORG &0B00
 
 .token30
 
- EQUB &1F
+ EQUB 31, 5, 24         \ Move text cursor to column 5, row 24
 
- EQUB &05
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB &18
-
- EQUB &86
-
- EQUB &D9
+ EQUB 200 + 17          \ Print token 17
 
  EQUS "SPACE BAR TO CONTINUE"
 
@@ -11183,11 +11148,11 @@ ORG &0B00
 
 .token53
 
- EQUB &AF
+ EQUB 160 + 15          \ Print 15 spaces
 
  EQUS "FINISHED"
 
- EQUB &AF
+ EQUB 160 + 15          \ Print 15 spaces
 
  EQUB 255               \ End token
 
@@ -11204,11 +11169,11 @@ ORG &0B00
 
 .token41
 
- EQUB &A6
+ EQUB 160 + 6           \ Print 6 spaces
 
  EQUS "Less than one minute to go"
 
- EQUB &A6
+ EQUB 160 + 6           \ Print 6 spaces
 
  EQUB 255               \ End token
 
@@ -11223,27 +11188,21 @@ ORG &0B00
 
 .token38
 
- EQUB &1F
+ EQUB 31, 5, 20         \ Move text cursor to column 5, row 20
 
- EQUB &05
+ EQUB 132, 157          \ Set background colour to blue
 
- EQUB &14
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB &84
+ EQUS "3"
 
- EQUB &9D
+ EQUB 160 + 2           \ Print 2 spaces
 
- EQUB &86
+ EQUB 156               \ Set background colour to black
 
- EQUB &33
+ EQUB 160 + 5           \ Print 5 spaces
 
- EQUB &A2
-
- EQUB &9C
-
- EQUB &A5
-
- EQUB &83
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
  EQUB 255               \ End token
 
@@ -11535,30 +11494,6 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: headerColour
-\       Type: Variable
-\   Category: Text
-\    Summary: Foreground colour for printing mode 7 headers
-\
-\ ------------------------------------------------------------------------------
-\
-\ The values in this table are used by the PrintHeader routine to print out
-\ headers in mode 7.
-\
-\ ******************************************************************************
-
-.headerColour
-
- EQUB 129
- EQUB 129
- EQUB 133
- EQUB 132
- EQUB 163
- EQUB 131
- EQUB 133
-
-\ ******************************************************************************
-\
 \       Name: headerBackground
 \       Type: Variable
 \   Category: Text
@@ -11572,6 +11507,30 @@ ORG &0B00
 \ ******************************************************************************
 
 .headerBackground
+
+ EQUB 129
+ EQUB 129
+ EQUB 133
+ EQUB 132
+ EQUB 163
+ EQUB 131
+ EQUB 133
+
+\ ******************************************************************************
+\
+\       Name: headerForeground
+\       Type: Variable
+\   Category: Text
+\    Summary: Foreground colour for printing mode 7 headers
+\
+\ ------------------------------------------------------------------------------
+\
+\ The values in this table are used by the PrintHeader routine to print out
+\ headers in mode 7.
+\
+\ ******************************************************************************
+
+.headerForeground
 
  EQUB 131
  EQUB 131
@@ -11595,7 +11554,8 @@ ORG &0B00
  EQUB 22, 7             \ Switch to screen mode 7
 
  EQUB 23, 0, 10, 32     \ Disable cursor
- EQUB 0, 0, 0, 0, 0, 0
+ EQUB 0, 0, 0
+ EQUB 0, 0, 0
 
  EQUB 255               \ End token
 
@@ -11610,29 +11570,25 @@ ORG &0B00
 
 .token24
 
- EQUB &EB
+ EQUB 200 + 35          \ Print token 35
 
- EQUB &D2
+ EQUB 200 + 10          \ Print token 10
 
  EQUS "WING SETTINGS"
 
- EQUB &D8
+ EQUB 200 + 16          \ Print token 16
 
  EQUS "range 0 to 40"
 
- EQUB &1F
-
- EQUB &0E
-
- EQUB &10
+ EQUB 31, 14, 16        \ Move text cursor to column 14, row 16
 
  EQUS "rear"
 
- EQUB &A2
+ EQUB 160 + 2           \ Print 2 spaces
 
- EQUB &85
+ EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB &D8
+ EQUB 200 + 16          \ Print token 16
 
  EQUB 255               \ End token
 
@@ -11717,15 +11673,11 @@ ORG &0B00
 
 .token50
 
- EQUB &1F
+ EQUB 31, 24, 2         \ Move text cursor to column 24, row 2
 
- EQUB &18
+ EQUB 200 + 18          \ Print token 18
 
- EQUB &02
-
- EQUB &DA
-
- EQUB &D6
+ EQUB 200 + 14          \ Print token 14
 
  EQUB 255               \ End token
 
@@ -11740,9 +11692,11 @@ ORG &0B00
 
 .token6
 
- EQUB &A2
+ EQUB 160 + 2           \ Print 2 spaces
+
  EQUS "BEST LAP TIMES"
- EQUB &A2
+
+ EQUB 160 + 2           \ Print 2 spaces
 
  EQUB 255               \ End token
 
@@ -11926,21 +11880,21 @@ ORG &0B00
 
 .token27
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &EC
+ EQUB 200 + 36          \ Print token 36
 
- EQUB &D3
+ EQUB 200 + 11          \ Print token 11
 
  EQUS "ANOTHER"
 
- EQUB &D4
+ EQUB 200 + 12          \ Print token 12
 
- EQUB &ED
+ EQUB 200 + 37          \ Print token 37
 
  EQUS "START"
 
- EQUB &D7
+ EQUB 200 + 15          \ Print token 15
 
  EQUB 255               \ End token
 
@@ -11961,9 +11915,9 @@ ORG &0B00
 
  EQUB 141               \ Set double-height text
 
- EQUB 129               \ Set foreground colour to red alphanumeric
+ EQUB 129, 157          \ Set background colour to red
 
- EQUB 157, 131          \ Set background colour to yellow
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
  EQUB 200+0             \ Print token 0 ("FORMULA 3  CHAMPIONSHIP")
 
@@ -12110,29 +12064,29 @@ ORG &0B00
 
 .token21
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &EC
+ EQUB 200 + 36          \ Print token 36
 
- EQUB &CF
+ EQUB 200 + 7           \ Print token 7
 
- EQUB &ED
+ EQUB 200 + 37          \ Print token 37
 
- EQUB &D0
+ EQUB 200 + 8           \ Print token 8
 
- EQUB &EE
+ EQUB 200 + 38          \ Print token 38
 
- EQUB &D1
+ EQUB 200 + 9           \ Print token 9
 
- EQUB &EB
+ EQUB 200 + 35          \ Print token 35
 
- EQUB &A4
+ EQUB 160 + 4           \ Print 4 spaces
 
- EQUB &D2
+ EQUB 200 + 10          \ Print token 10
 
  EQUS "THE CLASS OF"
 
- EQUB &D7
+ EQUB 200 + 15          \ Print token 15
 
  EQUB 255               \ End token
 
@@ -12256,17 +12210,17 @@ ORG &0B00
 
 .token29
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &EB
+ EQUB 200 + 35          \ Print token 35
 
- EQUB &A5
+ EQUB 160 + 5           \ Print 5 spaces
 
- EQUB &82
+ EQUB 130               \ Set foreground colour to green alphanumeric
 
- EQUB &D4
+ EQUB 200 + 12          \ Print token 12
 
- EQUB &D8
+ EQUB 200 + 16          \ Print token 16
 
  EQUB 255               \ End token
 
@@ -12533,27 +12487,21 @@ ORG &0B00
 
 .token37
  
- EQUB &1F
+ EQUB 31, 5, 18         \ Move text cursor to column 5, row 18
 
- EQUB &05
+ EQUB 132, 157          \ Set background colour to blue
 
- EQUB &12
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB &84
+ EQUS "2"
 
- EQUB &9D
+ EQUB 160 + 2           \ Print 2 spaces
 
- EQUB &86
+ EQUB 156               \ Set background colour to black
 
- EQUB &32
+ EQUB 160 + 5           \ Print 5 spaces
 
- EQUB &A2
-
- EQUB &9C
-
- EQUB &A5
-
- EQUB &83
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
  EQUB 255               \ End token
 
@@ -12810,37 +12758,38 @@ ORG &0B00
 \   * Token 0 ("FORMULA 3  CHAMPIONSHIP")
 \     Column 4, row 3
 \     10 spaces
-\     Red on yellow
+\     Yellow on red
 \
 \   * Token 1
 \     Column 7, row 0
 \     15 spaces
-\     Red on yellow
+\     Yellow on red
 \
 \   * Token 2 ("GRID POSITIONS")
 \     Column 9, row 0
 \     19 spaces
-\     Magenta on white
+\     White on magenta
 \
 \   * Token 3
 \     Column 7, row 0
 \     15 spaces
-\     Blue on white
+\     White on blue
 \
 \   * Token 4
 \     Column 0, row 4
 \     2 spaces
-\     Foreground: 163 (no background set as 127 is the delete character)
+\     Prints 141, 163, 157, 127 before token 4, i.e. 141, 163 (as 127 is DEL),
+\     which is double-height "sixel" 163, i.e. a line along the top of the block
 \
 \   * Token 5 ("THE  PITS")
 \     Column 11, row 4
 \     24 spaces
-\     Yellow on blue
+\     Blue on yellow
 \
 \   * Token 6
 \     Column 7, row 0
 \     15 spaces
-\     Magenta on white
+\     White on magenta
 \
 \ Arguments:
 \
@@ -12860,10 +12809,10 @@ ORG &0B00
  LDA headerSpaces,X     \ Set the number of spaces in token 33
  STA token33+5
 
- LDA headerColour,X     \ Set the foreground colour in token 34
+ LDA headerBackground,X \ Set the background colour in token 34
  STA token34+1
 
- LDA headerBackground,X \ Set the background colour in token 34
+ LDA headerForeground,X \ Set the foreground colour in token 34
  STA token34+3
 
  TXA                    \ Set the token embedded in token 34 to token X
@@ -12902,11 +12851,11 @@ ORG &0B00
 
 .token1
 
- EQUB &A5
+ EQUB 160 + 5           \ Print 5 spaces
 
- EQUB &FB
+ EQUB 200 + 51          \ Print token 51
 
- EQUB &A6
+ EQUB 160 + 6           \ Print 6 spaces
 
  EQUB 255               \ End token
 
@@ -12951,15 +12900,15 @@ ORG &0B00
 
  EQUS "Lap Time"
 
- EQUB &A3
+ EQUB 160 + 3           \ Print 3 spaces
 
- EQUB &3A
+ EQUS ":"
 
- EQUB &A9
+ EQUB 160 + 9           \ Print 9 spaces
 
  EQUS "Best Time"
 
- EQUB &A8
+ EQUB 160 + 8           \ Print 8 spaces
 
  EQUB 255               \ End token
 
@@ -13047,21 +12996,21 @@ ORG &0B00
 
 .token52
 
- EQUB &85
+ EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB &52
+ EQUS "R"
 
- EQUB &83
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
- EQUB &45
+ EQUS "E"
 
- EQUB &86
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB &56
+ EQUS "V"
 
- EQUB &82
+ EQUB 130               \ Set foreground colour to green alphanumeric
 
- EQUB &53
+ EQUS "S"
 
  EQUB 255               \ End token
 
@@ -13078,33 +13027,33 @@ ORG &0B00
 
 .token28
 
- EQUB &FE
+ EQUB 200 + 54          \ Print token 54
 
- EQUB &EB
+ EQUB 200 + 35          \ Print token 35
 
- EQUB &A6
+ EQUB 160 + 6           \ Print 6 spaces
 
- EQUB &D2
+ EQUB 200 + 10          \ Print token 10
 
  EQUS "NUMBER OF LAPS"
- EQUB &EC
+ 
+ EQUB 200 + 36          \ Print token 36
 
- EQUB &DA
+ EQUB 200 + 18          \ Print token 18
 
- EQUB &D6
+ EQUB 200 + 14          \ Print token 14
 
- EQUB &ED
+ EQUB 200 + 37          \ Print token 37
 
- EQUB &DB
+ EQUB 200 + 19          \ Print token 19
 
- EQUB &D6
+ EQUB 200 + 14          \ Print token 14
 
- EQUB &EE
+ EQUB 200 + 38          \ Print token 38
 
- EQUB &DC
+ EQUB 200 + 20          \ Print token 20
 
- EQUB &D6
-
+ EQUB 200 + 14          \ Print token 14
 
  EQUB 255               \ End token
 
@@ -13160,39 +13109,29 @@ ORG &0B00
 
 .token36
 
- EQUB &1F
+ EQUB 31, 4, 14         \ Move text cursor to column 4, row 14
 
- EQUB &04
+ EQUB 136               \ Set flashing text
 
- EQUB &0E
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB &88
+ EQUB 200 + 17          \ Print token 17
 
- EQUB &86
+ EQUB 31, 5, 16         \ Move text cursor to column 5, row 16
 
- EQUB &D9
+ EQUB 132, 157          \ Set background colour to blue
 
- EQUB &1F
+ EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB &05
+ EQUS "1"
 
- EQUB &10
+ EQUB 160 + 2           \ Print 2 spaces
 
- EQUB &84
+ EQUB 156               \ Set background colour to black
 
- EQUB &9D
+ EQUB 160 + 5           \ Print 5 spaces
 
- EQUB &86
-
- EQUB &31
-
- EQUB &A2
-
- EQUB &9C
-
- EQUB &A5
-
- EQUB &83
+ EQUB 131               \ Set foreground colour to yellow alphanumeric
 
  EQUB 255               \ End token
 
