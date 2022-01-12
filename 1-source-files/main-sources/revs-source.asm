@@ -9188,9 +9188,25 @@ ORG &0B00
 
 .token26
 
- EQUB &FE, &1F, &0A, &0C, &83
+ EQUB &FE
+
+ EQUB &1F
+
+ EQUB &0A
+
+ EQUB &0C
+
+ EQUB &83
+
  EQUS "STANDARD OF"
- EQUB &D7, &1F, &0E, &0E
+
+ EQUB &D7
+
+ EQUB &1F
+
+ EQUB &0E
+
+ EQUB &0E
 
  EQUB 255               \ End token
 
@@ -9205,7 +9221,17 @@ ORG &0B00
 
 .token4
 
- EQUB &FC, &A3, &FC, &A3, &FC, &A1
+ EQUB &FC
+
+ EQUB &A3
+
+ EQUB &FC
+
+ EQUB &A3
+
+ EQUB &FC
+
+ EQUB &A1
 
  EQUB 255               \ End token
 
@@ -9853,9 +9879,19 @@ ORG &0B00
 
 .token25
 
- EQUB &1F, &0D, &12
+ EQUB &1F
+
+ EQUB &0D
+
+ EQUB &12
+
  EQUS "front"
- EQUB &A2, &85, &D8
+
+ EQUB &A2
+
+ EQUB &85
+
+ EQUB &D8
 
  EQUB 255               \ End token
 
@@ -10040,8 +10076,15 @@ ORG &0B00
 
 .token31
 
- EQUS "  " 
- EQUB &9C, &86, &9D, &84
+ EQUS "  "
+
+ EQUB &9C
+
+ EQUB &86
+
+ EQUB &9D
+
+ EQUB &84
 
  EQUB 255               \ End token
 
@@ -10171,7 +10214,9 @@ ORG &0B00
 .token42
 
  EQUB &AB
+
  EQUS "YOUR TIME IS UP!"
+
  EQUB &AB
 
  EQUB 255               \ End token
@@ -10243,11 +10288,37 @@ ORG &0B00
 
 .token23
 
- EQUB &FE, &EB, &A7, &D3
+ EQUB &FE
+
+ EQUB &EB
+
+ EQUB &A7
+
+ EQUB &D3
+
  EQUS "NAME OF"
- EQUB &D4, &1F, &0C, &11, &83
+
+ EQUB &D4
+
+ EQUB &1F
+
+ EQUB &0C
+
+ EQUB &11
+
+ EQUB &83
+
  EQUS "____________"
- EQUB &1F, &09, &10, &85, &D8
+
+ EQUB &1F
+
+ EQUB &09
+
+ EQUB &10
+
+ EQUB &85
+
+ EQUB &D8
 
  EQUB 255               \ End token
 
@@ -10262,7 +10333,13 @@ ORG &0B00
 
 .token35
 
- EQUB &1F, &02, &0A, &86
+ EQUB &1F
+
+ EQUB &02
+
+ EQUB &0A
+
+ EQUB &86
 
  EQUB 255               \ End token
 
@@ -10336,8 +10413,11 @@ ORG &0B00
 .token43
 
  EQUS "Position"
+
  EQUB &A8
+
  EQUS "In front:"
+
  EQUB &AD
 
  EQUB 255               \ End token
@@ -10354,8 +10434,11 @@ ORG &0B00
 .token44
 
  EQUS "Laps to go"
+
  EQUB &A8
+
  EQUS "Behind:"
+
  EQUB &B2
 
  EQUB 255               \ End token
@@ -10490,7 +10573,30 @@ ORG &0B00
 
 .token22
 
- EQUB &FE, &EC, &DA, &D5, &ED, &DB, &D5, &EE, &DC, &D5, &EB, &D2
+ EQUB &FE
+
+ EQUB &EC
+
+ EQUB &DA
+
+ EQUB &D5
+
+ EQUB &ED
+
+ EQUB &DB
+
+ EQUB &D5
+
+ EQUB &EE
+
+ EQUB &DC
+
+ EQUB &D5
+
+ EQUB &EB
+
+ EQUB &D2
+
  EQUS "DURATION OF QUALIFYING LAPS"
 
  EQUB 255               \ End token
@@ -10594,8 +10700,11 @@ ORG &0B00
 .token39
 
  EQUB &EC
+
  EQUS "PRACTICE"
+
  EQUB &ED
+
  EQUS "COMPETITION"
 
  EQUB 255               \ End token
@@ -10614,9 +10723,13 @@ ORG &0B00
 .token48
 
  EQUB &AD
+
  EQUS "PLEASE"
+
  EQUB &A2
+
  EQUS "WAIT"
+
  EQUB &AD
 
  EQUB 255               \ End token
@@ -10632,7 +10745,11 @@ ORG &0B00
 
 .token49
 
- EQUB &1F, &09, &02
+ EQUB &1F
+
+ EQUB &09
+
+ EQUB &02
 
  EQUB 255               \ End token
 
@@ -10804,7 +10921,15 @@ ORG &0B00
 
 .token32
 
- EQUB &A2, &9C, &08, &08, &E7
+ EQUB &A2
+
+ EQUB &9C
+
+ EQUB &08
+
+ EQUB &08
+
+ EQUB &E7
 
  EQUB 255               \ End token
 
@@ -10925,27 +11050,21 @@ ORG &0B00
 
 .token30
 
- EQUB &1F, &05, &18, &86, &D9
+ EQUB &1F
+
+ EQUB &05
+
+ EQUB &18
+
+ EQUB &86
+
+ EQUB &D9
+
  EQUS "SPACE BAR TO CONTINUE"
 
  EQUB 255               \ End token
 
-\ ******************************************************************************
-\
-\       Name: L3A1B
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L3A1B
-
- EQUB &45, &FF
+ EQUB &45, &FF          \ these bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -11065,7 +11184,9 @@ ORG &0B00
 .token53
 
  EQUB &AF
+
  EQUS "FINISHED"
+
  EQUB &AF
 
  EQUB 255               \ End token
@@ -11084,7 +11205,9 @@ ORG &0B00
 .token41
 
  EQUB &A6
+
  EQUS "Less than one minute to go"
+
  EQUB &A6
 
  EQUB 255               \ End token
@@ -11100,7 +11223,27 @@ ORG &0B00
 
 .token38
 
- EQUB &1F, &05, &14, &84, &9D, &86, &33, &A2, &9C, &A5, &83
+ EQUB &1F
+
+ EQUB &05
+
+ EQUB &14
+
+ EQUB &84
+
+ EQUB &9D
+
+ EQUB &86
+
+ EQUB &33
+
+ EQUB &A2
+
+ EQUB &9C
+
+ EQUB &A5
+
+ EQUB &83
 
  EQUB 255               \ End token
 
@@ -11467,13 +11610,29 @@ ORG &0B00
 
 .token24
 
- EQUB &EB, &D2
+ EQUB &EB
+
+ EQUB &D2
+
  EQUS "WING SETTINGS"
+
  EQUB &D8
+
  EQUS "range 0 to 40"
- EQUB &1F, &0E, &10
+
+ EQUB &1F
+
+ EQUB &0E
+
+ EQUB &10
+
  EQUS "rear"
- EQUB &A2, &85, &D8
+
+ EQUB &A2
+
+ EQUB &85
+
+ EQUB &D8
 
  EQUB 255               \ End token
 
@@ -11558,7 +11717,15 @@ ORG &0B00
 
 .token50
 
- EQUB &1F, &18, &02, &DA, &D6
+ EQUB &1F
+
+ EQUB &18
+
+ EQUB &02
+
+ EQUB &DA
+
+ EQUB &D6
 
  EQUB 255               \ End token
 
@@ -11759,10 +11926,20 @@ ORG &0B00
 
 .token27
 
- EQUB &FE, &EC, &D3
+ EQUB &FE
+
+ EQUB &EC
+
+ EQUB &D3
+
  EQUS "ANOTHER"
- EQUB &D4, &ED
+
+ EQUB &D4
+
+ EQUB &ED
+
  EQUS "START"
+
  EQUB &D7
 
  EQUB 255               \ End token
@@ -11933,8 +12110,28 @@ ORG &0B00
 
 .token21
 
- EQUB &FE, &EC, &CF, &ED, &D0, &EE, &D1, &EB, &A4, &D2
+ EQUB &FE
+
+ EQUB &EC
+
+ EQUB &CF
+
+ EQUB &ED
+
+ EQUB &D0
+
+ EQUB &EE
+
+ EQUB &D1
+
+ EQUB &EB
+
+ EQUB &A4
+
+ EQUB &D2
+
  EQUS "THE CLASS OF"
+
  EQUB &D7
 
  EQUB 255               \ End token
@@ -12059,7 +12256,17 @@ ORG &0B00
 
 .token29
 
- EQUB &FE, &EB, &A5, &82, &D4, &D8
+ EQUB &FE
+
+ EQUB &EB
+
+ EQUB &A5
+
+ EQUB &82
+
+ EQUB &D4
+
+ EQUB &D8
 
  EQUB 255               \ End token
 
@@ -12326,7 +12533,27 @@ ORG &0B00
 
 .token37
  
- EQUB &1F, &05, &12, &84, &9D, &86, &32, &A2, &9C, &A5, &83
+ EQUB &1F
+
+ EQUB &05
+
+ EQUB &12
+
+ EQUB &84
+
+ EQUB &9D
+
+ EQUB &86
+
+ EQUB &32
+
+ EQUB &A2
+
+ EQUB &9C
+
+ EQUB &A5
+
+ EQUB &83
 
  EQUB 255               \ End token
 
@@ -12675,7 +12902,11 @@ ORG &0B00
 
 .token1
 
- EQUB &A5, &FB, &A6
+ EQUB &A5
+
+ EQUB &FB
+
+ EQUB &A6
 
  EQUB 255               \ End token
 
@@ -12719,8 +12950,15 @@ ORG &0B00
 .token40
 
  EQUS "Lap Time"
- EQUB &A3, &3A, &A9
+
+ EQUB &A3
+
+ EQUB &3A
+
+ EQUB &A9
+
  EQUS "Best Time"
+
  EQUB &A8
 
  EQUB 255               \ End token
@@ -12809,7 +13047,21 @@ ORG &0B00
 
 .token52
 
- EQUB &85, &52, &83, &45, &86, &56, &82, &53
+ EQUB &85
+
+ EQUB &52
+
+ EQUB &83
+
+ EQUB &45
+
+ EQUB &86
+
+ EQUB &56
+
+ EQUB &82
+
+ EQUB &53
 
  EQUB 255               \ End token
 
@@ -12826,9 +13078,33 @@ ORG &0B00
 
 .token28
 
- EQUB &FE, &EB, &A6, &D2
+ EQUB &FE
+
+ EQUB &EB
+
+ EQUB &A6
+
+ EQUB &D2
+
  EQUS "NUMBER OF LAPS"
- EQUB &EC, &DA, &D6, &ED, &DB, &D6, &EE, &DC, &D6
+ EQUB &EC
+
+ EQUB &DA
+
+ EQUB &D6
+
+ EQUB &ED
+
+ EQUB &DB
+
+ EQUB &D6
+
+ EQUB &EE
+
+ EQUB &DC
+
+ EQUB &D6
+
 
  EQUB 255               \ End token
 
@@ -12884,8 +13160,39 @@ ORG &0B00
 
 .token36
 
- EQUB &1F, &04, &0E, &88, &86, &D9, &1F, &05, &10, &84, &9D
- EQUB &86, &31, &A2, &9C, &A5, &83
+ EQUB &1F
+
+ EQUB &04
+
+ EQUB &0E
+
+ EQUB &88
+
+ EQUB &86
+
+ EQUB &D9
+
+ EQUB &1F
+
+ EQUB &05
+
+ EQUB &10
+
+ EQUB &84
+
+ EQUB &9D
+
+ EQUB &86
+
+ EQUB &31
+
+ EQUB &A2
+
+ EQUB &9C
+
+ EQUB &A5
+
+ EQUB &83
 
  EQUB 255               \ End token
 
