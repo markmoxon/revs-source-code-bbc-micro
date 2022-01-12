@@ -813,7 +813,7 @@ ORG &790E
 \
 \       Name: soundEnvelopes
 \       Type: Variable
-\   Category: 
+\   Category: Sound
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1995,8 +1995,8 @@ ORG &0B00
 
 .C0FBA
 
- LDA setp1+2,X
- SBC setp1+2,Y
+ LDA SetupGame+20,X
+ SBC SetupGame+20,Y
  STA U
  LDA L39E4,X
  SBC L39E4,Y
@@ -11320,101 +11320,123 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3BD0
+\       Name: headerX
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Column number for printing mode 7 headers
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The values in this table are used by the PrintHeader routine to print out
+\ headers in mode 7.
 \
 \ ******************************************************************************
 
-.L3BD0
+.headerX
 
- EQUB &04, &07, &09, &07, &00, &0B, &07
+ EQUB 4
+ EQUB 7
+ EQUB 9
+ EQUB 7
+ EQUB 0
+ EQUB 11
+ EQUB 7
 
 \ ******************************************************************************
 \
-\       Name: L3BD7
+\       Name: headerY
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Row number for printing mode 7 headers
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The values in this table are used by the PrintHeader routine to print out
+\ headers in mode 7.
 \
 \ ******************************************************************************
 
-.L3BD7
+.headerY
 
- EQUB 3, 0, 0, 0, 4, 4, 0
+ EQUB 3
+ EQUB 0
+ EQUB 0
+ EQUB 0
+ EQUB 4
+ EQUB 4
+ EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L3BDE
+\       Name: headerSpaces
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Number of spaces for printing mode 7 headers
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The values in this table are used by the PrintHeader routine to print out
+\ headers in mode 7.
 \
 \ ******************************************************************************
 
-.L3BDE
+.headerSpaces
 
- EQUB &AA, &AF, &B3, &AF, &A2, &B8, &AF
+ EQUB 160 + 10
+ EQUB 160 + 15
+ EQUB 160 + 19
+ EQUB 160 + 15
+ EQUB 160 + 2
+ EQUB 160 + 24
+ EQUB 160 + 15
 
 \ ******************************************************************************
 \
-\       Name: L3BE5
+\       Name: headerColour
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Foreground colour for printing mode 7 headers
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The values in this table are used by the PrintHeader routine to print out
+\ headers in mode 7.
 \
 \ ******************************************************************************
 
-.L3BE5
+.headerColour
 
- EQUB &81, &81, &85, &84, &A3, &83, &85
+ EQUB 129
+ EQUB 129
+ EQUB 133
+ EQUB 132
+ EQUB 163
+ EQUB 131
+ EQUB 133
 
 \ ******************************************************************************
 \
-\       Name: L3BEC
+\       Name: headerBackground
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Background colour for printing mode 7 headers
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The values in this table are used by the PrintHeader routine to print out
+\ headers in mode 7.
 \
 \ ******************************************************************************
 
-.L3BEC
+.headerBackground
 
- EQUB &83, &83, &87, &87, &7F, &84, &87
-
-\ ******************************************************************************
-\
-\       Name: token46
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ EQUB 131
+ EQUB 131
+ EQUB 135
+ EQUB 135
+ EQUB 127
+ EQUB 132
+ EQUB 135
 
 \ ******************************************************************************
 \
@@ -11491,7 +11513,7 @@ ORG &0B00
 .sub_C3C50
 
  LDX #5
- JSR sub_C41D0
+ JSR PrintHeader
  LDX #&18
  JSR PrintToken
  JSR sub_C3EE0
@@ -11752,11 +11774,15 @@ ORG &0B00
 \   Category: Text
 \    Summary: Text for recursive token 34
 \
+\ ------------------------------------------------------------------------------
+\
+\ The configurable values below are set in the PrintHeader routine.
+\
 \ ******************************************************************************
 
 .token34
 
- EQUB 141               \ Double height
+ EQUB 141               \ Set double-height text
 
  EQUB 129               \ Set foreground colour to red alphanumeric
 
@@ -12465,19 +12491,23 @@ ORG &0B00
 \   Category: Text
 \    Summary: Text for recursive token 33
 \
+\ ------------------------------------------------------------------------------
+\
+\ The configurable values below are set in the PrintHeader routine.
+\
 \ ******************************************************************************
 
 .token33
 
  EQUB 12                \ Clear text area (clear screen)
 
- EQUB 31, 4, 3          \ Move text cursor to column 4, row 3
+ EQUB 31, 4, 3          \ Move text cursor to column 4, row 3 (configurable)
 
- EQUB 200 + 34          \ Print token 34
+ EQUB 200 + 34          \ Print token 34 (configurable double-height text)
 
- EQUB 160 + 10          \ Print 10 spaces
+ EQUB 160 + 10          \ Print 10 spaces (configurable)
 
- EQUB 200 + 34          \ Print token 34
+ EQUB 200 + 34          \ Print token 34 (configurable double-height text)
 
  EQUB 31, 36, 2         \ Move text cursor to column 36, row 2
 
@@ -12540,45 +12570,73 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C41D0
+\       Name: PrintHeader
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Configure and print a double-height header in screen mode 7
 \
 \ ------------------------------------------------------------------------------
 \
-\ Prints token X in double height, in the foreground and background colours and
-\ at the coordinates given in tables, and with the correct number of spaces.
+\ Prints a token as a double-height header, with the position and colours given
+\ in the header tables. The tokens are formatted as follows:
+\
+\   * Token 0 ("FORMULA 3  CHAMPIONSHIP")
+\     Column 4, row 3
+\     10 spaces
+\     Red on yellow
+\
+\   * Token 1
+\     Column 7, row 0
+\     15 spaces
+\     Red on yellow
+\
+\   * Token 2 ("GRID POSITIONS")
+\     Column 9, row 0
+\     19 spaces
+\     Magenta on white
+\
+\   * Token 3
+\     Column 7, row 0
+\     15 spaces
+\     Blue on white
+\
+\   * Token 4
+\     Column 0, row 4
+\     2 spaces
+\     Foreground: 163 (no background set as 127 is the delete character)
+\
+\   * Token 5 ("THE  PITS")
+\     Column 11, row 4
+\     24 spaces
+\     Yellow on blue
+\
+\   * Token 6
+\     Column 7, row 0
+\     15 spaces
+\     Magenta on white
 \
 \ Arguments:
 \
-\   X                   Offset:
-\
-\                         * 0 in PrintToken when printing embedded token 200+54
-\
-\                         * 4 in StartGame
-\
-\                         * 5 in sub_C3C50
-\
-\                         * 1, 2, 3, 6 in sub_C65D3
+\   X                   The number of the token to print as a double-height
+\                       header
 \
 \ ******************************************************************************
 
-.sub_C41D0
+.PrintHeader
 
- LDA L3BD0,X            \ Set the x-coordinate for the text in token 33
+ LDA headerX,X          \ Set the x-coordinate for the text in token 33
  STA token33+2
 
- LDA L3BD7,X            \ Set the y-coordinate for the text in token 33
+ LDA headerY,X          \ Set the y-coordinate for the text in token 33
  STA token33+3
 
- LDA L3BDE,X            \ Set the number of spaces in token 33
+ LDA headerSpaces,X     \ Set the number of spaces in token 33
  STA token33+5
 
- LDA L3BE5,X            \ Set the foreground colour in token 34
+ LDA headerColour,X     \ Set the foreground colour in token 34
  STA token34+1
 
- LDA L3BEC,X            \ Set the background colour in token 34
+ LDA headerBackground,X \ Set the background colour in token 34
  STA token34+3
 
  TXA                    \ Set the token embedded in token 34 to token X
@@ -12586,8 +12644,8 @@ ORG &0B00
  ADC #200
  STA token34+4
 
- LDX #33                \ Print token 33
- JSR PrintToken
+ LDX #33                \ Print token 33, which prints token 34 in double-height
+ JSR PrintToken         \ text with the colours and position configured above
 
  RTS                    \ Return from the subroutine
 
@@ -12755,7 +12813,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
- EQUB &75, &75
+ EQUB &75, &75          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -12884,7 +12942,7 @@ ORG &0B00
 
 .C43EA
 
- LDA setp1+2,X
+ LDA SetupGame+20,X
  JSR sub_C37D6
  LDA #1
  JSR PrintSpaces
@@ -14942,7 +15000,7 @@ ORG &0B00
  STA L04A0,X
  JSR sub_C635D
  LDA #0
- STA setp1+2,X
+ STA SetupGame+20,X
  STA L39E4,X
  STA L04F0,X
  TXA
@@ -15057,7 +15115,7 @@ ORG &0B00
  BNE toke3              \ instructions and print the embedded token
 
  LDX #0                 \ X = 54, so ???
- JSR sub_C41D0
+ JSR PrintHeader
 
  JMP toke4              \ Skip the following instruction
 
@@ -16567,6 +16625,8 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ The dashboard2.bin file loads at address &594A.
+\
+\ See the track source in revs-silverstone.asm for details of the track data.
 \
 \ ******************************************************************************
 
@@ -18387,7 +18447,7 @@ ORG &5FD0
 \       Name: Protect
 \       Type: Subroutine
 \   Category: Setup
-\    Summary: Decrypt the game code (disabled)
+\    Summary: Decrypt or unprotect the game code (disabled)
 \
 \ ******************************************************************************
 
@@ -18435,7 +18495,7 @@ ORG &5FD0
 \
 \       Name: StartGame
 \       Type: Subroutine
-\   Category: 
+\   Category: Main loop
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18450,7 +18510,7 @@ ORG &5FD0
  STX L05F4
  JSR sub_C4D4D
  LDX #4
- JSR sub_C41D0
+ JSR PrintHeader
  JSR sub_C3A50
  LDX #&27
  JSR PrintToken
@@ -18823,7 +18883,7 @@ ORG &5FD0
  PHA
  AND #&0F
  STA L0042
- JSR sub_C41D0
+ JSR PrintHeader
  LDY #0
 
 .C65DD
@@ -18994,10 +19054,10 @@ ORG &5FD0
 .sub_C6698
 
  SED
- LDA setp1+2,Y
+ LDA SetupGame+20,Y
  CLC
  ADC SetupGame+40,X
- STA setp1+2,Y
+ STA SetupGame+20,Y
  LDA L39E4,Y
  ADC L39F8,X
  STA L39E4,Y
@@ -19128,7 +19188,7 @@ ORG &5FD0
 
 ORG &6C00
 
-.L6C00
+.dashboard
 
 INCBIN "1-source-files/images/dashboard1.bin"
 
