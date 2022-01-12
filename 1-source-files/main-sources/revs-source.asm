@@ -9194,7 +9194,7 @@ ORG &0B00
 
  EQUB 131               \ Set foreground colour to yellow alphanumeric
 
- EQUS "STANDARD OF"
+ EQUS "STANDARD OF"     \ Print "STANDARD OF"
 
  EQUB 200 + 15          \ Print token 15
 
@@ -9430,7 +9430,7 @@ ORG &0B00
 
 .token18
 
- EQUS " 5"
+ EQUS " 5"              \ Print " 5"
 
  EQUB 255               \ End token
 
@@ -9550,7 +9550,7 @@ ORG &0B00
 
 .token19
 
- EQUS "10"
+ EQUS "10"              \ Print "10"
 
  EQUB 255               \ End token
 
@@ -9653,7 +9653,7 @@ ORG &0B00
 
 .token20
 
- EQUS "20"
+ EQUS "20"              \ Print "20"
 
  EQUB 255               \ End token
 
@@ -9739,7 +9739,7 @@ ORG &0B00
 
 .token11
 
- EQUS "ENTER "
+ EQUS "ENTER "          \ Print "ENTER "
 
  EQUB 255               \ End token
 
@@ -9873,7 +9873,7 @@ ORG &0B00
 
  EQUB 31, 13, 18        \ Move text cursor to column 13, row 18
 
- EQUS "front"
+ EQUS "front"           \ Print "front"
 
  EQUB 160 + 2           \ Print 2 spaces
 
@@ -9992,7 +9992,7 @@ ORG &0B00
 
 .token8
 
- EQUS "Amateur"
+ EQUS "Amateur"         \ Print "Amateur"
 
  EQUB 255               \ End token
 
@@ -10007,7 +10007,7 @@ ORG &0B00
 
 .token51
 
- EQUS " POINTS"
+ EQUS " POINTS"         \ Print " POINTS"
 
  EQUB 255               \ End token
 
@@ -10064,7 +10064,7 @@ ORG &0B00
 
 .token31
 
- EQUS "  "
+ EQUS "  "              \ Print "  "
 
  EQUB 156               \ Set background colour to black
 
@@ -10085,7 +10085,7 @@ ORG &0B00
 
 .token3
 
- EQUS "ACCUMULATED"
+ EQUS "ACCUMULATED"     \ Print "ACCUMULATED"
 
  EQUB 200 + 51          \ Print token 51
 
@@ -10144,7 +10144,9 @@ ORG &0B00
 
 .token0
 
- EQUS "FORMULA 3  CHAMPIONSHIP"
+ EQUS "FORMULA 3  "     \ Print "FORMULA 3  "
+
+ EQUS "CHAMPIONSHIP"    \ Print "CHAMPIONSHIP"
 
  EQUB 255               \ End token
 
@@ -10202,7 +10204,9 @@ ORG &0B00
 
  EQUB 160 + 11          \ Print 11 spaces
 
- EQUS "YOUR TIME IS UP!"
+ EQUS "YOUR TIME "      \ Print "YOUR TIME "
+
+ EQUS "IS UP!"          \ Print "IS UP!"
 
  EQUB 160 + 11          \ Print 11 spaces
 
@@ -10219,7 +10223,7 @@ ORG &0B00
 
 .token17
 
- EQUS "PRESS "
+ EQUS "PRESS "          \ Print "PRESS "
 
  EQUB 255               \ End token
 
@@ -10283,7 +10287,7 @@ ORG &0B00
 
  EQUB 200 + 11          \ Print token 11
 
- EQUS "NAME OF"
+ EQUS "NAME OF"         \ Print "NAME OF"
 
  EQUB 200 + 12          \ Print token 12
 
@@ -10291,7 +10295,7 @@ ORG &0B00
 
  EQUB 131               \ Set foreground colour to yellow alphanumeric
 
- EQUS "____________"
+ EQUS "____________"    \ Print "____________"
 
  EQUB 31, 9, 16         \ Move text cursor to column 9, row 16
 
@@ -10387,11 +10391,11 @@ ORG &0B00
 
 .token43
 
- EQUS "Position"
+ EQUS "Position"        \ Print "Position"
 
  EQUB 160 + 8           \ Print 8 spaces
 
- EQUS "In front:"
+ EQUS "In front:"       \ Print "In front:"
 
  EQUB 160 + 13          \ Print 13 spaces
 
@@ -10408,11 +10412,11 @@ ORG &0B00
 
 .token44
 
- EQUS "Laps to go"
+ EQUS "Laps to go"      \ Print "Laps to go"
 
  EQUB 160 + 8           \ Print 8 spaces
 
- EQUS "Behind:"
+ EQUS "Behind:"         \ Print "Behind:"
 
  EQUB 160 + 18          \ Print 18 spaces
 
@@ -10572,7 +10576,9 @@ ORG &0B00
 
  EQUB 200 + 10          \ Print token 10
 
- EQUS "DURATION OF QUALIFYING LAPS"
+ EQUS "DURATION OF "    \ Print "DURATION OF "
+
+ EQUS "QUALIFYING LAPS" \ Print "QUALIFYING LAPS"
 
  EQUB 255               \ End token
 
@@ -10587,7 +10593,7 @@ ORG &0B00
 
 .token16
 
- EQUS " ] "
+ EQUS " ] "             \ Print " ] "
 
  EQUB 255               \ End token
 
@@ -10676,11 +10682,11 @@ ORG &0B00
 
  EQUB 200 + 36          \ Print token 36
 
- EQUS "PRACTICE"
+ EQUS "PRACTICE"        \ Print "PRACTICE"
 
  EQUB 200 + 37          \ Print token 37
 
- EQUS "COMPETITION"
+ EQUS "COMPETITION"     \ Print "COMPETITION"
 
  EQUB 255               \ End token
 
@@ -10699,11 +10705,11 @@ ORG &0B00
 
  EQUB 160 + 13          \ Print 13 spaces
 
- EQUS "PLEASE"
+ EQUS "PLEASE"          \ Print "PLEASE"
 
  EQUB 160 + 2           \ Print 2 spaces
 
- EQUS "WAIT"
+ EQUS "WAIT"            \ Print "WAIT"
 
  EQUB 160 + 13          \ Print 13 spaces
 
@@ -10832,8 +10838,8 @@ ORG &0B00
 .L3900
 
  EQUB &1B, &1B, &1B, &15, &03, &02, &02, &06, &0B, &0F, &13, &17
- EQUB &1B
- EQUS "&++++++++++++&"
+ EQUB &1B, &26, &2B, &2B, &2B, &2B, &2B, &2B, &2B, &2B, &2B, &2B
+ EQUB &2B, &2B, &26
  EQUB &1B, &17, &13, &0F, &0B, &06, &02, &02, &03, &15, &1B, &1B
  EQUB &1B, &1B, &FF, &81, &81, &F3, &7E, &4C, &13, &7D, &BD, &60
  EQUB &5F, &29, &03, &A8, &B9, &FC, &38, &BC, &00, &30, &F0, &08
@@ -11025,7 +11031,9 @@ ORG &0B00
 
  EQUB 200 + 17          \ Print token 17
 
- EQUS "SPACE BAR TO CONTINUE"
+ EQUS "SPACE BAR "      \ Print "SPACE BAR "
+
+ EQUS "TO CONTINUE"     \ Print "TO CONTINUE"
 
  EQUB 255               \ End token
 
@@ -11042,7 +11050,7 @@ ORG &0B00
 
 .token2
 
- EQUS "GRID POSITIONS"
+ EQUS "GRID POSITIONS"  \ Print "GRID POSITIONS"
 
  EQUB 255               \ End token
 
@@ -11150,7 +11158,7 @@ ORG &0B00
 
  EQUB 160 + 15          \ Print 15 spaces
 
- EQUS "FINISHED"
+ EQUS "FINISHED"        \ Print "FINISHED"
 
  EQUB 160 + 15          \ Print 15 spaces
 
@@ -11171,7 +11179,9 @@ ORG &0B00
 
  EQUB 160 + 6           \ Print 6 spaces
 
- EQUS "Less than one minute to go"
+ EQUS "Less than one "  \ Print "Less than one "
+
+ EQUS "minute to go"    \ Print "minute to go"
 
  EQUB 160 + 6           \ Print 6 spaces
 
@@ -11194,7 +11204,7 @@ ORG &0B00
 
  EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUS "3"
+ EQUS "3"               \ Print "3"
 
  EQUB 160 + 2           \ Print 2 spaces
 
@@ -11574,15 +11584,15 @@ ORG &0B00
 
  EQUB 200 + 10          \ Print token 10
 
- EQUS "WING SETTINGS"
+ EQUS "WING SETTINGS"   \ Print "WING SETTINGS"
 
  EQUB 200 + 16          \ Print token 16
 
- EQUS "range 0 to 40"
+ EQUS "range 0 to 40"   \ Print "range 0 to 40"
 
  EQUB 31, 14, 16        \ Move text cursor to column 14, row 16
 
- EQUS "rear"
+ EQUS "rear"            \ Print "rear"
 
  EQUB 160 + 2           \ Print 2 spaces
 
@@ -11694,7 +11704,7 @@ ORG &0B00
 
  EQUB 160 + 2           \ Print 2 spaces
 
- EQUS "BEST LAP TIMES"
+ EQUS "BEST LAP TIMES"  \ Print "BEST LAP TIMES"
 
  EQUB 160 + 2           \ Print 2 spaces
 
@@ -11711,7 +11721,7 @@ ORG &0B00
 
 .token13
 
- EQUS " mins"
+ EQUS " mins"           \ Print " mins"
 
  EQUB 255               \ End token
 
@@ -11726,7 +11736,7 @@ ORG &0B00
 
 .token14
 
- EQUS " laps"
+ EQUS " laps"           \ Print " laps"
 
  EQUB 255               \ End token
 
@@ -11741,7 +11751,7 @@ ORG &0B00
 
 .token15
 
- EQUS " RACE"
+ EQUS " RACE"           \ Print " RACE"
 
  EQUB 255               \ End token
 
@@ -11886,13 +11896,13 @@ ORG &0B00
 
  EQUB 200 + 11          \ Print token 11
 
- EQUS "ANOTHER"
+ EQUS "ANOTHER"         \ Print "ANOTHER"
 
  EQUB 200 + 12          \ Print token 12
 
  EQUB 200 + 37          \ Print token 37
 
- EQUS "START"
+ EQUS "START"           \ Print "START"
 
  EQUB 200 + 15          \ Print token 15
 
@@ -12084,7 +12094,7 @@ ORG &0B00
 
  EQUB 200 + 10          \ Print token 10
 
- EQUS "THE CLASS OF"
+ EQUS "THE CLASS OF"    \ Print "THE CLASS OF"
 
  EQUB 200 + 15          \ Print token 15
 
@@ -12235,7 +12245,7 @@ ORG &0B00
 
 .token9
 
- EQUS "Professional"
+ EQUS "Professional"    \ Print "Professional"
 
  EQUB 255               \ End token
 
@@ -12350,7 +12360,7 @@ ORG &0B00
 
 .token10
 
- EQUS "SELECT "
+ EQUS "SELECT "         \ Print "SELECT "
 
  EQUB 255               \ End token
 
@@ -12365,7 +12375,7 @@ ORG &0B00
 
 .token12
 
- EQUS " DRIVER"
+ EQUS " DRIVER"         \ Print " DRIVER"
 
  EQUB 255               \ End token
 
@@ -12493,7 +12503,7 @@ ORG &0B00
 
  EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUS "2"
+ EQUS "2"               \ Print "2"
 
  EQUB 160 + 2           \ Print 2 spaces
 
@@ -12544,8 +12554,8 @@ ORG &0B00
 .L3F4F
 
  EQUB &44, &1B, &1B, &1B, &15, &03, &02, &02, &02, &06, &0B, &0F
- EQUB &13, &17, &1B
- EQUS "&+++++++++++&"
+ EQUB &13, &17, &1B, &26, &2B, &2B, &2B, &2B, &2B, &2B, &2B, &2B
+ EQUS &2B, &2B, &2B, &26
  EQUB &1B, &17, &13, &0F, &0B, &06, &02, &02, &02, &03, &15, &1B
  EQUB &1B, &1B, &20, &20, &20, &42, &65, &68, &69
 
@@ -12560,7 +12570,7 @@ ORG &0B00
 
 .token7
 
- EQUS "Novice"
+ EQUS "Novice"          \ Print "Novice"
 
  EQUB 255               \ End token
 
@@ -12629,10 +12639,42 @@ ORG &0B00
  EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &3A, &6C, &28, &6C, &6C
  EQUB &2C, &2C, &1C, &77, &66, &66, &77, &66, &66, &66, &00, &CC
  EQUB &66, &66, &CC, &CC, &66, &66, &00, &80
+
+\ ******************************************************************************
+\
+\       Name: L4050
+\       Type: Variable
+\   Category: Text
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4050
+
  EQUS "Max Throttle"
  EQUS "Johnny Turbo"
  EQUS "Davey Rocket"
  EQUS "Gloria Slap "
+
+\ ******************************************************************************
+\
+\       Name: L4080
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4080
+
  EQUB &81, &81, &81, &40, &00, &08, &0C, &0C, &00, &00, &00, &00
  EQUB &00, &00, &00, &00, &00, &00, &00, &02, &02, &02, &02, &02
  EQUB &00, &00, &00, &0C, &04, &0C, &08, &0C, &05, &05, &05, &05
@@ -12723,6 +12765,8 @@ ORG &0B00
 \
 \ ******************************************************************************
 
+.L40F9
+
  EQUB &77, &C2, &C0, &BC, &BC, &C0, &C2, &81, &81, &81, &0F, &0F
  EQUB &0F, &0D, &0E, &0F, &0F, &0E, &0E, &0E, &29, &21, &61, &43
  EQUB &42, &42, &C2, &86, &08, &08, &00, &41, &00, &01, &01, &01
@@ -12731,10 +12775,42 @@ ORG &0B00
  EQUB &00, &00, &00, &14, &0A, &0E, &0A, &04, &3C, &2C, &34, &16
  EQUB &12, &12, &12, &03, &86, &C2, &C3, &43, &E1, &21, &F0, &90
  EQUB &00, &00, &00
+
+\ ******************************************************************************
+\
+\       Name: L4150
+\       Type: Variable
+\   Category: Text
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4150
+
  EQUS "Hugh Jengine"
  EQUS "Desmond Dash"
  EQUS "Percy Veer  "
  EQUS "Gary Clipper"
+
+\ ******************************************************************************
+\
+\       Name: L4180
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4180
+
  EQUB &81, &81, &81, &81, &E0, &F0, &F0, &F0, &F0, &F0, &00, &00
  EQUB &00, &00, &80, &C0, &E0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
  EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0, &C0
@@ -12882,6 +12958,22 @@ ORG &0B00
  EQUB &00, &44, &11, &C0, &70, &10, &00, &F0, &70, &30, &30, &10
  EQUB &10, &00, &80, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &70, &C0
  EQUB &C0
+
+\ ******************************************************************************
+\
+\       Name: L4250
+\       Type: Variable
+\   Category: Text
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4250
+
  EQUS "Willy Swerve"
  EQUS "Sid Spoiler "
  EQUS "Billy Bumper"
@@ -12898,15 +12990,15 @@ ORG &0B00
 
 .token40
 
- EQUS "Lap Time"
+ EQUS "Lap Time"        \ Print "Lap Time"
 
  EQUB 160 + 3           \ Print 3 spaces
 
- EQUS ":"
+ EQUS ":"               \ Print ":"
 
  EQUB 160 + 9           \ Print 9 spaces
 
- EQUS "Best Time"
+ EQUS "Best Time"       \ Print "Best Time"
 
  EQUB 160 + 8           \ Print 8 spaces
 
@@ -12998,19 +13090,19 @@ ORG &0B00
 
  EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUS "R"
+ EQUS "R"               \ Print "R"
 
  EQUB 131               \ Set foreground colour to yellow alphanumeric
 
- EQUS "E"
+ EQUS "E"               \ Print "E"
 
  EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUS "V"
+ EQUS "V"               \ Print "V"
 
  EQUB 130               \ Set foreground colour to green alphanumeric
 
- EQUS "S"
+ EQUS "S"               \ Print "S"
 
  EQUB 255               \ End token
 
@@ -13035,7 +13127,7 @@ ORG &0B00
 
  EQUB 200 + 10          \ Print token 10
 
- EQUS "NUMBER OF LAPS"
+ EQUS "NUMBER OF LAPS"  \ Print "NUMBER OF LAPS"
  
  EQUB 200 + 36          \ Print token 36
 
@@ -13078,6 +13170,22 @@ ORG &0B00
  EQUB &01, &01, &00, &00, &00, &00, &05, &05, &05, &02, &00, &00
  EQUB &00, &00, &01, &01, &01, &01, &03, &92, &12, &12, &F0, &80
  EQUB &F0, &80
+
+\ ******************************************************************************
+\
+\       Name: L4350
+\       Type: Variable
+\   Category: Text
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4350
+
  EQUS "Harry Fume  "
  EQUS "Dan Dipstick"
  EQUS "Wilma Cargo "
@@ -13094,7 +13202,7 @@ ORG &0B00
 
 .token5
 
- EQUS "THE  PITS"
+ EQUS "THE  PITS"       \ Print "THE  PITS"
 
  EQUB 255               \ End token
 
@@ -13123,7 +13231,7 @@ ORG &0B00
 
  EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUS "1"
+ EQUS "1"               \ Print "1"
 
  EQUB 160 + 2           \ Print 2 spaces
 
@@ -13242,6 +13350,22 @@ ORG &0B00
  EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
  EQUB &0E, &00, &1C, &0C, &14, &08, &38, &18, &F0, &30, &E1, &43
  EQUB &C3, &86, &0C, &08, &87, &0E, &0C, &08
+
+\ ******************************************************************************
+\
+\       Name: L4450
+\       Type: Variable
+\   Category: Text
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4450
+
  EQUS "Roland Slide"
  EQUS "Rick Shaw   "
  EQUS "Peter Out   "
