@@ -4869,7 +4869,7 @@ ORG &0B00
  LDA L007E
  AND #3
  TAX
- LDA L3FE8,X
+ LDA yLookupLo+8,X
  EOR #&FF
  AND V
  STA V
@@ -4881,7 +4881,7 @@ ORG &0B00
  LDA L0079
  AND L33FC,X
  ORA T
- AND L3FE8,X
+ AND yLookupLo+8,X
  ORA V
  STA L007A
  LDA L0048
@@ -4921,7 +4921,7 @@ ORG &0B00
  STA L007D
  EOR #&FF
  AND L0079
- AND L3FE8,X
+ AND yLookupLo+8,X
  ORA V
 
 .C1D25
@@ -4942,7 +4942,7 @@ ORG &0B00
  STA L007D
  EOR #&FF
  AND L0078
- AND L3FE8,X
+ AND yLookupLo+8,X
  ORA V
 
 .C1D44
@@ -10472,8 +10472,8 @@ ORG &0B00
 
 .sub_C37D0
 
- STX L62CC
- STY L62CD
+ STX xCursor
+ STY yCursor
 
 \ ******************************************************************************
 \
@@ -11037,7 +11037,7 @@ ORG &0B00
 
  EQUB 255               \ End token
 
- EQUB &45, &FF          \ these bytes appear to be unused
+ EQUB &45, &FF          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -11304,7 +11304,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3B06
+\       Name: yLookupHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -11315,7 +11315,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.L3B06
+.yLookupHi
 
  EQUB &58, &59, &5A, &5B, &5D, &5E, &5F, &60, &62, &63, &64, &65
  EQUB &67, &68, &69, &6A, &6C, &6D, &6E, &6F, &71, &72, &73, &74
@@ -12600,7 +12600,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3FE0
+\       Name: yLookupLo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -12611,25 +12611,9 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.L3FE0
+.yLookupLo
 
  EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
-
-\ ******************************************************************************
-\
-\       Name: L3FE8
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L3FE8
-
  EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE, &00, &40, &80, &C0
  EQUB &00, &40, &80, &C0, &00, &40, &80, &C0, &00, &40, &80, &C0
  EQUB &81, &81, &81, &81, &81, &81, &81, &07, &01, &01, &00, &88
@@ -12829,43 +12813,53 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ Prints a token as a double-height header, with the position and colours given
-\ in the header tables. The tokens are formatted as follows:
+\ in the header tables, and a specific number of spaces between the top and
+\ bottom parts of the couble-height text (to ensure they line up).
+\
+\ The tokens are formatted as follows:
 \
 \   * Token 0 ("FORMULA 3  CHAMPIONSHIP")
 \     Column 4, row 3
+\     Yellow on red
 \     10 spaces
-\     Yellow on red
 \
-\   * Token 1
+\   * Token 1 ("      POINTS      ")
 \     Column 7, row 0
-\     15 spaces
 \     Yellow on red
+\     15 spaces
 \
 \   * Token 2 ("GRID POSITIONS")
 \     Column 9, row 0
-\     19 spaces
 \     White on magenta
+\     19 spaces
 \
-\   * Token 3
+\   * Token 3 ("ACCUMULATED POINTS")
 \     Column 7, row 0
-\     15 spaces
 \     White on blue
+\     15 spaces
 \
-\   * Token 4
+\   * Token 4 ("REVS   REVS   REVS")
 \     Column 0, row 4
+\     The colours of each letter in REVS are magenta/yellow/cyan/green
 \     2 spaces
-\     Prints 141, 163, 157, 127 before token 4, i.e. 141, 163 (as 127 is DEL),
-\     which is double-height "sixel" 163, i.e. a line along the top of the block
+\
+\     This token actually prints characters 141, 163, 157, 127 before printing
+\     token 4 (which it does twice, one for each part of the heading). 127 is
+\     the DEL character, so this is the same as printing just 141 and 163,
+\     which sets double-height, and then shows graphics character 163. This
+\     latter character will blank as we are still in alphanumeric text mode...
+\     so overall this just displays a double-height token 4, as token 4 contains
+\     all the colour information for the individual letters
 \
 \   * Token 5 ("THE  PITS")
 \     Column 11, row 4
-\     24 spaces
 \     Blue on yellow
+\     24 spaces
 \
-\   * Token 6
+\   * Token 6 ("  BEST LAP TIMES  ")
 \     Column 7, row 0
-\     15 spaces
 \     White on magenta
+\     15 spaces
 \
 \ Arguments:
 \
@@ -13041,16 +13035,16 @@ ORG &0B00
 .sub_C42D0
 
  LDA #&22
- STA L62CC
+ STA xCursor
  STA W
  LDA #&D7
- STA L62CD
+ STA yCursor
  LDX L0040
  LDA L3779,X
- JSR sub_C508C
+ JSR PrintCharacter-6
  LDX #&FF
  STX W
- JSR sub_C508C
+ JSR PrintCharacter-6
  RTS
 
 \ ******************************************************************************
@@ -15414,10 +15408,10 @@ ORG &0B00
 
 .C4D76
 
- STA L62CD
+ STA yCursor
 
- LDA #1                 \ Set L62CC = 1
- STA L62CC
+ LDA #1                 \ Set xCursor = 1
+ STA xCursor
 
 \ ******************************************************************************
 \
@@ -15484,8 +15478,9 @@ ORG &0B00
  CPX #54                \ If X <> 54, jump to toke3 to skip the following three
  BNE toke3              \ instructions and print the embedded token
 
- LDX #0                 \ X = 54, so ???
- JSR PrintHeader
+ LDX #0                 \ X = 54, so call PrintHeader with X = 0 to print
+ JSR PrintHeader        \ "FORMULA 3  CHAMPIONSHIP" as a double-height heading
+                        \ at column 4, row 3, in yellow text on a red background
 
  JMP toke4              \ Skip the following instruction
 
@@ -15526,7 +15521,8 @@ ORG &0B00
 
 .toke6
 
- JSR PrintCharacter     \ Print character 0-159 ???
+ JSR PrintCharacter     \ Call PrintCharacter to print the character in A (which
+                        \ is in the range 0 to 159)
 
 .toke7
 
@@ -16186,9 +16182,9 @@ ORG &0B00
 .sub_C501D
 
  LDX #&20
- STX L62CC
+ STX xCursor
  INX
- STX L62CD
+ STX yCursor
  LDX L006F
  LDA #&26
  JSR L7B9C
@@ -16226,9 +16222,9 @@ ORG &0B00
 .sub_C502F
 
  LDX #&0A
- STX L62CC
+ STX xCursor
  LDX #&21
- STX L62CD
+ STX yCursor
  LDX #&15
  JSR L7B9C
  RTS
@@ -16367,24 +16363,6 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C508C
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C508C
-
- STA L62C3
- JMP char1
-
-\ ******************************************************************************
-\
 \       Name: PrintCharacter
 \       Type: Subroutine
 \   Category: Text
@@ -16405,68 +16383,110 @@ ORG &0B00
 \   (Q P)               The screen address to print the character when bit 7 of
 \                       printMode is clear
 \
+\ Returns:
+\
+\   A                   A is unchanged
+\
+\ Other entry points:
+\
+\   PrintCharacter-6    Skip printMode check and do not set W = 0
+\
 \ ******************************************************************************
+
+ STA characterDef       \ Store the character number in characterDef
+
+ JMP char1              \ Jump to char1 to skip the printMode check and use the
+                        \ current value of W
 
 .PrintCharacter
 
  BIT printMode          \ If bit 7 of printMode is set, jump to char8 to print
  BMI char8              \ the character in A with OSWRCH
 
- STA L62C3
+ STA characterDef       \ Store the character number in characterDef
 
- LDA #0
+ LDA #0                 \ Set W = 0
  STA W
 
 .char1
 
- TXA
- PHA
+ TXA                    \ Store X and Y on the stack so we can retrieve them
+ PHA                    \ after we have printed the character
  TYA
  PHA
 
- LDY #HI(L62C3)
- LDX #LO(L62C3)
- LDA #10                \ Read definition of char in L62C3 into L62C3+1..8
+ LDY #HI(characterDef)  \ Call OSWORD with A = 10 and (Y X) = characterDef,
+ LDX #LO(characterDef)  \ which puts the character definition for the specified
+ LDA #10                \ character into characterDef+1 to characterDef+8
  JSR OSWORD
 
- LDA W
+ LDA W                  \ If W = 0, jump to char5 to skip the following
  BEQ char5
- LDX #8
+
+                        \ If we get here, then W is non-zero, so we now update
+                        \ the character definition to contain just one half of
+                        \ the character in the left half of the character
+                        \ definition, as follows:
+                        \
+                        \   * If bit 7 of W is set, put the right half of the
+                        \     character into left half of the character
+                        \     definition
+                        \
+                        \   * If bit 7 of W is clear, put the left half of the
+                        \     character into left half of the character
+                        \     definition
+
+ LDX #8                 \ We are now going to work our way through each pixel
+                        \ row of the character definition, so set X as a loop
+                        \ counter for each byte in the character definition
 
 .char2
 
- LDA L62C3,X
- BIT W
- BMI char3
- AND #&F0
- JMP char4
+ LDA characterDef,X     \ Set A to the bitmap for the X-th row of the character
+                        \ definition
+
+ BIT W                  \ If bit 7 of W is set, jump to char3 to skip the next
+ BMI char3              \ two instructions
+
+ AND #%11110000         \ Clear the four pixels in the right half of the pixel
+ JMP char4              \ row
 
 .char3
 
- ASL A
- ASL A
+ ASL A                  \ Shift A to the left so the right half of the pixel
+ ASL A                  \ row moves to the left half
  ASL A
  ASL A
 
 .char4
 
- STA L62C3,X
- DEX
- BNE char2
+ STA characterDef,X     \ Store the updated pixel row byte in the X-th row of
+                        \ the character definition
+
+ DEX                    \ Decrement the row counter
+
+ BNE char2              \ Loop back until we have processed all eight rows in
+                        \ the character definition
 
 .char5
 
- LDY L62CD
- LDA L62CC
- JSR sub_C50FA
- LDX #8
+ LDY yCursor            \ Set (Q P) to the screen address for column xCursor and
+ LDA xCursor            \ row yCursor
+ JSR GetScreenAddress-2
+
+ LDX #8                 \ We are now going to work our way through each pixel
+                        \ row of the character definition, poking each row to
+                        \ screen memory, so set a counter in X
 
 .char6
 
- LDA L62C3,X
- STA (P),Y
+ LDA characterDef,X     \ Store the X-th row of the character definition in the
+ STA (P),Y              \ Y-th byte of (Q P)
+
  DEY
+
  BPL char7
+
  LDA P
  SEC
  SBC #&40
@@ -16478,18 +16498,20 @@ ORG &0B00
 
 .char7
 
- DEX
+ DEX                    \ Decrement the character pixel row counter
 
- BNE char6
+ BNE char6              \ Loop back to poke the next row into screen memory
+                        \ until we have poked all eight rows
 
- INC L62CC
+ INC xCursor
 
- PLA
+ PLA                    \ Retrieve X and Y from the stack
  TAY
  PLA
  TAX
 
- LDA L62C3
+ LDA characterDef       \ Set A to the character number, so A is unchanged by
+                        \ the routine
 
  RTS                    \ Return from the subroutine
 
@@ -16499,60 +16521,60 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
+
+
 \ ******************************************************************************
 \
-\       Name: sub_C50FA
+\       Name: GetScreenAddress
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   x-coordinate
+\
+\   Y                   y-coordinate
+\
+\ Other entry points:
+\
+\   GetScreenAddress-2  Divides A by 8 at the start rather than 2
 \
 \ ******************************************************************************
 
-.sub_C50FA
+ ASL A                  \ Set A = A << 2
+ ASL A                  \       = x-coord << 2
 
- ASL A
- ASL A
+.GetScreenAddress
 
-\ ******************************************************************************
-\
-\       Name: sub_C50FC
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C50FC
-
- STA P
- LDA #0
- ASL P
- ROL A
+ STA P                  \ Set (Q P) = A << 1
+ LDA #0                 \           = x-coord << 1
+ ASL P                  \
+ ROL A                  \ (or x-coordinate << 3 if we called GetScreenAddress-2)
  STA Q
- TYA
- LSR A
- LSR A
- LSR A
+
+ TYA                    \ Set X = Y
+ LSR A                  \       = y-coord >> 3
+ LSR A                  \
+ LSR A                  \ so X is the character row number for this coordinate
  TAX
- LDA L3FE0,X
- CLC
- ADC P
+
+ LDA yLookupLo,X        \ Set (Q P) = (Q P) + X-th entry in (yLookupHi yLookupLo)
+ CLC                    \
+ ADC P                  \ starting with the low bytes
  STA P
- LDA L3B06,X
+
+ LDA yLookupHi,X        \ And then the high bytes
  ADC Q
  STA Q
- TYA
- AND #7
+
+ TYA                    \ Set Y = Y mod 8, to set it to the pixel row within the
+ AND #7                 \ character block
  TAY
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -16669,7 +16691,7 @@ ORG &0B00
  ADC #&50
  STA W
  AND #&FC
- JSR sub_C50FC
+ JSR GetScreenAddress
  LDA W
  ASL A
  AND #7
@@ -16871,7 +16893,7 @@ ORG &0B00
  STA L0780,X
  INC L0069
  LDX V
- AND L3FE8,X
+ AND yLookupLo+8,X
  ORA L34F8,X
  STA (P),Y
  LDX W
@@ -17871,7 +17893,23 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: L62C3
+\       Name: characterDef
+\       Type: Variable
+\   Category: Text
+\    Summary: Storage for a character definition when printing characters
+\
+\ ******************************************************************************
+
+.characterDef
+
+ EQUB 0                 \ The character number
+
+ EQUB 0, 0, 0, 0        \ The eight bytes that make up the character definition,
+ EQUB 0, 0, 0, 0        \ which gets populated by an OSWORD call
+
+\ ******************************************************************************
+\
+\       Name: xCursor
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -17882,30 +17920,13 @@ ORG &5FD0
 \
 \ ******************************************************************************
 
-.L62C3
-
- EQUB 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L62CC
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L62CC
+.xCursor
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62CD
+\       Name: yCursor
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -17916,7 +17937,7 @@ ORG &5FD0
 \
 \ ******************************************************************************
 
-.L62CD
+.yCursor
 
  EQUB 0, 0, 0
 
@@ -19359,9 +19380,9 @@ ORG &5FD0
 
 .sub_C6673
 
- STA L62CD
+ STA yCursor
  LDA #&1B
- STA L62CC
+ STA xCursor
 
 \ ******************************************************************************
 \
