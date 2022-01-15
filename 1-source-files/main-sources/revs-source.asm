@@ -125,7 +125,17 @@ L003C = &003C
 L003D = &003D
 L003E = &003E
 L003F = &003F
-L0040 = &0040
+
+gearNumber = &0040
+
+ SKIP 1                 \ The current gear number
+                        \
+                        \  * 0 = reverse
+                        \
+                        \  * 1 = neutral
+                        \
+                        \  * 2-7 = 1 to 5
+
 L0041 = &0041
 L0042 = &0042
 L0043 = &0043
@@ -161,7 +171,15 @@ L0060 = &0060
 L0061 = &0061
 L0062 = &0062
 L0063 = &0063
+
 printMode = &0064
+
+ SKIP 1                 \ Determines how the next character is printed on-screen:
+                        \
+                        \  * 0 = poke the character directly into screen memory
+                        \
+                        \  * 1 = print the character with OSWRCH (for mode 7)
+
 L0065 = &0065
 L0066 = &0066
 L0067 = &0067
@@ -334,11 +352,27 @@ L77E4 = &77E4
 
 trackChecksum = &7800
 
+ SKIP 4                 \ The track data checksums
+                        \
+                        \   * trackChecksum+0 counts the number of data bytes
+                        \     ending in %00
+                        \
+                        \   * trackChecksum+1 counts the number of data bytes
+                        \     ending in %01
+                        \
+                        \   * trackChecksum+2 counts the number of data bytes
+                        \     ending in %10
+                        \
+                        \   * trackChecksum+3 counts the number of data bytes
+                        \     ending in %11
+
 L7B00 = &7B00
 L7B4A = &7B4A
 L7B9C = &7B9C
 L7BE2 = &7BE2
-L7C79 = &7C79
+
+row2_column1 = &7C79           \ Chequered flag mode 7 screen address
+
 L7E85 = &7E85
 L7FC5 = &7FC5
 
@@ -1667,24 +1701,39 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0E50
+\       Name: ScanKeyboard
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: Scan the kayboard for a specific key press
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The negative inkey value of the key to scan for
+\
+\ Returns:
+\
+\   Z flag              Set if the key in X is being pressed, in which case BEQ
+\                       will branch
+\
+\                       CLear if the key in X is not being pressed, in which
+\                       case BNE will branch
 \
 \ ******************************************************************************
 
-.sub_C0E50
+.ScanKeyboard
 
- LDA #129               \ osbyte_inkey
- LDY #&FF
+ LDA #129               \ Call OSBYTE with A = 129, Y = &FF and the key value in
+ LDY #&FF               \ X, to scan the keyboard for key X
  JSR OSBYTE
- CPX #&FF
- RTS
+
+ CPX #&FF               \ If the key in X is being pressed, the above call sets
+                        \ both X and Y to &FF, so this sets the Z flag depending
+                        \ on whether the key is being pressed (so a BEQ after
+                        \ the call will branch if the key in X is being pressed)
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -1835,7 +1884,7 @@ ORG &0B00
 
  STY T
  LDX #&FF
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE C0F63
  LDY T
 
@@ -1843,7 +1892,7 @@ ORG &0B00
 
  STY T
  LDX L3DE2,Y
- JSR sub_C0E50
+ JSR ScanKeyboard
  BEQ C0F01
  LDY T
  DEY
@@ -1871,7 +1920,7 @@ ORG &0B00
 
  JSR sub_C66B6
  LDX #&A6
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE loop_C0F1B
 
 .C0F25
@@ -2102,8 +2151,10 @@ ORG &0B00
  DEC L62EF
  BNE C106F
  JSR sub_C501D
- LDA #2
+
+ LDA #2                 \ Print two spaces
  JSR PrintSpaces
+
  BEQ C106F
 
 .C106A
@@ -3373,7 +3424,7 @@ ORG &0B00
  STA T
  STA L0058
  LDX #&9D
- JSR sub_C0E50
+ JSR ScanKeyboard
  PHP
  BIT L05F5
  BPL C15B3
@@ -3405,7 +3456,7 @@ ORG &0B00
 .C15B3
 
  LDX #&A9
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE C15BE
  LDA #2
  STA V
@@ -3413,7 +3464,7 @@ ORG &0B00
 .C15BE
 
  LDX #&A8
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE C15C7
  INC V
 
@@ -3523,7 +3574,7 @@ ORG &0B00
 .C165E
 
  LDX #&AE
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE C166B
  LDX #1
 
@@ -3535,7 +3586,7 @@ ORG &0B00
 .C166B
 
  LDX #&BE
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE C1678
  LDX #0
 
@@ -3576,10 +3627,10 @@ ORG &0B00
 .C16A3
 
  LDX #&9F
- JSR sub_C0E50
+ JSR ScanKeyboard
  BEQ C16B7
  LDX #&EF
- JSR sub_C0E50
+ JSR ScanKeyboard
  BEQ C16BB
 
 .C16B1
@@ -3604,7 +3655,7 @@ ORG &0B00
  BNE C16DB
  STA L0019
  CLC
- ADC L0040
+ ADC gearNumber
  CMP #&FF
  BEQ C16D4
  CMP #7
@@ -3618,8 +3669,8 @@ ORG &0B00
 
 .C16D6
 
- STA L0040
- JSR sub_C42D0
+ STA gearNumber
+ JSR PrintGearNumber
 
 .C16DB
 
@@ -3918,7 +3969,7 @@ ORG &0B00
  DEX
  BPL C1851
  LDA #1
- STA L0040
+ STA gearNumber
  STA L0030
  LDX #7
  STX L0009
@@ -3932,7 +3983,7 @@ ORG &0B00
  STA L6293,X
  DEX
  BPL loop_C1885
- JSR sub_C42D0
+ JSR PrintGearNumber
  LDA L006C
  BMI C18A5
  LDX #&28
@@ -4253,11 +4304,11 @@ ORG &0B00
  ADC L30FC,Y
  STA L004F
  LDA L2B1E,Y
- STA sub_C2F4E+2
- STA sub_C2F90+2
+ STA mod_C2F4E+2
+ STA mod_C2F90+2
  LDA L2B22,Y
- STA sub_C2F4E+1
- STA sub_C2F90+1
+ STA mod_C2F4E+1
+ STA mod_C2F90+1
  LDX L004F
  LDY L004C
  SEC
@@ -5043,8 +5094,8 @@ ORG &0B00
 .sub_C1DA6
 
  STX C1DDD+1
- STY sub_C1DD4+1
- STA sub_C1DDB+1
+ STY mod_1DD4+1
+ STA mod_1DDB+1
 
 \ ******************************************************************************
 \
@@ -5081,39 +5132,13 @@ ORG &0B00
 
  LDA (P),Y
 
-\ ******************************************************************************
-\
-\       Name: sub_C1DD4
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C1DD4
+.mod_1DD4
 
  BNE C1DDF
  JSR sub_C1E9E
  BNE C1DDD
 
-\ ******************************************************************************
-\
-\       Name: sub_C1DDB
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C1DDB
+.mod_1DDB
 
  LDA #&55
 
@@ -8436,7 +8461,7 @@ ORG &0B00
 .sub_C2D17
 
  LDA L3E50,X
- STA sub_C2D27+1
+ STA mod_C2D27+1
  LDX #&80
  LDA L0083
  EOR #&FF
@@ -8444,20 +8469,7 @@ ORG &0B00
  ADC #1
  CLC
 
-\ ******************************************************************************
-\
-\       Name: sub_C2D27
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2D27
+.mod_C2D27
 
  BCC C2D29
 
@@ -8556,7 +8568,7 @@ ORG &0B00
 .sub_C2D9A
 
  LDA L40D0,X
- STA sub_C2DAA+1
+ STA mod_C2DAA+1
  LDX #&80
  LDA L0083
  EOR #&FF
@@ -8564,20 +8576,7 @@ ORG &0B00
  ADC #1
  CLC
 
-\ ******************************************************************************
-\
-\       Name: sub_C2DAA
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2DAA
+.mod_C2DAA
 
  BCC C2DAC
 
@@ -8677,27 +8676,14 @@ ORG &0B00
 .sub_C2E20
 
  LDA L3ED0,X
- STA sub_C2E2E+1
+ STA mod_C2E2E+1
  LDA L0084
  EOR #&FF
  CLC
  ADC #1
  CLC
 
-\ ******************************************************************************
-\
-\       Name: sub_C2E2E
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2E2E
+.mod_C2E2E
 
  BCC C2E30
 
@@ -8790,27 +8776,14 @@ ORG &0B00
 .sub_C2E99
 
  LDA L3ED8,X
- STA sub_C2EA7+1
+ STA mod_C2EA7+1
  LDA L0084
  EOR #&FF
  CLC
  ADC #1
  CLC
 
-\ ******************************************************************************
-\
-\       Name: sub_C2EA7
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2EA7
+.mod_C2EA7
 
  BCC C2EA9
 
@@ -8956,20 +8929,7 @@ ORG &0B00
  BEQ C2F7E
  LDA L0085
 
-\ ******************************************************************************
-\
-\       Name: sub_C2F4E
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2F4E
+.mod_C2F4E
 
  STA L7000,Y
  LDA (R),Y
@@ -9047,20 +9007,7 @@ ORG &0B00
  BEQ C2F7E
  LDA L0085
 
-\ ******************************************************************************
-\
-\       Name: sub_C2F90
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2F90
+.mod_C2F90
 
  STA L7000,Y
  LDA (P),Y
@@ -9479,7 +9426,9 @@ ORG &0B00
 .loop_C3256
 
  LDA (R),Y
- JSR PrintCharacter
+
+ JSR PrintCharacter     \ Print the character in A
+
  INY
  CPY #&0C
  BNE loop_C3256
@@ -9501,10 +9450,13 @@ ORG &0B00
 .sub_C3261
 
  LDX #&FF
- JSR sub_C0E50
+ JSR ScanKeyboard
+
  BNE C327B
+
  LDX #&86
- JSR sub_C0E50
+ JSR ScanKeyboard
+
  BNE C327B
  BIT L001C
  BMI C327D
@@ -9938,25 +9890,26 @@ ORG &0B00
 .sub_C34D2
 
  STA L0078
- LDX #&1E
+
+ LDX #30
  JSR PrintToken
 
 .loop_C34D9
 
  LDX #&9D
- JSR sub_C0E50
+ JSR ScanKeyboard
  BEQ loop_C34D9
 
 .C34E0
 
  LDX #&9D
- JSR sub_C0E50
+ JSR ScanKeyboard
  BEQ C34F7
  JSR sub_C3261
  BIT L0078
  BPL C34E0
  LDX #&B6
- JSR sub_C0E50
+ JSR ScanKeyboard
  BNE C34E0
  LSR L0078
 
@@ -10365,18 +10318,14 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3779
+\       Name: gearNumberText
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: The character to print on the gear stick for each gear
 \
 \ ******************************************************************************
 
-.L3779
+.gearNumberText
 
  EQUS "RN12345"
 
@@ -10505,7 +10454,9 @@ ORG &0B00
 
  CLC
  ADC #&30
- JSR PrintCharacter
+
+ JSR PrintCharacter     \ Print the character in A
+
  ASL L0078
  PLA
  ASL L0078
@@ -10518,7 +10469,8 @@ ORG &0B00
 
  CLC
  ADC #&30
- JSR PrintCharacter
+
+ JSR PrintCharacter     \ Print the character in A
 
 .C37FE
 
@@ -10554,7 +10506,7 @@ ORG &0B00
 
  EQUB 200 + 54          \ Print token 54
 
- EQUB 200 + 36          \ Print token 36
+ EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
 
  EQUB 200 + 18          \ Print token 18
 
@@ -10680,7 +10632,7 @@ ORG &0B00
 
 .token39
 
- EQUB 200 + 36          \ Print token 36
+ EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
 
  EQUS "PRACTICE"        \ Print "PRACTICE"
 
@@ -10964,20 +10916,19 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L39E0
+\       Name: menuKeys
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Keyboard
+\    Summary: Negative inkey values for the menu keys (SPACE, "1", "2" and "3")
 \
 \ ******************************************************************************
 
-.L39E0
+.menuKeys
 
- EQUB &9D, &CF, &CE, &EE
+ EQUB &9D               \ Negative inkey value for SPACE
+ EQUB &CF               \ Negative inkey value for "1"
+ EQUB &CE               \ Negative inkey value for "2"
+ EQUB &EE               \ Negative inkey value for "3"
 
 \ ******************************************************************************
 \
@@ -11076,74 +11027,87 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3A50
+\       Name: PrintHeaderChecks
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: Print chequered lines above and below the header
 \
 \ ******************************************************************************
 
-.sub_C3A50
+.PrintHeaderChecks
 
- LDY #1
+ LDY #1                 \ We are about to print two chequered lines, so set a
+                        \ line counter in Y
 
-.loop_C3A52
+.head1
 
- LDA L3A71,Y
- STA T
- LDX L3A6F,Y
- LDA #&97
- STA L7C79,X
- LDA #&E2
+ LDA endChecks,Y        \ Set T to the screen address offset of the end of the
+ STA T                  \ Y-th chequered line
 
-.loop_C3A61
+ LDX startChecks,Y      \ Set A to the screen address offset of the start of the
+                        \ Y-th chequered line
 
- INX
- STA L7C79,X
- LDA #&E6
- CPX T
- BNE loop_C3A61
- DEY
- BPL loop_C3A52
- RTS
+ LDA #151               \ Poke the "white graphics" character into the X-th byte
+ STA row2_column1,X     \ of screen memory at column 1, row 2, so the subsequent
+                        \ bytes are shown as graphics characters
+
+ LDA #226               \ Set A to the graphics character with the top-right and
+                        \ bottom-right blocks set to white, to form the first
+                        \ character of the line (i.e. the first two checks in
+                        \ the chequered line)
+
+.head2
+
+ INX                    \ Increment the screen address offset to move along one
+                        \ character
+
+ STA row2_column1,X     \ Poke character A into screen memory
+
+ LDA #230               \ Set A to the graphics character with the top-right,
+                        \ bottom-right and centre-left blocks set to white, to
+                        \ form the rest of the checks on the chequered line
+
+ CPX T                  \ Loop back to print the next character in the line
+ BNE head2              \ until we have reached the screen address in T
+
+ DEY                    \ Decrement the line counter
+
+ BPL head1              \ Loop back to print the second line
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: L3A6F
+\       Name: startChecks
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: The screen address offset of the start of each chequered header
+\             line
 \
 \ ******************************************************************************
 
-.L3A6F
+.startChecks
 
- EQUB &00, &78
+ EQUB 0                 \ Start the first line at row 2, column 1 (as the offset
+                        \ is added to row2_column1)
+
+ EQUB 40 * 3            \ Start the second line on row 5, column 1 (as there are
+                        \ 40 characters per row)
 
 \ ******************************************************************************
 \
-\       Name: L3A71
+\       Name: endChecks
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: The screen address offset of the end of each chequered header line
 \
 \ ******************************************************************************
 
-.L3A71
+.endChecks
 
- EQUB &23, &9B
+ EQUB 35                \ End the first line after 35 characters
+
+ EQUB 35 + (40 * 3)     \ End the first line after 35 characters
 
 \ ******************************************************************************
 \
@@ -11306,7 +11270,7 @@ ORG &0B00
 \
 \       Name: yLookupHi
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11317,9 +11281,27 @@ ORG &0B00
 
 .yLookupHi
 
- EQUB &58, &59, &5A, &5B, &5D, &5E, &5F, &60, &62, &63, &64, &65
- EQUB &67, &68, &69, &6A, &6C, &6D, &6E, &6F, &71, &72, &73, &74
- EQUB &76, &77, &78, &79, &7B, &7C, &7D, &7E, &40, &48, &18, &30
+ EQUB &58, &59, &5A, &5B, &5D, &5E, &5F, &60
+ EQUB &62, &63, &64, &65, &67, &68, &69, &6A
+ EQUB &6C, &6D, &6E, &6F, &71, &72, &73, &74
+ EQUB &76, &77, &78, &79, &7B, &7C, &7D, &7E
+
+\ ******************************************************************************
+\
+\       Name: L3B26
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3B26
+
+ EQUB &40, &48, &18, &30
  EQUB &70, &78, &D0, &1D, &E0, &A0, &F0, &0D, &CA, &10, &12, &E0
  EQUB &C0, &B0, &EF, &A9, &A5, &A0, &77, &D0, &0C, &A5, &6A, &29
  EQUB &3F, &D0, &F4, &A2, &28, &A9, &F2, &A0, &05, &86, &6D, &48
@@ -11637,14 +11619,18 @@ ORG &0B00
 
 .sub_C3C50
 
- LDX #5
- JSR PrintHeader
- LDX #&18
+ LDX #5                 \ Print "THE  PITS" as a double-height header at column
+ JSR PrintHeader        \ 11, row 4, in blue text on a yellow background
+
+ LDX #24
  JSR PrintToken
+
  JSR sub_C3EE0
  STA L5F3E
- LDX #&19
+
+ LDX #25
  JSR PrintToken
+
  JSR sub_C3EE0
  STA L5F3D
  JSR sub_C34D0
@@ -11669,7 +11655,9 @@ ORG &0B00
  CLC
  ADC #7
  TAX
- JSR PrintToken
+
+ JSR PrintToken         \ Print token X
+
  RTS
 
 \ ******************************************************************************
@@ -11892,7 +11880,7 @@ ORG &0B00
 
  EQUB 200 + 54          \ Print token 54
 
- EQUB 200 + 36          \ Print token 36
+ EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
 
  EQUB 200 + 11          \ Print token 11
 
@@ -12076,7 +12064,7 @@ ORG &0B00
 
  EQUB 200 + 54          \ Print token 54
 
- EQUB 200 + 36          \ Print token 36
+ EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
 
  EQUB 200 + 7           \ Print token 7
 
@@ -12602,7 +12590,7 @@ ORG &0B00
 \
 \       Name: yLookupLo
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -12614,8 +12602,25 @@ ORG &0B00
 .yLookupLo
 
  EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
- EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE, &00, &40, &80, &C0
- EQUB &00, &40, &80, &C0, &00, &40, &80, &C0, &00, &40, &80, &C0
+ EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE
+ EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
+ EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
+
+\ ******************************************************************************
+\
+\       Name: L4000
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L4000
+
  EQUB &81, &81, &81, &81, &81, &81, &81, &07, &01, &01, &00, &88
  EQUB &88, &88, &88, &00, &00, &00, &00, &04, &05, &05, &05, &01
  EQUB &01, &00, &20, &08, &04, &04, &04, &49, &48, &68, &2C, &24
@@ -12844,7 +12849,7 @@ ORG &0B00
 \     2 spaces
 \
 \     This token actually prints characters 141, 163, 157, 127 before printing
-\     token 4 (which it does twice, one for each part of the heading). 127 is
+\     token 4 (which it does twice, one for each part of the header). 127 is
 \     the DEL character, so this is the same as printing just 141 and 163,
 \     which sets double-height, and then shows graphics character 163. This
 \     latter character will blank as we are still in alphanumeric text mode...
@@ -13021,31 +13026,51 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C42D0
+\       Name: PrintGearNumber
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print the number of the current gear in double-width characters on
+\             the gear stick
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The gear number to print on the stick:
+\
+\                         * 0 = reverse
+\
+\                         * 1 = neutral
+\
+\                         * 2-7 = 1 to 5
 \
 \ ******************************************************************************
 
-.sub_C42D0
+.PrintGearNumber
 
- LDA #&22
+ LDA #34                \ Move the cursor to character column 34
  STA xCursor
- STA W
- LDA #&D7
+
+ STA W                  \ Set W to a non-zero value with bit 7 clear, so the
+                        \ call to PrintCharacter-6 prints the left half of the
+                        \ double-width character
+
+ LDA #215               \ Move the cursor to pixel row 215
  STA yCursor
- LDX L0040
- LDA L3779,X
- JSR PrintCharacter-6
- LDX #&FF
- STX W
- JSR PrintCharacter-6
- RTS
+
+ LDX gearNumber         \ Set X to the current gear number
+
+ LDA gearNumberText,X   \ Set A to the character to print for this gear number
+
+ JSR PrintCharacter-6   \ Print the left half of the double-width character
+
+ LDX #&FF               \ Set W to a non-zero value with bit 7 set, so the
+ STX W                  \ call to PrintCharacter-6 prints the right half of the
+                        \ double-width character
+
+ JSR PrintCharacter-6   \ Print the right half of the double-width character
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13123,7 +13148,7 @@ ORG &0B00
 
  EQUS "NUMBER OF LAPS"  \ Print "NUMBER OF LAPS"
  
- EQUB 200 + 36          \ Print token 36
+ EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
 
  EQUB 200 + 18          \ Print token 18
 
@@ -13273,14 +13298,17 @@ ORG &0B00
 
 .sub_C43D0
 
- LDA #2
+ LDA #2                 \ Print two spaces
  JSR PrintSpaces
- LDA #&20
+ 
+LDA #&20
  STA L0078
  LDA L39E4,X
  BNE C43E7
- LDA #2
+
+ LDA #2                 \ Print two spaces
  JSR PrintSpaces
+
  LSR L0078
  BNE C43EA
 
@@ -13292,8 +13320,10 @@ ORG &0B00
 
  LDA SetupGame+20,X
  JSR sub_C37D6
- LDA #1
+
+ LDA #1                 \ Print a space
  JSR PrintSpaces
+
  RTS
 
 \ ******************************************************************************
@@ -13396,7 +13426,13 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   
+\
+\ Returns:
+\
+\   X                   X is unchanged
 \
 \ ******************************************************************************
 
@@ -13405,6 +13441,7 @@ ORG &0B00
  LDA trackData+1812,X
  STA L5F40
  STA U
+
  LDA trackData+1786
  LSR A
  LSR A
@@ -13417,7 +13454,9 @@ ORG &0B00
  LSR A
  PHP
  LSR A
+
  BCS C44E0
+
  JSR sub_C0C00
 
 .C44E0
@@ -13426,8 +13465,11 @@ ORG &0B00
  PLP
  ROR A
  STA L5FB0,Y
+
  DEY
+
  BPL loop_C44D5
+
  RTS
 
 \ ******************************************************************************
@@ -13456,7 +13498,7 @@ ORG &0B00
  STA L0028
  STA L0026
  LDY L62F0
- LDA L0040
+ LDA gearNumber
  BEQ C4510
  LDA L003E
  BMI C4510
@@ -14481,9 +14523,9 @@ ORG &0B00
 .C4978
 
  LDX #&DC
- JSR sub_C0E50
+ JSR ScanKeyboard
  BEQ C498C
- LDY L0040
+ LDY gearNumber
  DEY
  BEQ C4988
  LDA L0063
@@ -14575,7 +14617,7 @@ ORG &0B00
  BNE C499F
  LDA L0058
  BMI C499D
- LDY L0040
+ LDY gearNumber
  DEY
  BEQ C499F
  LDA L002E
@@ -14591,7 +14633,7 @@ ORG &0B00
 .C49EE
 
  STA U
- LDX L0040
+ LDX gearNumber
  LDA trackData+1798,X
  JSR sub_C0C00
  ASL T
@@ -14993,7 +15035,7 @@ ORG &0B00
 
  CPX #1
  BNE C4BCD
- LDA L0040
+ LDA gearNumber
  SEC
  SBC #1
  STA L0079
@@ -15345,14 +15387,18 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The routine is called with X = 0
 \
 \ ******************************************************************************
 
 .sub_C4D4D
 
- STX L004A
- STX L5F3A
+ STX L004A              \ Set L004A = 0
+
+ STX L5F3A              \ Set L5F3A = 0
+
  JSR sub_C44C6
 
 .loop_C4D55
@@ -15479,16 +15525,15 @@ ORG &0B00
  BNE toke3              \ instructions and print the embedded token
 
  LDX #0                 \ X = 54, so call PrintHeader with X = 0 to print
- JSR PrintHeader        \ "FORMULA 3  CHAMPIONSHIP" as a double-height heading
+ JSR PrintHeader        \ "FORMULA 3  CHAMPIONSHIP" as a double-height header
                         \ at column 4, row 3, in yellow text on a red background
 
  JMP toke4              \ Skip the following instruction
 
 .toke3
 
- JSR PrintToken         \ Print the embedded token in X recursively (so if it
-                        \ also contains embedded tokens, they will also be
-                        \ expanded and printed)
+ JSR PrintToken         \ Print token X (so if it also contains embedded tokens,
+                        \ they will also be expanded and printed)
 
 .toke4
 
@@ -15521,8 +15566,8 @@ ORG &0B00
 
 .toke6
 
- JSR PrintCharacter     \ Call PrintCharacter to print the character in A (which
-                        \ is in the range 0 to 159)
+ JSR PrintCharacter     \ Print the character in A (which is in the range 0 to
+                        \ 159)
 
 .toke7
 
@@ -16389,7 +16434,19 @@ ORG &0B00
 \
 \ Other entry points:
 \
-\   PrintCharacter-6    Skip printMode check and do not set W = 0
+\   PrintCharacter-6    Print double-width character (this is used to print the
+\                       double-width number on the gear stick)
+\
+\                       The routine must be called twice to print double-width
+\                       characters, which are drawn as follows:
+\
+\                         * Bit 7 of W is set = draw the right half
+\
+\                         * Bit 7 of W is clear = draw the left half
+\
+\                       W must be non-zero when the routine is called on this
+\                       entry point, otherwise the routine will print characters
+\                       at the normal width
 \
 \ ******************************************************************************
 
@@ -18897,18 +18954,31 @@ ORG &5FD0
 
 .StartGame
 
- LDX #0
+ LDX #0                 \ Set L05F4 = 0
  STX L05F4
+
  JSR sub_C4D4D
- LDX #4
- JSR PrintHeader
- JSR sub_C3A50
- LDX #&27
- JSR PrintToken
+
+ LDX #4                 \ Print "REVS   REVS   REVS" as a double-height header
+ JSR PrintHeader        \ at column 0, row 4, with the colours of each letter in
+                        \ REVS set to magenta/yellow/cyan/green
+
+ JSR PrintHeaderChecks  \ Print chequered lines above and below the header
+
+ LDX #39                \ Print token 39, which is a menu with the following
+ JSR PrintToken         \ options:
+                        \
+                        \   1 = PRACTICE
+                        \
+                        \   2 = COMPETITION
+
  LDX #2
- JSR sub_C6571
+ JSR GetMenuOption
+
  CPX #1
+
  BCS C640A
+
  STX L006F
  DEX
  STX L5F3B
@@ -18919,19 +18989,22 @@ ORG &5FD0
 
  LDA #0
  STA L5F3C
- LDX #&15
+
+ LDX #21
  JSR PrintToken
+
  LDX #3
- JSR sub_C6571
+ JSR GetMenuOption
  STX L5F3A
  JSR sub_C44C6
 
 .C641F
 
- LDX #&16
+ LDX #22
  JSR PrintToken
+
  LDX #3
- JSR sub_C6571
+ JSR GetMenuOption
  LDA L3DF0,X
  STA L5F3B
  JSR sub_C42EC
@@ -18956,16 +19029,19 @@ ORG &5FD0
 
 .C6457
 
- LDX #&17
+ LDX #23
  JSR PrintToken
+
  JSR sub_C66D4
  JSR sub_C655A
  LDX L006F
  BEQ C6474
- LDX #&1B
+
+ LDX #27
  JSR PrintToken
+
  LDX #2
- JSR sub_C6571
+ JSR GetMenuOption
  CPX #0
  BEQ C6436
 
@@ -19001,8 +19077,10 @@ ORG &5FD0
 
  LDX L5F3A
  JSR sub_C44C6
- LDX #&1A
+
+ LDX #26
  JSR PrintToken
+
  JSR sub_C3C6F
  JSR sub_C34D0
 
@@ -19030,14 +19108,16 @@ ORG &5FD0
  BPL loop_C64BC
  LDA L5F3C
  BNE C64F2
- LDX #&1C
+
+ LDX #28
  JSR PrintToken
+
  LDA #&14
  SEC
  SBC L5F39
  STA L5F38
  LDX #3
- JSR sub_C6571
+ JSR GetMenuOption
  LDA L3DF4,X
  STA L006E
  STX L5F3F
@@ -19151,73 +19231,101 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: sub_C6571
+\       Name: GetMenuOption
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: Scan the keyboard for menu option key pressed
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The number of entries in the menu
 \
 \ ******************************************************************************
 
-.sub_C6571
+.GetMenuOption
 
- LDY #0
+ LDY #0                 \ Set W = 0
  STY W
- STX U
 
-.C6577
+ STX U                  \ Store the number of entries in U
+
+.mopt1
 
  JSR sub_C3261
- LDY U
 
-.loop_C657C
+ LDY U                  \ We now loop through each valid menu option for this
+                        \ menu and check whether the relevant key is being
+                        \ pressed, so we set a loop counter in U to start from
+                        \ the menu size and loop down to zero
 
- STY V
- LDX L39E0,Y
- JSR sub_C0E50
- BEQ C658D
- LDY V
- DEY
- BPL loop_C657C
- BMI C6577
+.mopt2
 
-.C658D
+ STY V                  \ Store the loop counter in V so we can retrieve it
+                        \ below
 
- LDY V
- BNE C659E
- LDA W
- BEQ C6577
- LDA #&98
+ LDX menuKeys,Y         \ Fetch the key number for menu option Y
+
+ JSR ScanKeyboard       \ Scan the keyboard to see if this key is being pressed
+
+ BEQ mopt3              \ If this key is being pressed, jump to mopt3
+
+ LDY V                  \ Retrieve the value of the loop counter
+
+ DEY                    \ Decrement the loop counter to scan for the next menu
+                        \ option
+
+ BPL mopt2              \ Loop back to check the key for the next option
+
+ BMI mopt1              \ Loop back to mopt1 to keep checking through the option
+                        \ keys (this BMI is effectively a JMP as we just passed
+                        \ through a BPL)
+
+.mopt3
+
+ LDY V                  \ Set Y to the menu option that was chosen
+
+ BNE mopt4              \ If Y is non-zero, jump to mopt4 to process the choice
+
+                        \ If we get here, SPACE was pressed
+
+ LDA W                  \ If W = 0, jump back to mopt1 to keep checking for keys
+ BEQ mopt1
+
+                        \ If we get here, SPACE was pressed and W is non-zero
+
+ LDA #152
  STA L7FC5
+
  LDX L0078
  DEX
+
  RTS
 
-.C659E
+.mopt4
 
  STY L0078
  LDA W
- BNE C65AB
- LDX #&1E
+ BNE mopt5
+
+ LDX #30
  STX W
  JSR PrintToken
 
-.C65AB
+.mopt5
 
  LDX #0
  LDY #1
 
-.C65AF
+.mopt6
 
  LDA #&84
  CPY L0078
- BNE C65B7
+ BNE mopt7
  LDA #&81
 
-.C65B7
+.mopt7
 
  STA L7E85,X
  TXA
@@ -19226,9 +19334,9 @@ ORG &5FD0
  TAX
  INY
  CPY U
- BCC C65AF
- BEQ C65AF
- BNE C6577
+ BCC mopt6
+ BEQ mopt6
+ BNE mopt1
 
 \ ******************************************************************************
 \
@@ -19265,7 +19373,9 @@ ORG &5FD0
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The number of the token to print (see PrintHeader)
 \
 \ ******************************************************************************
 
@@ -19274,7 +19384,9 @@ ORG &5FD0
  PHA
  AND #&0F
  STA L0042
- JSR PrintHeader
+
+ JSR PrintHeader        \ Print the header specified in X
+
  LDY #0
 
 .C65DD
@@ -19283,8 +19395,10 @@ ORG &5FD0
  LDA #0
  STA L0078
  JSR sub_C3E60
- LDX #&20
+
+ LDX #32
  JSR PrintToken
+
  LDY L001B
  LDA L0100,Y
  BIT L006C
@@ -19295,12 +19409,16 @@ ORG &5FD0
 
  JSR sub_C65C8
  JSR sub_C37D6
- LDX #&1F
+
+ LDX #31
  JSR PrintToken
+
  LDY L001B
  JSR sub_C667B
- LDX #&1F
+
+ LDX #31
  JSR PrintToken
+
  LDX L0045
  PLA
  PHA
@@ -19318,8 +19436,10 @@ ORG &5FD0
  CMP #&1A
  TAX
  BCC C6640
- LDA #7
+
+ LDA #7                 \ Print seven spaces
  JSR PrintSpaces
+
  BEQ C6643
 
 .C662B
@@ -19343,20 +19463,25 @@ ORG &5FD0
  INY
  CPY #&14
  BNE C65DD
- LDA #3
+
+ LDA #3                 \ Print three spaces
  JSR PrintSpaces
+
  LDA #&9C
  JSR OSWRCH
  LDA L006C
  BPL C666E
- LDX #&31
+
+ LDX #49
  JSR PrintToken
+
  JSR sub_C3C6F
  LDA L5F3F
  CLC
  ADC #&DA
  STA token50+3
- LDX #&32
+
+ LDX #50
  JSR PrintToken
 
 .C666E
@@ -19420,12 +19545,14 @@ ORG &5FD0
 
 .sub_C6687
 
- LDX #&1D
+ LDX #29
  JSR PrintToken
+
  LDX L006F
  JSR sub_C3CEB
  JSR sub_C3250
  JSR sub_C34D0
+
  RTS
 
 \ ******************************************************************************
