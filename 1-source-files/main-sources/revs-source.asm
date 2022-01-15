@@ -89,7 +89,12 @@ L0018 = &0018
 L0019 = &0019
 L001A = &001A
 L001B = &001B
-L001C = &001C
+
+pressingShiftArrow = &001C
+
+ SKIP 1                 \ Bit 7 is set if we are pressing SHIFT and right arrow
+                        \ (which restarts the game)
+
 L001D = &001D
 L001E = &001E
 L001F = &001F
@@ -186,7 +191,12 @@ L0067 = &0067
 L0068 = &0068
 L0069 = &0069
 L006A = &006A
-L006B = &006B
+
+startingStack = &006B
+
+ SKIP 1                 \ The value of the stack pointer when the game starts,
+                        \ so we can restore it when restarting the game
+
 L006C = &006C
 L006D = &006D
 L006E = &006E
@@ -1710,7 +1720,8 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   X                   The negative inkey value of the key to scan for
+\   X                   The negative inkey value of the key to scan for (in the
+\                       range &80 to &FF)
 \
 \ Returns:
 \
@@ -1724,8 +1735,8 @@ ORG &0B00
 
 .ScanKeyboard
 
- LDA #129               \ Call OSBYTE with A = 129, Y = &FF and the key value in
- LDY #&FF               \ X, to scan the keyboard for key X
+ LDA #129               \ Call OSBYTE with A = 129, Y = &FF and the inkey value
+ LDY #&FF               \ in X, to scan the keyboard for key X
  JSR OSBYTE
 
  CPX #&FF               \ If the key in X is being pressed, the above call sets
@@ -9436,58 +9447,61 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3261
+\       Name: CheckRestartKeys
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: If the restart keys are being pressed, restart the game
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   RestartGame         Restart the game, putting the C flag into bit 7 of
+\                       pressingShiftArrow
 \
 \ ******************************************************************************
 
-.sub_C3261
+.CheckRestartKeys
 
- LDX #&FF
+ LDX #&FF               \ Check to see if SHIFT is being pressed
  JSR ScanKeyboard
 
- BNE C327B
+ BNE rest1              \ If SHIFT is not being pressed, jump to rest1
 
- LDX #&86
- JSR ScanKeyboard
+ LDX #&86               \ Check to see if right arrow is being pressed (if it is
+ JSR ScanKeyboard       \ this will also set the C flag)
 
- BNE C327B
- BIT L001C
- BMI C327D
+ BNE rest1              \ If right arrow is not being pressed, jump to rest1
 
-\ ******************************************************************************
-\
-\       Name: sub_C3273
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ BIT pressingShiftArrow \ If bit 7 of pressingShiftArrow is set, then we are
+ BMI rest2              \ still pressing Shift-arrow from a previous restart, so
+                        \ jump to rest2 to return from the subroutine without
+                        \ anything doing
 
-.sub_C3273
+                        \ If we get here then SHIFT-arrow is being pressed and
+                        \ bit 7 of pressingShiftArrow is clear, so this is a
+                        \ new pressing SHIFT-arrow, so we fall through into
+                        \ RestartGame with the C flag set to restart the game
+                        \ and set bit 7 of pressingShiftArrow
 
- LDX L006B
- TXS
- ROR L001C
- JMP StartGame
+.RestartGame
 
-.C327B
+ LDX startingStack      \ Set the stack pointer to the value it had when the
+ TXS                    \ game started, which clears any stored addresses put on
+                        \ the stack by the code we are now exiting from
 
- LSR L001C
+ ROR pressingShiftArrow \ Shift the C flag into bit 7 of pressingShiftArrow
 
-.C327D
+ JMP StartGame          \ Start the game again
 
- RTS
+.rest1
+
+ LSR pressingShiftArrow \ Clear bit 7 of pressingShiftArrow to indicate that we
+                        \ are no longer pressing SHIFT-arrow
+
+.rest2
+
+ RTS                    \ Return from the subroutine
 
  EQUB 0, 0              \ These bytes appear to be unused
 
@@ -9905,7 +9919,7 @@ ORG &0B00
  LDX #&9D
  JSR ScanKeyboard
  BEQ C34F7
- JSR sub_C3261
+ JSR CheckRestartKeys
  BIT L0078
  BPL C34E0
  LDX #&B6
@@ -10606,8 +10620,8 @@ ORG &0B00
  LDA #246               \ Set L05FE = 246
  STA L05FE
 
- TSX                    \ Set L006B to the stack pointer
- STX L006B
+ TSX                    \ Store the stack pointer in startingStack so we can
+ STX startingStack      \ restore it when restarting the game
 
  JSR CallTrackHook      \ Call the hook code in the track file (for Silverstone
                         \ the hook routine is just an RTS, so this does nothing)
@@ -19223,7 +19237,7 @@ ORG &5FD0
  BIT L05F4
  BVS loop_C6560
  BPL C6570
- JSR sub_C3273
+ JSR RestartGame
 
 .C6570
 
@@ -19253,7 +19267,9 @@ ORG &5FD0
 
 .mopt1
 
- JSR sub_C3261
+ JSR CheckRestartKeys   \ Check whether the restart keys are being pressed, and
+                        \ if they are, restart the game (the restart keys are
+                        \ SHIFT and right arrow)
 
  LDY U                  \ We now loop through each valid menu option for this
                         \ menu and check whether the relevant key is being
