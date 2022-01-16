@@ -9146,7 +9146,7 @@ ORG &0B00
 
 .token26
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
  EQUB 31, 10, 12        \ Move text cursor to column 10, row 12
 
@@ -9154,7 +9154,7 @@ ORG &0B00
 
  EQUS "STANDARD OF"     \ Print "STANDARD OF"
 
- EQUB 200 + 15          \ Print token 15
+ EQUB 200 + 15          \ Print token 15 (" RACE")
 
  EQUB 31, 14, 14        \ Move text cursor to column 14, row 14
 
@@ -9171,15 +9171,15 @@ ORG &0B00
 
 .token4
 
- EQUB 200 + 52          \ Print token 52
+ EQUB 200 + 52          \ Print token 52 (multicoloured "REVS")
 
  EQUB 160 + 3           \ Print 3 spaces
 
- EQUB 200 + 52          \ Print token 52
+ EQUB 200 + 52          \ Print token 52 (multicoloured "REVS")
 
  EQUB 160 + 3           \ Print 3 spaces
 
- EQUB 200 + 52          \ Print token 52
+ EQUB 200 + 52          \ Print token 52 (multicoloured "REVS")
 
  EQUB 160 + 1           \ Print 1 space
 
@@ -9845,7 +9845,7 @@ ORG &0B00
 
  EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB 200 + 16          \ Print token 16
+ EQUB 200 + 16          \ Print token 16 (" > ")
 
  EQUB 255               \ End token
 
@@ -9905,8 +9905,8 @@ ORG &0B00
 
  STA L0078
 
- LDX #30
- JSR PrintToken
+ LDX #30                \ Print token 30 ("PRESS SPACE BAR TO CONTINUE" in cyan
+ JSR PrintToken         \ at column 5, row 24)
 
 .loop_C34D9
 
@@ -10035,9 +10035,10 @@ ORG &0B00
 
  EQUB 156               \ Set background colour to black
 
- EQUB 134, 157          \ Set background colour to cyan
+ EQUB 134, 157          \ Set background colour (configurable, default is cyan)
 
- EQUB 132               \ Set foreground colour to blue alphanumeric
+ EQUB 132               \ Set foreground colour (configurable, default is blue
+                        \ alphanumeric
 
  EQUB 255               \ End token
 
@@ -10054,7 +10055,7 @@ ORG &0B00
 
  EQUS "ACCUMULATED"     \ Print "ACCUMULATED"
 
- EQUB 200 + 51          \ Print token 51
+ EQUB 200 + 51          \ Print token 51 (" POINTS")
 
  EQUB 255               \ End token
 
@@ -10246,17 +10247,17 @@ ORG &0B00
 
 .token23
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
- EQUB 200 + 35          \ Print token 35
+ EQUB 200 + 35          \ Print token 35 (cyan, move cursor to prompt position)
 
  EQUB 160 + 7           \ Print 7 spaces
 
- EQUB 200 + 11          \ Print token 11
+ EQUB 200 + 11          \ Print token 11 ("ENTER ")
 
  EQUS "NAME OF"         \ Print "NAME OF"
 
- EQUB 200 + 12          \ Print token 12
+ EQUB 200 + 12          \ Print token 12 (" DRIVER")
 
  EQUB 31, 12, 17        \ Move text cursor to column 12, row 17
 
@@ -10268,7 +10269,7 @@ ORG &0B00
 
  EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB 200 + 16          \ Print token 16
+ EQUB 200 + 16          \ Print token 16 (" > ")
 
  EQUB 255               \ End token
 
@@ -10518,29 +10519,29 @@ ORG &0B00
 
 .token22
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
- EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
+ EQUB 200 + 36          \ Print token 36 (menu option 1 with "PRESS" prompt)
 
- EQUB 200 + 18          \ Print token 18
+ EQUB 200 + 18          \ Print token 18 (" 5")
 
- EQUB 200 + 13          \ Print token 13
+ EQUB 200 + 13          \ Print token 13 (" mins")
 
- EQUB 200 + 37          \ Print token 37
+ EQUB 200 + 37          \ Print token 37 (menu option 2)
 
- EQUB 200 + 19          \ Print token 19
+ EQUB 200 + 19          \ Print token 19 ("10")
 
- EQUB 200 + 13          \ Print token 13
+ EQUB 200 + 13          \ Print token 13 (" mins")
 
- EQUB 200 + 38          \ Print token 38
+ EQUB 200 + 38          \ Print token 38 (menu option 3)
 
- EQUB 200 + 20          \ Print token 20
+ EQUB 200 + 20          \ Print token 20 ("20")
 
- EQUB 200 + 13          \ Print token 13
+ EQUB 200 + 13          \ Print token 13 (" mins")
 
- EQUB 200 + 35          \ Print token 35
+ EQUB 200 + 35          \ Print token 35 (cyan, move cursor to prompt position)
 
- EQUB 200 + 10          \ Print token 10
+ EQUB 200 + 10          \ Print token 10 ("SELECT ")
 
  EQUS "DURATION OF "    \ Print "DURATION OF "
 
@@ -10646,11 +10647,11 @@ ORG &0B00
 
 .token39
 
- EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
+ EQUB 200 + 36          \ Print token 36 (menu option 1 with "PRESS" prompt)
 
  EQUS "PRACTICE"        \ Print "PRACTICE"
 
- EQUB 200 + 37          \ Print token 37
+ EQUB 200 + 37          \ Print token 37 (menu option 2)
 
  EQUS "COMPETITION"     \ Print "COMPETITION"
 
@@ -10870,7 +10871,7 @@ ORG &0B00
 
  EQUB 8, 8              \ Backspace to the left by two characters
 
- EQUB 200 + 31          \ Print token 31
+ EQUB 200 + 31          \ Print token 31 (two spaces and configurable colours)
 
  EQUB 255               \ End token
 
@@ -10994,7 +10995,7 @@ ORG &0B00
 
  EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB 200 + 17          \ Print token 17
+ EQUB 200 + 17          \ Print token 17 ("PRESS ")
 
  EQUS "SPACE BAR "      \ Print "SPACE BAR "
 
@@ -11576,13 +11577,13 @@ ORG &0B00
 
 .token24
 
- EQUB 200 + 35          \ Print token 35
+ EQUB 200 + 35          \ Print token 35 (cyan, move cursor to prompt position)
 
- EQUB 200 + 10          \ Print token 10
+ EQUB 200 + 10          \ Print token 10 ("SELECT ")
 
  EQUS "WING SETTINGS"   \ Print "WING SETTINGS"
 
- EQUB 200 + 16          \ Print token 16
+ EQUB 200 + 16          \ Print token 16 (" > ")
 
  EQUS "range 0 to 40"   \ Print "range 0 to 40"
 
@@ -11594,7 +11595,7 @@ ORG &0B00
 
  EQUB 133               \ Set foreground colour to magenta alphanumeric
 
- EQUB 200 + 16          \ Print token 16
+ EQUB 200 + 16          \ Print token 16 (" > ")
 
  EQUB 255               \ End token
 
@@ -11636,18 +11637,21 @@ ORG &0B00
  LDX #5                 \ Print "THE  PITS" as a double-height header at column
  JSR PrintHeader        \ 11, row 4, in blue text on a yellow background
 
- LDX #24
- JSR PrintToken
+ LDX #24                \ Print token 24, which shows the prompt "SELECT WING
+ JSR PrintToken         \ SETTINGS > range 0 to 40" and a further prompt of
+                        \ "rear > "
 
  JSR sub_C3EE0
  STA L5F3E
 
- LDX #25
+ LDX #25                \ Print token 25, which shows a prompt of "front > "
  JSR PrintToken
 
  JSR sub_C3EE0
  STA L5F3D
+
  JSR sub_C34D0
+
  RTS
 
 \ ******************************************************************************
@@ -11687,9 +11691,10 @@ ORG &0B00
 
  EQUB 31, 24, 2         \ Move text cursor to column 24, row 2
 
- EQUB 200 + 18          \ Print token 18
+ EQUB 200 + 18          \ Print token (configurable token number, default is 18,
+                        \ which is " 5")
 
- EQUB 200 + 14          \ Print token 14
+ EQUB 200 + 14          \ Print token 14 (" laps")
 
  EQUB 255               \ End token
 
@@ -11892,21 +11897,21 @@ ORG &0B00
 
 .token27
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
- EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
+ EQUB 200 + 36          \ Print token 36 (menu option 1 with "PRESS" prompt)
 
- EQUB 200 + 11          \ Print token 11
+ EQUB 200 + 11          \ Print token 11 ("ENTER ")
 
  EQUS "ANOTHER"         \ Print "ANOTHER"
 
- EQUB 200 + 12          \ Print token 12
+ EQUB 200 + 12          \ Print token 12 (" DRIVER")
 
- EQUB 200 + 37          \ Print token 37
+ EQUB 200 + 37          \ Print token 37 (menu option 2)
 
  EQUS "START"           \ Print "START"
 
- EQUB 200 + 15          \ Print token 15
+ EQUB 200 + 15          \ Print token 15 (" RACE")
 
  EQUB 255               \ End token
 
@@ -11927,13 +11932,15 @@ ORG &0B00
 
  EQUB 141               \ Set double-height text
 
- EQUB 129, 157          \ Set background colour to red
+ EQUB 129, 157          \ Set background colour (configurable, default is red)
 
- EQUB 131               \ Set foreground colour to yellow alphanumeric
+ EQUB 131               \ Set foreground colour (configurable, default is yellow
+                        \ alphanumeric)
 
- EQUB 200+0             \ Print token 0 ("FORMULA 3  CHAMPIONSHIP")
+ EQUB 200+0             \ Print token (configurable token number, default is 0,
+                        \ which is "FORMULA 3  CHAMPIONSHIP")
 
- EQUB 160+2             \ Print 2 spaces
+ EQUB 160+2             \ Print spaces (configurable, default is 2 spaces)
 
  EQUB 156               \ Set background colour to black
 
@@ -12076,29 +12083,29 @@ ORG &0B00
 
 .token21
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
- EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
+ EQUB 200 + 36          \ Print token 36 (menu option 1 with "PRESS" prompt)
 
- EQUB 200 + 7           \ Print token 7
+ EQUB 200 + 7           \ Print token 7 ("Novice")
 
- EQUB 200 + 37          \ Print token 37
+ EQUB 200 + 37          \ Print token 37 (menu option 2)
 
- EQUB 200 + 8           \ Print token 8
+ EQUB 200 + 8           \ Print token 8 ("Amateur")
 
- EQUB 200 + 38          \ Print token 38
+ EQUB 200 + 38          \ Print token 38 (menu option 3)
 
- EQUB 200 + 9           \ Print token 9
+ EQUB 200 + 9           \ Print token 9 ("Professional")
 
- EQUB 200 + 35          \ Print token 35
+ EQUB 200 + 35          \ Print token 35 (cyan, move cursor to prompt position)
 
  EQUB 160 + 4           \ Print 4 spaces
 
- EQUB 200 + 10          \ Print token 10
+ EQUB 200 + 10          \ Print token 10 ("SELECT ")
 
  EQUS "THE CLASS OF"    \ Print "THE CLASS OF"
 
- EQUB 200 + 15          \ Print token 15
+ EQUB 200 + 15          \ Print token 15 (" RACE")
 
  EQUB 255               \ End token
 
@@ -12222,17 +12229,17 @@ ORG &0B00
 
 .token29
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
- EQUB 200 + 35          \ Print token 35
+ EQUB 200 + 35          \ Print token 35 (cyan, move cursor to prompt position)
 
  EQUB 160 + 5           \ Print 5 spaces
 
  EQUB 130               \ Set foreground colour to green alphanumeric
 
- EQUB 200 + 12          \ Print token 12
+ EQUB 200 + 12          \ Print token 12 (" DRIVER")
 
- EQUB 200 + 16          \ Print token 16
+ EQUB 200 + 16          \ Print token 16 (" > ")
 
  EQUB 255               \ End token
 
@@ -12721,13 +12728,16 @@ ORG &0B00
 
  EQUB 12                \ Clear text area (clear screen)
 
- EQUB 31, 4, 3          \ Move text cursor to column 4, row 3 (configurable)
+ EQUB 31, 4, 3          \ Move text cursor (configurable, default is column 4,
+                        \ row 3)
 
- EQUB 200 + 34          \ Print token 34 (configurable double-height text)
+ EQUB 200 + 34          \ Print token 34 (double-height, text and colours are
+                        \ configurable)
 
- EQUB 160 + 10          \ Print 10 spaces (configurable)
+ EQUB 160 + 10          \ Print spaces (configurable, default is 10 spaces)
 
- EQUB 200 + 34          \ Print token 34 (configurable double-height text)
+ EQUB 200 + 34          \ Print token 34 (double-height, text and colours are
+                        \ configurable)
 
  EQUB 31, 36, 2         \ Move text cursor to column 36, row 2
 
@@ -12942,7 +12952,7 @@ ORG &0B00
 
  EQUB 160 + 5           \ Print 5 spaces
 
- EQUB 200 + 51          \ Print token 51
+ EQUB 200 + 51          \ Print token 51 (" POINTS")
 
  EQUB 160 + 6           \ Print 6 spaces
 
@@ -13152,33 +13162,33 @@ ORG &0B00
 
 .token28
 
- EQUB 200 + 54          \ Print token 54
+ EQUB 200 + 54          \ Print token 54 ("FORMULA 3  CHAMPIONSHIP" header)
 
- EQUB 200 + 35          \ Print token 35
+ EQUB 200 + 35          \ Print token 35 (cyan, move cursor to prompt position)
 
  EQUB 160 + 6           \ Print 6 spaces
 
- EQUB 200 + 10          \ Print token 10
+ EQUB 200 + 10          \ Print token 10 ("SELECT ")
 
  EQUS "NUMBER OF LAPS"  \ Print "NUMBER OF LAPS"
  
- EQUB 200 + 36          \ Print token 36 (menu with flashing "PRESS" and "1)
+ EQUB 200 + 36          \ Print token 36 (menu option 1 with "PRESS" prompt)
 
- EQUB 200 + 18          \ Print token 18
+ EQUB 200 + 18          \ Print token 18 (" 5")
 
- EQUB 200 + 14          \ Print token 14
+ EQUB 200 + 14          \ Print token 14 (" laps")
 
- EQUB 200 + 37          \ Print token 37
+ EQUB 200 + 37          \ Print token 37 (menu option 2)
 
- EQUB 200 + 19          \ Print token 19
+ EQUB 200 + 19          \ Print token 19 ("10")
 
- EQUB 200 + 14          \ Print token 14
+ EQUB 200 + 14          \ Print token 14 (" laps")
 
- EQUB 200 + 38          \ Print token 38
+ EQUB 200 + 38          \ Print token 38 (menu option 3)
 
- EQUB 200 + 20          \ Print token 20
+ EQUB 200 + 20          \ Print token 20 ("20")
 
- EQUB 200 + 14          \ Print token 14
+ EQUB 200 + 14          \ Print token 14 (" laps")
 
  EQUB 255               \ End token
 
@@ -13256,7 +13266,7 @@ ORG &0B00
 
  EQUB 134               \ Set foreground colour to cyan alphanumeric
 
- EQUB 200 + 17          \ Print token 17
+ EQUB 200 + 17          \ Print token 17 ("PRESS ")
 
  EQUB 31, 5, 16         \ Move text cursor to column 5, row 16
 
@@ -18979,7 +18989,7 @@ ORG &5FD0
 
  JSR PrintHeaderChecks  \ Print chequered lines above and below the header
 
- LDX #39                \ Print token 39, which is a menu with the following
+ LDX #39                \ Print token 39, which shows a menu with the following
  JSR PrintToken         \ options:
                         \
                         \   1 = PRACTICE
@@ -19004,21 +19014,39 @@ ORG &5FD0
  LDA #0
  STA L5F3C
 
- LDX #21
- JSR PrintToken
+ LDX #21                \ Print token 21, which shows a menu with the following
+ JSR PrintToken         \ options:
+                        \
+                        \   Prompt = SELECT THE CLASS OF RACE
+                        \
+                        \   1 = Novice
+                        \
+                        \   2 = Amateur
+                        \
+                        \   3 = Professional
 
  LDX #3
  JSR GetMenuOption
+
  STX L5F3A
  JSR sub_C44C6
 
 .C641F
 
- LDX #22
- JSR PrintToken
+ LDX #22                \ Print token 22, which shows a menu with the following
+ JSR PrintToken         \ options:
+                        \
+                        \   Prompt = SELECT DURATION OF QUALIFYING LAPS
+                        \
+                        \   1 = 5 mins
+                        \
+                        \   2 = 10 mins
+                        \
+                        \   3 = 20 mins
 
  LDX #3
  JSR GetMenuOption
+
  LDA L3DF0,X
  STA L5F3B
  JSR sub_C42EC
@@ -19043,19 +19071,29 @@ ORG &5FD0
 
 .C6457
 
- LDX #23
- JSR PrintToken
+ LDX #23                \ Print token 23, which shows the following prompt:
+ JSR PrintToken         \
+                        \   ENTER NAME OF DRIVER
+                        \
+                        \ and a text prompt:
+                        \
+                        \   > 
+                        \     ------------
 
  JSR sub_C66D4
  JSR sub_C655A
  LDX L006F
  BEQ C6474
 
- LDX #27
- JSR PrintToken
-
+ LDX #27                \ Print token 27, which shows a menu with the following
+ JSR PrintToken         \ options:
+                        \
+                        \   1 = ENTER ANOTHER DRIVER
+                        \
+                        \   2 = START RACE
  LDX #2
  JSR GetMenuOption
+
  CPX #0
  BEQ C6436
 
@@ -19092,8 +19130,8 @@ ORG &5FD0
  LDX L5F3A
  JSR sub_C44C6
 
- LDX #26
- JSR PrintToken
+ LDX #26                \ Print token 26, which is a double-height header with
+ JSR PrintToken         \ the text "STANDARD OF RACE"
 
  JSR sub_C3C6F
  JSR sub_C34D0
@@ -19123,15 +19161,25 @@ ORG &5FD0
  LDA L5F3C
  BNE C64F2
 
- LDX #28
- JSR PrintToken
+ LDX #28                \ Print token 28, which shows a menu with the following
+ JSR PrintToken         \ options:
+                        \
+                        \   Prompt = SELECT NUMBER OF LAPS
+                        \
+                        \   1 = 5 laps
+                        \
+                        \   2 = 10 laps
+                        \
+                        \   3 = 20 laps
 
- LDA #&14
+ LDA #20
  SEC
  SBC L5F39
  STA L5F38
+
  LDX #3
  JSR GetMenuOption
+
  LDA L3DF4,X
  STA L006E
  STX L5F3F
@@ -19327,7 +19375,9 @@ ORG &5FD0
 
  LDX #30
  STX W
- JSR PrintToken
+
+ JSR PrintToken         \ Print token 30 ("PRESS SPACE BAR TO CONTINUE" in cyan
+                        \ at column 5, row 24)
 
 .mopt5
 
@@ -19412,7 +19462,7 @@ ORG &5FD0
  STA L0078
  JSR sub_C3E60
 
- LDX #32
+ LDX #32                \ Print token 32, which prints two spaces and backspaces
  JSR PrintToken
 
  LDY L001B
@@ -19426,14 +19476,14 @@ ORG &5FD0
  JSR sub_C65C8
  JSR sub_C37D6
 
- LDX #31
- JSR PrintToken
+ LDX #31                \ Print token 31, which prints two spaces and sets
+ JSR PrintToken         \ configurable colours
 
  LDY L001B
  JSR sub_C667B
 
- LDX #31
- JSR PrintToken
+ LDX #31                \ Print token 31, which prints two spaces and sets
+ JSR PrintToken         \ configurable colours
 
  LDX L0045
  PLA
@@ -19488,8 +19538,8 @@ ORG &5FD0
  LDA L006C
  BPL C666E
 
- LDX #49
- JSR PrintToken
+ LDX #49                \ Print token 49, which moves the cursor to column 9,
+ JSR PrintToken         \ row 2
 
  JSR sub_C3C6F
  LDA L5F3F
@@ -19497,8 +19547,8 @@ ORG &5FD0
  ADC #&DA
  STA token50+3
 
- LDX #50
- JSR PrintToken
+ LDX #50                \ Print token 50, which is "n laps", where n is the
+ JSR PrintToken         \ number of laps we just configured
 
 .C666E
 
@@ -19561,8 +19611,8 @@ ORG &5FD0
 
 .sub_C6687
 
- LDX #29
- JSR PrintToken
+ LDX #29                \ Print token 29, which clears the screen, displays the
+ JSR PrintToken         \ F3 header, and shows a " DRIVER > " prompt
 
  LDX L006F
  JSR sub_C3CEB
