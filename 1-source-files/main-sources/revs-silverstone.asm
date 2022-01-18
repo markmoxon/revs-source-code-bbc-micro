@@ -331,10 +331,12 @@ ORG CODE%
  EQUB &01, &01, &00
 
 \ trackData+1798 = 5A06
+\ Called "ratios" in car performance hack
 
  EQUB &67, &00, &67, &42, &35, &2E, &2A
 
 \ trackData+1805 = 5A0D
+\ Called "powers" in car performance hack
 
  EQUB &A1, &00, &A1, &68, &52, &48, &41
 
