@@ -983,7 +983,7 @@ ORG &0B00
 
  LDX #1
 
-.loop_C0B79
+.P0B79
 
  LDA L5F3D,X
  ASL A
@@ -995,7 +995,7 @@ ORG &0B00
  ADC #&5A
  STA L62A8,X
  DEX
- BPL loop_C0B79
+ BPL P0B79
  LDA L5F3E
  ASL A
  ADC L5F3E
@@ -1892,7 +1892,7 @@ ORG &0B00
  BNE C0F63
  LDY T
 
-.loop_C0EF0
+.P0EF0
 
  STY T
  LDX L3DE2,Y
@@ -1900,7 +1900,7 @@ ORG &0B00
  BEQ C0F01
  LDY T
  DEY
- BPL loop_C0EF0
+ BPL P0EF0
  BMI C0F11
 
 .C0F01
@@ -1920,12 +1920,12 @@ ORG &0B00
  BPL C0F25
  JSR sub_C43F6
 
-.loop_C0F1B
+.P0F1B
 
  JSR sub_C66B6
  LDX #&A6
  JSR ScanKeyboard
- BNE loop_C0F1B
+ BNE P0F1B
 
 .C0F25
 
@@ -2215,18 +2215,18 @@ ORG &0B00
  SEC
  ROR L62F8
 
-.loop_C10A1
+.P10A1
 
  LDX #&13
 
-.loop_C10A3
+.P10A3
 
  JSR sub_C147C
  DEX
- BPL loop_C10A3
+ BPL P10A3
  LDA L08D0
  ORA L08E8
- BNE loop_C10A1
+ BNE P10A1
  LDA #&FF
  STA L0078
  BNE C10CF
@@ -2236,7 +2236,7 @@ ORG &0B00
  LDA V
  STA W
 
-.loop_C10BB
+.P10BB
 
  TXA
  PHA
@@ -2246,7 +2246,7 @@ ORG &0B00
  PLA
  TAX
  DEC W
- BPL loop_C10BB
+ BPL P10BB
  INX
  CPX #&14
  BCC C10B7
@@ -2274,35 +2274,35 @@ ORG &0B00
  STA V
  STA L0042
 
-.loop_C10F2
+.P10F2
 
  JSR sub_C14C3
  DEC V
- BNE loop_C10F2
+ BNE P10F2
 
-.loop_C10F9
+.P10F9
 
  INC L0042
  JSR sub_C14C3
- BCC loop_C10F9
+ BCC P10F9
  LDA #&50
  LDY #&13
 
-.loop_C1104
+.P1104
 
  LDX L013C,Y
  EOR #&FF
  STA L0178,X
  DEY
- BPL loop_C1104
+ BPL P1104
  LDA #0
  STA L0024
 
-.loop_C1113
+.P1113
 
  JSR sub_C12F7
  DEC L0042
- BNE loop_C1113
+ BNE P1113
  LSR L62F8
  RTS
 
@@ -2344,11 +2344,11 @@ ORG &0B00
  LDA #0
  LDX #&1E
 
-.loop_C114C
+.P114C
 
  STA L62D0,X
  DEX
- BPL loop_C114C
+ BPL P114C
  STA L0061
  STA L0026
  STA L0060
@@ -2494,14 +2494,14 @@ ORG &0B00
  JSR C2937
  LDX #2
 
-.loop_C11DB
+.P11DB
 
  LDA L09FD,X
  STA L6280,X
  LDA L0AFD,X
  STA L6283,X
  DEX
- BPL loop_C11DB
+ BPL P11DB
  LDA L0022
  CLC
  ADC #3
@@ -2694,7 +2694,7 @@ ORG &0B00
 
  LDX #&2C
 
-.loop_C12A2
+.P12A2
 
  LDA L5E40,X
  STA L5E41,X
@@ -2709,7 +2709,7 @@ ORG &0B00
 .C12BA
 
  DEX
- BPL loop_C12A2
+ BPL P12A2
  LDA #6
  SEC
  SBC L0007
@@ -3100,11 +3100,11 @@ ORG &0B00
  JSR sub_C13DA
  STX L0042
 
-.loop_C142B
+.P142B
 
  JSR sub_C12F7
  DEC L0042
- BNE loop_C142B
+ BNE P142B
  RTS
 
 \ ******************************************************************************
@@ -3178,7 +3178,7 @@ ORG &0B00
  BEQ C147B
  LDX #2
 
-.loop_C146B
+.P146B
 
  LDA #0
  SEC
@@ -3188,7 +3188,7 @@ ORG &0B00
  SBC L0083,X
  STA L0083,X
  DEX
- BPL loop_C146B
+ BPL P146B
 
 .C147B
 
@@ -3699,7 +3699,7 @@ ORG &0B00
  LDA #0
  STA printMode
  JSR CopyDashboard
- JSR L7BE2
+ JSR sub_C7BE2
  BIT L05F4
  BVS C16F9
 
@@ -3725,7 +3725,7 @@ ORG &0B00
 .C1701
 
  JSR sub_C5052
- JSR L7B4A
+ JSR sub_C7B4A
  JSR sub_C1579
  JSR sub_C46A1
  JSR sub_C24F6
@@ -3743,12 +3743,12 @@ ORG &0B00
  JSR sub_C1B12
  JSR sub_C2637
  JSR sub_C1E15
- JSR L7B00
+ JSR sub_C7B00
  JSR sub_C0E74
  JSR sub_C4F44
  JSR sub_C1BB9
  JSR sub_C111E
- JSR L7BE2
+ JSR sub_C7BE2
  LDA L4F43
  BPL C1753
  INC L4F43
@@ -3761,12 +3761,12 @@ ORG &0B00
  LDA #&9C
  STA L62F7
 
-.loop_C1760
+.P1760
 
  LDA L62F7
- BMI loop_C1760
+ BMI P1760
 
-.loop_C1765
+.P1765
 
  LDA L5F3B
  BMI C16EE
@@ -3779,7 +3779,7 @@ ORG &0B00
 
  JSR sub_C43F6
  LDA L5F3B
- BMI loop_C1765
+ BMI P1765
  LDX #&30
  JSR sub_C17FC
  JSR sub_C1163
@@ -3914,23 +3914,23 @@ ORG &0B00
  LDA #0
  LDX #&68
 
-.loop_C1809
+.P1809
 
  STA L0000,X
  DEX
- BPL loop_C1809
+ BPL P1809
  LDX #&7F
 
-.loop_C1810
+.P1810
 
  STA L6280,X
  DEX
- BPL loop_C1810
+ BPL P1810
  JSR sub_C0B65
  LDX #&17
  STX L62F9
 
-.loop_C181E
+.P181E
 
  LDA trackData+1791
  STA L08E8,X
@@ -3940,7 +3940,7 @@ ORG &0B00
  STA L06E8,X
  STA L0880,X
  DEX
- BPL loop_C181E
+ BPL P181E
  JSR sub_C63A2
  LDA #1
  BIT L006C
@@ -3982,11 +3982,11 @@ ORG &0B00
  STX L0008
  DEX
 
-.loop_C1885
+.P1885
 
  STA L6293,X
  DEX
- BPL loop_C1885
+ BPL P1885
  JSR PrintGearNumber
  LDA L006C
  BMI C18A5
@@ -4050,7 +4050,7 @@ ORG &0B00
  LDA #&21
  LDY #&4F
 
-.loop_C18DD
+.P18DD
 
  LDX L5F60,Y
  BEQ C18E3
@@ -4060,7 +4060,7 @@ ORG &0B00
 
  STA L5F60,Y
  DEY
- BPL loop_C18DD
+ BPL P18DD
  RTS
 
 \ ******************************************************************************
@@ -4261,7 +4261,7 @@ ORG &0B00
 
 .sub_C193E
 
- STA loop_C196F+1
+ STA P196F+1
  STY L004B
  DEY
  STY U
@@ -4296,7 +4296,7 @@ ORG &0B00
  TXA
  JMP C1973
 
-.loop_C196F
+.P196F
 
  STA L0400,Y
  DEY
@@ -4304,7 +4304,7 @@ ORG &0B00
 .C1973
 
  CPY L0082
- BNE loop_C196F
+ BNE P196F
 
 .C1977
 
@@ -4338,13 +4338,13 @@ ORG &0B00
 
  LDX L0050
 
-.loop_C1998
+.P1998
 
  LDA L5EE0,X
  BPL C19A2
  INX
  CPX U
- BCC loop_C1998
+ BCC P1998
 
 .C19A2
 
@@ -4582,14 +4582,14 @@ ORG &0B00
  ADC #&14
  BPL C1B03
 
-.loop_C1AD8
+.P1AD8
 
  LDA L5EE1,X
  BPL C1AE4
  INX
  INC U
  CPX L004B
- BCC loop_C1AD8
+ BCC P1AD8
 
 .C1AE4
 
@@ -4688,12 +4688,12 @@ ORG &0B00
  STA L0036
  LDY #2
 
-.loop_C1B5B
+.P1B5B
 
  ASL T
  ROL U
  DEY
- BNE loop_C1B5B
+ BNE P1B5B
  LDA U
  BPL C1B6B
  EOR #&FF
@@ -5081,7 +5081,7 @@ ORG &0B00
  LDY L007F
  JMP C1D6B
 
-.loop_C1D4F
+.P1D4F
 
  LDA (P),Y
  BEQ C1D5D
@@ -5113,7 +5113,7 @@ ORG &0B00
 .C1D6B
 
  CPY L0082
- BNE loop_C1D4F
+ BNE P1D4F
  LDX L007B
  CPX #1
  BEQ C1D93
@@ -5205,7 +5205,7 @@ ORG &0B00
  EQUB &C9, &55, &D0, &02, &A9, &00, &91, &72, &88, &C4, &82, &F0
  EQUB &12
 
-.loop_C1DD2
+.P1DD2
 
  LDA (P),Y
 
@@ -5230,13 +5230,13 @@ ORG &0B00
 .C1DE0
 
  CPY L0082
- BNE loop_C1DD2
+ BNE P1DD2
 
 .C1DE4
 
  RTS
 
-.loop_C1DE5
+.P1DE5
 
  STA (P),Y
  DEY
@@ -5244,7 +5244,7 @@ ORG &0B00
 .C1DE8
 
  CPY L0082
- BNE loop_C1DE5
+ BNE P1DE5
  JMP C1D7C
 
 \ ******************************************************************************
@@ -5397,12 +5397,12 @@ ORG &0B00
  CPX #2
  BCC C1E98
 
-.loop_C1E8C
+.P1E8C
 
  STA (P),Y
  STA (R),Y
  INY
- BPL loop_C1E8C
+ BPL P1E8C
 
 .C1E93
 
@@ -5507,13 +5507,13 @@ ORG &0B00
  JSR sub_C63C5
  BNE C1EF1
 
-.loop_C1EEE
+.P1EEE
 
  JMP C162D
 
 .C1EF1
 
- BCS loop_C1EEE
+ BCS P1EEE
  CMP #5
  BCS C1F08
  JMP C15F4
@@ -5703,12 +5703,12 @@ ORG &0B00
  STX T
  LDX #3
 
-.loop_C1FB8
+.P1FB8
 
  LDA L38FC,X
  STA L628F,X
  DEX
- BPL loop_C1FB8
+ BPL P1FB8
  LDA #&F0
  STA L38FE
  LDA T
@@ -5841,11 +5841,11 @@ ORG &0B00
  LDX L002B
  BEQ C2080
 
-.loop_C207A
+.P207A
 
  LSR A
  DEX
- BNE loop_C207A
+ BNE P207A
  ADC #0
 
 .C2080
@@ -5947,7 +5947,7 @@ ORG &0B00
  BVS C2106
  LDY L001B
 
-.loop_C2102
+.P2102
 
  INY
  JMP C209C
@@ -5956,7 +5956,7 @@ ORG &0B00
 
  RTS
 
-.loop_C2107
+.P2107
 
  AND #&40
  BNE C2106
@@ -5965,10 +5965,10 @@ ORG &0B00
 .C210C
 
  LDA L3750,Y
- BMI loop_C2107
+ BMI P2107
  AND #&40
  BNE C2106
- BEQ loop_C2102
+ BEQ P2102
 
 .C2117
 
@@ -6094,7 +6094,7 @@ ORG &0B00
  BEQ C220D
  JMP C2239
 
-.loop_C21BD
+.P21BD
 
  ASL L0082
  ROL L0085
@@ -6103,7 +6103,7 @@ ORG &0B00
 
  ASL L0080
  ROL A
- BCC loop_C21BD
+ BCC P21BD
  ROR A
  STA V
  LDA L0082
@@ -6183,7 +6183,7 @@ ORG &0B00
  STA L008B
  RTS
 
-.loop_C2235
+.P2235
 
  ASL L0080
  ROL L0083
@@ -6192,7 +6192,7 @@ ORG &0B00
 
  ASL L0082
  ROL A
- BCC loop_C2235
+ BCC P2235
  ROR A
  STA V
  LDA L0080
@@ -6312,7 +6312,7 @@ ORG &0B00
  LDA L007D
  JMP C22CA
 
-.loop_C22C5
+.P22C5
 
  ASL L0081
  ROL L0084
@@ -6322,7 +6322,7 @@ ORG &0B00
 
  ASL L007C
  ROL A
- BCC loop_C22C5
+ BCC P22C5
  ROR A
  STA V
  STY L002B
@@ -6389,7 +6389,7 @@ ORG &0B00
  CPY #6
  BEQ C2330
 
-.loop_C2318
+.P2318
 
  CPY L0008
  BEQ C232B
@@ -6406,7 +6406,7 @@ ORG &0B00
 
  INY
  CPY #6
- BCC loop_C2318
+ BCC P2318
 
 .C2330
 
@@ -6945,12 +6945,12 @@ ORG &0B00
  BEQ C25A9
  BPL C25A3
 
-.loop_C259B
+.P259B
 
  LSR U
  ROR A
  INY
- BNE loop_C259B
+ BNE P259B
  BEQ C25A9
 
 .C25A3
@@ -7055,18 +7055,18 @@ ORG &0B00
 
  LDX #&16
 
-.loop_C2621
+.P2621
 
  LDA L018C,X
  ORA #&80
  STA L018C,X
  DEX
- BPL loop_C2621
+ BPL P2621
  RTS
 
 \ ******************************************************************************
 \
-\       Name: loop_C262D
+\       Name: sub_C262D
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -7077,7 +7077,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.loop_C262D
+.sub_C262D
 
  LDX #6
 
@@ -7105,7 +7105,7 @@ ORG &0B00
 .sub_C2637
 
  LDA L5F3B
- BMI loop_C262D
+ BMI sub_C262D
  LDX L005B
  LDY L013C,X
  LDA L018C,Y
@@ -7118,7 +7118,7 @@ ORG &0B00
  LDX L0003
  LDY #5
 
-.loop_C2659
+.P2659
 
  BIT L0025
  BPL C2663
@@ -7137,7 +7137,7 @@ ORG &0B00
  LDX L001D
  LDY L62F4
  DEY
- BPL loop_C2659
+ BPL P2659
  JSR sub_C66DF
  LDX L005B
  JSR sub_C28F2
@@ -7448,7 +7448,7 @@ ORG &0B00
  PLP
  SEC
 
-.loop_C27EC
+.P27EC
 
  RTS
 
@@ -7468,7 +7468,7 @@ ORG &0B00
 .sub_C27ED
 
  LDA L006D
- BMI loop_C27EC
+ BMI P27EC
  LDX #&14
  JMP C28E7
 
@@ -7571,7 +7571,7 @@ ORG &0B00
  LDA #1
  STA V
 
-.loop_C2883
+.P2883
 
  LDA L0150,X
  CLC
@@ -7583,7 +7583,7 @@ ORG &0B00
 .C2892
 
  DEC V
- BPL loop_C2883
+ BPL P2883
  LDA L018C,X
  ASL A
  BCS C28E7
@@ -7955,11 +7955,11 @@ ORG &0B00
  BEQ C2A99
  BPL C2A95
 
-.loop_C2A8F
+.P2A8F
 
  LSR A
  INX
- BNE loop_C2A8F
+ BNE P2A8F
  BEQ C2A99
 
 .C2A95
@@ -8126,7 +8126,7 @@ ORG &0B00
 
  LDX #2
 
-.loop_C2B10
+.P2B10
 
  LDA L0083,X
  CLC
@@ -8138,7 +8138,7 @@ ORG &0B00
  ROR L0083,X
  ROR T,X
  DEX
- BPL loop_C2B10
+ BPL P2B10
  RTS
 
 \ ******************************************************************************
@@ -8353,7 +8353,7 @@ ORG &0B00
  LDY L0054
  LDX #0
 
-.loop_C2C13
+.P2C13
 
  LDA L5FD0,Y
  STA L628F,X
@@ -8362,7 +8362,7 @@ ORG &0B00
  INY
  INX
  CPX #4
- BNE loop_C2C13
+ BNE P2C13
  LDA L0027
  ASL A
  ASL A
@@ -8772,61 +8772,61 @@ ORG &0B00
  BCC C2E30
  SBC L0084
 
-.loop_C2E3B
+.P2E3B
 
  LDX #1
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2E3B
+ BCC P2E3B
  SBC L0084
 
-.loop_C2E46
+.P2E46
 
  LDX #2
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2E46
+ BCC P2E46
  SBC L0084
 
-.loop_C2E51
+.P2E51
 
  LDX #3
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2E51
+ BCC P2E51
  SBC L0084
  INC L0085
 
-.loop_C2E5E
+.P2E5E
 
  LDX #0
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2E5E
+ BCC P2E5E
  SBC L0084
 
-.loop_C2E69
+.P2E69
 
  LDX #1
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2E69
+ BCC P2E69
  SBC L0084
 
-.loop_C2E74
+.P2E74
 
  LDX #2
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2E74
+ BCC P2E74
  SBC L0084
 
-.loop_C2E7F
+.P2E7F
 
  LDX #3
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2E7F
+ BCC P2E7F
  SBC L0084
  INC S
  INC Q
@@ -8872,61 +8872,61 @@ ORG &0B00
  BCC C2EA9
  SBC L0084
 
-.loop_C2EB4
+.P2EB4
 
  LDX #2
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2EB4
+ BCC P2EB4
  SBC L0084
 
-.loop_C2EBF
+.P2EBF
 
  LDX #1
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2EBF
+ BCC P2EBF
  SBC L0084
 
-.loop_C2ECA
+.P2ECA
 
  LDX #0
  JSR sub_C2F87
  ADC L0083
- BCC loop_C2ECA
+ BCC P2ECA
  SBC L0084
  DEC L0085
 
-.loop_C2ED7
+.P2ED7
 
  LDX #3
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2ED7
+ BCC P2ED7
  SBC L0084
 
-.loop_C2EE2
+.P2EE2
 
  LDX #2
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2EE2
+ BCC P2EE2
  SBC L0084
 
-.loop_C2EED
+.P2EED
 
  LDX #1
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2EED
+ BCC P2EED
  SBC L0084
 
-.loop_C2EF8
+.P2EF8
 
  LDX #0
  JSR sub_C2F45
  ADC L0083
- BCC loop_C2EF8
+ BCC P2EF8
  SBC L0084
  DEC S
  DEC Q
@@ -9019,7 +9019,7 @@ ORG &0B00
  LDA L008B
  STA (P),Y
 
-.loop_C2F5E
+.P2F5E
 
  LDA L008A
 
@@ -9034,7 +9034,7 @@ ORG &0B00
  CPY #&2C
  BCS C2F6C
  JSR sub_C2FEE
- BCC loop_C2F5E
+ BCC P2F5E
 
 .C2F6C
 
@@ -9097,7 +9097,7 @@ ORG &0B00
  LDA L008B
  STA (L008E),Y
 
-.loop_C2FA0
+.P2FA0
 
  LDA L008A
 
@@ -9112,7 +9112,7 @@ ORG &0B00
  CPY #&2C
  BCS C2FAE
  JSR sub_C2FEE
- BCC loop_C2FA0
+ BCC P2FA0
 
 .C2FAE
 
@@ -9508,7 +9508,7 @@ ORG &0B00
 
  LDX #3
 
-.loop_C31D2
+.P31D2
 
  CPY L001F
  BCC C31DB
@@ -9532,7 +9532,7 @@ ORG &0B00
 
  DEY
  CPY U
- BNE loop_C31D2
+ BNE P31D2
  INC T
  LDA P
  EOR #&80
@@ -9610,7 +9610,7 @@ ORG &0B00
  STA R
  LDY #0
 
-.loop_C3256
+.P3256
 
  LDA (R),Y
 
@@ -9618,7 +9618,7 @@ ORG &0B00
 
  INY
  CPY #&0C
- BNE loop_C3256
+ BNE P3256
  RTS
 
 \ ******************************************************************************
@@ -10133,11 +10133,11 @@ ORG &0B00
  LDX #30                \ Print token 30 ("PRESS SPACE BAR TO CONTINUE" in cyan
  JSR PrintToken         \ at column 5, row 24)
 
-.loop_C34D9
+.P34D9
 
  LDX #&9D
  JSR ScanKeyboard
- BEQ loop_C34D9
+ BEQ P34D9
 
 .C34E0
 
@@ -12975,13 +12975,13 @@ ORG &0B00
  JSR sub_C32D0
  BCC C3EF9
 
-.loop_C3EEE
+.P3EEE
 
  DEY
  BMI sub_C3EE0
  LDA #&7F
  JSR OSWRCH
- JMP loop_C3EEE
+ JMP P3EEE
 
 .C3EF9
 
@@ -13759,11 +13759,11 @@ ORG &0B00
 
  LDX #&13
 
-.loop_C42EE
+.P42EE
 
  JSR sub_C40EB
  DEX
- BPL loop_C42EE
+ BPL P42EE
  RTS
 
 \ ******************************************************************************
@@ -14007,11 +14007,11 @@ LDA #&20
 
  LDX #3
 
-.loop_C43F8
+.P43F8
 
  JSR sub_C0E5A
  DEX
- BPL loop_C43F8
+ BPL P43F8
  RTS
 
  EQUB 0
@@ -14126,7 +14126,7 @@ LDA #&20
  LSR A
  TAY
 
-.loop_C44D5
+.P44D5
 
  LDA trackData+1744,Y
  LSR A
@@ -14146,7 +14146,7 @@ LDA #&20
 
  DEY
 
- BPL loop_C44D5
+ BPL P44D5
 
  RTS
 
@@ -14601,12 +14601,12 @@ LDA #&20
  LDX #2
  LDA #0
 
-.loop_C4710
+.P4710
 
  STA L62D5,X
  STA L62E5,X
  DEX
- BPL loop_C4710
+ BPL P4710
 
 .C4719
 
@@ -14871,11 +14871,11 @@ LDA #&20
  STA L62D5
  LDY #1
 
-.loop_C4817
+.P4817
 
  LDX #3
 
-.loop_C4819
+.P4819
 
  LDA L62EA,X
  CLC
@@ -14887,9 +14887,9 @@ LDA #&20
  ROR L62EA,X
  ROR L62DA,X
  DEX
- BPL loop_C4819
+ BPL P4819
  DEY
- BPL loop_C4817
+ BPL P4817
  LDX #2
  LDA #1
  STA L0078
@@ -15462,12 +15462,12 @@ LDA #&20
  JSR sub_C0E42
  LDY #5
 
-.loop_C4AA2
+.P4AA2
 
  ASL T
  ROL A
  DEY
- BNE loop_C4AA2
+ BNE P4AA2
  STA L62EA,X
  PLP
  BEQ C4AB4
@@ -15655,15 +15655,15 @@ LDA #&20
 
  LDY #5
 
-.loop_C4B79
+.P4B79
 
  ASL L008E
  ROL A
  BMI C4B84
  DEY
- BNE loop_C4B79
+ BNE P4B79
 
-.loop_C4B81
+.P4B81
 
  STA L008F
  RTS
@@ -15671,7 +15671,7 @@ LDA #&20
 .C4B84
 
  LDA #&7F
- BNE loop_C4B81
+ BNE P4B81
 
 \ ******************************************************************************
 \
@@ -16079,7 +16079,7 @@ LDA #&20
 
  JSR sub_C44C6
 
-.loop_C4D55
+.P4D55
 
  TXA
  STA L013C,X
@@ -16092,7 +16092,7 @@ LDA #&20
  STA L39E4,X
  STA L04F0,X
  TXA
- BNE loop_C4D55
+ BNE P4D55
  RTS
 
 \ ******************************************************************************
@@ -16318,13 +16318,13 @@ LDA #&20
  SEI
  LDX #&0D
 
-.loop_C4DE0
+.P4DE0
 
  STX VIA+&00            \ crtc_horz_total
  LDA L4F0F,X
  STA VIA+&01            \ crtc_horz_displayed
  DEX
- BPL loop_C4DE0
+ BPL P4DE0
  DEX
  STX L4F43
  CLI
@@ -16334,11 +16334,11 @@ LDA #&20
  CLC
  LDA #7
 
-.loop_C4DFB
+.P4DFB
 
  STA VIA+&21            \ video_ula_palette
  ADC #&10
- BCC loop_C4DFB
+ BCC P4DFB
  SEI
  LDA IRQ1V
  STA L4F1D
@@ -16346,10 +16346,10 @@ LDA #&20
  STA L4F1E
  LDA #2
 
-.loop_C4E11
+.P4E11
 
  BIT VIA+&4D            \ system_via_ifr
- BEQ loop_C4E11
+ BEQ P4E11
  LDA #&40
  STA VIA+&6B            \ user_via_acr
  ORA VIA+&4B            \ system_via_acr
@@ -16380,7 +16380,7 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: loop_C4E59
+\       Name: sub_C4E59
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -16391,13 +16391,13 @@ LDA #&20
 \
 \ ******************************************************************************
 
-.loop_C4E59
+.sub_C4E59
 
  JMP (L4F1D)
 
  LDA VIA+&6D            \ user_via_ifr
  AND #&40
- BEQ loop_C4E59
+ BEQ sub_C4E59
  STA VIA+&6D            \ user_via_ifr
  TXA
  PHA
@@ -16418,14 +16418,14 @@ LDA #&20
  STA VIA+&20            \ video_ula_control
  LDX #&0F
 
-.loop_C4E83
+.P4E83
 
  LDA L3468,X
  STA VIA+&21            \ video_ula_palette
  DEX
- BPL loop_C4E83
+ BPL P4E83
 
-.loop_C4E8C
+.P4E8C
 
  LDA #&C4
  LDX #&0F
@@ -16436,7 +16436,7 @@ LDA #&20
  CMP #&FF
  BNE C4F0A
  INC L4F43
- BEQ loop_C4E8C
+ BEQ P4E8C
 
 .C4E9B
 
@@ -16445,11 +16445,11 @@ LDA #&20
  CLC
  LDA #3
 
-.loop_C4EA3
+.P4EA3
 
  STA VIA+&21            \ video_ula_palette
  ADC #&10
- BCC loop_C4EA3
+ BCC P4EA3
  LDA #&3C
  SEC
  SBC L4F1F
@@ -16465,12 +16465,12 @@ LDA #&20
 
  LDX #&0F
 
-.loop_C4EC5
+.P4EC5
 
  LDA L3458,X
  STA VIA+&21            \ video_ula_palette
  DEX
- BPL loop_C4EC5
+ BPL P4EC5
  LDA L4F21
  LDX L4F22
  BNE C4F01
@@ -16479,12 +16479,12 @@ LDA #&20
 
  LDX #3
 
-.loop_C4ED8
+.P4ED8
 
  LDA L3478,X
  STA VIA+&21            \ video_ula_palette
  DEX
- BPL loop_C4ED8
+ BPL P4ED8
  LDA #0
  LDX #&1E
  BNE C4F01
@@ -16493,12 +16493,12 @@ LDA #&20
 
  LDX #3
 
-.loop_C4EE9
+.P4EE9
 
  LDA L347C,X
  STA VIA+&21            \ video_ula_palette
  DEX
- BPL loop_C4EE9
+ BPL P4EE9
  STX L4F43
  JSR sub_C52A4
  LDA #&FF
@@ -16910,7 +16910,7 @@ LDA #&20
  STX yCursor
  LDX L006F
  LDA #&26
- JSR L7B9C
+ JSR sub_C7B9C
 
 \ ******************************************************************************
 \
@@ -16949,7 +16949,7 @@ LDA #&20
  LDX #&21
  STX yCursor
  LDX #&15
- JSR L7B9C
+ JSR sub_C7B9C
  RTS
 
 \ ******************************************************************************
@@ -17330,7 +17330,7 @@ LDA #&20
  BEQ C5139
  DEX
 
-.loop_C5123
+.P5123
 
  LDA L07A8,X
  STA P
@@ -17340,7 +17340,7 @@ LDA #&20
  LDY #0
  STA (P),Y
  DEX
- BPL loop_C5123
+ BPL P5123
  STY L0069
 
 .C5139
@@ -17477,11 +17477,11 @@ LDA #&20
  LDX #&FF
  SEC
 
-.loop_C51C5
+.P51C5
 
  INX
  SBC #&26
- BCS loop_C51C5
+ BCS P51C5
  ADC #&26
  CMP #&13
  BCC C51D8
@@ -19406,7 +19406,7 @@ ORG &5FD0
  LDX #0
  JSR OSBYTE
 
-.loop_C6314
+.P6314
 
  LDY #0
 
@@ -19429,7 +19429,7 @@ ORG &5FD0
  BNE C6316
  DEY
  BPL C633F
- BMI loop_C6314
+ BMI P6314
 
 .C6334
 
@@ -19458,7 +19458,7 @@ ORG &5FD0
  TAY
  JMP C6316
 
-.loop_C6351
+.P6351
 
  INY
 
@@ -19472,7 +19472,7 @@ ORG &5FD0
 
  LDA #&20
  STA (P),Y
- BNE loop_C6351
+ BNE P6351
 
 \ ******************************************************************************
 \
@@ -19495,22 +19495,22 @@ ORG &5FD0
  AND #&7F
  LDY #&10
 
-.loop_C6367
+.P6367
 
  CMP #4
  BCC C637B
  SBC #4
  DEY
- BNE loop_C6367
+ BNE P6367
  LDY #9
 
-.loop_C6372
+.P6372
 
  CMP #7
  BCC C637B
  SBC #7
  DEY
- BNE loop_C6372
+ BNE P6372
 
 .C637B
 
@@ -19559,12 +19559,12 @@ ORG &5FD0
  LDA L006F
  LDX #&13
 
-.loop_C63A6
+.P63A6
 
  CMP L013C,X
  BEQ C63AE
  DEX
- BPL loop_C63A6
+ BPL P63A6
 
 .C63AE
 
@@ -19767,7 +19767,7 @@ ORG &5FD0
  JSR sub_C0F64
  LDX #0
 
-.loop_C6480
+.P6480
 
  LDY L014F
  CPY L5F39
@@ -19779,7 +19779,7 @@ ORG &5FD0
  SBC trackData+1795,X
  BCS C649A
  INX
- BNE loop_C6480
+ BNE P6480
 
 .C649A
 
@@ -19805,7 +19805,7 @@ ORG &5FD0
  JSR sub_C65D3
  LDY #&13
 
-.loop_C64BC
+.P64BC
 
  LDA L013C,Y
  STA L04C8,Y
@@ -19819,7 +19819,7 @@ ORG &5FD0
 .C64CF
 
  DEY
- BPL loop_C64BC
+ BPL P64BC
  LDA L5F3C
  BNE C64F2
 
@@ -19857,12 +19857,12 @@ ORG &5FD0
  JSR sub_C6687
  LDX #&13
 
-.loop_C64FD
+.P64FD
 
  LDA L04C8,X
  STA L013C,X
  DEX
- BPL loop_C64FD
+ BPL P64FD
  JSR sub_C42EC
  LDA #&80
  JSR sub_C655C
@@ -19870,11 +19870,11 @@ ORG &5FD0
  JSR sub_C0F64
  LDX #5
 
-.loop_C6515
+.P6515
 
  JSR sub_C5A25
  DEX
- BPL loop_C6515
+ BPL P6515
  LDA #0
  JSR sub_C0F64
  LDX #6
@@ -19940,12 +19940,12 @@ ORG &5FD0
  STA L006C
  STA L006D
 
-.loop_C6560
+.P6560
 
  JSR sub_C3C50
  JSR sub_C16DC
  BIT L05F4
- BVS loop_C6560
+ BVS P6560
  BPL C6570
  JSR RestartGame
 
@@ -20152,7 +20152,7 @@ ORG &5FD0
  PHA
  BNE C6618
  LDA #&26
- JSR L7B9C
+ JSR sub_C7B9C
  JMP C6643
 
 .C6618
@@ -20331,22 +20331,22 @@ ORG &5FD0
  LDX L001F
  LDA #&80
 
-.loop_C66BA
+.P66BA
 
  STA L05A4,X
  STA L0650,X
  STA L0600,X
  STA L0554,X
  DEX
- BPL loop_C66BA
+ BPL P66BA
  LDX #&4F
  LDA #0
 
-.loop_C66CD
+.P66CD
 
  STA L5F60,X
  DEX
- BPL loop_C66CD
+ BPL P66CD
  RTS
 
 \ ******************************************************************************
@@ -20388,7 +20388,7 @@ ORG &5FD0
  LDX L0003
  BPL C66E6
 
-.loop_C66E3
+.P66E3
 
  JSR sub_C2ACB
 
@@ -20396,16 +20396,16 @@ ORG &5FD0
 
  JSR sub_C5084
  CPX L004D
- BNE loop_C66E3
+ BNE P66E3
  LDX #&16
 
-.loop_C66EF
+.P66EF
 
  STX L0045
  JSR sub_C2AD1
  DEX
  CPX #&14
- BCS loop_C66EF
+ BCS P66EF
  LDX L004D
  JSR sub_C2ACB
  RTS
@@ -20450,7 +20450,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
 
 \ ******************************************************************************
 \
-\       Name: L7B00
+\       Name: sub_C7B00
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -20463,7 +20463,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
 
  ORG &7B00
 
-.L7B00
+.sub_C7B00
 
  LDY L005B
  LDX L013C,Y
@@ -20512,7 +20512,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
 .L7B40
 
  STA L6293,Y
- JSR L7FB6
+ JSR sub_C7FB6
 
 .L7B46
 
@@ -20520,7 +20520,20 @@ INCBIN "1-source-files/images/dashboard1.bin"
  BPL L7B2E
  RTS
 
-.L7B4A
+\ ******************************************************************************
+\
+\       Name: sub_C7B4A
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7B4A
 
  LDA L006C
  BPL L7B9B
@@ -20593,7 +20606,20 @@ INCBIN "1-source-files/images/dashboard1.bin"
 
  RTS
 
-.L7B9C
+\ ******************************************************************************
+\
+\       Name: sub_C7B9C
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7B9C
 
  STA L0078
  LDA L06D0,X
@@ -20613,7 +20639,20 @@ INCBIN "1-source-files/images/dashboard1.bin"
 
  RTS
 
-.L7BBF
+\ ******************************************************************************
+\
+\       Name: sub_C7BBF
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7BBF
 
  LDA &7D24
  STA &7BD4
@@ -20629,7 +20668,20 @@ INCBIN "1-source-files/images/dashboard1.bin"
  STA &7EEE
  RTS
 
-.L7BE2
+\ ******************************************************************************
+\
+\       Name: sub_C7BE2
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7BE2
 
  LDA #&00
  STA P
@@ -20639,17 +20691,43 @@ INCBIN "1-source-files/images/dashboard1.bin"
  INX
  STX S
  LDX #&4F
- JSR L7EF3
- JMP L7D13
+ JSR sub_C7EF3
+ JMP sub_C7D13
 
-.L7BF7
+\ ******************************************************************************
+\
+\       Name: sub_C7BF7
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7BF7
 
  LDA &5F60,X
  AND #&03
  TAY
  LDA &38FC,Y
 
-.L7C00
+\ ******************************************************************************
+\
+\       Name: sub_C7C00
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7C00
 
  LDY token26,X
  BEQ L7C0D
@@ -20811,9 +20889,22 @@ INCBIN "1-source-files/images/dashboard1.bin"
 
  LDY #&78
  STA (P),Y
- JMP L7D56
+ JMP sub_C7D56
 
-.L7D13
+\ ******************************************************************************
+\
+\       Name: sub_C7D13
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7D13
 
  LDA #&60
  STA &7EEE
@@ -20829,13 +20920,13 @@ INCBIN "1-source-files/images/dashboard1.bin"
  STY &7D2F
  STY &7D24
  LDA #&60
- STA L7C00
+ STA sub_C7C00
  LDY &30D0,X
  STY &7D4D
 
 .L7D37
 
- JSR L7EF3
+ JSR sub_C7EF3
  AND &38D0,X
  ORA &3350,X
  STA (P),Y
@@ -20843,12 +20934,25 @@ INCBIN "1-source-files/images/dashboard1.bin"
  AND &3950,X
  ORA &33D0,X
  TAY
- JSR L7E00
+ JSR sub_C7E00
  CPX #&1C
  BNE L7D18
- JMP L7F18
+ JMP sub_C7F18
 
-.L7D56
+\ ******************************************************************************
+\
+\       Name: sub_C7D56
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7D56
 
  LDY &3800,X
  BEQ L7D63
@@ -20951,7 +21055,20 @@ INCBIN "1-source-files/images/dashboard1.bin"
  LDY #&C8
  STA (P),Y
 
-.L7E00
+\ ******************************************************************************
+\
+\       Name: sub_C7E00
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7E00
 
  LDY &3D00,X
  BEQ L7E0D
@@ -21097,7 +21214,20 @@ INCBIN "1-source-files/images/dashboard1.bin"
  BEQ L7F17
  DEX
 
-.L7EF3
+\ ******************************************************************************
+\
+\       Name: sub_C7EF3
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7EF3
 
  LDY P
  INY
@@ -21106,7 +21236,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
  BEQ L7F02
  STY P
  STY R
- JMP L7BF7
+ JMP sub_C7BF7
 
 .L7F02
 
@@ -21120,13 +21250,26 @@ INCBIN "1-source-files/images/dashboard1.bin"
  STA Q
  ADC #&01
  STA S
- JMP L7BF7
+ JMP sub_C7BF7
 
 .L7F17
 
  RTS
 
-.L7F18
+\ ******************************************************************************
+\
+\       Name: sub_C7F18
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7F18
 
  DEX
  LDY &3150,X
@@ -21137,7 +21280,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
  STY &7F2F
  STY &7F24
  LDA #&60
- STA L7C00
+ STA sub_C7C00
 
 .L7F31
 
@@ -21174,7 +21317,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
  AND &3679,Y
  ORA &3579,Y
  TAY
- JSR L7C00
+ JSR sub_C7C00
  AND &38D0,X
  ORA &3350,X
  STA (P),Y
@@ -21186,7 +21329,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
  STY &7F88
  STY &7F7D
  LDA #&60
- STA L7E00
+ STA sub_C7E00
 
 .L7F8A
 
@@ -21196,7 +21339,7 @@ INCBIN "1-source-files/images/dashboard1.bin"
  AND &3950,X
  ORA &33D0,X
  TAY
- JSR L7E00
+ JSR sub_C7E00
  STY U
  LDY &3050,X
  AND &36F9,Y
@@ -21205,13 +21348,26 @@ INCBIN "1-source-files/images/dashboard1.bin"
  STA (R),Y
  CPX #&03
  BEQ L7FB3
- JMP L7F18
+ JMP sub_C7F18
 
 .L7FB3
 
- JMP L7BBF
+ JMP sub_C7BBF
 
-.L7FB6
+\ ******************************************************************************
+\
+\       Name: sub_C7FB6
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C7FB6
 
  STA L0082
  STY L0078
@@ -21264,6 +21420,16 @@ INCBIN "1-source-files/images/dashboard1.bin"
 
  EQUB &FF
 
+\ ******************************************************************************
+\
+\ Save Revs.bin
+\
+\ ******************************************************************************
+
+\ First, we need to move the code that runs within screen memory. We move it
+\ into the main game code, spread out across multiple dashboard blocks, from
+\ dashboard0 to dashboard25.
+
 COPYBLOCK &7FCC, &8000, dashboard0
 COPYBLOCK &7F98, &7FCC, dashboard1
 COPYBLOCK &7F64, &7F98, dashboard2
@@ -21291,12 +21457,6 @@ COPYBLOCK &7B3E, &7B62, dashboard23
 COPYBLOCK &7B1A, &7B3E, dashboard24
 \COPYBLOCK &7AF6, &7B1A, dashboard25
 COPYBLOCK &7B00, &7B1A, dashboard25+10
-
-\ ******************************************************************************
-\
-\ Save Revs.bin
-\
-\ ******************************************************************************
 
 \ We now move all the game code from where it runs (i.e. where it's been
 \ assembled by the above source code) to its position in the game binary file
