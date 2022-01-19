@@ -23,7 +23,7 @@
 \
 \ ******************************************************************************
 
-GUARD &7C00             \ Guard against assembling over screen memory
+GUARD &8000             \ Guard against assembling over sideways ROMS
 
 \ ******************************************************************************
 \
@@ -43,13 +43,17 @@ OSWRCH = &FFEE          \ The address for the OSWRCH routine
 OSBYTE = &FFF4          \ The address for the OSBYTE routine
 OSWORD = &FFF1          \ The address for the OSWORD routine
 
+CODE% = &0B00           \ The address of the main game code
+
 LOAD% = &1200           \ The load address of the main code binary
 
 LOAD_END% = &7000       \ The address of the end of the main code binary
 
-CODE% = &0B00           \ The address of the main game code
-
 trackLoad = &70DB       \ The load address of the track data file
+
+trackChecksum = &7800   \ The address of the checksums in the track data file
+
+row2_column1 = &7C79    \ Chequered flag mode 7 screen address
 
 \ ******************************************************************************
 \
@@ -360,7 +364,6 @@ L77DC = &77DC
 L77E3 = &77E3
 L77E4 = &77E4
 
-trackChecksum = &7800
 
  SKIP 4                 \ The track data checksums
                         \
@@ -375,16 +378,6 @@ trackChecksum = &7800
                         \
                         \   * trackChecksum+3 counts the number of data bytes
                         \     ending in %11
-
-L7B00 = &7B00
-L7B4A = &7B4A
-L7B9C = &7B9C
-L7BE2 = &7BE2
-
-row2_column1 = &7C79           \ Chequered flag mode 7 screen address
-
-L7E85 = &7E85
-L7FC5 = &7FC5
 
 \ ******************************************************************************
 \
@@ -9263,21 +9256,13 @@ ORG &0B00
 \       Name: dashboard0
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard0
 
- EQUB &A8, &A9, &F0, &C4, &82, &B0, &0C, &C4, &7F, &90, &08, &AE
- EQUB &68, &FE, &3D, &00, &20, &25, &61, &91, &70, &88, &10, &14
- EQUB &98, &29, &07, &C9, &07, &90, &0D, &A5, &70, &38, &E9, &38
- EQUB &85, &70, &A5, &71, &E9, &01, &85, &71, &C4, &77, &B0, &D1
- EQUB &A4, &78, &60, &FF
+ SKIP 52                \ Populated with code from &7FCC to &7FFF
 
 \ ******************************************************************************
 \
@@ -9348,7 +9333,24 @@ ORG &0B00
 
 .L3076
 
- EQUB &05, &05, &03, &04, &03, &04, &04, &04, &38, &38, &97, &97
+ EQUB &05, &05, &03, &04, &03, &04, &04, &04, &38, &38
+
+\ ******************************************************************************
+\
+\       Name: L3080
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3080
+
+ EQUB &97, &97
  EQUB &97, &97, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8
  EQUB &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &B9, &B9, &B9, &B9
  EQUB &B9, &B9
@@ -9358,21 +9360,13 @@ ORG &0B00
 \       Name: dashboard1
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard1
 
- EQUB &33, &A8, &20, &00, &7E, &84, &75, &BC, &50, &30
- EQUB &39, &F9, &36, &19, &F9, &35, &A4, &75, &91, &72, &E0, &03
- EQUB &F0, &03, &4C, &18, &7F, &4C, &BF, &7B, &85, &82, &84, &78
- EQUB &B9, &9E, &3B, &85, &71, &B9, &26, &3B, &85, &70, &B9, &FA
- EQUB &3E, &85, &77, &B9, &FA, &40
+ SKIP 52                \ Populated with code from &7F98 to &7FCB
 
 \ ******************************************************************************
 \
@@ -9436,21 +9430,13 @@ ORG &0B00
 \       Name: dashboard2
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard2
 
- EQUB &79, &35, &A8, &20, &00, &7C, &3D, &D0
- EQUB &38, &1D, &50, &33, &91, &70, &BC, &80, &30, &CC, &7D, &7F
- EQUB &F0, &10, &A9, &91, &8D, &0F, &7E, &8C, &88, &7F, &8C, &7D
- EQUB &7F, &A9, &60, &8D, &00, &7E, &BC, &D0, &30, &8C, &9B, &7F
- EQUB &BD, &00, &44, &3D, &50, &39, &1D, &D0
+ SKIP 52                \ Populated with code from &7F64 to &7F97
 
 \ ******************************************************************************
 \
@@ -9497,22 +9483,13 @@ ORG &0B00
 \       Name: dashboard3
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard3
 
- EQUB &24, &7F, &A9, &60, &8D, &00
- EQUB &7C, &A4, &70, &C8, &98, &29, &07, &D0, &14, &98, &18, &69
- EQUB &38, &85, &70, &85, &72, &A5, &71, &69, &01, &85, &71, &69
- EQUB &01, &85, &73, &90, &04, &84, &70, &84, &72, &A9, &F1, &38
- EQUB &FD, &80, &30, &8D, &68, &7F, &BC, &50, &30, &BD, &04, &05
- EQUB &39, &79, &36, &19
+ SKIP 58                \ Populated with code from &7F2A to &7F63
 
 \ ******************************************************************************
 \
@@ -9606,23 +9583,13 @@ ORG &0B00
 \       Name: dashboard4
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard4
 
- EQUB &80, &43, &F0, &08, &A9, &00, &9D
- EQUB &80, &43, &B9, &00, &60, &A0, &38, &91, &72, &E0, &2C, &F0
- EQUB &25, &CA, &A4, &70, &C8, &98, &29, &07, &F0, &07, &84, &70
- EQUB &84, &72, &4C, &F7, &7B, &98, &18, &69, &38, &85, &70, &85
- EQUB &72, &A5, &71, &69, &01, &85, &71, &69, &01, &85, &73, &4C
- EQUB &F7, &7B, &60, &CA, &BC, &50, &31, &CC, &24, &7F, &F0, &10
- EQUB &A9, &91, &8D, &0F, &7C, &8C, &2F, &7F, &8C
+ SKIP 76                \ Populated with code from &7EDE to &7F29
 
 \ ******************************************************************************
 \
@@ -9734,23 +9701,13 @@ ORG &0B00
 \       Name: dashboard5
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard5
 
- EQUB &41, &B9, &00, &60, &A0, &10, &91
- EQUB &72, &BC, &80, &41, &F0, &08, &A9, &00, &9D, &80, &41, &B9
- EQUB &00, &60, &A0, &18, &91, &72, &BC, &00, &42, &F0, &08, &A9
- EQUB &00, &9D, &00, &42, &B9, &00, &60, &A0, &20, &91, &72, &BC
- EQUB &80, &42, &F0, &08, &A9, &00, &9D, &80, &42, &B9, &00, &60
- EQUB &A0, &28, &91, &72, &BC, &00, &43, &F0, &08, &A9, &00, &9D
- EQUB &00, &43, &B9, &00, &60, &A0, &30, &91, &72, &BC
+ SKIP 77                \ Populated with code from &7E91 to &7EDD
 
 \ ******************************************************************************
 \
@@ -9837,23 +9794,13 @@ ORG &0B00
 \       Name: dashboard6
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard6
 
- EQUB &BC, &00, &3F, &F0, &08
- EQUB &A9, &00, &9D, &00, &3F, &B9, &00, &60, &A0, &F0, &91, &70
- EQUB &BC, &80, &3F, &F0, &08, &A9, &00, &9D, &80, &3F, &B9, &00
- EQUB &60, &A0, &F8, &91, &70, &BC, &00, &40, &F0, &08, &A9, &00
- EQUB &9D, &00, &40, &B9, &00, &60, &A0, &00, &91, &72, &BC, &80
- EQUB &40, &F0, &08, &A9, &00, &9D, &80, &40, &B9, &00, &60, &A0
- EQUB &08, &91, &72, &BC, &00, &41, &F0, &08, &A9, &00, &9D, &00
+ SKIP 77                \ Populated with code from &7E44 to &7E90
 
 \ ******************************************************************************
 \
@@ -9914,23 +9861,13 @@ ORG &0B00
 \       Name: dashboard7
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard7
 
- EQUB &60
- EQUB &A0, &C8, &91, &70, &BC, &00, &3D, &F0, &08, &A9, &00, &9D
- EQUB &00, &3D, &B9, &00, &60, &A0, &D0, &91, &70, &BC, &80, &3D
- EQUB &F0, &08, &A9, &00, &9D, &80, &3D, &B9, &00, &60, &A0, &D8
- EQUB &91, &70, &BC, &00, &3E, &F0, &08, &A9, &00, &9D, &00, &3E
- EQUB &B9, &00, &60, &A0, &E0, &91, &70, &BC, &80, &3E, &F0, &08
- EQUB &A9, &00, &9D, &80, &3E, &B9, &00, &60, &A0, &E8, &91, &70
+ SKIP 73                \ Populated with code from &7DFB to &7E43
 
 \ ******************************************************************************
 \
@@ -10006,23 +9943,13 @@ ORG &0B00
 \       Name: dashboard8
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard8
 
- EQUB &60, &A0, &A8, &91, &70, &BC
- EQUB &00, &3B, &F0, &08, &A9, &00, &9D, &00, &3B, &B9, &00, &60
- EQUB &A0, &B0, &91, &70, &BC, &80, &3B, &F0, &08, &A9, &00, &9D
- EQUB &80, &3B, &B9, &00, &60, &A0, &B8, &91, &70, &BC, &00, &3C
- EQUB &F0, &08, &A9, &00, &9D, &00, &3C, &B9, &00, &60, &A0, &C0
- EQUB &91, &70, &BC, &80, &3C, &F0, &08, &A9, &00, &9D, &80, &3C
- EQUB &B9, &00
+ SKIP 68                \ Populated with code from &7DB7 to &7DFA
 
 \ ******************************************************************************
 \
@@ -10161,22 +10088,13 @@ ORG &0B00
 \       Name: dashboard9
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard9
 
- EQUB &70, &BC, &00, &39
- EQUB &F0, &08, &A9, &00, &9D, &00, &39, &B9, &00, &60, &A0, &90
- EQUB &91, &70, &BC, &80, &39, &F0, &08, &A9, &00, &9D, &80, &39
- EQUB &B9, &00, &60, &A0, &98, &91, &70, &BC, &00, &3A, &F0, &08
- EQUB &A9, &00, &9D, &00, &3A, &B9, &00, &60, &A0, &A0, &91, &70
- EQUB &BC, &80, &3A, &F0, &08, &A9, &00, &9D, &80, &3A, &B9, &00
+ SKIP 64                \ Populated with code from &7D77 to &7DB6
 
 \ ******************************************************************************
 \
@@ -10307,22 +10225,13 @@ ORG &0B00
 \       Name: dashboard10
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard10
 
- EQUB &D0, &38, &1D, &50, &33, &91, &70
- EQUB &BD, &00, &44, &3D, &50, &39, &1D, &D0, &33, &A8, &20, &00
- EQUB &7E, &E0, &1C, &D0, &C5, &4C, &18, &7F, &BC, &00, &38, &F0
- EQUB &08, &A9, &00, &9D, &00, &38, &B9, &00, &60, &A0, &80, &91
- EQUB &70, &BC, &80, &38, &F0, &08, &A9, &00, &9D, &80, &38, &B9
- EQUB &00, &60, &A0, &88, &91
+ SKIP 60                \ Populated with code from &7D3B to &7D76
 
 \ ******************************************************************************
 \
@@ -10405,22 +10314,13 @@ ORG &0B00
 \       Name: dashboard11
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard11
 
- EQUB &08, &A9, &00, &9D, &80, &37
- EQUB &B9, &00, &60, &A0, &78, &91, &70, &4C, &56, &7D, &A9, &60
- EQUB &8D, &EE, &7E, &CA, &BC, &50, &31, &CC, &24, &7D, &F0, &16
- EQUB &A9, &91, &8D, &0F, &7C, &8C, &2F, &7D, &8C, &24, &7D, &A9
- EQUB &60, &8D, &00, &7C, &BC, &D0, &30, &8C, &4D, &7D, &20, &F3
- EQUB &7E, &3D
+ SKIP 56                \ Populated with code from &7D03 to &7D3A
 
 \ ******************************************************************************
 \
@@ -10481,21 +10381,13 @@ ORG &0B00
 \       Name: dashboard12
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard12
 
- EQUB &F0, &08, &A9, &00, &9D, &00, &36
- EQUB &B9, &00, &60, &A0, &60, &91, &70, &BC, &80, &36, &F0, &08
- EQUB &A9, &00, &9D, &80, &36, &B9, &00, &60, &A0, &68, &91, &70
- EQUB &BC, &00, &37, &F0, &08, &A9, &00, &9D, &00, &37, &B9, &00
- EQUB &60, &A0, &70, &91, &70, &BC, &80, &37, &F0
+ SKIP 52                \ Populated with code from &7CCF to &7D02
 
 \ ******************************************************************************
 \
@@ -10576,20 +10468,13 @@ ORG &0B00
 \       Name: dashboard13
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard13
 
- EQUB &A0, &48, &91, &70, &BC, &00, &35, &F0, &08, &A9
- EQUB &00, &9D, &00, &35, &B9, &00, &60, &A0, &50, &91, &70, &BC
- EQUB &80, &35, &F0, &08, &A9, &00, &9D, &80, &35, &B9, &00, &60
- EQUB &A0, &58, &91, &70, &BC, &00, &36
+ SKIP 41                \ Populated with code from &7CA6 to &7CCE
 
 \ ******************************************************************************
 \
@@ -10687,20 +10572,13 @@ ORG &0B00
 \       Name: dashboard14
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard14
 
- EQUB &00, &60, &A0, &38, &91, &70, &BC, &00
- EQUB &34, &F0, &08, &A9, &00, &9D, &00, &34, &B9, &00, &60, &A0
- EQUB &40, &91, &70, &BC, &80, &34, &F0, &08, &A9, &00, &9D, &80
- EQUB &34, &B9, &00, &60
+ SKIP 36                \ Populated with code from &7C82 to &7CA5
 
 \ ******************************************************************************
 \
@@ -10814,20 +10692,13 @@ ORG &0B00
 \       Name: dashboard15
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard15
 
- EQUB &32, &B9, &00, &60, &A0, &28
- EQUB &91, &70, &BC, &00, &33, &F0, &08, &A9, &00, &9D, &00, &33
- EQUB &B9, &00, &60, &A0, &30, &91, &70, &BC, &80, &33, &F0, &08
- EQUB &A9, &00, &9D, &80, &33, &B9
+ SKIP 36                \ Populated with code from &7C5E to &7C81
 
 \ ******************************************************************************
 \
@@ -10977,20 +10848,13 @@ ORG &0B00
 \       Name: dashboard16
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard16
 
- EQUB &9D, &80, &31, &B9, &00, &60, &A0, &18, &91, &70, &BC
- EQUB &00, &32, &F0, &08, &A9, &00, &9D, &00, &32, &B9, &00, &60
- EQUB &A0, &20, &91, &70, &BC, &80, &32, &F0, &08, &A9, &00, &9D
- EQUB &80
+ SKIP 36                \ Populated with code from &7C3A to &7C5D
 
 \ ******************************************************************************
 \
@@ -11127,6 +10991,19 @@ ORG &0B00
 \       Name: dashboard17
 \       Type: Variable
 \   Category: Dashboard
+\    Summary: Contains code that gets moved into screen memory
+\
+\ ******************************************************************************
+
+.dashboard17
+
+ SKIP 36                \ Populated with code from &7C16 to &7C39
+
+\ ******************************************************************************
+\
+\       Name: L3850
+\       Type: Variable
+\   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11135,12 +11012,9 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.dashboard17
+.L3850
 
- EQUB &A9, &00, &9D
- EQUB &80, &30, &B9, &00, &60, &A0, &08, &91, &70, &BC, &00, &31
- EQUB &F0, &08, &A9, &00, &9D, &00, &31, &B9, &00, &60, &A0, &10
- EQUB &91, &70, &BC, &80, &31, &F0, &08, &A9, &00, &FF, &FF, &88
+ EQUB &FF, &FF, &88
  EQUB &88, &CC, &EE, &FF, &88, &88, &CC, &EE, &FF, &88, &CC, &EE
  EQUB &FF, &88, &CC, &EE, &FF, &88, &CC, &EE, &FF, &88, &CC, &EE
  EQUB &FF, &88, &88, &CC, &CC, &CC, &EE, &EE, &EE, &FF, &FF, &FF
@@ -11295,6 +11169,19 @@ ORG &0B00
 \       Name: dashboard18
 \       Type: Variable
 \   Category: Dashboard
+\    Summary: Contains code that gets moved into screen memory
+\
+\ ******************************************************************************
+
+.dashboard18
+
+ SKIP 36                \ Populated with code from &7BF2 to &7C15
+
+\ ******************************************************************************
+\
+\       Name: L3950
+\       Type: Variable
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11303,12 +11190,9 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.dashboard18
+.L3950
 
- EQUB &F3, &7E, &4C, &13, &7D, &BD, &60
- EQUB &5F, &29, &03, &A8, &B9, &FC, &38, &BC, &00, &30, &F0, &08
- EQUB &A9, &00, &9D, &00, &30, &B9, &00, &60, &A0, &00, &91, &70
- EQUB &BC, &80, &30, &F0, &08, &FF, &FF, &11, &11, &33, &77, &FF
+ EQUB &FF, &FF, &11, &11, &33, &77, &FF
  EQUB &11, &11, &33, &77, &FF, &11, &33, &77, &FF, &11, &33, &77
  EQUB &FF, &11, &33, &77, &FF, &11, &33, &77, &FF, &11, &11, &33
  EQUB &33, &33, &77, &77, &77, &FF, &FF, &FF, &11, &11, &11, &33
@@ -11377,20 +11261,13 @@ ORG &0B00
 \       Name: dashboard19
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard19
 
- EQUB &8D, &DA, &7B, &A9
- EQUB &91, &8D, &0F, &7C, &8D, &0F, &7C, &8D, &0F, &7E, &A9, &E0
- EQUB &8D, &EE, &7E, &60, &A9, &00, &85, &70, &85, &72, &A2, &67
- EQUB &86, &71, &E8, &86, &73, &A2, &4F, &20
+ SKIP 36                \ Populated with code from &7BCE to &7BF1
 
 \ ******************************************************************************
 \
@@ -11522,20 +11399,13 @@ ORG &0B00
 \       Name: dashboard20
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard20
 
- EQUB &B8, &06, &20, &D6, &37, &06, &78, &B0, &0B, &A9, &2E
- EQUB &20, &92, &50, &BD, &A0, &06, &20, &D6, &37, &60, &AD, &24
- EQUB &7D, &8D, &D4, &7B, &AD, &24, &7F, &8D, &D7, &7B, &AD, &7D
- EQUB &7F
+ SKIP 36                \ Populated with code from &7BAA to &7BCD
 
 \ ******************************************************************************
 \
@@ -11714,20 +11584,13 @@ ORG &0B00
 \       Name: dashboard21
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard21
 
- EQUB &A9, &F0, &A2, &09, &9D, &C0, &42
- EQUB &CA, &10, &FA, &68, &A2, &05, &9D, &C2, &42, &45, &74, &CA
- EQUB &10, &F8, &60, &85, &78, &BD, &D0, &06, &20, &D6, &37, &A9
- EQUB &3A, &20, &92, &50, &BD
+ SKIP 36                \ Populated with code from &7B86 to &7BA9
 
 \ ******************************************************************************
 \
@@ -11838,20 +11701,13 @@ ORG &0B00
 \       Name: dashboard22
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard22
 
- EQUB &D0, &1D, &E0, &A0, &F0, &0D, &CA, &10, &12, &E0
- EQUB &C0, &B0, &EF, &A9, &A5, &A0, &77, &D0, &0C, &A5, &6A, &29
- EQUB &3F, &D0, &F4, &A2, &28, &A9, &F2, &A0, &05, &86, &6D, &48
- EQUB &84, &74
+ SKIP 36                \ Populated with code from &7B62 to &7B85
 
 \ ******************************************************************************
 \
@@ -11952,14 +11808,13 @@ ORG &0B00
 .L3B8E
 
  EQUB &88, &E8, &E8, &C8, &C8, &CA, &CA, &88, &18, &EA, &EA, &18
- EQUB &18, &EA, &EA, &18, &75, &75, &74, &75, &76, &76, &12, &11
- EQUB &10, &0E, &0D, &0C, &81, &81
+ EQUB &18, &EA, &EA, &18, &75, &75, &74, &75, &76, &76
 
 \ ******************************************************************************
 \
-\       Name: dashboard23
+\       Name: L3BA4
 \       Type: Variable
-\   Category: Dashboard
+\   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11968,12 +11823,39 @@ ORG &0B00
 \
 \ ******************************************************************************
 
+.L3BA4
+
+ EQUB &12, &11, &10, &0E, &0D, &0C
+
+\ ******************************************************************************
+\
+\       Name: L3BAA
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3BAA
+
+ EQUB &81, &81
+
+\ ******************************************************************************
+\
+\       Name: dashboard23
+\       Type: Variable
+\   Category: Dashboard
+\    Summary: Contains code that gets moved into screen memory
+\
+\ ******************************************************************************
+
 .dashboard23
 
- EQUB &A5, &84, &99, &93, &62, &20
- EQUB &B6, &7F, &88, &10, &E5, &60, &A5, &6C, &10, &4D, &A6, &6D
- EQUB &F0, &49, &10, &10, &E0, &80, &D0, &0C, &24, &61, &10, &02
- EQUB &A2, &F0, &A0, &00, &A9, &80
+ SKIP 36                \ Populated with code from &7B3E to &7B61
 
 \ ******************************************************************************
 \
@@ -12169,20 +12051,13 @@ ORG &0B00
 \       Name: dashboard24
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code that gets moved into screen memory
 \
 \ ******************************************************************************
 
 .dashboard24
 
- EQUB &E5, &74, &85, &7F
- EQUB &BD, &98, &03, &38, &E5, &0B, &38, &E9, &04, &4A, &4A, &4A
- EQUB &85, &76, &A0, &05, &A5, &76, &D9, &A4, &3B, &F0, &09, &B9
- EQUB &93, &62, &F0, &0C, &A9, &00, &F0, &02
+ SKIP 36                \ Populated with code from &7B1A to &7B3D
 
 \ ******************************************************************************
 \
@@ -12368,20 +12243,16 @@ ORG &0B00
 \       Name: dashboard25
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains code and part of the dashboard image that gets moved into
+\             screen memory
 \
 \ ******************************************************************************
 
 .dashboard25
 
- EQUB &44, &88, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &70, &30, &A4, &5B, &BE, &3C, &01, &BD, &8C, &01
- EQUB &30, &20, &BD, &C8, &03, &4A, &4A, &4A, &85, &74, &18, &69
- EQUB &B6, &85, &84, &A9, &B6, &38
+ EQUB &44, &88, &F0, &F0, &F0, &F0, &F0, &F0, &70, &30
+
+ SKIP 26                \ Populated with code from &7B00 to &7B19
 
 \ ******************************************************************************
 \
@@ -12551,11 +12422,8 @@ ORG &0B00
 \       Name: dashboard26
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -12730,11 +12598,8 @@ ORG &0B00
 \       Name: dashboard27
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -12896,11 +12761,8 @@ ORG &0B00
 \       Name: dashboard28
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13043,11 +12905,8 @@ ORG &0B00
 \       Name: dashboard29
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13196,11 +13055,8 @@ ORG &0B00
 \       Name: dashboard30
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13272,11 +13128,8 @@ ORG &0B00
 \       Name: dashboard31
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13333,11 +13186,8 @@ ORG &0B00
 \       Name: dashboard32
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13393,11 +13243,8 @@ ORG &0B00
 \       Name: dashboard33
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13522,11 +13369,8 @@ ORG &0B00
 \       Name: dashboard34
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13583,11 +13427,8 @@ ORG &0B00
 \       Name: dashboard35
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13751,11 +13592,8 @@ ORG &0B00
 \       Name: dashboard36
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13835,11 +13673,8 @@ ORG &0B00
 \       Name: dashboard37
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -13848,7 +13683,15 @@ ORG &0B00
  EQUB &F0, &90, &E1, &21
  EQUB &F0, &61, &C3, &87, &86, &0C, &18, &00, &0F, &0C, &08, &00
  EQUB &00, &00, &00, &06, &0F, &00, &00, &00, &00, &00, &07, &05
- EQUB &1E, &07, &03, &01, &40, &00, &00, &00, &F0, &C0, &78, &2C
+ EQUB &1E, &07, &03, &01, &40, &00, &00, &00
+
+.L42C0
+
+ EQUB &F0, &C0
+
+.L42C2
+
+ EQUB &78, &2C
  EQUB &3C, &16, &03, &01, &07, &00, &83, &03, &82, &01, &C1, &81
 
 \ ******************************************************************************
@@ -14000,11 +13843,8 @@ ORG &0B00
 \       Name: dashboard38
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -14094,11 +13934,8 @@ ORG &0B00
 \       Name: dashboard39
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -14203,11 +14040,8 @@ LDA #&20
 \       Name: dashboard40
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -18181,7 +18015,11 @@ ORG &5FD0
 
 .L5FFF
 
- EQUB &01, &00, &01, &02, &03, &04, &05, &06, &07, &08, &09, &0A
+ EQUB &01
+
+.L6000
+
+ EQUB &00, &01, &02, &03, &04, &05, &06, &07, &08, &09, &0A
  EQUB &0B, &0C, &0D, &0E, &0F, &10, &11, &12, &13, &14, &15, &16
  EQUB &17, &18, &19, &1A, &1B, &1C, &1D, &1E, &1F, &20, &21, &22
  EQUB &23, &24, &25, &26, &27, &28, &29, &2A, &2B, &2C, &2D, &2E
@@ -20184,7 +20022,7 @@ ORG &5FD0
                         \ If we get here, SPACE was pressed and W is non-zero
 
  LDA #152
- STA L7FC5
+ STA mod_C7FC4+1
 
  LDX L0078
  DEX
@@ -20217,7 +20055,7 @@ ORG &5FD0
 
 .mopt7
 
- STA L7E85,X
+ STA L7E84+1,X
  TXA
  CLC
  ADC #&50
@@ -20609,6 +20447,850 @@ ORG &6C00
 .dashboard42
 
 INCBIN "1-source-files/images/dashboard1.bin"
+
+\ ******************************************************************************
+\
+\       Name: L7B00
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+ ORG &7B00
+
+.L7B00
+
+ LDY L005B
+ LDX L013C,Y
+ LDA L018C,X
+ BMI L7B2A
+ LDA L03C8,X
+ LSR A
+ LSR A
+ LSR A
+ STA T
+ CLC
+ ADC #&B6
+ STA L0084
+ LDA #&B6
+ SEC
+ SBC T
+ STA L007F
+ LDA L0398,X
+ SEC
+ SBC L000B
+ SEC
+ SBC #&04
+ LSR A
+ LSR A
+ LSR A
+
+.L7B2A
+
+ STA V
+ LDY #&05
+
+.L7B2E
+
+ LDA V
+ CMP L3BA4,Y
+ BEQ L7B3E
+ LDA L6293,Y
+ BEQ L7B46
+ LDA #&00
+ BEQ L7B40
+
+.L7B3E
+
+ LDA L0084
+
+.L7B40
+
+ STA L6293,Y
+ JSR L7FB6
+
+.L7B46
+
+ DEY
+ BPL L7B2E
+ RTS
+
+.L7B4A
+
+ LDA L006C
+ BPL L7B9B
+ LDX L006D
+ BEQ L7B9B
+ BPL L7B64
+ CPX #&80
+ BNE L7B64
+ BIT L0061
+ BPL L7B5E
+ LDX #&F0
+
+.L7B5E
+
+ LDY #&00
+ LDA #&80
+ BNE L7B81
+
+.L7B64
+
+ CPX #&A0
+ BEQ L7B75
+ DEX
+ BPL L7B7D
+ CPX #&C0
+ BCS L7B5E
+
+.L7B6F
+
+ LDA #&A5
+ LDY #W
+ BNE L7B81
+
+.L7B75
+
+ LDA L006A
+ AND #&3F
+ BNE L7B6F
+ LDX #&28
+
+.L7B7D
+
+ LDA #&F2
+ LDY #&05
+
+.L7B81
+
+ STX L006D
+ PHA
+ STY T
+ LDA #&F0
+ LDX #&09
+
+.L7B8A
+
+ STA L42C0,X
+ DEX
+ BPL L7B8A
+ PLA
+ LDX #&05
+
+.L7B93
+
+ STA L42C2,X
+ EOR T
+ DEX
+ BPL L7B93
+
+.L7B9B
+
+ RTS
+
+.L7B9C
+
+ STA L0078
+ LDA L06D0,X
+ JSR &37D6
+ LDA #&3A
+ JSR &5092
+ LDA L06B8,X
+ JSR &37D6
+ ASL L0078
+ BCS L7BBE
+ LDA #&2E
+ JSR &5092
+ LDA &06A0,X
+ JSR &37D6
+
+.L7BBE
+
+ RTS
+
+.L7BBF
+
+ LDA &7D24
+ STA &7BD4
+ LDA &7F24
+ STA &7BD7
+ LDA &7F7D
+ STA &7BDA
+ LDA #&91
+ STA &7C0F
+ STA &7C0F
+ STA &7E0F
+ LDA #&E0
+ STA &7EEE
+ RTS
+
+.L7BE2
+
+ LDA #&00
+ STA P
+ STA R
+ LDX #&67
+ STX Q
+ INX
+ STX S
+ LDX #&4F
+ JSR L7EF3
+ JMP L7D13
+
+.L7BF7
+
+ LDA &5F60,X
+ AND #&03
+ TAY
+ LDA &38FC,Y
+
+.L7C00
+
+ LDY token26,X
+ BEQ L7C0D
+ LDA #&00
+ STA token26,X
+ LDA L6000,Y
+
+.L7C0D
+
+ LDY #&00
+ STA (P),Y
+ LDY L3080,X
+ BEQ L7C1E
+ LDA #&00
+ STA L3080,X
+ LDA L6000,Y
+
+.L7C1E
+
+ LDY #&08
+ STA (P),Y
+ LDY L3100,X
+ BEQ L7C2F
+ LDA #&00
+ STA L3100,X
+ LDA L6000,Y
+
+.L7C2F
+
+ LDY #&10
+ STA (P),Y
+ LDY L3180,X
+ BEQ L7C40
+ LDA #&00
+ STA L3180,X
+ LDA L6000,Y
+
+.L7C40
+
+ LDY #&18
+ STA (P),Y
+ LDY token18,X
+ BEQ L7C51
+ LDA #&00
+ STA token18,X
+ LDA L6000,Y
+
+.L7C51
+
+ LDY #&20
+ STA (P),Y
+ LDY &3280,X
+ BEQ L7C62
+ LDA #&00
+ STA &3280,X
+ LDA L6000,Y
+
+.L7C62
+
+ LDY #&28
+ STA (P),Y
+ LDY &3300,X
+ BEQ L7C73
+ LDA #&00
+ STA &3300,X
+ LDA L6000,Y
+
+.L7C73
+
+ LDY #&30
+ STA (P),Y
+ LDY &3380,X
+ BEQ L7C84
+ LDA #&00
+ STA &3380,X
+ LDA L6000,Y
+
+.L7C84
+
+ LDY #&38
+ STA (P),Y
+ LDY &3400,X
+ BEQ L7C95
+ LDA #&00
+ STA &3400,X
+ LDA L6000,Y
+
+.L7C95
+
+ LDY #&40
+ STA (P),Y
+ LDY &3480,X
+ BEQ L7CA6
+ LDA #&00
+ STA &3480,X
+ LDA L6000,Y
+
+.L7CA6
+
+ LDY #&48
+ STA (P),Y
+ LDY &3500,X
+ BEQ L7CB7
+ LDA #&00
+ STA &3500,X
+ LDA L6000,Y
+
+.L7CB7
+
+ LDY #&50
+ STA (P),Y
+ LDY &3580,X
+ BEQ L7CC8
+ LDA #&00
+ STA &3580,X
+ LDA L6000,Y
+
+.L7CC8
+
+ LDY #&58
+ STA (P),Y
+ LDY &3600,X
+ BEQ L7CD9
+ LDA #&00
+ STA &3600,X
+ LDA L6000,Y
+
+.L7CD9
+
+ LDY #&60
+ STA (P),Y
+ LDY &3680,X
+ BEQ L7CEA
+ LDA #&00
+ STA &3680,X
+ LDA L6000,Y
+
+.L7CEA
+
+ LDY #&68
+ STA (P),Y
+ LDY &3700,X
+ BEQ L7CFB
+ LDA #&00
+ STA &3700,X
+ LDA L6000,Y
+
+.L7CFB
+
+ LDY #P
+ STA (P),Y
+ LDY &3780,X
+ BEQ L7D0C
+ LDA #&00
+ STA &3780,X
+ LDA L6000,Y
+
+.L7D0C
+
+ LDY #&78
+ STA (P),Y
+ JMP L7D56
+
+.L7D13
+
+ LDA #&60
+ STA &7EEE
+
+.L7D18
+
+ DEX
+ LDY &3150,X
+ CPY &7D24
+ BEQ L7D37
+ LDA #&91
+ STA &7C0F
+ STY &7D2F
+ STY &7D24
+ LDA #&60
+ STA L7C00
+ LDY &30D0,X
+ STY &7D4D
+
+.L7D37
+
+ JSR L7EF3
+ AND &38D0,X
+ ORA &3350,X
+ STA (P),Y
+ LDA &4400,X
+ AND &3950,X
+ ORA &33D0,X
+ TAY
+ JSR L7E00
+ CPX #&1C
+ BNE L7D18
+ JMP L7F18
+
+.L7D56
+
+ LDY &3800,X
+ BEQ L7D63
+ LDA #&00
+ STA &3800,X
+ LDA L6000,Y
+
+.L7D63
+
+ LDY #&80
+ STA (P),Y
+ LDY &3880,X
+ BEQ L7D74
+ LDA #&00
+ STA &3880,X
+ LDA L6000,Y
+
+.L7D74
+
+ LDY #&88
+ STA (P),Y
+ LDY &3900,X
+ BEQ L7D85
+ LDA #&00
+ STA &3900,X
+ LDA L6000,Y
+
+.L7D85
+
+ LDY #&90
+ STA (P),Y
+ LDY &3980,X
+ BEQ L7D96
+ LDA #&00
+ STA &3980,X
+ LDA L6000,Y
+
+.L7D96
+
+ LDY #&98
+ STA (P),Y
+ LDY &3A00,X
+ BEQ L7DA7
+ LDA #&00
+ STA &3A00,X
+ LDA L6000,Y
+
+.L7DA7
+
+ LDY #&A0
+ STA (P),Y
+ LDY &3A80,X
+ BEQ L7DB8
+ LDA #&00
+ STA &3A80,X
+ LDA L6000,Y
+
+.L7DB8
+
+ LDY #&A8
+ STA (P),Y
+ LDY &3B00,X
+ BEQ L7DC9
+ LDA #&00
+ STA &3B00,X
+ LDA L6000,Y
+
+.L7DC9
+
+ LDY #&B0
+ STA (P),Y
+ LDY &3B80,X
+ BEQ L7DDA
+ LDA #&00
+ STA &3B80,X
+ LDA L6000,Y
+
+.L7DDA
+
+ LDY #&B8
+ STA (P),Y
+ LDY &3C00,X
+ BEQ L7DEB
+ LDA #&00
+ STA &3C00,X
+ LDA L6000,Y
+
+.L7DEB
+
+ LDY #&C0
+ STA (P),Y
+ LDY &3C80,X
+ BEQ L7DFC
+ LDA #&00
+ STA &3C80,X
+ LDA L6000,Y
+
+.L7DFC
+
+ LDY #&C8
+ STA (P),Y
+
+.L7E00
+
+ LDY &3D00,X
+ BEQ L7E0D
+ LDA #&00
+ STA &3D00,X
+ LDA L6000,Y
+
+.L7E0D
+
+ LDY #&D0
+ STA (P),Y
+ LDY &3D80,X
+ BEQ L7E1E
+ LDA #&00
+ STA &3D80,X
+ LDA L6000,Y
+
+.L7E1E
+
+ LDY #&D8
+ STA (P),Y
+ LDY &3E00,X
+ BEQ L7E2F
+ LDA #&00
+ STA &3E00,X
+ LDA L6000,Y
+
+.L7E2F
+
+ LDY #&E0
+ STA (P),Y
+ LDY &3E80,X
+ BEQ L7E40
+ LDA #&00
+ STA &3E80,X
+ LDA L6000,Y
+
+.L7E40
+
+ LDY #&E8
+ STA (P),Y
+ LDY &3F00,X
+ BEQ L7E51
+ LDA #&00
+ STA &3F00,X
+ LDA L6000,Y
+
+.L7E51
+
+ LDY #&F0
+ STA (P),Y
+ LDY &3F80,X
+ BEQ L7E62
+ LDA #&00
+ STA &3F80,X
+ LDA L6000,Y
+
+.L7E62
+
+ LDY #&F8
+ STA (P),Y
+ LDY &4000,X
+ BEQ L7E73
+ LDA #&00
+ STA &4000,X
+ LDA L6000,Y
+
+.L7E73
+
+ LDY #&00
+ STA (R),Y
+ LDY &4080,X
+ BEQ L7E84
+ LDA #&00
+ STA &4080,X
+ LDA L6000,Y
+
+.L7E84
+
+ LDY #&08
+ STA (R),Y
+ LDY &4100,X
+ BEQ L7E95
+ LDA #&00
+ STA &4100,X
+ LDA L6000,Y
+
+.L7E95
+
+ LDY #&10
+ STA (R),Y
+ LDY &4180,X
+ BEQ L7EA6
+ LDA #&00
+ STA &4180,X
+ LDA L6000,Y
+
+.L7EA6
+
+ LDY #&18
+ STA (R),Y
+ LDY &4200,X
+ BEQ L7EB7
+ LDA #&00
+ STA &4200,X
+ LDA L6000,Y
+
+.L7EB7
+
+ LDY #&20
+ STA (R),Y
+ LDY &4280,X
+ BEQ L7EC8
+ LDA #&00
+ STA &4280,X
+ LDA L6000,Y
+
+.L7EC8
+
+ LDY #&28
+ STA (R),Y
+ LDY &4300,X
+ BEQ L7ED9
+ LDA #&00
+ STA &4300,X
+ LDA L6000,Y
+
+.L7ED9
+
+ LDY #&30
+ STA (R),Y
+ LDY &4380,X
+ BEQ L7EEA
+ LDA #&00
+ STA &4380,X
+ LDA L6000,Y
+
+.L7EEA
+
+ LDY #&38
+ STA (R),Y
+ CPX #&2C
+ BEQ L7F17
+ DEX
+
+.L7EF3
+
+ LDY P
+ INY
+ TYA
+ AND #&07
+ BEQ L7F02
+ STY P
+ STY R
+ JMP L7BF7
+
+.L7F02
+
+ TYA
+ CLC
+ ADC #&38
+ STA P
+ STA R
+ LDA Q
+ ADC #&01
+ STA Q
+ ADC #&01
+ STA S
+ JMP L7BF7
+
+.L7F17
+
+ RTS
+
+.L7F18
+
+ DEX
+ LDY &3150,X
+ CPY &7F24
+ BEQ L7F31
+ LDA #&91
+ STA &7C0F
+ STY &7F2F
+ STY &7F24
+ LDA #&60
+ STA L7C00
+
+.L7F31
+
+ LDY P
+ INY
+ TYA
+ AND #&07
+ BNE L7F4D
+ TYA
+ CLC
+ ADC #&38
+ STA P
+ STA R
+ LDA Q
+ ADC #&01
+ STA Q
+ ADC #&01
+ STA S
+ BCC L7F51
+
+.L7F4D
+
+ STY P
+ STY R
+
+.L7F51
+
+ LDA #&F1
+ SEC
+ SBC L3080,X
+ STA &7F68
+ LDY &3050,X
+ LDA &0504,X
+ AND &3679,Y
+ ORA &3579,Y
+ TAY
+ JSR L7C00
+ AND &38D0,X
+ ORA &3350,X
+ STA (P),Y
+ LDY L3080,X
+ CPY &7F7D
+ BEQ L7F8A
+ LDA #&91
+ STA &7E0F
+ STY &7F88
+ STY &7F7D
+ LDA #&60
+ STA L7E00
+
+.L7F8A
+
+ LDY &30D0,X
+ STY &7F9B
+ LDA &4400,X
+ AND &3950,X
+ ORA &33D0,X
+ TAY
+ JSR L7E00
+ STY U
+ LDY &3050,X
+ AND &36F9,Y
+ ORA &35F9,Y
+ LDY U
+ STA (R),Y
+ CPX #&03
+ BEQ L7FB3
+ JMP L7F18
+
+.L7FB3
+
+ JMP L7BBF
+
+.L7FB6
+
+ STA L0082
+ STY L0078
+ LDA &3B9E,Y
+ STA Q
+ LDA &3B26,Y
+ STA P
+
+.mod_C7FC4
+
+ LDA &3EFA,Y
+ STA W
+ LDA &40FA,Y
+ TAY
+
+.L7FCD
+
+ LDA #&F0
+ CPY L0082
+ BCS L7FDF
+ CPY L007F
+ BCC L7FDF
+ LDX &FE68
+ AND &2000,X
+ AND L0061
+
+.L7FDF
+
+ STA (P),Y
+ DEY
+ BPL L7FF8
+ TYA
+ AND #&07
+ CMP #&07
+ BCC L7FF8
+ LDA P
+ SEC
+ SBC #&38
+ STA P
+ LDA Q
+ SBC #&01
+ STA Q
+
+.L7FF8
+
+ CPY W
+ BCS L7FCD
+ LDY L0078
+ RTS
+
+ EQUB &FF
+
+COPYBLOCK &7FCC, &8000, dashboard0
+COPYBLOCK &7F98, &7FCC, dashboard1
+COPYBLOCK &7F64, &7F98, dashboard2
+COPYBLOCK &7F2A, &7F64, dashboard3
+COPYBLOCK &7EDE, &7F2A, dashboard4
+COPYBLOCK &7E91, &7EDE, dashboard5
+COPYBLOCK &7E44, &7E91, dashboard6
+COPYBLOCK &7DFB, &7E44, dashboard7
+COPYBLOCK &7DB7, &7DFB, dashboard8
+COPYBLOCK &7D77, &7DB7, dashboard9
+COPYBLOCK &7D3B, &7D77, dashboard10
+COPYBLOCK &7D03, &7D3B, dashboard11
+COPYBLOCK &7CCF, &7D03, dashboard12
+COPYBLOCK &7CA6, &7CCF, dashboard13
+COPYBLOCK &7C82, &7CA6, dashboard14
+COPYBLOCK &7C5E, &7C82, dashboard15
+COPYBLOCK &7C3A, &7C5E, dashboard16
+COPYBLOCK &7C16, &7C3A, dashboard17
+COPYBLOCK &7BF2, &7C16, dashboard18
+COPYBLOCK &7BCE, &7BF2, dashboard19
+COPYBLOCK &7BAA, &7BCE, dashboard20
+COPYBLOCK &7B86, &7BAA, dashboard21
+COPYBLOCK &7B62, &7B86, dashboard22
+COPYBLOCK &7B3E, &7B62, dashboard23
+COPYBLOCK &7B1A, &7B3E, dashboard24
+\COPYBLOCK &7AF6, &7B1A, dashboard25
+COPYBLOCK &7B00, &7B1A, dashboard25+10
 
 \ ******************************************************************************
 \
