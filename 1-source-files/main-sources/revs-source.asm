@@ -12344,7 +12344,7 @@ ORG &0B00
 
 .dashData25
 
- EQUB &44, &88, &F0, &F0, &F0, &F0, &F0, &F0, &70, &30
+ SKIP 10                \ Populated with part of the dashboard image
 
  SKIP 26                \ Populated with code from &7B00 to &7B19
 
@@ -12523,10 +12523,7 @@ ORG &0B00
 
 .dashData26
 
- EQUB &0E, &0E, &0E, &00, &80, &E0, &74, &77
- EQUB &77, &77, &77, &00, &10, &70, &E2, &EE, &EE, &EE, &EE, &91
- EQUB &AA, &00, &11, &00, &33, &22, &11, &22, &44, &99, &22, &88
- EQUB &EE, &33, &44, &70, &30, &10, &10, &88, &00
+ SKIP 41
 
 \ ******************************************************************************
 \
@@ -12699,12 +12696,7 @@ ORG &0B00
 
 .dashData27
 
- EQUB &88, &88
- EQUB &44, &44, &44, &44, &44, &04, &00, &00, &00, &00, &00, &00
- EQUB &00, &08, &00, &00, &05, &05, &05, &05, &05, &12, &12, &12
- EQUB &12, &03, &01, &41, &01, &05, &07, &07, &03, &83, &83, &83
- EQUB &83, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &1C, &1D, &0C
- EQUB &0E, &0E
+ SKIP 52
 
 \ ******************************************************************************
 \
@@ -12862,12 +12854,7 @@ ORG &0B00
 
 .dashData28
 
- EQUB &00, &10, &80, &00, &00, &07, &0F
- EQUB &00, &00, &00, &01, &03, &1E, &3C, &68, &16, &16, &3C, &68
- EQUB &F0, &80, &F0, &00, &F0, &10, &F0, &10, &E1, &21, &E1, &21
- EQUB &08, &08, &08, &09, &08, &01, &40, &01, &06, &00, &00, &08
- EQUB &08, &08, &08, &08, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &88
+ SKIP 56
 
 \ ******************************************************************************
 \
@@ -13006,12 +12993,7 @@ ORG &0B00
 
 .dashData29
 
- EQUB &44, &44, &22, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &09, &0A, &0A, &0A, &09
- EQUB &01, &01, &01, &01, &09, &08, &28, &00, &F0, &80, &F0, &80
- EQUB &78, &48, &78, &48, &86, &86, &C3, &61, &F0, &10, &F0, &00
- EQUB &00, &00, &00, &08, &0C, &87, &C3, &61, &00, &00, &00, &10
- EQUB &00, &00, &0E, &0F, &00
+ SKIP 60
 
 \ ******************************************************************************
 \
@@ -13156,13 +13138,7 @@ ORG &0B00
 
 .dashData30
 
- EQUB &FF, &44
- EQUB &FF, &AA, &FF, &11, &FF, &11, &FF, &BB, &77, &CF, &47, &CF
- EQUB &8F, &8F, &8F, &8F, &8F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &0F, &0A, &0E, &0E, &0C, &1C, &1C, &1C, &1C, &84, &84, &84
- EQUB &84, &0C, &08, &28, &08, &00, &00, &00, &04, &0A, &0A, &0A
- EQUB &04, &00, &00, &00, &00, &00, &00, &00, &00, &44, &44, &44
- EQUB &44
+ SKIP 63
 
 \ ******************************************************************************
 \
@@ -13173,13 +13149,30 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This gets copied to screen memory along with dashData30.
 \
 \ ******************************************************************************
 
 .L3F4F
 
- EQUB &44, &1B, &1B, &1B, &15, &03, &02, &02, &02, &06, &0B, &0F
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L3F50
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3F50
+
+ EQUB &1B, &1B, &1B, &15, &03, &02, &02, &02, &06, &0B, &0F
  EQUB &13, &17, &1B, &26, &2B, &2B, &2B, &2B, &2B, &2B, &2B, &2B
  EQUS &2B, &2B, &2B, &26
  EQUB &1B, &17, &13, &0F, &0B, &06, &02, &02, &02, &03, &15, &1B
@@ -13229,13 +13222,24 @@ ORG &0B00
 
 .dashData31
 
- EQUB &40, &40, &62, &40, &51, &62
- EQUB &80, &70, &30, &30, &10, &98, &00, &44, &88, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &70, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &C0, &E0, &C0, &80
- EQUB &80, &11, &00, &22, &11, &44, &22, &99, &44, &11, &77, &CC
- EQUB &22, &88, &66, &33, &99, &22, &CC, &77, &AA, &88, &FF, &11
- EQUB &77, &AA, &88, &EA, &EA, &C8, &EA, &88, &C8, &EA, &C8, &EA
+ SKIP 68
+
+\ ******************************************************************************
+\
+\       Name: L3FD0
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L3FD0
+
+ EQUB &88, &EA, &EA, &C8, &EA, &88, &C8, &EA, &C8, &EA
  EQUB &EA, &88, &EA, &C8, &88, &EA
 
 \ ******************************************************************************
@@ -13287,13 +13291,7 @@ ORG &0B00
 
 .dashData32
 
- EQUB &07, &01, &01, &00, &88
- EQUB &88, &88, &88, &00, &00, &00, &00, &04, &05, &05, &05, &01
- EQUB &01, &00, &20, &08, &04, &04, &04, &49, &48, &68, &2C, &24
- EQUB &24, &34, &16, &0F, &0B, &07, &0F, &0F, &07, &07, &07, &0F
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &3A, &6C, &28, &6C, &6C
- EQUB &2C, &2C, &1C, &77, &66, &66, &77, &66, &66, &66, &00, &CC
- EQUB &66, &66, &CC, &CC, &66, &66, &00, &80
+ SKIP 73
 
 \ ******************************************************************************
 \
@@ -13344,13 +13342,7 @@ ORG &0B00
 
 .dashData33
 
- EQUB &40, &00, &08, &0C, &0C, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &02, &02, &02, &02, &02
- EQUB &00, &00, &00, &0C, &04, &0C, &08, &0C, &05, &05, &05, &05
- EQUB &05, &00, &00, &10, &00, &00, &00, &20, &00, &01, &03, &03
- EQUB &16, &34, &3C, &2C, &78, &48, &F0, &90, &C3, &43, &C2, &86
- EQUB &84, &84, &84, &1C, &00, &00, &00, &00, &06, &04, &06, &02
- EQUB &02, &02, &02, &02, &00, &00, &00, &00
+ SKIP 77
 
 \ ******************************************************************************
 \
@@ -13487,14 +13479,7 @@ ORG &0B00
 
 .dashData34
 
- EQUB &0F, &0F
- EQUB &0F, &0D, &0E, &0F, &0F, &0E, &0E, &0E, &29, &21, &61, &43
- EQUB &42, &42, &C2, &86, &08, &08, &00, &41, &00, &01, &01, &01
- EQUB &01, &00, &00, &08, &08, &08, &00, &08, &0C, &08, &08, &00
- EQUB &88, &88, &88, &88, &0E, &0A, &0E, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &14, &0A, &0E, &0A, &04, &3C, &2C, &34, &16
- EQUB &12, &12, &12, &03, &86, &C2, &C3, &43, &E1, &21, &F0, &90
- EQUB &00, &00, &00
+ SKIP 77
 
 \ ******************************************************************************
 \
@@ -13545,13 +13530,7 @@ ORG &0B00
 
 .dashData35
 
- EQUB &E0, &F0, &F0, &F0, &F0, &F0, &00, &00
- EQUB &00, &00, &80, &C0, &E0, &F0, &F0, &F0, &F0, &F0, &F0, &F0
- EQUB &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &E0, &E0, &C0
- EQUB &C0, &80, &91, &00, &22, &11, &00, &22, &00, &55, &22, &99
- EQUB &44, &22, &99, &00, &11, &77, &CC, &11, &EE, &33, &55, &22
- EQUB &77, &99, &22, &EE, &55, &DD, &45, &AB, &45, &67, &AB, &CF
- EQUB &47, &8B, &0F, &0F, &0F, &0F, &0F, &0F
+ SKIP 76
 
 \ ******************************************************************************
 \
@@ -13710,12 +13689,7 @@ ORG &0B00
 
 .dashData36
 
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &1F
- EQUB &4A, &0E, &0F, &0F, &0F, &0F, &0F, &00, &AA, &44, &33, &CC
- EQUB &AA, &66, &DC, &44, &00, &22, &11, &FC, &E0, &80, &00, &00
- EQUB &00, &44, &11, &C0, &70, &10, &00, &F0, &70, &30, &30, &10
- EQUB &10, &00, &80, &F0, &F0, &F0, &F0, &F0, &F0, &F0, &70, &C0
- EQUB &C0
+ SKIP 58
 
 \ ******************************************************************************
 \
@@ -13791,10 +13765,7 @@ ORG &0B00
 
 .dashData37
 
- EQUB &F0, &90, &E1, &21
- EQUB &F0, &61, &C3, &87, &86, &0C, &18, &00, &0F, &0C, &08, &00
- EQUB &00, &00, &00, &06, &0F, &00, &00, &00, &00, &00, &07, &05
- EQUB &1E, &07, &03, &01, &40, &00, &00, &00
+ SKIP 36
 
 \ ******************************************************************************
 \
@@ -13805,13 +13776,13 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This gets copied to screen memory along with dashData37.
 \
 \ ******************************************************************************
 
 .L42C0
 
- EQUB &F0, &C0
+ SKIP 2
 
 \ ******************************************************************************
 \
@@ -13822,14 +13793,13 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This gets copied to screen memory along with dashData37.
 \
 \ ******************************************************************************
 
 .L42C2
 
- EQUB &78, &2C
- EQUB &3C, &16, &03, &01, &07, &00, &83, &03, &82, &01, &C1, &81
+ SKIP 14
 
 \ ******************************************************************************
 \
@@ -13987,12 +13957,7 @@ ORG &0B00
 
 .dashData38
 
- EQUB &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &01, &01
- EQUB &01, &01, &00, &00, &00, &00, &05, &05, &05, &02, &00, &00
- EQUB &00, &00, &01, &01, &01, &01, &03, &92, &12, &12, &F0, &80
- EQUB &F0, &80
+ SKIP 52
 
 \ ******************************************************************************
 \
@@ -14078,11 +14043,7 @@ ORG &0B00
 
 .dashData39
 
- EQUB &20, &00, &01, &01, &0F
- EQUB &00, &00, &00, &00, &00, &00, &00, &0F, &03, &01, &00, &20
- EQUB &00, &08, &08, &F0, &68, &3C, &1E, &16, &03, &01, &00, &F0
- EQUB &10, &F0, &10, &F0, &90, &78, &48, &08, &08, &08, &08, &0C
- EQUB &94, &84, &84, &00, &06, &02, &06, &04, &06, &00, &00
+ SKIP 52
 
 \ ******************************************************************************
 \
@@ -14184,11 +14145,7 @@ LDA #&20
 
 .dashData40
 
- EQUB &22, &00, &44, &88, &33, &22, &CC, &33
- EQUB &00, &55, &22, &CC, &33, &55, &66, &33, &8F, &25, &07, &0F
- EQUB &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F, &0F
- EQUB &0E, &00, &1C, &0C, &14, &08, &38, &18, &F0, &30, &E1, &43
- EQUB &C3, &86, &0C, &08, &87, &0E, &0C, &08
+ SKIP 52
 
 \ ******************************************************************************
 \
@@ -17888,9 +17845,9 @@ LDA #&20
 \
 \ ------------------------------------------------------------------------------
 \
-\ The dashboard2.bin file loads at address &594A.
-\
-\ See the track source in revs-silverstone.asm for details of the track data.
+\ See the track source in revs-silverstone.asm for details of the track data. It
+\ covers trackData and dashData41 - the latter gets moved into screen memory as
+\ part of the memory-moving process in the SwapData routine.
 \
 \ ******************************************************************************
 
@@ -17898,11 +17855,19 @@ LDA #&20
 
  SKIP 1610
 
+\ ******************************************************************************
+\
+\       Name: dashData41
+\       Type: Variable
+\   Category: Dashboard
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
+\
+\ ******************************************************************************
+
 .dashData41
 
-INCBIN "1-source-files/images/dashboard2.bin"
-
-.L598D
+ SKIP 67
 
  SKIP 149
 
@@ -20552,7 +20517,8 @@ ORG &5FD0
 \       Name: dashData42
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: Dashboard image
+\    Summary: Contains part of the dashboard image that gets moved into screen
+\             memory
 \
 \ ******************************************************************************
 
@@ -20560,7 +20526,7 @@ ORG &6C00
 
 .dashData42
 
-INCBIN "1-source-files/images/dashboard1.bin"
+ SKIP 2853
 
 \ ******************************************************************************
 \
@@ -21265,12 +21231,38 @@ ENDMACRO
 \
 \ Save Revs.bin
 \
+\ For an explanation of the following, see the deep dive on "The jigsaw puzzle
+\ binary"
+\
 \ ******************************************************************************
 
-\ First, we need to move the code that runs within screen memory. We move it
-\ into the main game code, spread out across multiple dashboard blocks, from
-\ dashData0 to dashData25. There are 10 bytes of dashboard image in block 25,
-\ so the COPYBLOCK for dashData25 populates that block from offset 10.
+\ Step 1: Insert the dashboard image into the game code, split into 18 pieces
+
+ORG &9000
+
+INCBIN "1-source-files/images/dashboard.bin"
+
+COPYBLOCK &9EF6, &9EF6+10, dashData25
+COPYBLOCK &9ECD, &9EF6, dashData26
+COPYBLOCK &9E99, &9ECD, dashData27
+COPYBLOCK &9E61, &9E99, dashData28
+COPYBLOCK &9E25, &9E61, dashData29
+COPYBLOCK &9DE5, &9E25, dashData30
+COPYBLOCK &9DA1, &9DE5, dashData31
+COPYBLOCK &9D58, &9DA1, dashData32
+COPYBLOCK &9D0B, &9D58, dashData33
+COPYBLOCK &9CBE, &9D0B, dashData34
+COPYBLOCK &9C72, &9CBE, dashData35
+COPYBLOCK &9C38, &9C72, dashData36
+COPYBLOCK &9C04, &9C38, dashData37
+COPYBLOCK &9BD0, &9C04, dashData38
+COPYBLOCK &9B9C, &9BD0, dashData39
+COPYBLOCK &9B68, &9B9C, dashData40
+COPYBLOCK &9B25, &9B68, dashData41
+COPYBLOCK &9000, &9B25, dashData42
+
+\ Step 2: Insert the code that runs in screen memory into the game code, split
+\ into 26 pieces
 
 COPYBLOCK &7FCC, &8000, dashData0
 COPYBLOCK &7F98, &7FCC, dashData1
@@ -21299,40 +21291,21 @@ COPYBLOCK &7B3E, &7B62, dashData23
 COPYBLOCK &7B1A, &7B3E, dashData24
 COPYBLOCK &7AF6+10, &7B1A, dashData25+10
 
-\ We now move all the game code from where it runs (i.e. where it's been
-\ assembled by the above source code) to its position in the game binary file
-\
-\ So the following commands move blocks of code from the address when the game
-\ is running, to the address within the binary game file
-\
-\ This is effectively the reverse of the Entry, SwapCode and MoveCode routines;
-\ they unpack the code from the game binary into memory, while the following
-\ does the opposite and packs the code from memory into the game binary
+\ 3: Split the game code into the parts that make up the game binary file and
+\ pack them together in the correct order
 
-COPYBLOCK &5FD0, &6700, &64D0   \ &5FD0-&66FF to &64D0-&6BFF
-COPYBLOCK &0D00, &16DC, &5A80   \ &0D00-&16DB to &5A80-&645B
-COPYBLOCK &7000, &70DB, &1500   \ &7000-&70DA to &1500-&15DA
-COPYBLOCK &70DB, &7725, &5300   \ &70DB-&7724 to &5300-&5949
-COPYBLOCK &0B00, &0D00, &1300   \ &0B00-&0CFF to &1300-&14FF
-COPYBLOCK &7900, &7A00, &1200   \ &7900-&79FF to &1200-&12FF
-CLEAR &645C, &64D0              \ Reset &645C-&64CF to zero
+COPYBLOCK &5FD0, &6700, &64D0
+COPYBLOCK &0D00, &16DC, &5A80
+COPYBLOCK &7000, &70DB, &1500
+COPYBLOCK &70DB, &7725, &5300
+COPYBLOCK &0B00, &0D00, &1300
+COPYBLOCK &7900, &7A00, &1200
+CLEAR &645C, &64D0
 
-\ The second COPYBLOCK above moves code out of &0D00-&16DB
-\
-\ This vacated block then gets filled by further COPYBLOCK commands that copy
-\ code into &1200-&12FF, &1300-&14FF and &1500-&15DA
-\
-\ We are going to save the binary file from address &1200 onwards, as that's
-\ where the game binary loads, so we can ignore anything before &1200, but this
-\ still leaves a gap at &15DB-&16DB which has had code assembled into it, but
-\ that code has been moved elsewhere as part of the binary file packing process
-\
-\ In the original game binary this block contains background noise from the
-\ compilation process, which doesn't have any effect on the game, but if we want
-\ to assemble a file that matches the original game binary, we need to put this
-\ noise back, as follows
+\ 4: Add workspace noise to match the final game binary
 
 ORG &15DB
+
 CLEAR &15DB, &16DC
 
  EQUB &20, &00, &63, &60, &A6, &03, &10, &03, &20, &CB, &2A, &20

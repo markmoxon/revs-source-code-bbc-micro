@@ -6,7 +6,7 @@ This folder contains the source files for the BBC Micro disc version of Revs.
 
 * [boot-files](boot-files) contains any !BOOT files to be included on the final game disc
 
-* [images](images) contains the image binaries for the dashboard
+* [images](images) contains the image binary for the dashboard
 
 * [main-sources](main-sources) contains the annotated source code
 
