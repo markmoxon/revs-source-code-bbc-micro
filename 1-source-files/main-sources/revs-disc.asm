@@ -28,9 +28,6 @@
 PUTFILE "1-source-files/boot-files/$.!BOOT.bin", "!BOOT", &FFFFFF, &FFFFFF
 PUTFILE "1-source-files/basic-programs/$.Car.bin", "Car", &FF1900, &FF8023
 PUTFILE "1-source-files/basic-programs/$.REVS.bin", "REVS", &FF1900, &FF8023
-PUTFILE "4-reference-binaries/bbcmicro-co-uk/Revs1.bin", "Revs1", &002000, &002000
-\PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
-PUTFILE "4-reference-binaries/bbcmicro-co-uk/Silvers.bin", "Silvers", &0070DB, &0070DB
-\PUTFILE "3-assembled-output/Silvers.bin", "Silvers", &0070DB, &0070DB
-PUTFILE "4-reference-binaries/bbcmicro-co-uk/Revs.bin", "Revs?", &001200, &001200
-\PUTFILE "3-assembled-output/Revs.bin", "Revs?", &001200, &001200
+PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
+PUTFILE "3-assembled-output/Silvers.bin", "Silvers", &0070DB, &0070DB
+PUTFILE "3-assembled-output/Revs.bin", "Revs?", &001200, &001200
