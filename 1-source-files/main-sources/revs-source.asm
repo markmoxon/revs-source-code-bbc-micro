@@ -23,7 +23,7 @@
 \
 \ ******************************************************************************
 
-GUARD &8000             \ Guard against assembling over sideways ROMS
+GUARD &8000             \ Guard against assembling over sideways ROMs
 
 \ ******************************************************************************
 \
@@ -187,7 +187,8 @@ L0063 = &0063
 
 printMode = &0064
 
- SKIP 1                 \ Determines how the next character is printed on-screen:
+ SKIP 1                 \ Determines how the next character is printed
+                        \ on-screen:
                         \
                         \  * 0 = poke the character directly into screen memory
                         \
@@ -368,21 +369,6 @@ L77DC = &77DC
 L77E3 = &77E3
 L77E4 = &77E4
 
-
- SKIP 4                 \ The track data checksums
-                        \
-                        \   * trackChecksum+0 counts the number of data bytes
-                        \     ending in %00
-                        \
-                        \   * trackChecksum+1 counts the number of data bytes
-                        \     ending in %01
-                        \
-                        \   * trackChecksum+2 counts the number of data bytes
-                        \     ending in %10
-                        \
-                        \   * trackChecksum+3 counts the number of data bytes
-                        \     ending in %11
-
 \ ******************************************************************************
 \
 \ REVS MAIN GAME CODE
@@ -398,6 +384,7 @@ L77E4 = &77E4
 \   Category: Setup
 \    Summary: The main entry point for the game: move code into upper memory and
 \             call it
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -422,10 +409,12 @@ ORG &1200
  JMP SwapCode           \ Jump to the routine that we just moved to continue the
                         \ setup process
 
-\ Code between &7900 and &79FF starts out at &1200 before being moved
+\ This code starts out at &1200 and is run there, before it moves itself to
+\ &7900-&790D along with the rest of the page, so the following moves this code
+\ next to the block that runs at &790E-&79FF
 
-COPYBLOCK &1200, &12FF, &7900
-CLEAR &1200, &12FF
+COPYBLOCK &1200, &120E, &7900
+CLEAR &1200, &120E
 
 \ ******************************************************************************
 \
@@ -433,6 +422,7 @@ CLEAR &1200, &12FF
 \       Type: Subroutine
 \   Category: Setup
 \    Summary: Move the track data to the right place and run a checksum on it
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -470,9 +460,9 @@ ORG &790E
                         \ The following does this in batches of 256 bytes, using
                         \ Y as an index that goes from 0 to 255. The checks are
                         \ done at the end of the loop, and they check the value
-                        \ of Y first (against &25), and then the high byte of the
-                        \ higher address (against &77) but only if the Y test
-                        \ fails, so the swaps end up being:
+                        \ of Y first (against &25), and then the high byte of
+                        \ the higher address (against &77) but only if the Y
+                        \ test fails, so the swaps end up being:
                         \
                         \   * Swap &5300 + 0-255 with &70DB + 0-255
                         \   * Swap &5400 + 0-255 with &71DB + 0-255
@@ -567,69 +557,8 @@ ORG &790E
 \       Type: Subroutine
 \   Category: Setup
 \    Summary: Move and reset various blocks around in memory
+\  Deep dive: The jigsaw puzzle binary
 \
-\ ------------------------------------------------------------------------------
-\
-\ This routine moves another batch of memory blocks, as well as zeroing a
-\ section of memory. Together with the Entry and SwapCode routines, the various
-\ memory-moving routines implement the following operations:
-\
-\   * Main code loads at:   &1200-&6FFF
-\   * Track data loads at:  &70DB-&7813
-\
-\   * The Entry routine does the following:
-\
-\     * Move &1200-&12FF to &7900-&79FF
-\
-\   * The SwapCode routine does the following:
-\
-\     * Swap memory between &70DB-&77FF and &5300-&5A24
-\
-\   * The MoveCode routine does the following:
-\
-\     * Move &1500-&15DA to &7000-&70DA
-\     * Move &1300-&14FF to &0B00-&0CFF
-\     * Move &5A80-&645B to &0D00-&16DB
-\     * Move &64D0-&6BFF to &5FD0-&63FF
-\     * Zero &5A80-&5E3F
-\
-\ Put together, these routines reorganise the game binary, which has the
-\ following file structure:
-\
-\   * &1200-&12FF   moves to &7900-&79FF in memory
-\   * &1300-&14FF   moves to &0B00-&0CFF in memory
-\   * &1500-&15da   moves to &7000-&70DA in memory
-\   * &15DB-&16DB   contains workspace noise
-\   * &16DC-&5A7F   stays put
-\   * &5300-&5A24   swaps with track data at &70DB-&77FF in memory
-\   * &5A25-&5A79   stays put
-\   * &5A80-&645B   moves to &0D00-&16DB in memory
-\   * &645C-&64CF   stays put (this just contains zeroes)
-\   * &64D0-&6BFF   moves to &5FD0-&63FF in memory
-\   * &6C00-&6FFF   stays put
-\
-\ and with the following for the track binary:
-\
-\   * &70DB-&7724   swaps with game data at &5300-&5949 in memory
-\
-\ The routines move, swap and reset various parts of the file, to give the
-\ following in-memory layout for when the game is running:
-\
-\   * &0B00-&0CFF   moves from &1300-&14FF in the game binary
-\   * &0D00-&16DB   moves from &5A80-&645B in the game binary
-\   * &16DC-&52FF   stays put
-\   * &5300-&5949   swaps with &70DB-&7724 in the track binary
-\   * &594A-&5FCF   stays put
-\   * &5FD0-&66FF   moves from &64D0-&6BFF in the game binary
-\   * &6700-&6FFF   stays put
-\   * &7000-&70DA   moves from &1500-&15DA in the game binary
-\   * &70DB-&77FF   swaps with &5300-&5A24 in the game binary
-\   * &7800-&78FF   not used
-\   * &7900-&79FF   moves from &1200-&12FF in the game binary
-\
-\ For details on the workspace noise in the final game binary at &15DB-&16DB,
-\ see the "Save Revs.bin" section at the end of this source file.
-
 \ ******************************************************************************
 
 .MoveCode
@@ -4072,7 +4001,9 @@ ORG &0B00
 \       Name: CopyDashData
 \       Type: Subroutine
 \   Category: Dashboard
-\    Summary: 
+\    Summary: Copy dash data from the main game code to screen memory, and vice
+\             versa
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4219,11 +4150,9 @@ ORG &0B00
 \       Name: dashDataAddress
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Addresses for copying the first block of dash data between the
+\             main game code and screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9216,6 +9145,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 26
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -9241,6 +9171,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 4
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -9266,6 +9197,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9370,6 +9302,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9440,6 +9373,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9493,6 +9427,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9561,6 +9496,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 18
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -9593,6 +9529,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9696,6 +9633,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 19
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -9711,6 +9649,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9789,6 +9728,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 20
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -9804,6 +9744,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9871,6 +9812,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -9921,6 +9863,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 11
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -9953,6 +9896,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10060,6 +10004,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 25
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10098,6 +10043,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10188,6 +10134,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 8
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10203,6 +10150,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 51
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10235,6 +10183,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10285,6 +10234,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 31
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10307,6 +10257,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 3
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10341,6 +10292,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10391,6 +10343,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 0
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10425,6 +10378,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10475,6 +10429,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 42
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10496,6 +10451,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 17
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10529,6 +10485,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10579,6 +10536,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 23
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10616,6 +10574,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 35
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10650,6 +10609,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10696,6 +10656,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 43
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10717,6 +10678,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 44
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10738,6 +10700,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 45
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10770,6 +10733,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10870,6 +10834,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 22
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10911,6 +10876,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 16
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -10926,6 +10892,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -10991,6 +10958,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 39
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11014,6 +10982,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 48
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11037,6 +11006,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 49
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11069,6 +11039,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11170,11 +11141,8 @@ ORG &0B00
 \       Name: dashDataOffset
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Offset of the dash data within each dash data block
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11247,6 +11215,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11318,6 +11287,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 32
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11339,6 +11309,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11437,6 +11408,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 30
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11462,6 +11434,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 2
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11477,6 +11450,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11574,6 +11548,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 53
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11595,6 +11570,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 41
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11616,6 +11592,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 38
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11662,6 +11639,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11675,6 +11653,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Low byte of the token address lookup table
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11779,6 +11758,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -11792,6 +11772,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: high byte of the token address lookup table
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -11944,6 +11925,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -12077,6 +12059,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 46
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12096,6 +12079,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 24
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12146,6 +12130,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains code that gets moved into screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -12218,6 +12203,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 50
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12238,6 +12224,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 6
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12257,6 +12244,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 13
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12272,6 +12260,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 14
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12287,6 +12276,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 15
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12339,6 +12329,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains code and part of the dashboard image that gets moved into
 \             screen memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -12439,6 +12430,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 27
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12472,6 +12464,7 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ The configurable values below are set in the PrintHeader routine.
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12518,6 +12511,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -12636,6 +12630,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 21
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12691,6 +12686,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -12791,6 +12787,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 29
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12816,6 +12813,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 9
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12849,6 +12847,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -12940,6 +12939,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 10
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12955,6 +12955,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 12
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -12988,6 +12989,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13086,6 +13088,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 37
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13133,6 +13136,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13184,6 +13188,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 7
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13217,6 +13222,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13286,6 +13292,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13337,6 +13344,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13372,6 +13380,7 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ The configurable values below are set in the PrintHeader routine.
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13474,6 +13483,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13525,6 +13535,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13538,12 +13549,13 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Text
 \    Summary: Configure and print a double-height header in screen mode 7
+\  Deep dive: Text tokens
 \
 \ ------------------------------------------------------------------------------
 \
 \ Prints a token as a double-height header, with the position and colours given
 \ in the header tables, and a specific number of spaces between the top and
-\ bottom parts of the couble-height text (to ensure they line up).
+\ bottom parts of the double-height text (to ensure they line up).
 \
 \ The tokens are formatted as follows:
 \
@@ -13645,6 +13657,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 1
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13684,6 +13697,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13717,6 +13731,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 40
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13760,6 +13775,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13879,6 +13895,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 52
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13910,6 +13927,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 28
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -13952,6 +13970,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -13985,6 +14004,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 5
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -14000,6 +14020,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Text
 \    Summary: Text for recursive token 36
+\  Deep dive: Text tokens
 \
 \ ******************************************************************************
 
@@ -14038,6 +14059,7 @@ ORG &0B00
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -14140,6 +14162,7 @@ LDA #&20
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
@@ -16237,6 +16260,7 @@ LDA #&20
 \       Type: Subroutine
 \   Category: Text
 \    Summary: Print a recursive token
+\  Deep dive: Text tokens
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17862,6 +17886,7 @@ LDA #&20
 \   Category: Dashboard
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
+\  Deep dive: The jigsaw puzzle binary
 \
 \ ******************************************************************************
 
