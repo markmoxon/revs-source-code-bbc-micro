@@ -1,6 +1,6 @@
 # Source code for Revs on the BBC Micro
 
-This repository contains source code for Revs on the BBC Micro. The project to add commentary is ongoing.
+This repository contains source code for Revs on the BBC Micro. The project to add commentary is ongoing. See the [accompanying website](https://revs.bbcelite.com) for more details about this project.
 
 ## Acknowledgements
 
