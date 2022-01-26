@@ -925,7 +925,7 @@ ORG &0B00
  ASL A
  STA U
  LDA L0BA0,X
- JSR sub_C0C00
+ JSR Multiply8x8
  CLC
  ADC #&5A
  STA L62A8,X
@@ -1034,7 +1034,195 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0C00
+\       Name: Multiply8x8
+\       Type: Subroutine
+\   Category: Maths
+\    Summary: Calculate (A T) = T * U
+\
+\ ------------------------------------------------------------------------------
+\
+\ Do the following multiplication of two unsigned 8-bit numbers:
+\
+\   (A T) = A * U
+\
+\ Other entry points:
+\
+\   Multiply8x8+2       Calculate (A T) = T * U
+\
+\ ******************************************************************************
+
+.Multiply8x8
+
+ STA T                  \ Set T = A
+
+                        \ We now calculate (A T) = T * U
+                        \                        = A * U
+
+ LDA #0                 \ Set A = 0 so we can start building the answer in A
+
+ LSR T                  \ Set T = T >> 1
+                        \ and C flag = bit 0 of T
+
+                        \ We are now going to work our way through the bits of
+                        \ T, and do a shift-add for any bits that are set,
+                        \ keeping the running total in A, and instead of using a
+                        \ loop, we unroll the calculation, starting with bit 0
+
+ BCC P%+5               \ If C (i.e. the next bit from T) is set, do the
+ CLC                    \ addition for this bit of T:
+ ADC U                  \
+                        \   A = A + U
+
+ ROR A                  \ Shift A right to catch the next digit of our result,
+                        \ which the next ROR sticks into the left end of T while
+                        \ also extracting the next bit of T
+
+ ROR T                  \ Add the overspill from shifting A to the right onto
+                        \ the start of T, and shift T right to fetch the next
+                        \ bit for the calculation into the C flag
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 1
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 2
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 3
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 4
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 5
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 6
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ BCC P%+5               \ Repeat the shift-and-add loop for bit 7
+ CLC
+ ADC U
+ ROR A
+ ROR T
+
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: Divide8x8
+\       Type: Subroutine
+\   Category: Maths
+\    Summary: Calculate T = A / V
+\
+\ ------------------------------------------------------------------------------
+\
+\ In the same way that shift-and-add implements a binary version of the manual
+\ long multiplication process, shift-and-subtract implements long division. We
+\ shift bits out of the left end of the number being divided (A), subtracting
+\ the largest possible multiple of the divisor (V) after each shift; each bit of
+\ A where we can subtract Q gives a 1 the answer to the division, otherwise it
+\ gives a 0.
+\
+\ ******************************************************************************
+
+.Divide8x8
+
+ ASL T                  \ Shift T left, which clears bit 0 of T, ready for us to
+                        \ start building the result
+
+                        \ We now repeat the following five instruction block
+                        \ eight times, one for each bit in T
+
+ ROL A                  \ Shift A to the left to extract the next bit from the
+                        \ number being divided
+
+ BCS P%+6               \ If we just shifted a 1 out of A, skip the next two
+                        \ instructions and jump straight to the subtraction
+
+ CMP V                  \ If A < V skip the following two instructions with the
+ BCC P%+5               \ C flag clear, so we shift a 0 into the result in T
+
+ SBC V                  \ A >= V, so set A = A - V and set the C flag so we
+ SEC                    \ shift a 1 into the result in T
+
+ ROL T                  \ Shift T to the left, pulling the C flag into bit 0
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 1
+ BCS P%+6
+ CMP V
+ BCC P%+5
+ SBC V
+ SEC
+ ROL T
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 2
+ BCS P%+6
+ CMP V
+ BCC P%+5
+ SBC V
+ SEC
+ ROL T
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 3
+ BCS P%+6
+ CMP V
+ BCC P%+5
+ SBC V
+ SEC
+ ROL T
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 4
+ BCS P%+6
+ CMP V
+ BCC P%+5
+ SBC V
+ SEC
+ ROL T
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 5
+ BCS P%+6
+ CMP V
+ BCC P%+5
+ SBC V
+ SEC
+ ROL T
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 6
+ BCS P%+6
+ CMP V
+ BCC P%+5
+ SBC V
+ SEC
+ ROL T
+
+ ROL A                  \ Repeat the shift-and-subtract loop for bit 7, but
+ BCS P%+4               \ without the subtraction, as we don't need to keep
+ CMP V                  \ calculating A once its top bit has been extracted
+ ROL T
+
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: sub_C0CA5
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -1045,223 +1233,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C0C00
-
- STA T
-
-\ ******************************************************************************
-\
-\       Name: sub_C0C02
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C0C02
-
- LDA #0
- LSR T
- BCC C0C0B
- CLC
- ADC U
-
-.C0C0B
-
- ROR A
- ROR T
- BCC C0C13
- CLC
- ADC U
-
-.C0C13
-
- ROR A
- ROR T
- BCC C0C1B
- CLC
- ADC U
-
-.C0C1B
-
- ROR A
- ROR T
- BCC C0C23
- CLC
- ADC U
-
-.C0C23
-
- ROR A
- ROR T
- BCC C0C2B
- CLC
- ADC U
-
-.C0C2B
-
- ROR A
- ROR T
- BCC C0C33
- CLC
- ADC U
-
-.C0C33
-
- ROR A
- ROR T
- BCC C0C3B
- CLC
- ADC U
-
-.C0C3B
-
- ROR A
- ROR T
- BCC C0C43
- CLC
- ADC U
-
-.C0C43
-
- ROR A
- ROR T
- RTS
-
-\ ******************************************************************************
-\
-\       Name: sub_C0C47
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C0C47
-
- ASL T
- ROL A
- BCS C0C50
- CMP V
- BCC C0C53
-
-.C0C50
-
- SBC V
- SEC
-
-.C0C53
-
- ROL T
- ROL A
- BCS C0C5C
- CMP V
- BCC C0C5F
-
-.C0C5C
-
- SBC V
- SEC
-
-.C0C5F
-
- ROL T
- ROL A
- BCS C0C68
- CMP V
- BCC C0C6B
-
-.C0C68
-
- SBC V
- SEC
-
-.C0C6B
-
- ROL T
- ROL A
- BCS C0C74
- CMP V
- BCC C0C77
-
-.C0C74
-
- SBC V
- SEC
-
-.C0C77
-
- ROL T
- ROL A
- BCS C0C80
- CMP V
- BCC C0C83
-
-.C0C80
-
- SBC V
- SEC
-
-.C0C83
-
- ROL T
- ROL A
- BCS C0C8C
- CMP V
- BCC C0C8F
-
-.C0C8C
-
- SBC V
- SEC
-
-.C0C8F
-
- ROL T
- ROL A
- BCS C0C98
- CMP V
- BCC C0C9B
-
-.C0C98
-
- SBC V
- SEC
-
-.C0C9B
-
- ROL T
- ROL A
- BCS C0CA2
- CMP V
-
-.C0CA2
-
- ROL T
- RTS
-
-\ ******************************************************************************
-\
-\       Name: C0CA5
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.C0CA5
+.sub_C0CA5
 
  LDA M
  CMP #&67
@@ -1355,8 +1327,8 @@ ORG &0B00
 .C0D27
 
  LDA #&AB
- JSR sub_C0C00
- JSR sub_C0C00
+ JSR Multiply8x8
+ JSR Multiply8x8
  STA V
  JSR sub_C0DBF
  LDA G
@@ -1477,10 +1449,10 @@ ORG &0B00
 
 .sub_C0DBF
 
- JSR sub_C0C02
+ JSR Multiply8x8+2
  STA W
  LDA V
- JSR sub_C0C00
+ JSR Multiply8x8
  STA U
  LDA W
  CLC
@@ -1535,7 +1507,7 @@ ORG &0B00
  LDA L0081
  STA U
  LDA L0082
- JSR sub_C0C00
+ JSR Multiply8x8
  STA W
  LDA T
  CLC
@@ -1547,7 +1519,7 @@ ORG &0B00
 .C0E10
 
  LDA L0083
- JSR sub_C0C00
+ JSR Multiply8x8
  STA G
  LDA T
  CLC
@@ -1561,7 +1533,7 @@ ORG &0B00
  LDA L0080
  STA U
  LDA L0083
- JSR sub_C0C00
+ JSR Multiply8x8
  STA U
  LDA T
  CLC
@@ -3370,7 +3342,7 @@ ORG &0B00
  LDX #1
  JSR sub_C503F
  STA U
- JSR sub_C0C00
+ JSR Multiply8x8
  PLP
  BEQ C159F
  LSR A
@@ -4771,7 +4743,7 @@ ORG &0B00
 
 .C1BFE
 
- JSR sub_C0C00
+ JSR Multiply8x8
  CMP #&10
  BCC C1C07
  LDA #&10
@@ -6051,7 +6023,7 @@ ORG &0B00
  LDA L0085
  CMP V
  BEQ C220D
- JSR sub_C0C47
+ JSR Divide8x8
  LDA #0
  STA L008A
  LDY T
@@ -6140,7 +6112,7 @@ ORG &0B00
  LDA L0083
  CMP V
  BEQ C220D
- JSR sub_C0C47
+ JSR Divide8x8
  LDA #0
  STA L008A
  LDY T
@@ -6272,7 +6244,7 @@ ORG &0B00
  LDA L0081
  STA T
  LDA L0084
- JSR sub_C0C47
+ JSR Divide8x8
  LDA T
  CMP #&80
  BCS C22FE
@@ -6486,7 +6458,7 @@ ORG &0B00
  LDA L008B
  SBC L000B
  STA L5E90,Y
- JMP C0CA5
+ JMP sub_C0CA5
 
 \ ******************************************************************************
 \
@@ -7680,7 +7652,7 @@ ORG &0B00
  EOR #&FF
  CLC
  ADC #1
- JSR sub_C0C00
+ JSR Multiply8x8
  EOR #&FF
  CLC
  ADC #1
@@ -7690,7 +7662,7 @@ ORG &0B00
 
 .C297B
 
- JSR sub_C0C00
+ JSR Multiply8x8
 
 .C297E
 
@@ -7730,7 +7702,7 @@ ORG &0B00
  EOR #&FF
  CLC
  ADC #1
- JSR sub_C0C00
+ JSR Multiply8x8
  EOR #&FF
  CLC
  ADC #1
@@ -7740,7 +7712,7 @@ ORG &0B00
 
 .C29C8
 
- JSR sub_C0C00
+ JSR Multiply8x8
 
 .C29CB
 
@@ -7959,7 +7931,7 @@ ORG &0B00
 
 .sub_C2AB3
 
- JSR C0CA5
+ JSR sub_C0CA5
  LDA L
  STA L0055
  BNE C2ACA
@@ -14263,7 +14235,7 @@ LDA #&20
 
  BCS C44E0
 
- JSR sub_C0C00
+ JSR Multiply8x8
 
 .C44E0
 
@@ -14498,7 +14470,7 @@ LDA #&20
  LDA L0063
  STA U
  LDA #&21
- JSR sub_C0C00
+ JSR Multiply8x8
  ASL U
  CLC
  ADC U
@@ -14526,7 +14498,7 @@ LDA #&20
  PHP
  LDA trackData+512,Y
  JSR sub_C3450
- JSR sub_C0C00
+ JSR Multiply8x8
  PLP
  JSR sub_C3450
  RTS
@@ -14618,10 +14590,10 @@ LDA #&20
  JSR sub_C4687
  STA U
  TYA
- JSR sub_C0C00
+ JSR Multiply8x8
  STA U
  LDA L0010
- JSR sub_C0C00
+ JSR Multiply8x8
  RTS
 
 \ ******************************************************************************
@@ -15441,7 +15413,7 @@ LDA #&20
  STA U
  LDX gearNumber
  LDA trackData+1798,X
- JSR sub_C0C00
+ JSR Multiply8x8
  ASL T
  ROL A
  PLP
@@ -15556,7 +15528,7 @@ LDA #&20
 
  STA U
  LDA trackData+1805,X
- JSR sub_C0C00
+ JSR Multiply8x8
 
 .C4A87
 
@@ -15851,7 +15823,7 @@ LDA #&20
 
  STA U
  LDA L003F
- JSR sub_C0C00
+ JSR Multiply8x8
  LDY L003E
  DEY
  BNE C4BCB
@@ -15918,7 +15890,7 @@ LDA #&20
 .C4C06
 
  LDA VIA+&68            \ user_via_t2c_l
- JSR sub_C0C00
+ JSR Multiply8x8
  AND #7
  TAX
  BNE C4C12
@@ -15951,7 +15923,7 @@ LDA #&20
 
  STA U
  LDA L62A8,X
- JSR sub_C0C00
+ JSR Multiply8x8
  BIT L62E9
  JSR sub_C3450
  CLC
@@ -15969,7 +15941,7 @@ LDA #&20
  CLC
  ADC G,X
  STA L62AA,X
- JSR sub_C0C00
+ JSR Multiply8x8
  STA L62AC,X
  DEX
  BPL C4C28
@@ -16040,7 +16012,7 @@ LDA #&20
 .C4C77
 
  STA W
- JSR sub_C0C00
+ JSR Multiply8x8
  STA U
  LDY #6
  LDA L0039
@@ -16048,7 +16020,7 @@ LDA #&20
  LDA L0063
  STA U
  LDA L62F1
- JSR sub_C0C00
+ JSR Multiply8x8
  CLC
  ADC #8
  STA V
@@ -17981,7 +17953,7 @@ LDA #&20
 
  STA U
  LDA L5F38
- JSR sub_C0C00
+ JSR Multiply8x8
  STA U
  JMP C5A61
 
@@ -19796,22 +19768,23 @@ ORG &5FD0
                         \
                         \   2 = COMPETITION
 
- LDX #2
+ LDX #2                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
- CPX #1
+ CPX #1                 \ If X >= 1, then the choice was competition, so jump to
+ BCS game1              \ game1
 
- BCS C640A
+ STX L006F              \ Otherwise X = 0 and the choice was practice, so set
+                        \ L006F = 0
 
- STX L006F
- DEX
+ DEX                    \ Set L5F3B = 255
  STX L5F3B
 
  JSR ResetAllL06A0
 
  JSR sub_C655A
 
-.C640A
+.game1
 
  LDA #0
  STA L5F3C
@@ -19827,13 +19800,14 @@ ORG &5FD0
                         \
                         \   3 = Professional
 
- LDX #3
+ LDX #3                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
  STX L5F3A
+
  JSR sub_C44C6
 
-.C641F
+.game2
 
  LDX #22                \ Print token 22, which shows a menu with the following
  JSR PrintToken         \ options:
@@ -19846,32 +19820,42 @@ ORG &5FD0
                         \
                         \   3 = 20 mins
 
- LDX #3
+ LDX #3                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
  LDA L3DF0,X
  STA L5F3B
+
  JSR ResetAllL06A0
+
  LDA #&14
  STA L006F
 
-.C6436
+.game3
 
  DEC L006F
+
  LDX L006F
+
  JSR ResetL06A0
+
  LDA L5F3C
- BEQ C6457
+ BEQ game4
+
  JSR sub_C6687
+
  JSR sub_C655A
+
  LDA L006F
  CMP L5F39
- BNE C6436
+ BNE game3
+
  LDA #0
  JSR sub_C0F64
- JMP C64B3
 
-.C6457
+ JMP game9
+
+.game4
 
  LDX #23                \ Print token 23, which shows the following prompt:
  JSR PrintToken         \
@@ -19885,7 +19869,7 @@ ORG &5FD0
  JSR sub_C66D4
  JSR sub_C655A
  LDX L006F
- BEQ C6474
+ BEQ game5
 
  LDX #27                \ Print token 27, which shows a menu with the following
  JSR PrintToken         \ options:
@@ -19893,13 +19877,14 @@ ORG &5FD0
                         \   1 = ENTER ANOTHER DRIVER
                         \
                         \   2 = START RACE
- LDX #2
+
+ LDX #2                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
  CPX #0
- BEQ C6436
+ BEQ game3
 
-.C6474
+.game5
 
  LDA L006F
  STA L5F39
@@ -19907,27 +19892,32 @@ ORG &5FD0
  JSR sub_C0F64
  LDX #0
 
-.P6480
+.game6
 
  LDY L014F
+
  CPY L5F39
- BCC C64A2
+ BCC game8
+
  LDA L06B8,Y
  SEC
  SBC trackData+1792,X
+
  LDA L06D0,Y
  SBC trackData+1795,X
- BCS C649A
- INX
- BNE P6480
 
-.C649A
+ BCS game7
+ INX
+ BNE game6
+
+.game7
 
  CPX L5F3A
- BCS C64A2
+ BCS game8
+
  STX L5F3A
 
-.C64A2
+.game8
 
  LDX L5F3A
  JSR sub_C44C6
@@ -19936,32 +19926,33 @@ ORG &5FD0
  JSR PrintToken         \ the text "STANDARD OF RACE"
 
  JSR sub_C3C6F
+
  JSR sub_C34D0
 
-.C64B3
+.game9
 
  LDX #2
  LDA #0
  JSR sub_C65D3
  LDY #&13
 
-.P64BC
+.game10
 
  LDA L013C,Y
  STA L04C8,Y
  CMP L5F39
- BCC C64CF
+ BCC game11
  TAX
  LDA L0100,Y
  LSR A
  STA L04A0,X
 
-.C64CF
+.game11
 
  DEY
- BPL P64BC
+ BPL game10
  LDA L5F3C
- BNE C64F2
+ BNE game12
 
  LDX #28                \ Print token 28, which shows a menu with the following
  JSR PrintToken         \ options:
@@ -19979,48 +19970,51 @@ ORG &5FD0
  SBC L5F39
  STA L5F38
 
- LDX #3
+ LDX #3                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
  LDA L3DF4,X
  STA L006E
  STX L5F3F
 
-.C64F2
+.game12
 
  LDA #&14
  STA L006F
 
-.C64F6
+.game13
 
  DEC L006F
  JSR sub_C6687
  LDX #&13
 
-.P64FD
+.game14
 
  LDA L04C8,X
  STA L013C,X
  DEX
- BPL P64FD
+ BPL game14
+
  JSR ResetAllL06A0
+
  LDA #&80
  JSR sub_C655C
  LDA #&80
  JSR sub_C0F64
  LDX #5
 
-.P6515
+.game15
 
  JSR sub_C5A25
  DEX
- BPL P6515
+ BPL game15
+
  LDA #0
  JSR sub_C0F64
  LDX #6
  JSR sub_C5A25
 
-.C6525
+.game16
 
  LDA #&80
  JSR sub_C0F64
@@ -20039,11 +20033,14 @@ ORG &5FD0
  LDA #&88
  JSR sub_C65D3
  BIT G
- BPL C6525
+ BPL game16
+
  LDA L006F
+
  CMP L5F39
- BNE C64F6
- JMP C641F
+ BNE game13
+
+ JMP game2
 
 \ ******************************************************************************
 \
