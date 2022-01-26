@@ -58,6 +58,8 @@ trackLoad = &70DB       \ The load address of the track data file
 trackChecksum = &7800   \ The address of the checksums in the track data file
 
 row2_column1 = &7C79    \ Chequered flag mode 7 screen address
+row18_column5 = &7E85
+row24_column5 = &7FC5
 
 \ ******************************************************************************
 \
@@ -218,14 +220,14 @@ T = &0074
 U = &0075
 V = &0076
 W = &0077
-L0078 = &0078
-L0079 = &0079
-L007A = &007A
-L007B = &007B
-L007C = &007C
-L007D = &007D
-L007E = &007E
-L007F = &007F
+G = &0078
+H = &0079
+I = &007A
+J = &007B
+K = &007C
+L = &007D
+M = &007E
+N = &007F
 L0080 = &0080
 L0081 = &0081
 L0082 = &0082
@@ -1261,31 +1263,31 @@ ORG &0B00
 
 .C0CA5
 
- LDA L007E
+ LDA M
  CMP #&67
  BCS C0CC2
- LDA L0078
- LSR L0079
+ LDA G
+ LSR H
  ROR A
- LSR L0079
+ LSR H
  ROR A
- LSR L0079
+ LSR H
  ROR A
  CLC
- ADC L007A
- STA L007C
- LDA L0079
- ADC L007B
- STA L007D
+ ADC I
+ STA K
+ LDA H
+ ADC J
+ STA L
  RTS
 
 .C0CC2
 
- LSR L0079
- ROR L0078
- LDA L007B
+ LSR H
+ ROR G
+ LDA J
  STA T
- LDA L007A
+ LDA I
  LSR T
  ROR A
  LSR T
@@ -1293,20 +1295,20 @@ ORG &0B00
  LSR T
  ROR A
  STA U
- LDA L0078
+ LDA G
  CLC
- ADC L007A
- STA L007C
- LDA L0079
- ADC L007B
- STA L007D
- LDA L007C
+ ADC I
+ STA K
+ LDA H
+ ADC J
+ STA L
+ LDA K
  SEC
  SBC U
- STA L007C
- LDA L007D
+ STA K
+ LDA L
  SBC T
- STA L007D
+ STA L
  RTS
 
  EQUB &F1, &0C, &E5, &74, &8D, &F6, &0C, &60
@@ -1327,16 +1329,16 @@ ORG &0B00
 
 .sub_C0D01
 
- STA L007B
+ STA J
  STX T
  JSR sub_C0DB3
- STA L0078
+ STA G
  LDA U
- STA L0079
+ STA H
  LDX #1
  STX L0042
  LDX #0
- BIT L007B
+ BIT J
  BVC C0D1B
  INX
  DEC L0042
@@ -1346,7 +1348,7 @@ ORG &0B00
  CMP #&7A
  BCC C0D27
  BCS C0D4F
- LDA L0078
+ LDA G
  CMP #&F0
  BCS C0D4F
 
@@ -1357,11 +1359,11 @@ ORG &0B00
  JSR sub_C0C00
  STA V
  JSR sub_C0DBF
- LDA L0078
+ LDA G
  SEC
  SBC T
  STA T
- LDA L0079
+ LDA H
  SBC U
  ASL T
  ROL A
@@ -1375,10 +1377,10 @@ ORG &0B00
 
  LDA #0
  SEC
- SBC L0078
+ SBC G
  STA T
  LDA #&C9
- SBC L0079
+ SBC H
  STA U
  STA V
  JSR sub_C0DBF
@@ -1407,17 +1409,17 @@ ORG &0B00
  LDX L0042
  LDA #0
  SEC
- SBC L0078
- STA L0078
+ SBC G
+ STA G
  LDA #&C9
- SBC L0079
- STA L0079
+ SBC H
+ STA H
  STA U
  JMP C0D1B
 
 .C0D97
 
- LDA L007B
+ LDA J
  BPL C0DA3
  LDA #1
  ORA L62A0
@@ -1425,9 +1427,9 @@ ORG &0B00
 
 .C0DA3
 
- LDA L007B
+ LDA J
  ASL A
- EOR L007B
+ EOR J
  BPL C0DB2
  LDA #1
  ORA L62A1
@@ -1515,18 +1517,18 @@ ORG &0B00
  LDA #0
  SBC L0081
  STA L0081
- LDA L0079
+ LDA H
  EOR #&80
- STA L0079
+ STA H
 
 .C0DEE
 
  LDA L0082
  AND #1
  BEQ C0DFA
- LDA L0079
+ LDA H
  EOR #&80
- STA L0079
+ STA H
 
 .C0DFA
 
@@ -1546,13 +1548,13 @@ ORG &0B00
 
  LDA L0083
  JSR sub_C0C00
- STA L0078
+ STA G
  LDA T
  CLC
  ADC W
  STA W
  BCC C0E22
- INC L0078
+ INC G
 
 .C0E22
 
@@ -1568,12 +1570,12 @@ ORG &0B00
  ADC W
  STA T
  BCC C0E3C
- INC L0078
+ INC G
 
 .C0E3C
 
- LDA L0078
- BIT L0079
+ LDA G
+ BIT H
 
 \ ******************************************************************************
 \
@@ -1925,7 +1927,7 @@ ORG &0B00
 
 .sub_C0F64
 
- STA L0078
+ STA G
  SED
 
 .C0F67
@@ -1944,7 +1946,7 @@ ORG &0B00
  LDA L013B,X
  TAX
  SEC
- BIT L0078
+ BIT G
  BVS C0FBA
  BMI C0FD4
  LDA L06A0,Y
@@ -1952,7 +1954,7 @@ ORG &0B00
  STA U
  LDA L06B8,Y
  SBC L06B8,X
- STA L0079
+ STA H
  LDA L06D0,Y
  SBC L06D0,X
  BCC C0FEC
@@ -1960,7 +1962,7 @@ ORG &0B00
 .C0F9B
 
  ORA U
- ORA L0079
+ ORA H
  BNE C0FAA
  LDX W
  DEX
@@ -1986,7 +1988,7 @@ ORG &0B00
  STA U
  LDA L39E4,X
  SBC L39E4,Y
- STA L0079
+ STA H
  LDA L04F0,X
  SBC L04F0,Y
  BCC C0FEC
@@ -1999,7 +2001,7 @@ ORG &0B00
  STA U
  LDA L08AC,Y
  SBC L08AC,X
- STA L0079
+ STA H
  LDA L04DC,Y
  SBC L04DC,X
  BCS C0FAA
@@ -2036,7 +2038,7 @@ ORG &0B00
  BPL C102A
  LDA #0
  STA L0066
- STA L0078
+ STA G
  LDX L006F
  LDA L04B4,X
  CMP #1
@@ -2161,7 +2163,7 @@ ORG &0B00
  ORA L08E8
  BNE P10A1
  LDA #&FF
- STA L0078
+ STA G
  BNE C10CF
 
 .C10B7
@@ -2186,8 +2188,8 @@ ORG &0B00
 
 .C10CF
 
- INC L0078
- LDX L0078
+ INC G
+ LDX G
  CPX #&14
  BCC C10B7
 
@@ -4225,7 +4227,7 @@ ORG &0B00
 
 .C1965
 
- CMP L007F
+ CMP N
  BCS C19A5
 
 .C1969
@@ -4246,7 +4248,7 @@ ORG &0B00
 
 .C1977
 
- STY L007F
+ STY N
 
 .C1979
 
@@ -4259,9 +4261,9 @@ ORG &0B00
 
  LDA L5F20,X
  BMI C198E
- CMP L007F
+ CMP N
  BCC C198E
- LDA L007F
+ LDA N
  STA L5F20,X
 
 .C198E
@@ -4686,7 +4688,7 @@ ORG &0B00
  BCS C1BA2
  LDX #0
  STX L002F
- STX L0078
+ STX G
  LDX #&0A
  LDY #&18
  JSR sub_C37D0
@@ -4807,15 +4809,15 @@ ORG &0B00
 
 .sub_C1C1C
 
- STY L007B
- LDX L0079
- STX L0078
+ STY J
+ LDX H
+ STX G
  AND #3
  TAX
  LDA L628F,X
- STA L0079
+ STA H
  LDA L0085
- STA L007C
+ STA K
  LDA L0084
  AND #&0C
  LSR A
@@ -4827,7 +4829,7 @@ ORG &0B00
  STA P
  CPY #1
  BNE C1C5A
- LDA L007E
+ LDA M
  BPL C1C4D
  SEC
  ROR A
@@ -4842,7 +4844,7 @@ ORG &0B00
 
  CLC
  ADC L0035
- STA L007E
+ STA M
  LSR A
  LSR A
  STA L0085
@@ -4853,7 +4855,7 @@ ORG &0B00
  LDA L008D
  STA L0085
  LDA L008F
- STA L007E
+ STA M
  CPY #0
  BNE C1C7B
 
@@ -4904,7 +4906,7 @@ ORG &0B00
 .C1C9C
 
  STA L0082
- CMP L007F
+ CMP N
  BCC C1CAA
  CPY #1
  BNE C1CA7
@@ -4932,7 +4934,7 @@ ORG &0B00
 
 .C1CC3
 
- LDA L007E
+ LDA M
  AND #3
  TAX
  LDA yLookupLo+8,X
@@ -4942,22 +4944,22 @@ ORG &0B00
  CPY #1
  BCS C1D15
  LDA L337C,X
- AND L0078
+ AND G
  STA T
- LDA L0079
+ LDA H
  AND L33FC,X
  ORA T
  AND yLookupLo+8,X
  ORA V
- STA L007A
+ STA I
  LDA L0048
  BEQ C1CFD
  LDA #0
  STA L0048
  LDA L008C
- STA L007D
+ STA L
  EOR #&FF
- AND L007A
+ AND I
  JMP C1D25
 
 .C1CFD
@@ -4965,28 +4967,28 @@ ORG &0B00
  LDX L0085
  CPX L008D
  BNE C1D0A
- LDA L007A
- STA L0079
+ LDA I
+ STA H
  JMP C1D7C
 
 .C1D0A
 
- LDA L007A
+ LDA I
  BNE C1D10
  LDA #&55
 
 .C1D10
 
- LDY L007F
+ LDY N
  JMP C1DE8
 
 .C1D15
 
  BNE C1D34
  LDA L337C,X
- STA L007D
+ STA L
  EOR #&FF
- AND L0079
+ AND H
  AND yLookupLo+8,X
  ORA V
 
@@ -4995,8 +4997,8 @@ ORG &0B00
  LDX L0085
  CPX L008D
  BNE C1D44
- STA L0079
- LDA L007D
+ STA H
+ LDA L
  STA L008C
  ROR L0048
  RTS
@@ -5005,18 +5007,18 @@ ORG &0B00
 
  LDA L008C
  ORA L39D0,X
- STA L007D
+ STA L
  EOR #&FF
- AND L0078
+ AND G
  AND yLookupLo+8,X
  ORA V
 
 .C1D44
 
- STA L007A
+ STA I
  LDA #0
  STA L008C
- LDY L007F
+ LDY N
  JMP C1D6B
 
 .P1D4F
@@ -5025,7 +5027,7 @@ ORG &0B00
  BEQ C1D5D
  CMP #&55
  BNE C1D60
- LDA L007A
+ LDA I
  BNE C1D68
  BEQ C1D66
 
@@ -5035,8 +5037,8 @@ ORG &0B00
 
 .C1D60
 
- AND L007D
- ORA L007A
+ AND L
+ ORA I
  BNE C1D68
 
 .C1D66
@@ -5052,7 +5054,7 @@ ORG &0B00
 
  CPY L0082
  BNE P1D4F
- LDX L007B
+ LDX J
  CPX #1
  BEQ C1D93
  INC L0085
@@ -5061,17 +5063,17 @@ ORG &0B00
 
 .C1D7C
 
- LDA L007C
+ LDA K
  CMP #&28
  BCC C1D86
  LDA #&FF
- STA L007C
+ STA K
 
 .C1D86
 
  LDA L0085
  CLC
- SBC L007C
+ SBC K
  BEQ C1D93
  BMI C1D93
  TAX
@@ -5083,10 +5085,10 @@ ORG &0B00
 
 .C1D94
 
- LDY L007B
+ LDY J
  CPY #1
  BEQ C1D93
- LDA L007C
+ LDA K
  CMP #&28
  BCS C1D93
  LDA #&28
@@ -5137,7 +5139,7 @@ ORG &0B00
  LDA #0
  ROR A
  STA P
- LDY L007F
+ LDY N
  JMP C1DE0
 
  EQUB &C9, &55, &D0, &02, &A9, &00, &91, &72, &88, &C4, &82, &F0
@@ -5205,7 +5207,7 @@ ORG &0B00
 .C1DF1
 
  STX L0085
- STY L007F
+ STY N
  LDA dashDataOffset,X
  STA L0082
  LDX #&72
@@ -5270,7 +5272,7 @@ ORG &0B00
 
 .sub_C1E38
 
- LDA L0078
+ LDA G
  BNE C1E3E
  LDA #&55
 
@@ -5279,7 +5281,7 @@ ORG &0B00
  STA V
  LDA #&7F
  SEC
- SBC L007F
+ SBC N
  STA T
  ADC L0047
  STA L0086
@@ -5827,7 +5829,7 @@ ORG &0B00
 .C209C
 
  LDA L38FC
- STA L0079
+ STA H
  LDA #0
  STA L0048
  STA L008C
@@ -5842,7 +5844,7 @@ ORG &0B00
 
 .C20B8
 
- STA L007F
+ STA N
  LDX L35D0,Y
  LDA L5EF8,X
  CLC
@@ -5859,12 +5861,12 @@ ORG &0B00
 
 .C20CF
 
- CMP L007F
+ CMP N
  BCS C210C
  STA L0047
  LDX L3650,Y
  LDA L5EF8,X
- STA L007E
+ STA M
  LDX L36D0,Y
  LDA L5EF8,X
  STA L0083
@@ -6008,26 +6010,26 @@ ORG &0B00
 .C2193
 
  LDA L0085
- STA L0079
+ STA H
  LDA L0082
- STA L0078
+ STA G
  LDA L0080
- STA L007A
+ STA I
  LDA L0083
- STA L007B
+ STA J
  JMP C21C1
 
 .C21A6
 
  PHP
  LDA L0083
- STA L0079
+ STA H
  LDA L0080
- STA L0078
+ STA G
  LDA L0082
- STA L007A
+ STA I
  LDA L0085
- STA L007B
+ STA J
  PLP
  BEQ C220D
  JMP C2239
@@ -6054,7 +6056,7 @@ ORG &0B00
  STA L008A
  LDY T
  LDA L6100,Y
- STA L007E
+ STA M
  LSR A
  ROR L008A
  LSR A
@@ -6090,7 +6092,7 @@ ORG &0B00
 .C220D
 
  LDA #&FF
- STA L007E
+ STA M
  LDA #0
  STA L008A
  BIT L0086
@@ -6143,7 +6145,7 @@ ORG &0B00
  STA L008A
  LDY T
  LDA L6100,Y
- STA L007E
+ STA M
  LSR A
  ROR L008A
  LSR A
@@ -6232,11 +6234,11 @@ ORG &0B00
  LSR A
  ROR L0081
  STA L0084
- CMP L007D
+ CMP L
  BCC C22BE
  BNE C22BC
  LDA L0081
- CMP L007C
+ CMP K
  BCC C22BE
 
 .C22BC
@@ -6247,7 +6249,7 @@ ORG &0B00
 .C22BE
 
  LDY #0
- LDA L007D
+ LDA L
  JMP C22CA
 
 .P22C5
@@ -6258,7 +6260,7 @@ ORG &0B00
 
 .C22CA
 
- ASL L007C
+ ASL K
  ROL A
  BCC P22C5
  ROR A
@@ -6512,14 +6514,14 @@ ORG &0B00
  BCC C23E7
  BNE C23FC
  LDA L0010
- CMP L007C
+ CMP K
  BCC C23FC
 
 .C23E7
 
- LDA L007D
+ LDA L
  STA L0011
- LDA L007C
+ LDA K
  STA L0010
  LDA L0042
  STA L0013
@@ -7130,11 +7132,11 @@ ORG &0B00
  STA T
  JSR sub_C507E
  LDA L013C,X
- STX L0078
+ STX G
  TAY
  LDX T
  LDA #0
- STA L007F
+ STA N
  STA L0114,X
  JSR sub_C27A4
  BCS C26E6
@@ -7142,7 +7144,7 @@ ORG &0B00
  CMP #&F6
  BCC C26E6
  LDX W
- LDY L0078
+ LDY G
  JSR sub_C267F
  SEC
  ROR L62FE
@@ -7161,7 +7163,7 @@ ORG &0B00
 
  STA T
  LDA L04B4,Y
- ROL L0079
+ ROL H
  SBC L04B4,X
  BNE C26E6
  SED
@@ -7210,7 +7212,7 @@ ORG &0B00
 
 .C271C
 
- STA L007F
+ STA N
  LDA L0178,X
  CMP L0178,Y
  ROR T
@@ -7220,7 +7222,7 @@ ORG &0B00
 
  BCS C2742
  LDA #&40
- STA L007F
+ STA N
  LDA L0178,Y
  CMP L0178,X
  ROR T
@@ -7248,7 +7250,7 @@ ORG &0B00
  BNE C278C
  LDA V
  AND #&80
- ORA L007F
+ ORA N
  JMP C278A
 
 .C275E
@@ -7269,8 +7271,8 @@ ORG &0B00
  BCS C277D
  LDA V
  AND #&80
- ORA L007F
- STA L007F
+ ORA N
+ STA N
 
 .C277D
 
@@ -7281,18 +7283,18 @@ ORG &0B00
 
 .C2786
 
- LDA L007F
+ LDA N
  ORA #&10
 
 .C278A
 
- STA L007F
+ STA N
 
 .C278C
 
  LDA L0100,X
  LSR A
- LDA L007F
+ LDA N
  BCS C2797
  STA L0100,X
 
@@ -7370,7 +7372,7 @@ ORG &0B00
 
 .C27D8
 
- ROR L0079
+ ROR H
  LDA T
  CMP #&80
  BCS C27EA
@@ -7958,13 +7960,13 @@ ORG &0B00
 .sub_C2AB3
 
  JSR C0CA5
- LDA L007D
+ LDA L
  STA L0055
  BNE C2ACA
- CPY L007C
+ CPY K
  BCC C2ACA
  DEC L0068
- LDA L007C
+ LDA K
  STA L0041
  LDA L0042
  STA L0067
@@ -8168,12 +8170,12 @@ ORG &0B00
  BIT L0088
  BVC C2B7B
  BMI C2BCA
- LDX L007E
- LDY L007F
+ LDX M
+ LDY N
  LDA W
- STA L007E
+ STA M
  LDA L0082
- STA L007F
+ STA N
  STX W
  STY L0082
  DEC L001E
@@ -8182,7 +8184,7 @@ ORG &0B00
 
  LDA L0082
  SEC
- SBC L007F
+ SBC N
  STA L0087
  BPL C2B89
  LDA #0
@@ -8238,7 +8240,7 @@ ORG &0B00
 
 .C2BCD
 
- LDA L007E
+ LDA M
  SEC
  SBC W
  ROR L0086
@@ -8353,7 +8355,7 @@ ORG &0B00
 .C2C70
 
  STA L0082
- LDA L007E
+ LDA M
  SEC
  SBC #&30
  STA U
@@ -8373,7 +8375,7 @@ ORG &0B00
  LDA U
  AND #7
  TAX
- LDY L007F
+ LDY N
  LDA L0083
  CMP L0084
  BCC C2CEF
@@ -8445,9 +8447,9 @@ ORG &0B00
  LDA L001E
  BMI C2D08
  LDA W
- STA L007E
+ STA M
  LDA L0082
- STA L007F
+ STA N
 
 .C2D08
 
@@ -9659,9 +9661,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C32D0
+\       Name: ConvertTextToNumber
 \       Type: Subroutine
-\   Category: 
+\   Category: Utility routines
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -9670,7 +9672,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C32D0
+.ConvertTextToNumber
 
  LDA T
  CMP #&20
@@ -10083,7 +10085,7 @@ ORG &0B00
 
 .sub_C34D2
 
- STA L0078
+ STA G
 
  LDX #30                \ Print token 30 ("PRESS SPACE BAR TO CONTINUE" in cyan
  JSR PrintToken         \ at column 5, row 24)
@@ -10100,12 +10102,12 @@ ORG &0B00
  JSR ScanKeyboard
  BEQ C34F7
  JSR CheckRestartKeys
- BIT L0078
+ BIT G
  BPL C34E0
  LDX #&B6
  JSR ScanKeyboard
  BNE C34E0
- LSR L0078
+ LSR G
 
 .C34F7
 
@@ -10781,7 +10783,7 @@ ORG &0B00
  LSR A
  BNE C37E5
  LDA #&1F
- BIT L0078
+ BIT G
  BMI C37E5
  LDA #&F0
 
@@ -10792,9 +10794,9 @@ ORG &0B00
 
  JSR PrintCharacter     \ Print the character in A
 
- ASL L0078
+ ASL G
  PLA
- ASL L0078
+ ASL G
  BCS C37FE
  AND #&0F
  BNE C37F8
@@ -12140,7 +12142,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3C50
+\       Name: GetWingSettings
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -12151,7 +12153,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C3C50
+.GetWingSettings
 
  LDX #5                 \ Print "THE  PITS" as a double-height header at column
  JSR PrintHeader        \ 11, row 4, in blue text on a yellow background
@@ -12160,13 +12162,13 @@ ORG &0B00
  JSR PrintToken         \ SETTINGS > range 0 to 40" and a further prompt of
                         \ "rear > "
 
- JSR sub_C3EE0
+ JSR GetNumberInput
  STA L5F3E
 
  LDX #25                \ Print token 25, which shows a prompt of "front > "
  JSR PrintToken
 
- JSR sub_C3EE0
+ JSR GetNumberInput
  STA L5F3D
 
  JSR sub_C34D0
@@ -13033,9 +13035,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3EE0
+\       Name: GetNumberInput
 \       Type: Subroutine
-\   Category: 
+\   Category: Keyboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13044,19 +13046,19 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C3EE0
+.GetNumberInput
 
  LDA #&74
  LDY #0
  LDX #2
- JSR sub_C6300
- JSR sub_C32D0
+ JSR GetTextInput
+ JSR ConvertTextToNumber
  BCC C3EF9
 
 .P3EEE
 
  DEY
- BMI sub_C3EE0
+ BMI GetNumberInput
  LDA #&7F
  JSR OSWRCH
  JMP P3EEE
@@ -13405,9 +13407,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C40EB
+\       Name: ResetL06A0
 \       Type: Subroutine
-\   Category: 
+\   Category: Utility routines
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13416,14 +13418,17 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C40EB
+.ResetL06A0
 
- LDA #0
+ LDA #0                 \ Zero the X-th entry of L06A0
  STA L06A0,X
- STA L06B8,X
- LDA #&10
+
+ STA L06B8,X            \ Zero the X-th entry of L06B8
+
+ LDA #16                \ Set the X-th entry of L06D0 to 16
  STA L06D0,X
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13867,27 +13872,33 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C42EC
+\       Name: ResetAllL06A0
 \       Type: Subroutine
-\   Category: 
+\   Category: Utility routines
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Zero L06A0 to L06A0+&13 (&06A0 to &06B3)
+\ Zero L06B8 to L06B8+&13 (&06B8 to &06CB)
+\ Set  L06D0 to L06D0+&13 (&06D0 to &06E3) to 16
 \
 \ ******************************************************************************
 
-.sub_C42EC
+.ResetAllL06A0
 
- LDX #&13
+ LDX #19                \ We are about to reset 20 bytes, so set a counter in X
 
-.P42EE
+.rall1
 
- JSR sub_C40EB
- DEX
- BPL P42EE
- RTS
+ JSR ResetL06A0         \ Reset the X-th entry in L06A0, L06B8, L06D0
+
+ DEX                    \ Decrement the byte counter
+
+ BPL rall1              \ Loop back to reset the next set of bytes until we have
+                        \ reset them all
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14086,14 +14097,14 @@ ORG &0B00
  JSR PrintSpaces
  
 LDA #&20
- STA L0078
+ STA G
  LDA L39E4,X
  BNE C43E7
 
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
 
- LSR L0078
+ LSR G
  BNE C43EA
 
 .C43E7
@@ -14892,13 +14903,13 @@ LDA #&20
  LDX #2
  LDY #9
  LDA #&80
- STA L0079
+ STA H
  LDA #&0E
  JSR sub_C4874
  LDX #2
  LDY #8
  LDA #&40
- STA L0079
+ STA H
  LDA #9
  JSR sub_C4874
  LDX #8
@@ -14923,13 +14934,13 @@ LDA #&20
  LDX #2
  LDY #&0C
  LDA #0
- STA L0079
+ STA H
  LDA #&0E
  JSR sub_C4874
  LDX #2
  LDY #&0A
  LDA #&C0
- STA L0079
+ STA H
  LDA #&0C
  JSR sub_C4874
  LDX #&0A
@@ -15009,7 +15020,7 @@ LDA #&20
  BPL P4817
  LDX #2
  LDA #1
- STA L0078
+ STA G
 
 .C4832
 
@@ -15029,11 +15040,11 @@ LDA #&20
  JSR sub_C4753
  ASL T
  ROL A
- LDY L0078
+ LDY G
  STA L62E6,Y
  LDA T
  STA L62D6,Y
- DEC L0078
+ DEC G
  DEX
  DEX
  BPL C4832
@@ -15056,8 +15067,8 @@ LDA #&20
 
 .sub_C486D
 
- LDY L007F
- STA L0079
+ LDY N
+ STA H
  JMP C4876
 
 \ ******************************************************************************
@@ -15075,7 +15086,7 @@ LDA #&20
 
 .sub_C4874
 
- STA L007C
+ STA K
 
 .C4876
 
@@ -15089,8 +15100,8 @@ LDA #&20
  STA L0083
  JSR sub_C0DD7
  STA U
- LDY L007C
- BIT L0079
+ LDY K
+ BIT H
  BVS C48A7
  LDA T
  STA L62D0,Y
@@ -15169,22 +15180,22 @@ LDA #&20
 
 .C48C7
 
- STY L007F
- STA L007C
+ STY N
+ STA K
  STX L0088
  LDX #1
  LDA #0
  JSR sub_C486D
  DEX
- INC L007F
+ INC N
  LDA L0088
  JSR sub_C486D
  INX
- INC L007C
+ INC K
  LDA #0
  JSR sub_C486D
  DEX
- DEC L007F
+ DEC N
  LDA L0088
  EOR #&80
  JSR sub_C486D
@@ -15660,11 +15671,11 @@ LDA #&20
  JSR sub_C4B61
  LDA L62E8
  EOR #&80
- STA L0079
+ STA H
  LDA #0
  STA T
  LDA L62AC,X
- STX L0078
+ STX G
  JSR sub_C4B47
  JSR sub_C4B88
  BCS C4B41
@@ -15734,9 +15745,9 @@ LDA #&20
 
 .C4B51
 
- BIT L0079
+ BIT H
  JSR sub_C0E40
- LDY L0078
+ LDY G
  STA L62EA,Y
  LDA T
  STA L62DA,Y
@@ -15808,7 +15819,7 @@ LDA #&20
  TXA
  CLC
  ADC #2
- STA L0078
+ STA G
  LDY L003E
  DEY
  BEQ C4BAF
@@ -15816,7 +15827,7 @@ LDA #&20
  JSR sub_C4B61
  LDA L62E9
  EOR #&80
- STA L0079
+ STA H
  LDA L62AA,X
  CPX #1
  BEQ C4BBC
@@ -15833,7 +15844,7 @@ LDA #&20
  LDA gearNumber
  SEC
  SBC #1
- STA L0079
+ STA H
  LDA L003D
 
 .C4BBC
@@ -15886,11 +15897,11 @@ LDA #&20
 
 .C4BE1
 
- STA L0079
+ STA H
  EOR #&FF
  CLC
  ADC #1
- STA L0078
+ STA G
  LDA L0063
  STA U
  LDX #0
@@ -15956,7 +15967,7 @@ LDA #&20
 .C4C51
 
  CLC
- ADC L0078,X
+ ADC G,X
  STA L62AA,X
  JSR sub_C0C00
  STA L62AC,X
@@ -16954,14 +16965,14 @@ LDA #&20
  STA U
  LDA L06E4
  SBC L04DC,X
- STA L0079
+ STA H
  BCC C4FFB
  SEC
  LDA T
  SBC L06A0,X
  LDA U
  SBC L06B8,X
- LDA L0079
+ LDA H
  SBC L06D0,X
  BCS C4FFB
  LDA T
@@ -16969,7 +16980,7 @@ LDA #&20
  STA L06A0,X
  LDA U
  STA L06B8,X
- LDA L0079
+ LDA H
  STA L06D0,X
 
 .C4FFB
@@ -17550,7 +17561,7 @@ LDA #&20
  AND #7
  STA W
  LDA #4
- STA L0079
+ STA H
  LDA #6
  STA U
  JSR sub_C5204
@@ -17572,7 +17583,7 @@ LDA #&20
 .sub_C51A8
 
  LDA #0
- STA L0079
+ STA H
  LDA L003C
  CMP #&1E
  BCS C51B4
@@ -17680,7 +17691,7 @@ LDA #&20
  TXA
  LSR A
  AND #3
- ORA L0079
+ ORA H
  STA V
  TXA
  BPL C523D
@@ -19510,9 +19521,9 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: sub_C6300
+\       Name: GetTextInput
 \       Type: Subroutine
-\   Category: 
+\   Category: Keyboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19521,7 +19532,7 @@ ORG &5FD0
 \
 \ ******************************************************************************
 
-.sub_C6300
+.GetTextInput
 
  STA P
  STY Q
@@ -19795,7 +19806,9 @@ ORG &5FD0
  STX L006F
  DEX
  STX L5F3B
- JSR sub_C42EC
+
+ JSR ResetAllL06A0
+
  JSR sub_C655A
 
 .C640A
@@ -19838,7 +19851,7 @@ ORG &5FD0
 
  LDA L3DF0,X
  STA L5F3B
- JSR sub_C42EC
+ JSR ResetAllL06A0
  LDA #&14
  STA L006F
 
@@ -19846,7 +19859,7 @@ ORG &5FD0
 
  DEC L006F
  LDX L006F
- JSR sub_C40EB
+ JSR ResetL06A0
  LDA L5F3C
  BEQ C6457
  JSR sub_C6687
@@ -19990,7 +20003,7 @@ ORG &5FD0
  STA L013C,X
  DEX
  BPL P64FD
- JSR sub_C42EC
+ JSR ResetAllL06A0
  LDA #&80
  JSR sub_C655C
  LDA #&80
@@ -20025,7 +20038,7 @@ ORG &5FD0
  STX L5F3C
  LDA #&88
  JSR sub_C65D3
- BIT L0078
+ BIT G
  BPL C6525
  LDA L006F
  CMP L5F39
@@ -20069,7 +20082,7 @@ ORG &5FD0
 
 .P6560
 
- JSR sub_C3C50
+ JSR GetWingSettings
  JSR sub_C16DC
  BIT L05F4
  BVS P6560
@@ -20085,7 +20098,8 @@ ORG &5FD0
 \       Name: GetMenuOption
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: Scan the keyboard for menu option key pressed
+\    Summary: Scan the keyboard for a menu entry number, highlight the choice,
+\             show the SPACE bar message and return the choice number
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20093,12 +20107,17 @@ ORG &5FD0
 \
 \   X                   The number of entries in the menu
 \
+\ Returns:
+\
+\   X                   The chosen option, zero-based (so the first option is 0,
+\                       the second option is 1, and so on)
+\
 \ ******************************************************************************
 
 .GetMenuOption
 
- LDY #0                 \ Set W = 0
- STY W
+ LDY #0                 \ Set W = 0, to indicate that we have not yet chosen an
+ STY W                  \ option from the menu
 
  STX U                  \ Store the number of entries in U
 
@@ -20143,55 +20162,85 @@ ORG &5FD0
 
                         \ If we get here, SPACE was pressed
 
- LDA W                  \ If W = 0, jump back to mopt1 to keep checking for keys
- BEQ mopt1
+ LDA W                  \ If W = 0 then we have not yet chosen an option from
+ BEQ mopt1              \ the menu, so jump back to mopt1 to keep checking for
+                        \ key presses, as SPACE is only a valid key press when
+                        \ we have chosen an option
 
-                        \ If we get here, SPACE was pressed and W is non-zero
+                        \ If we get here then we have already chosen an option
+                        \ from the menu, and SPACE has been pressed
 
- LDA #152
- STA mod_C7FC4+1
+ LDA #152               \ Poke the mode 7 conceal character into screen memory,
+ STA row24_column5      \ to hide row 24 from column 5 onwards, i.e. hide the
+                        \ "PRESS SPACE BAR TO CONTINUE" prompt
 
- LDX L0078
- DEX
+ LDX G                  \ Set X = G - 1, to return as the zero-based choice
+ DEX                    \ number
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .mopt4
 
- STY L0078
- LDA W
- BNE mopt5
+ STY G                  \ Set G to the number of the choice we just made
 
- LDX #30
- STX W
+ LDA W                  \ If W is non-zero, jump to mopt5 to skip the following
+ BNE mopt5              \ three instructions
+
+ LDX #30                \ Set X = 30 to pass to PrintToken below
+
+ STX W                  \ Set W = 30, so W is now non-zero and denotes that we
+                        \ have made a choice
 
  JSR PrintToken         \ Print token 30 ("PRESS SPACE BAR TO CONTINUE" in cyan
                         \ at column 5, row 24)
 
 .mopt5
 
- LDX #0
- LDY #1
+                        \ We now work our way through the menu, setting each
+                        \ entry's background colour according to the choice made
+                        \ (the chosen entry is set to red, while other entries
+                        \ are set to blue)
+
+ LDX #0                 \ Set an offset counter in X to step through the screen
+                        \ address of the on-screen number for each menu entry,
+                        \ starting at an offset of 0 (the offset is added to
+                        \ row18_column5 in the loop below)
+
+ LDY #1                 \ Set a counter in Y to count through the menu entries
 
 .mopt6
 
- LDA #&84
- CPY L0078
- BNE mopt7
- LDA #&81
+ LDA #132               \ Set A to the mode 7 control code for blue, to set as
+                        \ the background colour for the unselected menu entries
+
+ CPY G                  \ If Y <> G then this is not the chosen entry, so skip
+ BNE mopt7              \ the following instruction to leave A as blue
+
+ LDA #129               \ Set A to the mode 7 control code for red, to set as
+                        \ the background colour for the selected menu entry
 
 .mopt7
 
- STA mod_C7E84+1,X
- TXA
- CLC
- ADC #&50
- TAX
- INY
- CPY U
- BCC mopt6
+ STA row18_column5,X    \ Poke the colour in A into screen memory at offset X
+                        \ from column 5 on row 18, which is the screen address
+                        \ of the number for the first menu entry (so this sets
+                        \ the background colour of the current entry to A)
+
+ TXA                    \ Set X = X + 80
+ CLC                    \
+ ADC #80                \ so X now points to the next menu entry, as 80 is two
+ TAX                    \ lines of mode 7 characters, and the menu entries are
+                        \ shown on every other line
+
+ INY                    \ Increment the option counter in Y
+
+ CPY U                  \ If Y <= U then loop back to set the background colour
+ BCC mopt6              \ for the next option, until we have done all of them
  BEQ mopt6
- BNE mopt1
+
+ BNE mopt1              \ Jump back to mopt1 to keep checking for key presses,
+                        \ so we can change the option, or press SPACE to lock in
+                        \ our choice
 
 \ ******************************************************************************
 \
@@ -20248,7 +20297,7 @@ ORG &5FD0
 
  STY L001B
  LDA #0
- STA L0078
+ STA G
  JSR sub_C3E60
 
  LDX #32                \ Print token 32, which prints two spaces and backspaces
@@ -20300,7 +20349,7 @@ ORG &5FD0
 .C662B
 
  LDA #&28
- STA L0078
+ STA G
  LDA L04F0,X
  BEQ C6640
  JSR sub_C37D6
@@ -20494,7 +20543,7 @@ ORG &5FD0
  LDX L006F
  JSR sub_C3CEB
  LDX #&0C
- JSR sub_C6300
+ JSR GetTextInput
  RTS
 
 \ ******************************************************************************
@@ -20585,7 +20634,7 @@ ORG &6C00
  LDA #&B6
  SEC
  SBC T
- STA L007F
+ STA N
  LDA L0398,X
  SEC
  SBC L000B
@@ -20726,14 +20775,14 @@ ORG &6C00
 
 .sub_C7B9C
 
- STA L0078
+ STA G
  LDA L06D0,X
  JSR sub_C37D6
  LDA #&3A
  JSR PrintCharacter
  LDA L06B8,X
  JSR sub_C37D6
- ASL L0078
+ ASL G
  BCS L7BBE
  LDA #&2E
  JSR PrintCharacter
@@ -20763,7 +20812,7 @@ ORG &6C00
  STA mod_C7BD3+1
  LDA mod_C7F23+1
  STA mod_C7BD6+1
- LDA moc_C7F7C+1
+ LDA mod_C7F7C+1
  STA mod_C7BD9+1
  LDA #&91
 
@@ -21013,7 +21062,6 @@ ENDMACRO
  BLOCK 31
  BLOCK 32
  BLOCK 33
- mod_C7E84 = P% - 4     \ Points to the LDY #LO(8*I%) instruction in BLOCK 33
  BLOCK 34
  BLOCK 35
  BLOCK 36
@@ -21145,15 +21193,15 @@ ENDMACRO
  ORA L3350,X
  STA (P),Y
  LDY L3080,X
- CPY moc_C7F7C+1
+ CPY mod_C7F7C+1
  BEQ L7F8A
  LDA #&91
 
-.moc_C7F7C
+.mod_C7F7C
 
  STA mod_C7E0F
  STY mod_C7F87+1
- STY moc_C7F7C+1
+ STY mod_C7F7C+1
  LDA #&60
 
 .mod_C7F87
@@ -21202,13 +21250,11 @@ ENDMACRO
 .sub_C7FB6
 
  STA L0082
- STY L0078
+ STY G
  LDA L3B9E,Y
  STA Q
  LDA L3B26,Y
  STA P
-
-.mod_C7FC4
 
  LDA L3EFA,Y
  STA W
@@ -21220,7 +21266,7 @@ ENDMACRO
  LDA #&F0
  CPY L0082
  BCS L7FDF
- CPY L007F
+ CPY N
  BCC L7FDF
  LDX VIA+&68
  AND &2000,X
@@ -21247,7 +21293,7 @@ ENDMACRO
 
  CPY W
  BCS L7FCD
- LDY L0078
+ LDY G
  RTS
 
  EQUB &FF
