@@ -160,7 +160,11 @@ L0046 = &0046
 L0047 = &0047
 L0048 = &0048
 L0049 = &0049
-L004A = &004A
+
+driverNumber = &004A
+
+ SKIP 1                 \ Current driver number (0 to 19)
+
 L004B = &004B
 L004C = &004C
 L004D = &004D
@@ -247,9 +251,23 @@ L008F = &008F
 L0100 = &0100
 L0101 = &0101
 L0114 = &0114
-L0128 = &0128
+
+driverSpeed = &0128
+
+ SKIP 20                \ Indexed by driver number (0 to 19)
+                        \
+                        \ Gets set in InitialiseDriver, contains the speed of
+                        \ each driver?
+
 L013B = &013B
+
 L013C = &013C
+
+ SKIP 20                \ Indexed by driver number (0 to 19)
+                        \
+                        \ Gets set in InitialiseDrivers to the number of each
+                        \ driver - could this be the race order?
+
 L014F = &014F
 L0150 = &0150
 L0164 = &0164
@@ -266,12 +284,20 @@ L03C8 = &03C8
 
 L0400 = &0400
 L0450 = &0450
+
 L04A0 = &04A0
+
+ SKIP 20                \ Indexed by driver number (0 to 19)
+                        \
+                        \ Gets set in InitialiseDrivers
 L04B4 = &04B4
 L04C8 = &04C8
 L04DC = &04DC
 L04F0 = &04F0
 
+ SKIP 20                \ Indexed by driver number (0 to 19)
+                        \
+                        \ Gets set in InitialiseDrivers
 L0504 = &0504
 L0554 = &0554
 L05A4 = &05A4
@@ -345,13 +371,35 @@ L5F20 = &5F20
 L5F21 = &5F21
 L5F38 = &5F38
 L5F39 = &5F39
-L5F3A = &5F3A
+
+raceClass = &5F3A
+
+ SKIP 1                 \ The class of race:
+                        \
+                        \   * 0 = Novice
+                        \
+                        \   * 1 = Amateur
+                        \
+                        \   * 2 = Professional
+
 L5F3B = &5F3B
 L5F3C = &5F3C
 L5F3D = &5F3D
 L5F3E = &5F3E
 L5F3F = &5F3F
-L5F40 = &5F40
+
+baseSpeed = &5F40
+
+ SKIP 1                 \ The base speed for each car, which is faster with a
+                        \ higher class of race (this value is taken from the
+                        \ track data at trackData+1812):
+                        \
+                        \   * 134 = Novice
+                        \
+                        \   * 146 = Amateur
+                        \
+                        \   * 152 = Professional
+
 L5F48 = &5F48
 L5F60 = &5F60
 L5FB0 = &5FB0
@@ -1044,6 +1092,10 @@ ORG &0B00
 \ Do the following multiplication of two unsigned 8-bit numbers:
 \
 \   (A T) = A * U
+\
+\ Returns:
+\
+\   X                   X is unchanged
 \
 \ Other entry points:
 \
@@ -2232,12 +2284,16 @@ ORG &0B00
  CMP #2
  BCC C1162
  LDA L005E
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP #&60
  BCS C1138
  LDA #&14
  BIT L62E2
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  JMP C1C0B
 
 .C1138
@@ -3679,7 +3735,7 @@ ORG &0B00
  BMI C16EE
  LDA L006C
  BPL C16F3
- LDA L5F3A
+ LDA raceClass
  BEQ C16F6
 
 .C1773
@@ -6762,7 +6818,9 @@ ORG &0B00
  LDA L5E90,Y
  SEC
  SBC L5EB8,Y
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  LSR A
  STA L62FC
  RTS
@@ -7034,12 +7092,14 @@ ORG &0B00
 
  BIT L0025
  BPL C2663
- JSR sub_C5084
+
+ JSR NextDriver         \ Increment X to the next driver number
+
  JMP C2666
 
 .C2663
 
- JSR sub_C507E
+ JSR PreviousDriver     \ Decrement X to the previous driver number
 
 .C2666
 
@@ -7102,7 +7162,9 @@ ORG &0B00
  STX W
  LDA L013C,X
  STA T
- JSR sub_C507E
+
+ JSR PreviousDriver     \ Decrement X to the previous driver number
+
  LDA L013C,X
  STX G
  TAY
@@ -7199,7 +7261,9 @@ ORG &0B00
  CMP L0178,X
  ROR T
  AND #&FF
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP #&3C
  BCC C2744
  BCS C2749
@@ -7273,7 +7337,9 @@ ORG &0B00
 .C2797
 
  LDX W
- JSR sub_C5084
+
+ JSR NextDriver         \ Increment X to the next driver number
+
  CPX L0003
  BEQ C27A3
  JMP C2694
@@ -7349,7 +7415,9 @@ ORG &0B00
  CMP #&80
  BCS C27EA
  PLP
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  STA T
  LDA T
  CLC
@@ -7434,7 +7502,7 @@ ORG &0B00
 .C2843
 
  CLC
- ADC L0128,X
+ ADC driverSpeed,X
  BIT L006C
  BPL C284E
  SBC trackData+1818
@@ -7589,7 +7657,9 @@ ORG &0B00
  EOR L0025
  BMI C2911
  LDA T
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  STA T
  CMP #&28
  BCC C2914
@@ -9880,27 +9950,33 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3450
+\       Name: AbsoluteValue
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Calculate the absolute value (modulus) of A, i.e. |A|
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The number to make positive
 \
 \ ******************************************************************************
 
-.sub_C3450
+.AbsoluteValue
 
- BPL C3457
- EOR #&FF
- CLC
- ADC #1
+ BPL aval1              \ If A is positive then it already contains its absolute
+                        \ value, so jump to aval1 to return from the subroutine
 
-.C3457
+ EOR #&FF               \ Negate the value in A using two's complement, as the
+ CLC                    \ following is true when A is negative:
+ ADC #1                 \
+                        \   |A| = -A
+                        \       = ~A + 1
 
- RTS
+.aval1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -11350,7 +11426,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Indexed by driver number (0 to 19)
+\
+\ Gets set in InitialiseDrivers
 \
 \ ******************************************************************************
 
@@ -12162,7 +12240,7 @@ ORG &0B00
 
 .sub_C3C6F
 
- LDA L5F3A
+ LDA raceClass
  CLC
  ADC #7
  TAX
@@ -14197,7 +14275,7 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: sub_C44C6
+\       Name: Setup5FB0
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -14206,7 +14284,13 @@ LDA #&20
 \
 \ Arguments:
 \
-\   X                   
+\   X                   The class of race:
+\                       
+\                         * 0 = Novice
+\                       
+\                         * 1 = Amateur
+\                       
+\                         * 2 = Professional
 \
 \ Returns:
 \
@@ -14214,41 +14298,69 @@ LDA #&20
 \
 \ ******************************************************************************
 
-.sub_C44C6
+.Setup5FB0
 
- LDA trackData+1812,X
- STA L5F40
- STA U
+ LDA trackData+1812,X   \ Set baseSpeed = the X-th byte of trackData+1812
+ STA baseSpeed          \
+                        \ so baseSpeed contains the base speed for cars at the
+                        \ chosen class or race, on this track
+                        \
+                        \ For Silverstone, this is:
+                        \
+                        \   * 134 for Novice
+                        \   * 146 for Amateur
+                        \   * 152 for Professional
 
- LDA trackData+1786
- LSR A
- LSR A
- LSR A
+ STA U                  \ Set U = baseSpeed
+
+ LDA trackData+1786     \ Set Y = trackData+1786 >> 3
+ LSR A                  \       = &C0 >> 3
+ LSR A                  \       = &18
+ LSR A                  \       = 24
  TAY
+
+                        \ Now we copy the 24 bytes between trackData+1744 and
+                        \ trackData+1788 to L5FB0, processing each byte as we go
+                        \ (i.e. taking the input and storing the result):
+                        \
+                        \   * Bit 7 of the result = bit 0 of the input
+                        \
+                        \   * Bit 6 of the result = 0
+                        \
+                        \   * Bits 0-5 of the result are:
+                        \
+                        \     * A >> 2 * U / 256 if bit 1 of the input is clear
+                        \     * A >> 2           if bit 1 of the input is set
 
 .P44D5
 
- LDA trackData+1744,Y
- LSR A
- PHP
- LSR A
+ LDA trackData+1744,Y   \ Fetch the Y-th byte from trackData+1744 as the input
 
- BCS C44E0
+ LSR A                  \ Shift bit 0 of the input into the C flag and store it
+ PHP                    \ on the stack so we can put it into bit 7 of the result
 
- JSR Multiply8x8
+ LSR A                  \ Shift bit 1 of the input into the C flag
+
+ BCS C44E0              \ If bit 1 of the input is set, skip the following
+                        \ instruction
+
+ JSR Multiply8x8        \ Bit 1 of the input is clear, so set (A T) = A * U
+                        \
+                        \ i.e. A = A * U / 256
 
 .C44E0
 
- ASL A
+ ASL A                  \ Set bit 7 of the result to bit 0 of the input
  PLP
  ROR A
- STA L5FB0,Y
 
- DEY
+ STA L5FB0,Y            \ Store the result in the Y-th byte of L5FB0
 
- BPL P44D5
+ DEY                    \ Decrement the loop counter
 
- RTS
+ BPL P44D5              \ Loop back until we have processed all Y bytes
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14329,12 +14441,15 @@ LDA #&20
  PHP
  LDA trackData+768,Y
  PHP
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP #&3C
  PHP
  BCC C454F
  LDA trackData+256,Y
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
 
 .C454F
 
@@ -14357,7 +14472,9 @@ LDA #&20
 .C4561
 
  PLP
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  SEC
  SBC L000B
  STA L0044
@@ -14418,7 +14535,9 @@ LDA #&20
 .C45B3
 
  LDA L0026
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP #5
  BCC C45C3
  JSR sub_C4DCB
@@ -14497,10 +14616,14 @@ LDA #&20
  EOR L0025
  PHP
  LDA trackData+512,Y
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  JSR Multiply8x8
  PLP
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  RTS
 
 \ ******************************************************************************
@@ -14521,7 +14644,9 @@ LDA #&20
  LDA L005E
  SEC
  SBC L0044
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP #&40
  ROR L0043
  BPL C4639
@@ -14543,7 +14668,9 @@ LDA #&20
 
  LDX L006F
  BIT L0025
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  PHA
  SBC L0178,X
  BCS C4656
@@ -15585,17 +15712,23 @@ LDA #&20
  STA L62DC
  STA L62EC
  LDA L62EA
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  JMP C4AED
 
 .C4ACF
 
  JSR sub_C4B42
  LDA L62EC,X
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  STA T
  LDA L62EA,X
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP T
  BCC C4AE9
  LSR T
@@ -15925,7 +16058,9 @@ LDA #&20
  LDA L62A8,X
  JSR Multiply8x8
  BIT L62E9
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CLC
  ADC L4C61,X
  LDY #&F3
@@ -15997,7 +16132,9 @@ LDA #&20
 .sub_C4C65
 
  LDA L0039
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  STA U
  CMP L0063
  BCS C4C72
@@ -16091,7 +16228,9 @@ LDA #&20
  STA L03AF
  SEC
  SBC L000B
- JSR sub_C3450
+
+ JSR AbsoluteValue      \ Set A = |A|
+
  CMP #&40
  BCC C4D09
  LDY L0045
@@ -16158,42 +16297,59 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: sub_C4D4D
+\       Name: InitialiseDrivers
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Initialise all 20 drivers
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The routine is called with X = 0
+\   X                   The routine is always called with X = 0
 \
 \ ******************************************************************************
 
-.sub_C4D4D
+.InitialiseDrivers
 
- STX L004A              \ Set L004A = 0
+ STX driverNumber       \ Set driverNumber = 0, to use as a loop counter when
+                        \ initialising all 20 drivers
 
- STX L5F3A              \ Set L5F3A = 0
+ STX raceClass          \ Set raceClass = 0 (Novice)
 
- JSR sub_C44C6
+ JSR Setup5FB0          \ Call Setup5FB0 with X = 0 (Novice) to set up the 24
+                        \ bytes at L5FB0, returning with X unchanged 
+
+                        \ The following loop works starts with X = 0, and then
+                        \ loops down from 19 to 1, working its way through each
+                        \ of the 20 drivers
 
 .P4D55
 
- TXA
- STA L013C,X
- LSR A
+ TXA                    \ Set A to the current driver number in X
+
+ STA L013C,X            \ Set L013C for driver X to the driver number
+
+ LSR A                  \ Set L04A0 for driver X to driver number >> 1
  NOP
  STA L04A0,X
- JSR sub_C635D
- LDA #0
+
+ JSR InitialiseDriver   \ Initialise driver X
+                        \
+                        \ It also decrements X to the next driver number and
+                        \ updates driverNumber accordingly
+
+ LDA #0                 \ Zero SetupGame+20 for driver X
  STA SetupGame+20,X
- STA L39E4,X
- STA L04F0,X
- TXA
- BNE P4D55
- RTS
+
+ STA L39E4,X            \ Zero L39E4 for driver X
+
+ STA L04F0,X            \ Zero L04F0 for driver X
+
+ TXA                    \ If X <> 0, loop back to P4D55 to process the next
+ BNE P4D55              \ driver, until we have processed all 20 of them
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -17132,7 +17288,7 @@ LDA #&20
 
 .C507A
 
- JSR sub_C635D
+ JSR InitialiseDriver
 
 .C507D
 
@@ -17140,50 +17296,51 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: sub_C507E
+\       Name: PreviousDriver
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: Decrement X to the previous driver number (from 19 to 0 and round
+\             again)
 \
 \ ******************************************************************************
 
-.sub_C507E
+.PreviousDriver
 
- DEX
- BPL C5083
- LDX #&13
+ DEX                    \ Decrement X
 
-.C5083
+ BPL prev1              \ If X is >= 0, jump to prev1 to skip the following
+                        \ instruction
 
- RTS
+ LDX #19                \ Set X = 19, so repeated calls to this routine will
+                        \ decrement X down to 0, and then start again at 19
+
+.prev1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C5084
+\       Name: NextDriver
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: Increment X to the next driver number (from 0 to 19 and round
+\             again)
 \
 \ ******************************************************************************
 
-.sub_C5084
+.NextDriver
 
- INX
- CPX #&14
- BCC C508B
- LDX #0
+ INX                    \ Increment X
 
-.C508B
+ CPX #20                \ If X < 20, jump to next1 to skip the following
+ BCC next1              \ instruction
 
- RTS
+ LDX #0                 \ Set X = 0, so repeated calls to this routine will
+                        \ increment X up to 19, and then start again at 0
+
+.next1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -19586,70 +19743,145 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: sub_C635D
+\       Name: InitialiseDriver
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Initialise a driver
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   driverNumber        The number of the driver to initialise
 \
 \ ******************************************************************************
 
-.sub_C635D
+.InitialiseDriver
 
- LDX L004A
- LDA VIA+&68            \ user_via_t2c_l
- PHP
- AND #&7F
- LDY #&10
+ LDX driverNumber       \ Set X to the driver number to initialise
+
+ LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
+
+ PHP                    \ Store the processor flags from the random timer value
+                        \ on the stack
+
+ AND #%01111111         \ Clear bit 0 of the random number in A, so A is now in
+                        \ the range 0 to 127
+
+                        \ The following calculates the following:
+                        \
+                        \   * If A is in the range 0 to 63, A = A mod 4
+                        \
+                        \   * If A is in the range 64 to 127, A = (A - 64) mod 7
+                        \
+                        \ Given that A starts out as a random number, this will
+                        \ produce a random number with the following chances:
+                        \
+                        \   50% of the time, 25% chance of 0 to 3
+                        \   50% of the time, 12.5% chance of 0 to 7
+                        \
+                        \ So the probability of getting each of the numbers from
+                        \ 0 to 7 is:
+                        \
+                        \   0 to 3 = 0.5 * 0.25 + 0.5 * 0.125 = 0.1875 = 18.75%
+                        \   4 to 7 = 0.5 * 0.125              = 0.0625 =  6.25%
+                        \
+                        \ So we're three times more likely to get a number in
+                        \ the range 0 to 3 as in the range 4 to 7
+
+ LDY #16                \ Set a loop counter in Y to subtract 16 lots of 4
 
 .P6367
 
- CMP #4
- BCC C637B
- SBC #4
- DEY
- BNE P6367
- LDY #9
+ CMP #4                 \ If A < 4, jump to C637B, as A now contains the
+ BCC C637B              \ original value of A mod 4
+
+ SBC #4                 \ A >= 4, so set A = A - 4
+
+ DEY                    \ Decrement the loop counter
+
+ BNE P6367              \ Loop back until we have either reduced A to be less
+                        \ than 4, or we have subtracted 16 * 4 = 64
+
+                        \ If we get here then the original A was 64 or more,
+                        \ 64, and A is now in the range 0 to 63
+
+ LDY #9                 \ Set a loop counter in Y to subtract 9 lots of 7
 
 .P6372
 
- CMP #7
- BCC C637B
- SBC #7
- DEY
- BNE P6372
+ CMP #7                 \ If A < 7, jump to C637B, as A now contains the
+ BCC C637B              \ original value of (A - 64) mod 7
+
+ SBC #7                 \ A >= 7, so set A = A - 7
+
+ DEY                    \ Decrement the loop counter
+
+ BNE P6372              \ Loop back until we have either reduced A to be less
+                        \ than 7, or we have subtracted 9 * 7 = 63
+
+                        \ If we get here then the original A was 127, and we
+                        \ first subtracted 64 and then 63 to give us 0
 
 .C637B
 
- PLP
- JSR sub_C3450
- ASL A
- SEC
+                        \ We now have our random number in the range 0 to 7,
+                        \ with 0 to 3 more likely than 4 to 7
+
+ PLP                    \ Retrieve the processor flags from the random timer
+                        \ value that we put on the stack above, which sets the
+                        \ N flag randomly (amongst others)
+
+ JSR AbsoluteValue      \ The first instruction of AbsoluteValue is a BPL,
+                        \ which normally skips negation for positive numbers,
+                        \ but in this case it means the AbsoluteValue routine
+                        \ randomly changes the sign of A, so A is now in the
+                        \ range -7 to +7, with -3 to +3 more likely than -7 to
+                        \ -4 or 4 to 7
+
+ ASL A                  \ Set A = A << 1, so A is now in the range -14 to +14,
+                        \ with -6 to +6 more likely than -14 to -7 or 7 to 14
+
+ SEC                    \ Set T = A - L04A0 for this driver
  SBC L04A0,X
  STA T
- LDY L5F3A
- DEY
- BEQ C6395
- BPL C6392
- ASL A
- JMP C6395
+
+                        \ We now 
+
+ LDY raceClass          \ Set Y to the race class
+
+ DEY                    \ Decrement Y, so it will be -1 for Novice, 0 for
+                        \ Amateur and 1 for Professional
+
+ BEQ C6395              \ If Y = 0 (Amateur), jump to C6395
+
+ BPL C6392              \ If Y = 1 (Professional), jump to C6392
+
+                        \ If we get here, then the race class is Novice
+
+ ASL A                  \ Set A = A << 1
+
+ JMP C6395              \ Jump to C6395 to skip the following
 
 .C6392
 
- ROL T
+                        \ If we get here, then the race class is Professional
+
+ ROL T                  \ Shift bit 7 of T into bit 7 of A
  ROR A
 
 .C6395
 
- CLC
- ADC L5F40
- STA L0128,X
- JSR sub_C507E
- STX L004A
- RTS
+ CLC                    \ Set driverSpeed for driver X to baseSpeed = A
+ ADC baseSpeed
+ STA driverSpeed,X
+
+ JSR PreviousDriver     \ Decrement X to the previous driver number
+
+ STX driverNumber       \ Set driverNumber = X
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -19679,10 +19911,14 @@ ORG &5FD0
 .C63AE
 
  STX L0003
- JSR sub_C5084
+
+ JSR NextDriver         \ Increment X to the next driver number
+
  STX L005B
  LDX L0003
- JSR sub_C507E
+
+ JSR PreviousDriver     \ Decrement X to the previous driver number
+
  STX L004D
  RTS
 
@@ -19753,7 +19989,7 @@ ORG &5FD0
  LDX #0                 \ Set L05F4 = 0
  STX L05F4
 
- JSR sub_C4D4D
+ JSR InitialiseDrivers  \ Initialise all 20 drivers
 
  LDX #4                 \ Print "REVS   REVS   REVS" as a double-height header
  JSR PrintHeader        \ at column 0, row 4, with the colours of each letter in
@@ -19803,9 +20039,9 @@ ORG &5FD0
  LDX #3                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
- STX L5F3A
+ STX raceClass          \ Set raceClass to the chosen race class (0-2)
 
- JSR sub_C44C6
+ JSR Setup5FB0          \ Call Setup5FB0
 
 .game2
 
@@ -19912,15 +20148,15 @@ ORG &5FD0
 
 .game7
 
- CPX L5F3A
+ CPX raceClass
  BCS game8
 
- STX L5F3A
+ STX raceClass
 
 .game8
 
- LDX L5F3A
- JSR sub_C44C6
+ LDX raceClass
+ JSR Setup5FB0
 
  LDX #26                \ Print token 26, which is a double-height header with
  JSR PrintToken         \ the text "STANDARD OF RACE"
@@ -20567,7 +20803,8 @@ ORG &5FD0
 
 .C66E6
 
- JSR sub_C5084
+ JSR NextDriver         \ Increment X to the next driver number
+
  CPX L004D
  BNE P66E3
  LDX #&16

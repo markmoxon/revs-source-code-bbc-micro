@@ -288,6 +288,11 @@ ORG CODE%
  EQUB &48, &00, &50, &52
 
 \ trackData+1744 = 59D0
+\
+\ Next 24 bytes are copied to L5FB0
+\ Bit 0 -> bit 7 of result
+\ Bit 1 clear -> result is scaled by U
+\ See sub_C44C6
 
  EQUB &14, &33, &72, &3B, &18, &33, &15, &15
  EQUB &15, &3C, &18, &30, &33, &39, &38, &14, &14, &14, &37, &20
@@ -342,7 +347,9 @@ ORG CODE%
 
 \ trackData+1812 = 5A14
 
- EQUB &86, &92, &98
+ EQUB 134               \ Base speed for Novice
+ EQUB 146               \ Base speed for Amateur
+ EQUB 152               \ Base speed for Professional
 
 \ trackData+1815 = 5A17
 
