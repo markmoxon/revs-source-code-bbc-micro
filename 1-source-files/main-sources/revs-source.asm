@@ -56,10 +56,26 @@ dashData = &3000        \ The address of the first code block that gets swapped
 trackLoad = &70DB       \ The load address of the track data file
 
 trackChecksum = &7800   \ The address of the checksums in the track data file
+                        \ after it is loaded but before it is moved in memory
+
+L6E85 = &6E85           \ Dashboard screen memory, always there
+L6E8A = &6E8A
+L6FB2 = &6FB2
+L6FBD = &6FBD
+L6FC0 = &6FC0
+L7000 = &7000
+L70F8 = &70F8
+L713D = &713D
+L7205 = &7205
+
+L77DB = &77DB           \ Centre-bottom of dashboard for showing steering assist
+L77DC = &77DC           \ indicator
+L77E3 = &77E3
+L77E4 = &77E4
 
 row2_column1 = &7C79    \ Chequered flag mode 7 screen address
-row18_column5 = &7E85
-row24_column5 = &7FC5
+row18_column5 = &7E85   \ The first entry's number in a mode 7 menu
+row24_column5 = &7FC5   \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
 
 \ ******************************************************************************
 \
@@ -71,77 +87,266 @@ row24_column5 = &7FC5
 \
 \ ******************************************************************************
 
-L0000 = &0000
-L0001 = &0001
-L0002 = &0002
-L0003 = &0003
-L0004 = &0004
-L0005 = &0005
-L0006 = &0006
-L0007 = &0007
-L0008 = &0008
-L0009 = &0009
-L000A = &000A
-L000B = &000B
-L000C = &000C
-L000D = &000D
-L000E = &000E
-L000F = &000F
-L0010 = &0010
-L0011 = &0011
-L0012 = &0012
-L0013 = &0013
-L0014 = &0014
-L0015 = &0015
-L0016 = &0016
-L0017 = &0017
-L0018 = &0018
-L0019 = &0019
-L001A = &001A
-L001B = &001B
+ORG &0000
 
-pressingShiftArrow = &001C
+.L0000
+
+ SKIP 1                 \ 
+
+.L0001
+
+ SKIP 1                 \ 
+
+.L0002
+
+ SKIP 1                 \ 
+
+.L0003
+
+ SKIP 1                 \ 
+
+.L0004
+
+ SKIP 1                 \ 
+
+.L0005
+
+ SKIP 1                 \ 
+
+.L0006
+
+ SKIP 1                 \ 
+
+.L0007
+
+ SKIP 1                 \ 
+
+.L0008
+
+ SKIP 1                 \ 
+
+.L0009
+
+ SKIP 1                 \ 
+
+.L000A
+
+ SKIP 1                 \ 
+
+.L000B
+
+ SKIP 1                 \ 
+
+.L000C
+
+ SKIP 1                 \ 
+
+.L000D
+
+ SKIP 1                 \ 
+
+.L000E
+
+ SKIP 1                 \ 
+
+.L000F
+
+ SKIP 1                 \ 
+
+.L0010
+
+ SKIP 1                 \ 
+
+.L0011
+
+ SKIP 1                 \ 
+
+.L0012
+
+ SKIP 1                 \ 
+
+.L0013
+
+ SKIP 1                 \ 
+
+.L0014
+
+ SKIP 1                 \ 
+
+.L0015
+
+ SKIP 1                 \ 
+
+.L0016
+
+ SKIP 1                 \ 
+
+.L0017
+
+ SKIP 1                 \ 
+
+.L0018
+
+ SKIP 1                 \ 
+
+.L0019
+
+ SKIP 1                 \ 
+
+.L001A
+
+ SKIP 1                 \ 
+
+.L001B
+
+ SKIP 1                 \ 
+
+.pressingShiftArrow
 
  SKIP 1                 \ Bit 7 is set if we are pressing SHIFT and right arrow
                         \ (which restarts the game)
 
-L001D = &001D
-L001E = &001E
-L001F = &001F
-L0020 = &0020
-L0021 = &0021
-L0022 = &0022
-L0023 = &0023
-L0024 = &0024
-L0025 = &0025
-L0026 = &0026
-L0027 = &0027
-L0028 = &0028
-L0029 = &0029
-L002A = &002A
-L002B = &002B
-L002C = &002C
-L002D = &002D
-L002E = &002E
-L002F = &002F
-L0030 = &0030
-L0031 = &0031
-L0032 = &0032
-L0033 = &0033
-L0034 = &0034
-L0035 = &0035
-L0036 = &0036
-L0037 = &0037
-L0038 = &0038
-L0039 = &0039
-L003A = &003A
-L003B = &003B
-L003C = &003C
-L003D = &003D
-L003E = &003E
-L003F = &003F
+.L001D
 
-gearNumber = &0040
+ SKIP 1                 \ 
+
+.L001E
+
+ SKIP 1                 \ 
+
+.L001F
+
+ SKIP 1                 \ 
+
+.L0020
+
+ SKIP 1                 \ 
+
+.L0021
+
+ SKIP 1                 \ 
+
+.L0022
+
+ SKIP 1                 \ 
+
+.L0023
+
+ SKIP 1                 \ 
+
+.L0024
+
+ SKIP 1                 \ 
+
+.L0025
+
+ SKIP 1                 \ 
+
+.L0026
+
+ SKIP 1                 \ 
+
+.L0027
+
+ SKIP 1                 \ 
+
+.L0028
+
+ SKIP 1                 \ 
+
+.L0029
+
+ SKIP 1                 \ 
+
+.L002A
+
+ SKIP 1                 \ 
+
+.L002B
+
+ SKIP 1                 \ 
+
+.L002C
+
+ SKIP 1                 \ 
+
+.L002D
+
+ SKIP 1                 \ 
+
+.L002E
+
+ SKIP 1                 \ 
+
+.L002F
+
+ SKIP 1                 \ 
+
+.L0030
+
+ SKIP 1                 \ 
+
+.L0031
+
+ SKIP 1                 \ 
+
+.L0032
+
+ SKIP 1                 \ 
+
+.L0033
+
+ SKIP 1                 \ 
+
+.L0034
+
+ SKIP 1                 \ 
+
+.L0035
+
+ SKIP 1                 \ 
+
+.L0036
+
+ SKIP 1                 \ 
+
+.L0037
+
+ SKIP 1                 \ 
+
+.L0038
+
+ SKIP 1                 \ 
+
+.L0039
+
+ SKIP 1                 \ 
+
+.L003A
+
+ SKIP 1                 \ 
+
+.L003B
+
+ SKIP 1                 \ 
+
+.L003C
+
+ SKIP 1                 \ 
+
+.L003D
+
+ SKIP 1                 \ 
+
+.L003E
+
+ SKIP 1                 \ 
+
+.L003F
+
+ SKIP 1                 \ 
+
+.gearNumber
 
  SKIP 1                 \ The current gear number
                         \
@@ -151,47 +356,147 @@ gearNumber = &0040
                         \
                         \  * 2-7 = 1 to 5
 
-L0041 = &0041
-L0042 = &0042
-L0043 = &0043
-L0044 = &0044
-L0045 = &0045
-L0046 = &0046
-L0047 = &0047
-L0048 = &0048
-L0049 = &0049
+.L0041
 
-driverNumber = &004A
+ SKIP 1                 \ 
+
+.L0042
+
+ SKIP 1                 \ 
+
+.L0043
+
+ SKIP 1                 \ 
+
+.L0044
+
+ SKIP 1                 \ 
+
+.L0045
+
+ SKIP 1                 \ 
+
+.L0046
+
+ SKIP 1                 \ 
+
+.L0047
+
+ SKIP 1                 \ 
+
+.L0048
+
+ SKIP 1                 \ 
+
+.L0049
+
+ SKIP 1                 \ 
+
+.driverNumber
 
  SKIP 1                 \ Current driver number (0 to 19)
 
-L004B = &004B
-L004C = &004C
-L004D = &004D
-L004E = &004E
-L004F = &004F
-L0050 = &0050
-L0051 = &0051
-L0052 = &0052
-L0053 = &0053
-L0054 = &0054
-L0055 = &0055
-L0056 = &0056
-L0057 = &0057
-L0058 = &0058
-L0059 = &0059
-L005A = &005A
-L005B = &005B
-L005C = &005C
-L005D = &005D
-L005E = &005E
-L005F = &005F
-L0060 = &0060
-L0061 = &0061
-L0062 = &0062
-L0063 = &0063
+.L004B
 
-printMode = &0064
+ SKIP 1                 \ 
+
+.L004C
+
+ SKIP 1                 \ 
+
+.L004D
+
+ SKIP 1                 \ 
+
+.L004E
+
+ SKIP 1                 \ 
+
+.L004F
+
+ SKIP 1                 \ 
+
+.L0050
+
+ SKIP 1                 \ 
+
+.L0051
+
+ SKIP 1                 \ 
+
+.L0052
+
+ SKIP 1                 \ 
+
+.L0053
+
+ SKIP 1                 \ 
+
+.L0054
+
+ SKIP 1                 \ 
+
+.L0055
+
+ SKIP 1                 \ 
+
+.L0056
+
+ SKIP 1                 \ 
+
+.L0057
+
+ SKIP 1                 \ 
+
+.L0058
+
+ SKIP 1                 \ 
+
+.L0059
+
+ SKIP 1                 \ 
+
+.L005A
+
+ SKIP 1                 \ 
+
+.L005B
+
+ SKIP 1                 \ 
+
+.L005C
+
+ SKIP 1                 \ 
+
+.L005D
+
+ SKIP 1                 \ 
+
+.L005E
+
+ SKIP 1                 \ 
+
+.L005F
+
+ SKIP 1                 \ 
+
+.L0060
+
+ SKIP 1                 \ 
+
+.L0061
+
+ SKIP 1                 \ 
+
+.L0062
+
+ SKIP 1                 \ 
+
+.L0063
+
+ SKIP 1                 \ 
+
+.printMode
 
  SKIP 1                 \ Determines how the next character is printed
                         \ on-screen:
@@ -200,224 +505,512 @@ printMode = &0064
                         \
                         \  * 1 = print the character with OSWRCH (for mode 7)
 
-L0065 = &0065
-L0066 = &0066
-L0067 = &0067
-L0068 = &0068
-L0069 = &0069
-L006A = &006A
+.L0065
 
-startingStack = &006B
+ SKIP 1                 \ 
+
+.L0066
+
+ SKIP 1                 \ 
+
+.L0067
+
+ SKIP 1                 \ 
+
+.L0068
+
+ SKIP 1                 \ 
+
+.L0069
+
+ SKIP 1                 \ 
+
+.L006A
+
+ SKIP 1                 \ 
+
+.startingStack
 
  SKIP 1                 \ The value of the stack pointer when the game starts,
                         \ so we can restore it when restarting the game
 
-L006C = &006C
-L006D = &006D
-L006E = &006E
-L006F = &006F
-P = &0070
-Q = &0071
-R = &0072
-S = &0073
-T = &0074
-U = &0075
-V = &0076
-W = &0077
-G = &0078
-H = &0079
-I = &007A
-J = &007B
-K = &007C
-L = &007D
-M = &007E
-N = &007F
-L0080 = &0080
-L0081 = &0081
-L0082 = &0082
-L0083 = &0083
-L0084 = &0084
-L0085 = &0085
-L0086 = &0086
-L0087 = &0087
-L0088 = &0088
-L008A = &008A
-L008B = &008B
-L008C = &008C
-L008D = &008D
-L008E = &008E
-L008F = &008F
+.L006C
 
-L0100 = &0100
-L0101 = &0101
-L0114 = &0114
+ SKIP 1                 \ 
 
-driverSpeed = &0128
+.L006D
 
- SKIP 20                \ Indexed by driver number (0 to 19)
+ SKIP 1                 \ 
+
+.L006E
+
+ SKIP 1                 \ 
+
+.L006F
+
+ SKIP 1                 \ 
+
+.P
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.Q
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.R
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.S
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.T
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.U
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.V
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.W
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.G
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.H
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.I
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.J
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.K
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.L
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.M
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.N
+
+ SKIP 1                 \ Temporary storage, used in a number of places
+
+.L0080
+
+ SKIP 1                 \ 
+
+.L0081
+
+ SKIP 1                 \ 
+
+.L0082
+
+ SKIP 1                 \ 
+
+.L0083
+
+ SKIP 1                 \ 
+
+.L0084
+
+ SKIP 1                 \ 
+
+.L0085
+
+ SKIP 1                 \ 
+
+.L0086
+
+ SKIP 1                 \ 
+
+.L0087
+
+ SKIP 1                 \ 
+
+.L0088
+
+ SKIP 2                 \ 
+
+.L008A
+
+ SKIP 1                 \ 
+
+.L008B
+
+ SKIP 1                 \ 
+
+.L008C
+
+ SKIP 1                 \ 
+
+.L008D
+
+ SKIP 1                 \ 
+
+.L008E
+
+ SKIP 1                 \ 
+
+.L008F
+
+ SKIP 1                 \ 
+
+\ ******************************************************************************
+\
+\       Name: Stack variables
+\       Type: Workspace
+\    Address: &0100 to &0175
+\   Category: Workspaces
+\    Summary: Variables that share page 1 with the stack
+\
+\ ******************************************************************************
+
+ORG &0100
+
+.L0100
+
+ SKIP 1                 \ 
+
+.L0101
+
+ SKIP 19                \ 
+
+.L0114
+
+ SKIP 20                \ 
+
+.driverSpeed
+
+ SKIP 19                \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDriver, contains the speed of
                         \ each driver?
 
-L013B = &013B
+.L013B
 
-L013C = &013C
+ SKIP 1                 \ 
 
- SKIP 20                \ Indexed by driver number (0 to 19)
+
+.L013C
+
+ SKIP 19                \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDrivers to the number of each
                         \ driver - could this be the race order?
 
-L014F = &014F
-L0150 = &0150
-L0164 = &0164
-L0178 = &0178
-L018C = &018C
-L01A4 = &01A4
+.L014F
 
-L0380 = &0380
-L0397 = &0397
-L0398 = &0398
-L03AF = &03AF
-L03B0 = &03B0
-L03C8 = &03C8
+ SKIP 1                 \ 
 
-L0400 = &0400
-L0450 = &0450
+.L0150
 
-L04A0 = &04A0
+ SKIP 20                \ 
+
+.L0164
+
+ SKIP 20                \ 
+
+.L0178
+
+ SKIP 20                \ 
+
+.L018C
+
+ SKIP 24                \ 
+
+.L01A4
+
+ SKIP 20                \ 
+
+
+\ ******************************************************************************
+\
+\       Name: Main variable workspace
+\       Type: Workspace
+\    Address: &0380 to &07F8 and &0880 to &0AFF
+\   Category: Workspaces
+\    Summary: The main block of game variables
+\
+\ ******************************************************************************
+
+ORG &0380
+
+.L0380
+
+ SKIP 23                \ 
+
+.L0397
+
+ SKIP 1                 \ 
+
+.L0398
+
+ SKIP 23                \ 
+
+.L03AF
+
+ SKIP 1                 \ 
+
+.L03B0
+
+ SKIP 24                \ 
+
+.L03C8
+
+ SKIP 56                \ 
+
+.L0400
+
+ SKIP 80                \ 
+
+.L0450
+
+ SKIP 80                \ 
+
+.L04A0
 
  SKIP 20                \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDrivers
-L04B4 = &04B4
-L04C8 = &04C8
-L04DC = &04DC
-L04F0 = &04F0
+
+.L04B4
+
+ SKIP 20                \ 
+
+.L04C8
+
+ SKIP 20                \ 
+
+.L04DC
+
+ SKIP 20                \ 
+
+.L04F0
 
  SKIP 20                \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDrivers
-L0504 = &0504
-L0554 = &0554
-L05A4 = &05A4
-L05F4 = &05F4
-L05F5 = &05F5
-L05F6 = &05F6
-L05F7 = &05F7
-L05F8 = &05F8
-L05FE = &05FE
 
-L0600 = &0600
-L0650 = &0650
-L068A = &068A
-L06A0 = &06A0
-L06B4 = &06B4
-L06B8 = &06B8
-L06CC = &06CC
-L06D0 = &06D0
-L06E4 = &06E4
-L06E8 = &06E8
-L06FF = &06FF
+.L0504
 
-L0700 = &0700
-L0701 = &0701
-L0702 = &0702
-L0780 = &0780
-L07A8 = &07A8
-L07D0 = &07D0
+ SKIP 80                \ 
 
-L0880 = &0880
-L0897 = &0897
-L0898 = &0898
-L08AC = &08AC
-L08D0 = &08D0
-L08E8 = &08E8
+.L0554
 
-L0900 = &0900
-L0901 = &0901
-L0902 = &0902
-L0978 = &0978
-L0979 = &0979
-L097A = &097A
-L09FA = &09FA
-L09FD = &09FD
-L09FE = &09FE
+ SKIP 80                \ 
 
-L0A00 = &0A00
-L0A01 = &0A01
-L0A02 = &0A02
-L0A78 = &0A78
-L0A79 = &0A79
-L0A7A = &0A7A
-L0AFA = &0AFA
-L0AFD = &0AFD
-L0AFE = &0AFE
+.L05A4
 
-L5E40 = &5E40
-L5E41 = &5E41
-L5E50 = &5E50
-L5E8F = &5E8F
-L5E90 = &5E90
-L5E91 = &5E91
-L5EA0 = &5EA0
-L5EB8 = &5EB8
-L5EDF = &5EDF
-L5EE0 = &5EE0
-L5EE1 = &5EE1
-L5EF8 = &5EF8
-L5F00 = &5F00
-L5F20 = &5F20
-L5F21 = &5F21
-L5F38 = &5F38
-L5F39 = &5F39
+ SKIP 80                \ 
 
-raceClass = &5F3A
+.L05F4
 
- SKIP 1                 \ The class of race:
-                        \
-                        \   * 0 = Novice
-                        \
-                        \   * 1 = Amateur
-                        \
-                        \   * 2 = Professional
+ SKIP 1                 \ 
 
-L5F3B = &5F3B
-L5F3C = &5F3C
-L5F3D = &5F3D
-L5F3E = &5F3E
-L5F3F = &5F3F
+.L05F5
 
-baseSpeed = &5F40
+ SKIP 1                 \ 
 
- SKIP 1                 \ The base speed for each car, which is faster with a
-                        \ higher class of race (this value is taken from the
-                        \ track data at trackData+1812):
-                        \
-                        \   * 134 = Novice
-                        \
-                        \   * 146 = Amateur
-                        \
-                        \   * 152 = Professional
+.L05F6
 
-L5F48 = &5F48
-L5F60 = &5F60
-L5FB0 = &5FB0
+ SKIP 1                 \ 
 
-L6E85 = &6E85
-L6E8A = &6E8A
-L6FB2 = &6FB2
-L6FBD = &6FBD
-L6FC0 = &6FC0
+.L05F7
 
-L7000 = &7000
-L70F8 = &70F8
-L713D = &713D
-L7205 = &7205
-L77DB = &77DB
-L77DC = &77DC
-L77E3 = &77E3
-L77E4 = &77E4
+ SKIP 1                 \ 
+
+.L05F8
+
+ SKIP 6                 \ 
+
+.L05FE
+
+ SKIP 2                 \ 
+
+.L0600
+
+ SKIP 80                \ 
+
+.L0650
+
+ SKIP 58                \ 
+
+.L068A
+
+ SKIP 22                \ 
+
+.L06A0
+
+ SKIP 20                \ 
+
+.L06B4
+
+ SKIP 4                 \ 
+
+.L06B8
+
+ SKIP 20                \ 
+
+.L06CC
+
+ SKIP 4                 \ 
+
+.L06D0
+
+ SKIP 20                \ 
+
+.L06E4
+
+ SKIP 4                 \ 
+
+.L06E8
+
+ SKIP 23                \ 
+
+.L06FF
+
+ SKIP 1                 \ 
+
+.L0700
+
+ SKIP 1                 \ 
+
+.L0701
+
+ SKIP 1                 \ 
+
+.L0702
+
+ SKIP 126               \ 
+
+.L0780
+
+ SKIP 40                \ 
+
+.L07A8
+
+ SKIP 40                \ 
+
+.L07D0
+
+ SKIP 40                \ 
+
+ORG &0880
+
+.L0880
+
+ SKIP 23                \ 
+
+.L0897
+
+ SKIP 1                 \ 
+
+.L0898
+
+ SKIP 20                \ 
+
+.L08AC
+
+ SKIP 36                \ 
+
+.L08D0
+
+ SKIP 24                \ 
+
+.L08E8
+
+ SKIP 24                \ 
+
+.L0900
+
+ SKIP 1                 \ 
+
+.L0901
+
+ SKIP 1                 \ 
+
+.L0902
+
+ SKIP 118               \ 
+
+.L0978
+
+ SKIP 1                 \ 
+
+.L0979
+
+ SKIP 1                 \ 
+
+.L097A
+
+ SKIP 128               \ 
+
+.L09FA
+
+ SKIP 3                 \ 
+
+.L09FD
+
+ SKIP 1                 \ 
+
+.L09FE
+
+ SKIP 2                 \ 
+
+.L0A00
+
+ SKIP 1                 \ 
+
+.L0A01
+
+ SKIP 1                 \ 
+
+.L0A02
+
+ SKIP 118               \ 
+
+.L0A78
+
+ SKIP 1                 \ 
+
+.L0A79
+
+ SKIP 1                 \ 
+
+.L0A7A
+
+ SKIP 128               \ 
+
+.L0AFA
+
+ SKIP 3                 \ 
+
+.L0AFD
+
+ SKIP 1                 \ 
+
+.L0AFE
+
+ SKIP 2                 \ 
 
 \ ******************************************************************************
 \
@@ -1182,7 +1775,7 @@ ORG &0B00
 \       Name: Divide8x8
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: Calculate T = A / V
+\    Summary: Calculate T = A * 256 / V
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1192,6 +1785,14 @@ ORG &0B00
 \ the largest possible multiple of the divisor (V) after each shift; each bit of
 \ A where we can subtract Q gives a 1 the answer to the division, otherwise it
 \ gives a 0.
+\
+\ Arguments:
+\
+\   T                   This has an effect, not sure what ???
+\
+\   A                   Unsigned integer
+\
+\   V                   Unsigned integer
 \
 \ ******************************************************************************
 
@@ -6079,7 +6680,9 @@ ORG &0B00
  LDA L0085
  CMP V
  BEQ C220D
- JSR Divide8x8
+
+ JSR Divide8x8          \ Set T = A * 256 / V
+
  LDA #0
  STA L008A
  LDY T
@@ -6168,7 +6771,9 @@ ORG &0B00
  LDA L0083
  CMP V
  BEQ C220D
- JSR Divide8x8
+
+ JSR Divide8x8          \ Set T = A * 256 / V
+
  LDA #0
  STA L008A
  LDY T
@@ -6300,7 +6905,9 @@ ORG &0B00
  LDA L0081
  STA T
  LDA L0084
- JSR Divide8x8
+
+ JSR Divide8x8          \ Set T = A * 256 / V
+
  LDA T
  CMP #&80
  BCS C22FE
@@ -12632,6 +13239,19 @@ ORG &0B00
  LDA #&30
  STA Q
 
+\ ******************************************************************************
+\
+\       Name: sub_C3D68
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
 .C3D68
 
  LDX T
@@ -17554,7 +18174,7 @@ LDA #&20
  LSR A                  \ so X is the character row number for this coordinate
  TAX
 
- LDA yLookupLo,X        \ Set (Q P) = (Q P) + X-th entry in (yLookupHi yLookupLo)
+ LDA yLookupLo,X        \ Set (Q P) = (Q P) + X-th (yLookupHi yLookupLo) entry
  CLC                    \
  ADC P                  \ starting with the low bytes
  STA P
@@ -18143,7 +18763,482 @@ LDA #&20
  JSR sub_C6698
  RTS
 
-ORG &5FD0
+\ ******************************************************************************
+\
+\       Name: L5E40
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+ORG &5E40
+
+.L5E40
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5E41
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5E41
+
+ SKIP 15
+
+\ ******************************************************************************
+\
+\       Name: L5E50
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5E50
+
+ SKIP 63
+
+\ ******************************************************************************
+\
+\       Name: L5E8F
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5E8F
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5E90
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5E90
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5E91
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5E91
+
+ SKIP 15
+
+\ ******************************************************************************
+\
+\       Name: L5EA0
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5EA0
+
+ SKIP 24
+
+\ ******************************************************************************
+\
+\       Name: L5EB8
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5EB8
+
+ SKIP 39
+
+\ ******************************************************************************
+\
+\       Name: L5EDF
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5EDF
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5EE0
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5EE0
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5EE1
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5EE1
+
+ SKIP 23
+
+\ ******************************************************************************
+\
+\       Name: L5EF8
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5EF8
+
+ SKIP 8
+
+\ ******************************************************************************
+\
+\       Name: L5F00
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F00
+
+ SKIP 32
+
+\ ******************************************************************************
+\
+\       Name: L5F20
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F20
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5F21
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F21
+
+ SKIP 23
+
+\ ******************************************************************************
+\
+\       Name: L5F38
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F38
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5F39
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F39
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: raceClass
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.raceClass
+
+ SKIP 1                 \ The class of race:
+                        \
+                        \   * 0 = Novice
+                        \
+                        \   * 1 = Amateur
+                        \
+                        \   * 2 = Professional
+
+\ ******************************************************************************
+\
+\       Name: L5F3B
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F3B
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5F3C
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F3C
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5F3D
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F3D
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5F3E
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F3E
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: L5F3F
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F3F
+
+ SKIP 1
+
+\ ******************************************************************************
+\
+\       Name: baseSpeed
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.baseSpeed
+
+ SKIP 1                 \ The base speed for each car, which is faster with a
+                        \ higher class of race (this value is taken from the
+                        \ track data at trackData+1812):
+                        \
+                        \   * 134 = Novice
+                        \
+                        \   * 146 = Amateur
+                        \
+                        \   * 152 = Professional
+
+ SKIP 7
+
+\ ******************************************************************************
+\
+\       Name: L5F48
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F48
+
+ SKIP 24
+
+\ ******************************************************************************
+\
+\       Name: L5F60
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5F60
+
+ SKIP 80
+
+\ ******************************************************************************
+\
+\       Name: L5FB0
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5FB0
+
+ SKIP 1
 
 \ ******************************************************************************
 \
@@ -18157,6 +19252,8 @@ ORG &5FD0
 \ 
 \
 \ ******************************************************************************
+
+ORG &5FD0
 
 .L5FD0
 
@@ -20473,7 +21570,8 @@ ORG &5FD0
 
  BNE mopt1              \ Jump back to mopt1 to keep checking for key presses,
                         \ so we can change the option, or press SPACE to lock in
-                        \ our choice
+                        \ our choice (this BNE is effectively a JMP as we just
+                        \ passed through a BEQ)
 
 \ ******************************************************************************
 \
