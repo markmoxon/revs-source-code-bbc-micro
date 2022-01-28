@@ -702,7 +702,7 @@ ORG &0100
 
  SKIP 19                \ Indexed by driver number (0 to 19)
                         \
-                        \ Gets set in InitialiseDriver, contains the speed of
+                        \ Gets set in SetDriverSpeed, contains the speed of
                         \ each driver?
 
 .L013B
@@ -10312,7 +10312,7 @@ ORG &0B00
 \
 \       Name: ConvertTextToNumber
 \       Type: Subroutine
-\   Category: Utility routines
+\   Category: Text
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -14077,25 +14077,27 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ResetL06A0
+\       Name: ResetDriver060A
 \       Type: Subroutine
-\   Category: Utility routines
-\    Summary: 
+\   Category: Drivers
+\    Summary: Reset L06A0, L06B8, L06D0 for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The driver number (0 to 19)
 \
 \ ******************************************************************************
 
-.ResetL06A0
+.ResetDriver060A
 
- LDA #0                 \ Zero the X-th entry of L06A0
+ LDA #0                 \ Zero the L06A0 entry for driver X
  STA L06A0,X
 
- STA L06B8,X            \ Zero the X-th entry of L06B8
+ STA L06B8,X            \ Zero the L06B8 entry for driver X
 
- LDA #16                \ Set the X-th entry of L06D0 to 16
+ LDA #16                \ Set the L06D0 entry for driver X to 16
  STA L06D0,X
 
  RTS                    \ Return from the subroutine
@@ -14542,31 +14544,32 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ResetAllL06A0
+\       Name: ResetDrivers060A
 \       Type: Subroutine
-\   Category: Utility routines
-\    Summary: 
+\   Category: Drivers
+\    Summary: Reset L06A0, L06B8, L06D0 for all drivers
 \
 \ ------------------------------------------------------------------------------
 \
-\ Zero L06A0 to L06A0+&13 (&06A0 to &06B3)
-\ Zero L06B8 to L06B8+&13 (&06B8 to &06CB)
-\ Set  L06D0 to L06D0+&13 (&06D0 to &06E3) to 16
+\ Zero L06A0 to L06A0+19
+\ Zero L06B8 to L06B8+19
+\ Set  L06D0 to L06D0+19 to 16
 \
 \ ******************************************************************************
 
-.ResetAllL06A0
+.ResetDrivers060A
 
- LDX #19                \ We are about to reset 20 bytes, so set a counter in X
+ LDX #19                \ We are about to reset all 20 drivers, so set a driver
+                        \ counter in X
 
 .rall1
 
- JSR ResetL06A0         \ Reset the X-th entry in L06A0, L06B8, L06D0
+ JSR ResetDriver060A    \ Reset the entries for driver X in L06A0, L06B8, L06D0
 
- DEX                    \ Decrement the byte counter
+ DEX                    \ Decrement the driver counter
 
  BPL rall1              \ Loop back to reset the next set of bytes until we have
-                        \ reset them all
+                        \ reset all 20 drivers
 
  RTS                    \ Return from the subroutine
 
@@ -14895,9 +14898,9 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: Setup5FB0
+\       Name: Set5FB0
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -14918,7 +14921,7 @@ LDA #&20
 \
 \ ******************************************************************************
 
-.Setup5FB0
+.Set5FB0
 
  LDA trackData+1812,X   \ Set baseSpeed = the X-th byte of trackData+1812
  STA baseSpeed          \
@@ -16920,7 +16923,7 @@ LDA #&20
 \       Name: InitialiseDrivers
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Initialise all 20 drivers
+\    Summary: Set the base speed f all 20 drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16937,7 +16940,7 @@ LDA #&20
 
  STX raceClass          \ Set raceClass = 0 (Novice)
 
- JSR Setup5FB0          \ Call Setup5FB0 with X = 0 (Novice) to set up the 24
+ JSR Set5FB0            \ Call Set5FB0 with X = 0 (Novice) to set up the 24
                         \ bytes at L5FB0, returning with X unchanged 
 
                         \ The following loop works starts with X = 0, and then
@@ -16954,7 +16957,7 @@ LDA #&20
  NOP
  STA L04A0,X
 
- JSR InitialiseDriver   \ Initialise driver X
+ JSR SetDriverSpeed     \ Set the base speed for driver X
                         \
                         \ It also decrements X to the next driver number and
                         \ updates driverNumber accordingly
@@ -17908,7 +17911,7 @@ LDA #&20
 
 .C507A
 
- JSR InitialiseDriver
+ JSR SetDriverSpeed
 
 .C507D
 
@@ -19058,12 +19061,8 @@ ORG &5E40
 \
 \       Name: raceClass
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The class of the current race
 \
 \ ******************************************************************************
 
@@ -19166,12 +19165,8 @@ ORG &5E40
 \
 \       Name: baseSpeed
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The base speed for each car, copied from the track data
 \
 \ ******************************************************************************
 
@@ -19238,7 +19233,7 @@ ORG &5E40
 
 .L5FB0
 
- SKIP 1
+ SKIP 32
 
 \ ******************************************************************************
 \
@@ -19252,8 +19247,6 @@ ORG &5E40
 \ 
 \
 \ ******************************************************************************
-
-ORG &5FD0
 
 .L5FD0
 
@@ -20840,20 +20833,24 @@ ORG &5FD0
 
 \ ******************************************************************************
 \
-\       Name: InitialiseDriver
+\       Name: SetDriverSpeed
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Initialise a driver
+\    Summary: Set the base speed for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   driverNumber        The number of the driver to initialise
+\   driverNumber        The number of the driver
+\
+\ Returns:
+\
+\   X                   The number of the previous driver
 \
 \ ******************************************************************************
 
-.InitialiseDriver
+.SetDriverSpeed
 
  LDX driverNumber       \ Set X to the driver number to initialise
 
@@ -21113,7 +21110,7 @@ ORG &5FD0
  DEX                    \ Set L5F3B = 255
  STX L5F3B
 
- JSR ResetAllL06A0
+ JSR ResetDrivers060A
 
  JSR sub_C655A
 
@@ -21138,7 +21135,8 @@ ORG &5FD0
 
  STX raceClass          \ Set raceClass to the chosen race class (0-2)
 
- JSR Setup5FB0          \ Call Setup5FB0
+ JSR Set5FB0            \ Call Set5FB0 to set up the 24 bytes at L5FB0 according
+                        \ to the race class
 
 .game2
 
@@ -21159,7 +21157,7 @@ ORG &5FD0
  LDA L3DF0,X
  STA L5F3B
 
- JSR ResetAllL06A0
+ JSR ResetDrivers060A
 
  LDA #&14
  STA L006F
@@ -21170,7 +21168,7 @@ ORG &5FD0
 
  LDX L006F
 
- JSR ResetL06A0
+ JSR ResetDriver060A
 
  LDA L5F3C
  BEQ game4
@@ -21253,7 +21251,9 @@ ORG &5FD0
 .game8
 
  LDX raceClass
- JSR Setup5FB0
+
+ JSR Set5FB0            \ Call Set5FB0 to set up the 24 bytes at L5FB0 according
+                        \ to the race class
 
  LDX #26                \ Print token 26, which is a double-height header with
  JSR PrintToken         \ the text "STANDARD OF RACE"
@@ -21328,7 +21328,7 @@ ORG &5FD0
  DEX
  BPL game14
 
- JSR ResetAllL06A0
+ JSR ResetDrivers060A
 
  LDA #&80
  JSR sub_C655C
