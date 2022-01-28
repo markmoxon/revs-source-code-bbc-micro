@@ -710,12 +710,15 @@ ORG &0100
  SKIP 1                 \ 
 
 
-.L013C
+.driverPosition
 
- SKIP 19                \ Indexed by driver number (0 to 19)
+ SKIP 19                \ The current position of each driver in the race (i.e.
+                        \ first place, second place etc.)
+                        \
+                        \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDrivers to the number of each
-                        \ driver - could this be the race order?
+                        \ driver
 
 .L014F
 
@@ -2204,63 +2207,60 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0E40
+\       Name: Absolute16Bit
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Calculate the absolute value (modulus) of a 16-bit number
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine sets (A T) = |A T|.
+\
+\ Arguments:
+\
+\   (A T)               The number to make positive
 \
 \ ******************************************************************************
 
-.sub_C0E40
+.Absolute16Bit
 
- BPL C0E4F
+ BPL ScanKeyboard-1     \ If the high byte in A is already positive, return from
+                        \ the subroutine (as ScanKeyboard-1 contains an RTS)
+
+                        \ Otherwise fall through into Negate16Bit to negate the
+                        \ number in (A T), which will make it positive, so this
+                        \ sets (A T) = |A T|
 
 \ ******************************************************************************
 \
-\       Name: sub_C0E42
+\       Name: Negate16Bit
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Negate a 16-bit number
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine negates the 16-bit number (A T).
+\
+\ Other entry points:
+\
+\   Negate16Bit+2       Set (A T) = -(U T)
 \
 \ ******************************************************************************
 
-.sub_C0E42
+.Negate16Bit
 
- STA U
+ STA U                  \ Set (U T) = (A T)
 
-\ ******************************************************************************
-\
-\       Name: sub_C0E44
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ LDA #0                 \ Set (A T) = 0 - (U T)
+ SEC                    \           = -(A T)
+ SBC T                  \
+ STA T                  \ starting with the low bytes
 
-.sub_C0E44
-
- LDA #0
- SEC
- SBC T
- STA T
- LDA #0
+ LDA #0                 \ And then the high bytes
  SBC U
 
-.C0E4F
-
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2283,6 +2283,10 @@ ORG &0B00
 \
 \                       CLear if the key in X is not being pressed, in which
 \                       case BNE will branch
+\
+\ Other entry points:
+\
+\   ScanKeyboard-1      Contains an RTS
 \
 \ ******************************************************************************
 
@@ -2565,7 +2569,7 @@ ORG &0B00
 .C0F6F
 
  STX W
- LDY L013C,X
+ LDY driverPosition,X
  TXA
  STA L0100,X
  LDA L013B,X
@@ -2638,7 +2642,7 @@ ORG &0B00
  TYA
  STA L013B,X
  LDA T
- STA L013C,X
+ STA driverPosition,X
  DEC V
  JMP C0FAA
 
@@ -2800,7 +2804,7 @@ ORG &0B00
 
  TXA
  PHA
- LDA L013C,X
+ LDA driverPosition,X
  TAX
  JSR sub_C14C3
  PLA
@@ -2850,7 +2854,7 @@ ORG &0B00
 
 .P1104
 
- LDX L013C,Y
+ LDX driverPosition,Y
  EOR #&FF
  STA L0178,X
  DEY
@@ -2886,14 +2890,14 @@ ORG &0B00
  BCC C1162
  LDA L005E
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP #&60
  BCS C1138
  LDA #&14
  BIT L62E2
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  JMP C1C0B
 
@@ -2944,7 +2948,7 @@ ORG &0B00
  LDA #0
  STA L0000
  STA L006D
- JSR sub_C261F
+ JSR SetL018CBit7
  LDX L006F
  JSR sub_C11BE
 
@@ -4063,7 +4067,9 @@ ORG &0B00
  EOR L62A2
  AND #1
  BEQ C160F
- JSR sub_C0E44
+
+ JSR Negate16Bit+2      \ Set (A T) = -(U T)
+
  JMP C160D
 
 .C15F4
@@ -4072,7 +4078,9 @@ ORG &0B00
  AND #&F0
  STA T
  LDA L62EA
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  LSR A
  ROR T
  LSR A
@@ -4097,7 +4105,9 @@ ORG &0B00
  SBC U
  CMP #&C8
  BCC C162D
- JSR sub_C0E42
+
+ JSR Negate16Bit        \ Set (A T) = -(A T)
+
  STA U
  LDA T
  EOR #1
@@ -4511,7 +4521,7 @@ ORG &0B00
  BMI C184C
  LDX trackData+1815
  LDY L0003
- JSR sub_C267F
+ JSR SwapDriverPosition
  JSR sub_C63A2
  LDA trackData+1816
 
@@ -5408,7 +5418,8 @@ ORG &0B00
 .C1C07
 
  PLP
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
 
 .C1C0B
 
@@ -6146,7 +6157,9 @@ ORG &0B00
  LDA L5E90,X
  SBC W
  PHP
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  STA V
  LDY L0022
  LDA #&3C
@@ -6187,7 +6200,9 @@ ORG &0B00
  JSR sub_C0DBF
  LDA U
  PLP
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  STA U
  LDA T
  AND #&FE
@@ -6195,7 +6210,9 @@ ORG &0B00
  LDA L62A2
  LSR A
  BCS C1F95
- JSR sub_C0E44
+
+ JSR Negate16Bit+2      \ Set (A T) = -(U T)
+
  STA U
 
 .C1F95
@@ -6286,7 +6303,7 @@ ORG &0B00
  CMP #&14
  BCC C1FD5
  LDX L004D
- LDA L013C,X
+ LDA driverPosition,X
 
 .C1FD5
 
@@ -7426,7 +7443,7 @@ ORG &0B00
  SEC
  SBC L5EB8,Y
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  LSR A
  STA L62FC
@@ -7617,7 +7634,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C261F
+\       Name: SetL018CBit7
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -7628,43 +7645,49 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C261F
+.SetL018CBit7
 
- LDX #&16
+ LDX #22                \ We are about to process 23 bytes at L018C, so set a
+                        \ loop counter in X
 
 .P2621
 
- LDA L018C,X
- ORA #&80
+ LDA L018C,X            \ Set bit 7 in the X-th byte of L018C
+ ORA #%10000000
  STA L018C,X
- DEX
- BPL P2621
- RTS
+
+ DEX                    \ Decrement the loop counter
+
+ BPL P2621              \ Loop back until we have set bit 7 in all 23 bytes
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C262D
+\       Name: Delay
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Utility routines
+\    Summary: Delay for a specified number of loops
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine performs T + (5 * 256) loop iterations, to create a delay.
 \
 \ ******************************************************************************
 
-.sub_C262D
+.Delay
 
- LDX #6
+ LDX #6                 \ Set X as the counter for the outer loop
 
-.C262F
+.dely1
 
- DEC T
- BNE C262F
- DEX
- BNE C262F
- RTS
+ DEC T                  \ Loop around for T iterations in the inner loop
+ BNE dely1
+
+ DEX                    \ Loop around for X iterations in the outer loop
+ BNE dely1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -7682,15 +7705,15 @@ ORG &0B00
 .sub_C2637
 
  LDA L5F3B
- BMI sub_C262D
+ BMI Delay
  LDX L005B
- LDY L013C,X
+ LDY driverPosition,X
  LDA L018C,Y
  AND #&7F
  STA L018C,Y
  JSR sub_C27ED
  JSR sub_C2692
- JSR sub_C261F
+ JSR SetL018CBit7
  JSR sub_C63A2
  LDX L0003
  LDY #5
@@ -7724,28 +7747,45 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C267F
+\       Name: SwapDriverPosition
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Swap the position for two drivers (i.e. overtake)
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The driver number
+\
+\   Y                   The other driver number
+\
+\ Returns:
+\
+\   X                   The new position for driver X
+\
+\   Y                   The new position for driver Y
 \
 \ ******************************************************************************
 
-.sub_C267F
+.SwapDriverPosition
 
- LDA L013C,X
+ LDA driverPosition,X   \ Set T = driver X's current position
  STA T
- LDA L013C,Y
- STA L013C,X
- TAX
- LDA T
- STA L013C,Y
- TAY
- RTS
+
+ LDA driverPosition,Y   \ Set A = driver Y's current position
+
+ STA driverPosition,X   \ Set driver X's new position to A (i.e. driver Y's old
+                        \ position) 
+
+ TAX                    \ Set X = the new position for driver X
+
+ LDA T                  \ Set driver Y's new position to T (i.e. driver X's old
+ STA driverPosition,Y   \ position)
+
+ TAY                    \ Set Y = the new position for driver Y
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -7767,12 +7807,12 @@ ORG &0B00
 .C2694
 
  STX W
- LDA L013C,X
+ LDA driverPosition,X
  STA T
 
  JSR PreviousDriver     \ Decrement X to the previous driver number
 
- LDA L013C,X
+ LDA driverPosition,X
  STX G
  TAY
  LDX T
@@ -7786,7 +7826,7 @@ ORG &0B00
  BCC C26E6
  LDX W
  LDY G
- JSR sub_C267F
+ JSR SwapDriverPosition
  SEC
  ROR L62FE
  CPY L006F
@@ -7869,7 +7909,7 @@ ORG &0B00
  ROR T
  AND #&FF
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP #&3C
  BCC C2744
@@ -7996,7 +8036,9 @@ ORG &0B00
  SBC L08E8,X
  PHP
  BPL C27BF
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
 
 .C27BF
 
@@ -8023,7 +8065,7 @@ ORG &0B00
  BCS C27EA
  PLP
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  STA T
  LDA T
@@ -8253,7 +8295,7 @@ ORG &0B00
 
 .sub_C28F2
 
- LDA L013C,X
+ LDA driverPosition,X
  STA L0045
  STA L0042
  TAX
@@ -8265,7 +8307,7 @@ ORG &0B00
  BMI C2911
  LDA T
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  STA T
  CMP #&28
@@ -8640,7 +8682,7 @@ ORG &0B00
 .sub_C2ACB
 
  STX L0045
- LDA L013C,X
+ LDA driverPosition,X
  TAX
 
 \ ******************************************************************************
@@ -8855,7 +8897,9 @@ ORG &0B00
  LDA L5E90,Y
  SBC L5E90,X
  STA L0086
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  CMP #&40
  BCS C2BB9
  ASL T
@@ -10190,33 +10234,38 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3250
+\       Name: PrintDriverName
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print a driver's name
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   (Y A)               Address of 12-character driver name
 \
 \ ******************************************************************************
 
-.sub_C3250
+.PrintDriverName
 
- STY S
+ STY S                  \ Set (S R) = (Y A)
  STA R
- LDY #0
+
+ LDY #0                 \ Set a character counter in Y
 
 .P3256
 
- LDA (R),Y
+ LDA (R),Y              \ Set A to the Y-th character from (S R)
 
  JSR PrintCharacter     \ Print the character in A
 
- INY
- CPY #&0C
- BNE P3256
- RTS
+ INY                    \ Increment the character counter
+
+ CPY #12                \ Loop back to print the next character until we have
+ BNE P3256              \ printed all 12 characters
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -10557,12 +10606,14 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: AbsoluteValue
+\       Name: Absolute8Bit
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: Calculate the absolute value (modulus) of A, i.e. |A|
+\    Summary: Calculate the absolute value (modulus) of an 8-bit number
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine returns |A|.
 \
 \ Arguments:
 \
@@ -10570,7 +10621,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.AbsoluteValue
+.Absolute8Bit
 
  BPL aval1              \ If A is positive then it already contains its absolute
                         \ value, so jump to aval1 to return from the subroutine
@@ -15065,14 +15116,14 @@ LDA #&20
  LDA trackData+768,Y
  PHP
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP #&3C
  PHP
  BCC C454F
  LDA trackData+256,Y
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
 .C454F
 
@@ -15096,7 +15147,7 @@ LDA #&20
 
  PLP
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  SEC
  SBC L000B
@@ -15159,7 +15210,7 @@ LDA #&20
 
  LDA L0026
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP #5
  BCC C45C3
@@ -15240,12 +15291,12 @@ LDA #&20
  PHP
  LDA trackData+512,Y
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  JSR Multiply8x8
  PLP
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  RTS
 
@@ -15268,7 +15319,7 @@ LDA #&20
  SEC
  SBC L0044
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP #&40
  ROR L0043
@@ -15292,7 +15343,7 @@ LDA #&20
  LDX L006F
  BIT L0025
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  PHA
  SBC L0178,X
@@ -15412,7 +15463,9 @@ LDA #&20
  LDA L62D9
  STA T
  LDA L62E9
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  STA L0063
  LDA T
  STA L002E
@@ -15517,13 +15570,17 @@ LDA #&20
 .sub_C4753
 
  PHP
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  STA V
  STY U
  JSR sub_C0DBF
  LDA U
  PLP
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  RTS
 
 \ ******************************************************************************
@@ -15847,7 +15904,9 @@ LDA #&20
 .sub_C48A0
 
  BMI C48A7
- JSR sub_C0E44
+
+ JSR Negate16Bit+2      \ Set (A T) = -(U T)
+
  STA U
 
 .C48A7
@@ -16309,7 +16368,9 @@ LDA #&20
  ORA L62E8
  PHP
  LDA L62E8
- JSR sub_C0E42
+
+ JSR Negate16Bit        \ Set (A T) = -(A T)
+
  LDY #5
 
 .P4AA2
@@ -16336,7 +16397,7 @@ LDA #&20
  STA L62EC
  LDA L62EA
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  JMP C4AED
 
@@ -16345,12 +16406,12 @@ LDA #&20
  JSR sub_C4B42
  LDA L62EC,X
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  STA T
  LDA L62EA,X
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP T
  BCC C4AE9
@@ -16474,7 +16535,9 @@ LDA #&20
 .C4B51
 
  BIT H
- JSR sub_C0E40
+
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+
  LDY G
  STA L62EA,Y
  LDA T
@@ -16682,7 +16745,7 @@ LDA #&20
  JSR Multiply8x8
  BIT L62E9
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CLC
  ADC L4C61,X
@@ -16756,7 +16819,7 @@ LDA #&20
 
  LDA L0039
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  STA U
  CMP L0063
@@ -16852,7 +16915,7 @@ LDA #&20
  SEC
  SBC L000B
 
- JSR AbsoluteValue      \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|
 
  CMP #&40
  BCC C4D09
@@ -16951,7 +17014,7 @@ LDA #&20
 
  TXA                    \ Set A to the current driver number in X
 
- STA L013C,X            \ Set L013C for driver X to the driver number
+ STA driverPosition,X   \ Set driverPosition for driver X to the driver number
 
  LSR A                  \ Set L04A0 for driver X to driver number >> 1
  NOP
@@ -18711,10 +18774,10 @@ LDA #&20
  STA SetupGame+40,X
  STA L39F8,X
  STA U
- LDY L013C,X
+ LDY driverPosition,X
  CPX #6
  BNE C5A39
- LDY L013C
+ LDY driverPosition
 
 .C5A39
 
@@ -20927,9 +20990,9 @@ ORG &5E40
                         \ value that we put on the stack above, which sets the
                         \ N flag randomly (amongst others)
 
- JSR AbsoluteValue      \ The first instruction of AbsoluteValue is a BPL,
+ JSR Absolute8Bit       \ The first instruction of Absolute8Bit  is a BPL,
                         \ which normally skips negation for positive numbers,
-                        \ but in this case it means the AbsoluteValue routine
+                        \ but in this case it means the Absolute8Bit  routine
                         \ randomly changes the sign of A, so A is now in the
                         \ range -7 to +7, with -3 to +3 more likely than -7 to
                         \ -4 or 4 to 7
@@ -20997,7 +21060,7 @@ ORG &5E40
 
 .P63A6
 
- CMP L013C,X
+ CMP driverPosition,X
  BEQ C63AE
  DEX
  BPL P63A6
@@ -21271,7 +21334,7 @@ ORG &5E40
 
 .game10
 
- LDA L013C,Y
+ LDA driverPosition,Y
  STA L04C8,Y
  CMP L5F39
  BCC game11
@@ -21324,7 +21387,7 @@ ORG &5E40
 .game14
 
  LDA L04C8,X
- STA L013C,X
+ STA driverPosition,X
  DEX
  BPL game14
 
@@ -21759,10 +21822,10 @@ ORG &5E40
 
 .sub_C667B
 
- LDX L013C,Y
+ LDX driverPosition,Y
  STX L0045
  JSR sub_C3CEB
- JSR sub_C3250
+ JSR PrintDriverName
  RTS
 
 \ ******************************************************************************
@@ -21785,7 +21848,7 @@ ORG &5E40
 
  LDX L006F
  JSR sub_C3CEB
- JSR sub_C3250
+ JSR PrintDriverName
  JSR sub_C34D0
 
  RTS
@@ -21952,7 +22015,7 @@ ORG &6C00
 .sub_C7B00
 
  LDY L005B
- LDX L013C,Y
+ LDX driverPosition,Y
  LDA L018C,X
  BMI L7B2A
  LDA L03C8,X
