@@ -1569,7 +1569,9 @@ ORG &0B00
  ASL A
  STA U
  LDA L0BA0,X
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  CLC
  ADC #&5A
  STA L62A8,X
@@ -1983,8 +1985,11 @@ ORG &0B00
 .C0D27
 
  LDA #&AB
- JSR Multiply8x8
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA V
  JSR sub_C0DBF
  LDA G
@@ -2105,10 +2110,13 @@ ORG &0B00
 
 .sub_C0DBF
 
- JSR Multiply8x8+2
+ JSR Multiply8x8+2      \ Set (A T) = T * U
+
  STA W
  LDA V
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA U
  LDA W
  CLC
@@ -2163,7 +2171,9 @@ ORG &0B00
  LDA L0081
  STA U
  LDA L0082
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA W
  LDA T
  CLC
@@ -2175,7 +2185,9 @@ ORG &0B00
 .C0E10
 
  LDA L0083
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA G
  LDA T
  CLC
@@ -2189,7 +2201,9 @@ ORG &0B00
  LDA L0080
  STA U
  LDA L0083
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA U
  LDA T
  CLC
@@ -4003,7 +4017,9 @@ ORG &0B00
  LDX #1
  JSR sub_C503F
  STA U
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  PLP
  BEQ C159F
  LSR A
@@ -5410,7 +5426,8 @@ ORG &0B00
 
 .C1BFE
 
- JSR Multiply8x8
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  CMP #&10
  BCC C1C07
  LDA #&10
@@ -8371,7 +8388,9 @@ ORG &0B00
  EOR #&FF
  CLC
  ADC #1
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  EOR #&FF
  CLC
  ADC #1
@@ -8381,7 +8400,7 @@ ORG &0B00
 
 .C297B
 
- JSR Multiply8x8
+ JSR Multiply8x8        \ Set (A T) = A * U
 
 .C297E
 
@@ -8421,7 +8440,9 @@ ORG &0B00
  EOR #&FF
  CLC
  ADC #1
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  EOR #&FF
  CLC
  ADC #1
@@ -8431,7 +8452,7 @@ ORG &0B00
 
 .C29C8
 
- JSR Multiply8x8
+ JSR Multiply8x8        \ Set (A T) = A * U
 
 .C29CB
 
@@ -15263,7 +15284,9 @@ LDA #&20
  LDA L0063
  STA U
  LDA #&21
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  ASL U
  CLC
  ADC U
@@ -15293,7 +15316,8 @@ LDA #&20
 
  JSR Absolute8Bit       \ Set A = |A|
 
- JSR Multiply8x8
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  PLP
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -15391,10 +15415,14 @@ LDA #&20
  JSR sub_C4687
  STA U
  TYA
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA U
  LDA L0010
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  RTS
 
 \ ******************************************************************************
@@ -16222,7 +16250,9 @@ LDA #&20
  STA U
  LDX gearNumber
  LDA trackData+1798,X
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  ASL T
  ROL A
  PLP
@@ -16337,7 +16367,8 @@ LDA #&20
 
  STA U
  LDA trackData+1805,X
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
 
 .C4A87
 
@@ -16642,7 +16673,9 @@ LDA #&20
 
  STA U
  LDA L003F
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  LDY L003E
  DEY
  BNE C4BCB
@@ -16709,7 +16742,9 @@ LDA #&20
 .C4C06
 
  LDA VIA+&68            \ user_via_t2c_l
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  AND #7
  TAX
  BNE C4C12
@@ -16742,7 +16777,9 @@ LDA #&20
 
  STA U
  LDA L62A8,X
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  BIT L62E9
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -16762,7 +16799,9 @@ LDA #&20
  CLC
  ADC G,X
  STA L62AA,X
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA L62AC,X
  DEX
  BPL C4C28
@@ -16835,7 +16874,9 @@ LDA #&20
 .C4C77
 
  STA W
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA U
  LDY #6
  LDA L0039
@@ -16843,7 +16884,9 @@ LDA #&20
  LDA L0063
  STA U
  LDA L62F1
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  CLC
  ADC #8
  STA V
@@ -18796,7 +18839,9 @@ LDA #&20
 
  STA U
  LDA L5F38
- JSR Multiply8x8
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+
  STA U
  JMP C5A61
 
