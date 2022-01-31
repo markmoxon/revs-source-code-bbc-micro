@@ -861,29 +861,35 @@ ORG &0380
 
  SKIP 22                \ 
 
-.L06A0
+.driverTenths
 
- SKIP 20                \ 
+ SKIP 20                \ The tenths of seconds of each driver's lap time,
+                        \ stored in BCD
+                        \
+                        \ Indexed by driver number (0 to 19)
 
 .L06B4
 
- SKIP 4                 \ 
+ SKIP 4                 \ Tenths for current lap time?
 
-.L06B8
+.driverSeconds
 
- SKIP 20                \ 
-
+ SKIP 20                \ The seconds of each driver's lap time, stored in BCD
+                        \
+                        \ Indexed by driver number (0 to 19)
 .L06CC
 
- SKIP 4                 \ 
+ SKIP 4                 \ Seconds for current lap time?
 
-.L06D0
+.driverMinutes
 
- SKIP 20                \ 
+ SKIP 20                \ The minutes of each driver's lap time, stored in BCD
+                        \
+                        \ Indexed by driver number (0 to 19)
 
 .L06E4
 
- SKIP 4                 \ 
+ SKIP 4                 \ Minutes for current lap time?
 
 .L06E8
 
@@ -2627,14 +2633,14 @@ ORG &0B00
  BIT G
  BVS C0FBA
  BMI C0FD4
- LDA L06A0,Y
- SBC L06A0,X
+ LDA driverTenths,Y
+ SBC driverTenths,X
  STA U
- LDA L06B8,Y
- SBC L06B8,X
+ LDA driverSeconds,Y
+ SBC driverSeconds,X
  STA H
- LDA L06D0,Y
- SBC L06D0,X
+ LDA driverMinutes,Y
+ SBC driverMinutes,X
  BCC C0FEC
 
 .C0F9B
@@ -2756,8 +2762,9 @@ ORG &0B00
  ADC L62EFHi
  STA L62EFHi
  BEQ C104F
- LDA #&26
- JSR sub_C502F
+
+ LDA #%00100110
+ JSR PrintThisLapTime+2
 
 .C104F
 
@@ -2773,7 +2780,7 @@ ORG &0B00
  BEQ C106A
  DEC L62EFHi
  BNE C106F
- JSR sub_C501D
+ JSR PrintBestLapTime
 
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
@@ -2783,7 +2790,7 @@ ORG &0B00
 .C106A
 
  BCC C106F
- JSR sub_C502D
+ JSR PrintThisLapTime
 
 .C106F
 
@@ -4673,7 +4680,7 @@ ORG &0B00
  LDX #1                 \ Zero L06B5, L06CD and L06E5
  JSR sub_C5011
 
- JSR sub_C501D
+ JSR PrintBestLapTime
 
  LDA #&DF
  STA L62EFHi
@@ -5450,10 +5457,13 @@ ORG &0B00
  BIT L62FE
  BPL C1BB5
  LDY L004D
- LDA #&18
+
+ LDA #24
  JSR sub_C6673
+
  LDY L005B
- LDA #&21
+
+ LDA #33
  JSR sub_C6673
 
 .C1BB5
@@ -11608,55 +11618,93 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C37D6
+\       Name: PrintBCDNumber
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print a binary coded decimal (BCD) number in the specified format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The number to print (in BCD)
+\
+\   G                   Flags to control how the number is printed:
+\
+\                         * Bit 7: clear = do not print leading zeroes
+\                                  set = print leading zeroes
+\
+\                         * Bit 6: clear = print second digit
+\                                  set = do not print second digit
+\
+\ Returns:
+\
+\   G                   G is shifted left by two places, so bits 4 and 5 will be
+\                       used to determine the printing style in the next call to
+\                       PrintBCDNumber
 \
 \ ******************************************************************************
 
-.sub_C37D6
+.PrintBCDNumber
 
- PHA
+ PHA                    \ Store A on the stack so we can retrieve it later
+
+ LSR A                  \ Shift the high nibble of A into bits 0-3, so A
+ LSR A                  \ contains the first digit of the BCD number
  LSR A
  LSR A
- LSR A
- LSR A
- BNE C37E5
- LDA #&1F
- BIT G
- BMI C37E5
- LDA #&F0
 
-.C37E5
+ BNE pnum1              \ If the result is non-zero, jump to pnum1 to print the
+                        \ digit in A
 
- CLC
- ADC #&30
+                        \ Otherwise the first digit is a zero, which we either
+                        \ print as a capital "O" (so it doesn't have a line
+                        \ through it), or as a space, depending on the setting
+                        \ in G, which controls whether or not to print leading
+                        \ zeroes
 
- JSR PrintCharacter     \ Print the character in A
+ LDA #'O'-'0'           \ Set A so we print a capital "O" in pnum1
 
- ASL G
- PLA
- ASL G
- BCS C37FE
- AND #&0F
- BNE C37F8
- LDA #&1F
+ BIT G                  \ If bit 7 of G is set, jump to pnum1 to print a capital
+ BMI pnum1              \ "O"
 
-.C37F8
+ LDA #LO(' '-'0')       \ Otherwise bit 7 of G is clear and we do not print
+                        \ leading zeroes, so instead set A so we print a space
+                        \ in pnum1
 
- CLC
- ADC #&30
+.pnum1
 
- JSR PrintCharacter     \ Print the character in A
+ CLC                    \ Print the high nibble in A as a digit (or, if the high
+ ADC #'0'               \ nibble is zero, print a capitel "O" or a space, as per
+ JSR PrintCharacter     \ the above)
 
-.C37FE
+                        \ Now for the second digit
 
- RTS
+ ASL G                  \ Shift G to the left, so bit 6 is now in bit 7
+
+ PLA                    \ Retrieve the original value of A, which contains the
+                        \ BCD number to print
+
+ ASL G                  \ If bit 7 of G is set (i.e. bit 6 of the original G),
+ BCS pnum3              \ jump to pnum3 to skip printing the second digit, and
+                        \ return from the subroutine
+
+ AND #%00001111         \ Extract the low nibble of the BCD number into A
+
+ BNE pnum2              \ If the low nibble is non-zero, jump to pnum2 to skip
+                        \ the following instruction
+
+ LDA #'O'-'0'           \ Set A so we print a capital "O" in pnum2
+
+.pnum2
+
+ CLC                    \ Print the low nibble in A as a digit (or, if the low
+ ADC #'0'               \ nibble is zero, print a capital "O")
+ JSR PrintCharacter
+
+.pnum3
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14313,7 +14361,7 @@ ORG &0B00
 \       Name: ResetDriver060A
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset L06A0, L06B8, L06D0 for a specific driver
+\    Summary: Reset the lap time for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14325,13 +14373,13 @@ ORG &0B00
 
 .ResetDriver060A
 
- LDA #0                 \ Zero the L06A0 entry for driver X
- STA L06A0,X
+ LDA #0                 \ Zero the driverTenths entry for driver X
+ STA driverTenths,X
 
- STA L06B8,X            \ Zero the L06B8 entry for driver X
+ STA driverSeconds,X    \ Zero the driverSeconds entry for driver X
 
- LDA #16                \ Set the L06D0 entry for driver X to 16
- STA L06D0,X
+ LDA #&10               \ Set the driverMinutes for driver X to 10 (as is it a
+ STA driverMinutes,X    \ BCD number)
 
  RTS                    \ Return from the subroutine
 
@@ -14772,24 +14820,18 @@ ORG &0B00
 \       Name: ResetDrivers060A
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset L06A0, L06B8, L06D0 for all drivers
-\
-\ ------------------------------------------------------------------------------
-\
-\ Zero L06A0 to L06A0+19
-\ Zero L06B8 to L06B8+19
-\ Set  L06D0 to L06D0+19 to 16
+\    Summary: Reset the lap times for all drivers
 \
 \ ******************************************************************************
 
 .ResetDrivers060A
 
- LDX #19                \ We are about to reset all 20 drivers, so set a driver
-                        \ counter in X
+ LDX #19                \ We are about to reset the lap times for all 20
+                        \ drivers, so set a driver counter in X
 
 .rall1
 
- JSR ResetDriver060A    \ Reset the entries for driver X in L06A0, L06B8, L06D0
+ JSR ResetDriver060A    \ Reset the lap time for driver X
 
  DEX                    \ Decrement the driver counter
 
@@ -14990,7 +15032,7 @@ ORG &0B00
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
  
-LDA #&20
+ LDA #%00100000
  STA G
  LDA L39E4,X
  BNE C43E7
@@ -15003,12 +15045,13 @@ LDA #&20
 
 .C43E7
 
- JSR sub_C37D6
+ JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
 
 .C43EA
 
  LDA SetupGame+20,X
- JSR sub_C37D6
+
+ JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
 
  LDA #1                 \ Print a space
  JSR PrintSpaces
@@ -18015,19 +18058,19 @@ LDA #&20
  BCC C4FFB
  SEC
  LDA T
- SBC L06A0,X
+ SBC driverTenths,X
  LDA U
- SBC L06B8,X
+ SBC driverSeconds,X
  LDA H
- SBC L06D0,X
+ SBC driverMinutes,X
  BCS C4FFB
  LDA T
  AND #&F0
- STA L06A0,X
+ STA driverTenths,X
  LDA U
- STA L06B8,X
+ STA driverSeconds,X
  LDA H
- STA L06D0,X
+ STA driverMinutes,X
 
 .C4FFB
 
@@ -18075,70 +18118,60 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: sub_C501D
+\       Name: PrintBestLapTime
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print the best lap time and the current lap time at the top of the
+\             screen
+\
+\ ******************************************************************************
+
+.PrintBestLapTime
+
+ LDX #32                \ Move the cursor to character column 32 (to just after
+ STX xCursor            \ "Best time" in token 40)
+
+ INX                    \ Move the cursor to pixel row 33 (i.e. the second text
+ STX yCursor            \ line at the top of the screen)
+
+ LDX L006F              \ Set the driver number in X to L006F
+
+ LDA #%00100110         \ Print the lap time for driver X (i.e. the driver's
+ JSR PrintLapTime       \ best lap time)
+
+                        \ Fall through into PrintThisLapTime
+
+\ ******************************************************************************
+\
+\       Name: PrintThisLapTime
+\       Type: Subroutine
+\   Category: Text
+\    Summary: Print the current lap time
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   PrintThisLapTime+2  Format the lap time using the format value in A (see
+\                       PrintLapTime for details)
 \
 \ ******************************************************************************
 
-.sub_C501D
+.PrintThisLapTime
 
- LDX #32                \ Move the cursor to character column 32
- STX xCursor
+ LDA #%00101000
 
- INX                    \ Move the cursor to character row 33
- STX yCursor
+ LDX #10                \ Move the cursor to character column 10 (to just after
+ STX xCursor            \ "Lap time" in token 40)
 
- LDX L006F
- LDA #&26
- JSR sub_C7B9C
+ LDX #33                \ Move the cursor to pixel row 33 (i.e. the second text
+ STX yCursor            \ line at the top of the screen)
 
-\ ******************************************************************************
-\
-\       Name: sub_C502D
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ LDX #21                \ Print the lap time for the current lap (which is
+ JSR PrintLapTime       \ stored just after driver 20's lap time, i.e. for
+                        \ driver 21, if there was one)
 
-.sub_C502D
-
- LDA #&28
-
-\ ******************************************************************************
-\
-\       Name: sub_C502F
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C502F
-
- LDX #10                \ Move the cursor to character column 10
- STX xCursor
-
- LDX #33                \ Move the cursor to character row 33
- STX yCursor
-
- LDX #&15
- JSR sub_C7B9C
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -21519,11 +21552,11 @@ ORG &5E40
  CPY L5F39
  BCC game8
 
- LDA L06B8,Y
+ LDA driverSeconds,Y
  SEC
  SBC trackData+1792,X
 
- LDA L06D0,Y
+ LDA driverMinutes,Y
  SBC trackData+1795,X
 
  BCS game7
@@ -21921,8 +21954,10 @@ ORG &5E40
 .C65DD
 
  STY L001B
- LDA #0
+
+ LDA #%00000000
  STA G
+
  JSR sub_C3E60
 
  LDX #32                \ Print token 32, which prints two spaces and backspaces
@@ -21937,7 +21972,8 @@ ORG &5E40
 .C65F5
 
  JSR sub_C65C8
- JSR sub_C37D6
+
+ JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
 
  LDX #31                \ Print token 31, which prints two spaces and sets
  JSR PrintToken         \ configurable colours
@@ -21953,8 +21989,10 @@ ORG &5E40
  PLA
  PHA
  BNE C6618
- LDA #&26
- JSR sub_C7B9C
+
+ LDA #%00100110
+ JSR PrintLapTime
+
  JMP C6643
 
 .C6618
@@ -21974,11 +22012,14 @@ ORG &5E40
 
 .C662B
 
- LDA #&28
+ LDA #%00101000
  STA G
+
  LDA L04F0,X
  BEQ C6640
- JSR sub_C37D6
+
+ JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
+
  LDA L39E4,X
  JSR C43E7
  JMP C6643
@@ -22028,21 +22069,34 @@ ORG &5E40
 \
 \       Name: sub_C6673
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print a driver's name in the correct 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   The position of the driver whose name we print
+\
+\   A                   The pixel row on which to print the driver name:
+\
+\                         * 24 = the first line of text at the top of the screen
+\                                (i.e. the "In front:" section of token 43)
+\
+\                         * 33 = the second line of text at the top of the
+\                                screen (i.e. the "Behind:" section of token 43)
 \
 \ ******************************************************************************
 
 .sub_C6673
 
- STA yCursor
+ STA yCursor            \ Move the cursor to the pixel row in A
 
- LDA #&1B
+ LDA #27                \ Move the cursor to character column 27
  STA xCursor
+
+                        \ Fall through into PrintPositionName to print the
+                        \ driver name at column 27 on the specified row
 
 \ ******************************************************************************
 \
@@ -22076,7 +22130,8 @@ ORG &5E40
 \       Name: PrintDriverPrompt
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print a "DRIVER >" prompt and a driver's name
+\    Summary: Print the "DRIVER >" prompt and a driver's name, to show whose
+\             turn it is in a multi-player game
 \
 \ ******************************************************************************
 
@@ -22402,36 +22457,68 @@ ORG &6C00
 
 \ ******************************************************************************
 \
-\       Name: sub_C7B9C
+\       Name: PrintLapTime
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print the lap time for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The driver number
+\
+\   A                   Flags to control how the time is printed:
+\
+\                         * Bit 7: clear = do not print leading zeroes in mins
+\                                  set = print leading zeroes in mins
+\
+\                         * Bit 6: clear = print second digit in mins
+\                                  set = do not print second digit in mins
+\
+\                         * Bit 5: clear = do not print leading zeroes in secs
+\                                  set = print leading zeroes in secs
+\
+\                         * Bit 4: clear = print second digit in secs
+\                                  set = do not print second digit in secs
+\
+\                         * Bit 3: clear = print tenths of a second
+\                                  set = do not print tenths of a second
+\
+\                         * Bit 2: clear = do not print leading zeroes in tenths
+\                                  set = print leading zeroes in tenths
+\
+\                         * Bit 1: clear = print second digit in tenths
+\                                  set = do not print second digit in tenths
 \
 \ ******************************************************************************
 
-.sub_C7B9C
+.PrintLapTime
 
- STA G
- LDA L06D0,X
- JSR sub_C37D6
- LDA #&3A
+ STA G                  \ Store A in G so we can check the value of bit 7 below
+
+ LDA driverMinutes,X    \ Print the number of minutes in driver X's lap time
+ JSR PrintBCDNumber
+
+ LDA #&3A               \ Print ":"
  JSR PrintCharacter
- LDA L06B8,X
- JSR sub_C37D6
- ASL G
- BCS L7BBE
- LDA #&2E
+
+ LDA driverSeconds,X    \ Print the number of seconds in driver X's lap time
+ JSR PrintBCDNumber
+
+ ASL G                  \ If bit 7 of G is set, we do not want to print tenths
+ BCS plap1              \ of a second, so jump to plap1 to return from the 
+                        \ subroutine
+
+ LDA #&2E               \ Print "."
  JSR PrintCharacter
- LDA L06A0,X
- JSR sub_C37D6
 
-.L7BBE
+ LDA driverTenths,X     \ Print the number of tenths of a second in driver X's
+ JSR PrintBCDNumber     \ lap time
 
- RTS
+.plap1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
