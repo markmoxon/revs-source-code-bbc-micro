@@ -2465,17 +2465,24 @@ ORG &0B00
 .sub_C0EE5
 
  STY T
- LDX #&FF
+
+ LDX #&FF               \ Scan the keyboard to see if SHIFT is being pressed
  JSR ScanKeyboard
- BNE C0F63
+
+ BNE C0F63              \ If SHIFT is not being pressed, jump to C0F63
+
  LDY T
 
 .P0EF0
 
  STY T
- LDX L3DE2,Y
- JSR ScanKeyboard
- BEQ C0F01
+
+ LDX L3DE2,Y            \ Fetch the key number for ????
+
+ JSR ScanKeyboard       \ Scan the keyboard to see if this key is being pressed
+
+ BEQ C0F01              \ If this key is being pressed, jump to C0F01
+
  LDY T
  DEY
  BPL P0EF0
@@ -2501,9 +2508,11 @@ ORG &0B00
 .P0F1B
 
  JSR sub_C66B6
- LDX #&A6
+
+ LDX #&A6               \ Scan the keyboard to see if DELETE is being pressed
  JSR ScanKeyboard
- BNE P0F1B
+
+ BNE P0F1B              \ If DELETE is not being pressed, jump to P0F1B
 
 .C0F25
 
@@ -4009,9 +4018,12 @@ ORG &0B00
  STA V
  STA T
  STA L0058
- LDX #&9D
+
+ LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
- PHP
+
+ PHP                    \ Store the result of the scan on the stack
+
  BIT L05F5
  BPL C15B3
  LDX #1
@@ -4020,8 +4032,10 @@ ORG &0B00
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- PLP
- BEQ C159F
+ PLP                    \ Retrieve the result of the keyboard scan above
+
+ BEQ C159F              \ If SPACE is being pressed, jump to C159F
+
  LSR A
  ROR T
  LSR A
@@ -4043,17 +4057,21 @@ ORG &0B00
 
 .C15B3
 
- LDX #&A9
+ LDX #&A9               \ Scan the keyboard to see if "L" is being pressed
  JSR ScanKeyboard
- BNE C15BE
+
+ BNE C15BE              \ If "L" is not being pressed, jump to C15BE
+
  LDA #2
  STA V
 
 .C15BE
 
- LDX #&A8
+ LDX #&A8               \ Scan the keyboard to see if ";" is being pressed
  JSR ScanKeyboard
- BNE C15C7
+
+ BNE C15C7              \ If ";" is not being pressed, jump to C15C7
+
  INC V
 
 .C15C7
@@ -4167,9 +4185,11 @@ ORG &0B00
 
 .C165E
 
- LDX #&AE
+ LDX #&AE               \ Scan the keyboard to see if "S" is being pressed
  JSR ScanKeyboard
- BNE C166B
+
+ BNE C166B              \ If "S" is not being pressed, jump to C166B
+
  LDX #1
 
 .C1667
@@ -4179,9 +4199,11 @@ ORG &0B00
 
 .C166B
 
- LDX #&BE
+ LDX #&BE               \ Scan the keyboard to see if "A" is being pressed
  JSR ScanKeyboard
- BNE C1678
+
+ BNE C1678              \ If "A" is not being pressed, jump to C1678
+
  LDX #0
 
 .C1674
@@ -4220,12 +4242,15 @@ ORG &0B00
 
 .C16A3
 
- LDX #&9F
+ LDX #&9F               \ Scan the keyboard to see if TAB is being pressed
  JSR ScanKeyboard
- BEQ C16B7
- LDX #&EF
+
+ BEQ C16B7              \ If TAB is being pressed, jump to C16B7
+
+ LDX #&EF               \ Scan the keyboard to see if "Q" is being pressed
  JSR ScanKeyboard
- BEQ C16BB
+
+ BEQ C16BB              \ If "Q" is being pressed, jump to C16BB
 
 .C16B1
 
@@ -10306,13 +10331,13 @@ ORG &0B00
 
 .CheckRestartKeys
 
- LDX #&FF               \ Check to see if SHIFT is being pressed
+ LDX #&FF               \ Scan the keyboard to see if SHIFT is being pressed
  JSR ScanKeyboard
 
  BNE rest1              \ If SHIFT is not being pressed, jump to rest1
 
- LDX #&86               \ Check to see if right arrow is being pressed (if it is
- JSR ScanKeyboard       \ this will also set the C flag)
+ LDX #&86               \ Scan the keyboard to see if right arrow is being
+ JSR ScanKeyboard       \ pressed (if it is this will also set the C flag)
 
  BNE rest1              \ If right arrow is not being pressed, jump to rest1
 
@@ -10782,63 +10807,84 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C34D0
+\       Name: WaitForSpace
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: Print a prompt, wait for the SPACE key to be released, and wait
+\             for SPACE to be pressed
+\
+\ ******************************************************************************
+
+.WaitForSpace
+
+ LDA #0                 \ Set A = 0 so WaitForSpaceReturn waits for SPACE to be
+                        \ pressed
+
+                        \ Fall through into WaitForSpaceReturn to print the
+                        \ prompt, wait for the SPACE key to be released, and
+                        \ wait for SPACE to be pressed
+
+\ ******************************************************************************
+\
+\       Name: WaitForSpaceReturn
+\       Type: Subroutine
+\   Category: Keyboard
+\    Summary: Print a prompt, wait for the SPACE key to be released, and wait
+\             for either SPACE or RETURN to be pressed
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   Determines the key to wait for:
+\
+\                         * Bit 7 clear = wait for SPACE to be pressed
+\
+\                         * Bit 7 set = wait for RETURN to be pressed
 \
 \ ******************************************************************************
 
-.sub_C34D0
+.WaitForSpaceReturn
 
- LDA #0
-
-\ ******************************************************************************
-\
-\       Name: sub_C34D2
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C34D2
-
- STA G
+ STA G                  \ Store A in G so we can check the value of bit 7 below
 
  LDX #30                \ Print token 30 ("PRESS SPACE BAR TO CONTINUE" in cyan
  JSR PrintToken         \ at column 5, row 24)
 
-.P34D9
+.wait1
 
- LDX #&9D
+ LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
- BEQ P34D9
 
-.C34E0
+ BEQ wait1              \ If SPACE is being pressed, loop back to wait1 until
+                        \ it is released
 
- LDX #&9D
+.wait2
+
+ LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
- BEQ C34F7
- JSR CheckRestartKeys
- BIT G
- BPL C34E0
- LDX #&B6
+
+ BEQ C34F7              \ If SPACE is being pressed, jump to C34F7 to return
+                        \ from the subroutine
+
+ JSR CheckRestartKeys   \ Check whether the restart keys are being pressed, and
+                        \ if they are, restart the game (the restart keys are
+                        \ SHIFT and right arrow)
+
+ BIT G                  \ If bit 7 of G is clear, jump back to wait2 to wait for
+ BPL wait2              \ SPACE to be pressed
+
+ LDX #&B6               \ Scan the keyboard to see if RETURN is being pressed
  JSR ScanKeyboard
- BNE C34E0
- LSR G
+
+ BNE wait2              \ If RETURN is not being pressed, jump back to wait2 to
+                        \ wait for RETURN is being pressed
+
+ LSR G                  \ Clear bit 7 of G
 
 .C34F7
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12386,6 +12432,10 @@ ORG &0B00
 \    Summary: Low byte of the token address lookup table
 \  Deep dive: Text tokens
 \
+\ ------------------------------------------------------------------------------
+\
+\ Note that token 47 is not used.
+\
 \ ******************************************************************************
 
 .tokenLo
@@ -12504,6 +12554,10 @@ ORG &0B00
 \   Category: Text
 \    Summary: high byte of the token address lookup table
 \  Deep dive: Text tokens
+\
+\ ------------------------------------------------------------------------------
+\
+\ Note that token 47 is not used.
 \
 \ ******************************************************************************
 
@@ -12900,7 +12954,7 @@ ORG &0B00
  JSR GetNumberInput
  STA L5F3D
 
- JSR sub_C34D0
+ JSR WaitForSpace       \ Print a prompt and wait for SPACE to be pressed
 
  RTS
 
@@ -13125,35 +13179,74 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3CEB
+\       Name: GetDriverAddress
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Get the address of the specified driver's name
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine calculates the address of driver A's name using the following:
+\
+\   (Y A) = driverNames1 + (A div 4) * &100 + (A mod 4) * 12
+\
+\ The names of the 20 drivers are stored in in five blocks within the main game
+\ code. Each block of contains four names, each of which is 12 characters long.
+\ The blocks start every &100 (256) bytes, starting with the first block at
+\ driverNames1 and going through to driverNames5.
+\
+\ Given driver number A, A div 4 is the block number, while A mod 4 is the
+\ number of the 12-character name within that block. So we have:
+\
+\   * (A div 4) * &100 is the address of the start of the block containing the
+\     name of driver A
+\
+\   * (A mod 4) * 12 is the offset of driver A's 12-character name within that
+\     block
+\
+\ The first block is at driverNames1, so we add them together to arrive at the
+\ calculation above.
+\
+\ Arguments:
+\
+\   X                   The driver number (0 to 19)
+\
+\ Returns:
+\
+\   (Y A)               The address of the driver's 12-character name
 \
 \ ******************************************************************************
 
-.sub_C3CEB
+.GetDriverAddress
 
- TXA
- LSR A
+ TXA                    \ We start with the high byte of the calculation, which
+ LSR A                  \ is Y = HI(driverNames1) + (A div 4)
  LSR A
  CLC
- ADC #&40
+ ADC #HI(driverNames1)
  TAY
- TXA
+
+                        \ And now we do the low byte calculation, which is
+                        \ A = LO(driverNames1) + (A mod 4) * 12
+
+ TXA                    \ Set A = (A mod 4) * 4
  AND #3
  ASL A
  ASL A
- STA T
- ASL A
- CLC
- ADC T
- ADC #&50
- RTS
+
+ STA T                  \ Set T = A
+                        \       = (A mod 4) * 4
+
+ ASL A                  \ Set A = (A mod 4) * 8
+
+ CLC                    \ Set A = A + T
+ ADC T                  \       = (A mod 4) * 8 + (A mod 4) * 4
+                        \       = (A mod 4) * 12
+
+ ADC #LO(driverNames1)  \ Set A = LO(driverNames1) + A
+                        \       = LO(driverNames1) + (A mod 4) * 12
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14049,11 +14142,7 @@ ORG &0B00
 \       Name: driverNames1
 \       Type: Variable
 \   Category: Text
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The first batch of driver names (1 of 5)
 \
 \ ******************************************************************************
 
@@ -14245,11 +14334,7 @@ ORG &0B00
 \       Name: driverNames2
 \       Type: Variable
 \   Category: Text
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The second batch of driver names (2 of 5)
 \
 \ ******************************************************************************
 
@@ -14459,11 +14544,7 @@ ORG &0B00
 \       Name: driverNames3
 \       Type: Variable
 \   Category: Text
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The third batch of driver names (3 of 5)
 \
 \ ******************************************************************************
 
@@ -14739,11 +14820,7 @@ ORG &0B00
 \       Name: driverNames4
 \       Type: Variable
 \   Category: Text
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The fourth batch of driver names (4 of 5)
 \
 \ ******************************************************************************
 
@@ -14931,11 +15008,11 @@ LDA #&20
 \       Name: driverNames5
 \       Type: Variable
 \   Category: Text
-\    Summary: 
+\    Summary: The fifth batch of driver names (5 of 5)
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The last driver name in this batch is used to store the player's name.
 \
 \ ******************************************************************************
 
@@ -16137,9 +16214,11 @@ LDA #&20
 
 .C4978
 
- LDX #&DC
+ LDX #&DC               \ Scan the keyboard to see if "T" is being pressed
  JSR ScanKeyboard
- BEQ C498C
+
+ BEQ C498C              \ If "T" is being pressed, jump to C498C
+
  LDY gearNumber
  DEY
  BEQ C4988
@@ -20855,7 +20934,9 @@ ORG &5E40
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   String length?
 \
 \ ******************************************************************************
 
@@ -21281,7 +21362,7 @@ ORG &5E40
  LDA L5F3C
  BEQ game4
 
- JSR sub_C6687
+ JSR PrintDriverPrompt
 
  JSR sub_C655A
 
@@ -21305,7 +21386,7 @@ ORG &5E40
                         \   > 
                         \     ------------
 
- JSR sub_C66D4
+ JSR GetDriverName
  JSR sub_C655A
  LDX L006F
  BEQ game5
@@ -21368,7 +21449,7 @@ ORG &5E40
 
  JSR sub_C3C6F
 
- JSR sub_C34D0
+ JSR WaitForSpace       \ Print a prompt and wait for SPACE to be pressed
 
 .game9
 
@@ -21426,7 +21507,7 @@ ORG &5E40
 .game13
 
  DEC L006F
- JSR sub_C6687
+ JSR PrintDriverPrompt
  LDX #&13
 
 .game14
@@ -21718,13 +21799,18 @@ ORG &5E40
 \
 \ Arguments:
 \
-\   X                   The number of the token to print (see PrintHeader)
+\   A                   0, 4 or &88
+\
+\   X                   The number of the token to print as the header (see
+\                       PrintHeader for a list of values)
 \
 \ ******************************************************************************
 
 .sub_C65D3
 
- PHA
+ PHA                    \ Store the value of A on the stack so we can retrieve
+                        \ it below
+
  AND #&0F
  STA L0042
 
@@ -21757,7 +21843,8 @@ ORG &5E40
  JSR PrintToken         \ configurable colours
 
  LDY L001B
- JSR sub_C667B
+
+ JSR PrintPositionName  \ Print the name of the driver in position Y
 
  LDX #31                \ Print token 31, which prints two spaces and sets
  JSR PrintToken         \ configurable colours
@@ -21829,9 +21916,13 @@ ORG &5E40
 
 .C666E
 
- PLA
- JSR sub_C34D2
- RTS
+ PLA                    \ Retrieve the value of A that we stored on the stack at
+                        \ the start of the routine
+
+ JSR WaitForSpaceReturn \ Print a prompt and wait for SPACE or RETURN to be
+                        \ pressed, depending on bit 7 of A
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -21854,49 +21945,54 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C667B
+\       Name: PrintPositionName
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print the name of the driver in a specific position in the race
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   The position of the driver whose name we print
 \
 \ ******************************************************************************
 
-.sub_C667B
+.PrintPositionName
 
- LDX driverPosition,Y
- STX L0045
- JSR sub_C3CEB
- JSR PrintDriverName
- RTS
+ LDX driverPosition,Y   \ Set X to the number of the driver in position Y
+
+ STX L0045              \ Store the driver number in L0045
+
+ JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
+
+ JSR PrintDriverName    \ Print the name of the driver at address (Y A)
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C6687
+\       Name: PrintDriverPrompt
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: Print a "DRIVER >" prompt and a driver's name
 \
 \ ******************************************************************************
 
-.sub_C6687
+.PrintDriverPrompt
 
  LDX #29                \ Print token 29, which clears the screen, displays the
  JSR PrintToken         \ F3 header, and shows a " DRIVER > " prompt
 
- LDX L006F
- JSR sub_C3CEB
- JSR PrintDriverName
- JSR sub_C34D0
+ LDX L006F              \ Set the driver number in X to L006F
 
- RTS
+ JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
+
+ JSR PrintDriverName    \ Print the name of the driver at address (Y A)
+
+ JSR WaitForSpace       \ Print a prompt and wait for SPACE to be pressed
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -21966,9 +22062,9 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C66D4
+\       Name: GetDriverName
 \       Type: Subroutine
-\   Category: 
+\   Category: Keyboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -21977,13 +22073,16 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.sub_C66D4
+.GetDriverName
 
- LDX L006F
- JSR sub_C3CEB
- LDX #&0C
+ LDX L006F              \ Set the driver number in X to L006F
+
+ JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
+
+ LDX #12
  JSR GetTextInput
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
