@@ -1514,7 +1514,7 @@ ORG &0B00
  AND #3
  TAY
  LDA #7
- STA L62BD,Y
+ STA soundBuffer,Y
  BNE C0B6E
 
 \ ******************************************************************************
@@ -1622,10 +1622,10 @@ ORG &0B00
  STA L5EE0,Y
  LDA L5E40,Y
  SEC
- SBC L62D2
+ SBC L62D2Lo
  STA L5E40,Y
  LDA L5E90,Y
- SBC L62E2
+ SBC L62E2Hi
  STA L5E90,Y
  LDA L5F20,Y
  SEC
@@ -2319,37 +2319,60 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0E5A
+\       Name: FlushSoundBuffer
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Sound
+\    Summary: Flush the specified sound buffer
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine flushes the specified sound channel buffer, but only if that
+\ channel's soundBuffer value is non-zero.
+\
+\ Arguments:
+\
+\   X                   The number of the sound channel buffer to flush (0 to 3)
+\
+\ Returns:
+\
+\   X                   X is unchanged
+\
+\   A                   A is unchanged
 \
 \ ******************************************************************************
 
-.sub_C0E5A
+.FlushSoundBuffer
 
- PHA
- LDA L62BD,X
- BEQ C0E72
- LDA #0
- STA L62BD,X
- TXA
- ORA #4
+ PHA                    \ Store the value of A on the stack so we can retrieve
+                        \ it before returning from the routine
+
+ LDA soundBuffer,X      \ If this buffer's soundBuffer value is zero, then there
+ BEQ flus1              \ is nothing to flush, so jump to flus1 to return from
+                        \ the subroutine
+
+ LDA #0                 \ Set this buffer's soundBuffer value for this buffer to
+ STA soundBuffer,X      \ 0 to indicate that it has been flushed
+
+ TXA                    \ Set bit 2 of X
+ ORA #%00000100         \
+ TAX                    \ This changes X from the original range of 0 to 3, into
+                        \ the range 4 to 7, so it now matches the relevant sound
+                        \ buffer number (as buffers 4 to 7 are the buffers for
+                        \ sound channels 0 to 3)
+
+ LDA #21                \ Call OSBYTE with A = 21 to flush buffer X, which
+ JSR OSBYTE             \ flushes the relevant sound channel buffer
+
+ TXA                    \ Clear bit 2 of X, to reverse the X OR 4 above
+ AND #%11111011
  TAX
- LDA #21                \ osbyte_flush_buffer
- JSR OSBYTE
- TXA
- AND #&FB
- TAX
 
-.C0E72
+.flus1
 
- PLA
- RTS
+ PLA                    \ Retrieve the value of A that we stored on the stack
+                        \ above, so it remains unchanged by the routine
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2413,8 +2436,9 @@ ORG &0B00
 
 .C0EB8
 
- LDX #0
- JSR sub_C0E5A
+ LDX #0                 \ Flush the buffer for sound channel 0
+ JSR FlushSoundBuffer
+
  LDY L05FE
 
 .C0EC0
@@ -2446,7 +2470,8 @@ ORG &0B00
 
 .C0EE1
 
- JSR sub_C43F6
+ JSR FlushSoundBuffers  \ Flush all four sound channel buffers
+
  RTS
 
 \ ******************************************************************************
@@ -2503,7 +2528,8 @@ ORG &0B00
  LDA L05F7
  BEQ C0F2C
  BPL C0F25
- JSR sub_C43F6
+
+ JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
 .P0F1B
 
@@ -2703,8 +2729,12 @@ ORG &0B00
  JSR sub_C37D0
  PLP
  BPL C102A
- LDX #&35
- JSR sub_C17FC
+
+ LDX #53                \ Blank out the first text line at the top of the screen
+ JSR PrintSecondLineGap \ and print token 53 on the second line, to give:
+                        \
+                        \    "                                      "
+                        \    "               FINISHED               "
 
 .C102A
 
@@ -2723,23 +2753,25 @@ ORG &0B00
  LSR L0066
  LDA #&21
  CLC
- ADC L62EF
- STA L62EF
+ ADC L62EFHi
+ STA L62EFHi
  BEQ C104F
  LDA #&26
  JSR sub_C502F
 
 .C104F
 
- LDX #1
+ LDX #1                 \ Zero L06B5, L06CD and L06E5
  JSR sub_C5011
- BEQ C106F
+
+ BEQ C106F              \ Jump to C106F (this BNE is effectively a JMP as the
+                        \ sub_C5011 routine sets the Z flag)
 
 .C1056
 
- LDA L62EF
+ LDA L62EFHi
  BEQ C106A
- DEC L62EF
+ DEC L62EFHi
  BNE C106F
  JSR sub_C501D
 
@@ -2764,9 +2796,13 @@ ORG &0B00
  BVS C109A
  LDA #&40
  STA L0065
- LDX #&29
- JSR sub_C4D74
- RTS
+
+ LDX #41                \ Print token 41 on the first text line at the top of
+ JSR PrintFirstLine     \ the screen, to give:
+                        \
+                        \   "      Less than one minute to go      "
+
+ RTS                    \ Return from the subroutine
 
 .C1089
 
@@ -2776,12 +2812,15 @@ ORG &0B00
  STA L0065
  LDA #&3C
  STA L000F
- LDX #&2A
- JSR sub_C4D74
+
+ LDX #42                \ Print token 42 on the first text line at the top of
+ JSR PrintFirstLine     \ the screen, to give:
+                        \
+                        \   "           YOUR TIME IS UP!           "
 
 .C109A
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2918,7 +2957,7 @@ ORG &0B00
  CMP #&60
  BCS C1138
  LDA #&14
- BIT L62E2
+ BIT L62E2Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -2929,7 +2968,9 @@ ORG &0B00
  DEC L62F6
  INC L001F
  JSR sub_C3D5C
- JSR sub_C43F6
+
+ JSR FlushSoundBuffers  \ Flush all four sound channel buffers
+
  LDA #4
  JSR sub_C0B47
  LDA #0
@@ -2937,7 +2978,7 @@ ORG &0B00
 
 .P114C
 
- STA L62D0,X
+ STA L62D0Lo,X
  DEX
  BPL P114C
  STA L0061
@@ -2990,7 +3031,7 @@ ORG &0B00
  BMI C1199
  CPX L006F
  BNE C11AA
- LDA L62DF
+ LDA L62DFHi
  CMP #&0E
  BCC C1171
  RTS
@@ -4108,10 +4149,10 @@ ORG &0B00
 
 .C15F4
 
- LDA L62DA
+ LDA L62DAHi
  AND #&F0
  STA T
- LDA L62EA
+ LDA L62EAHi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
@@ -4320,7 +4361,7 @@ ORG &0B00
 
 .C16EE
 
- LDX #0
+ LDX #0                 \ Zero L06B4, L06CC and L06E4
  JSR sub_C5011
 
 .C16F3
@@ -4392,11 +4433,17 @@ ORG &0B00
 
 .C1773
 
- JSR sub_C43F6
+ JSR FlushSoundBuffers  \ Flush all four sound channel buffers
+
  LDA L5F3B
  BMI P1765
- LDX #&30
- JSR sub_C17FC
+
+ LDX #48                \ Blank out the first text line at the top of the screen
+ JSR PrintSecondLineGap \ and print token 48 on the second line, to give:
+                        \
+                        \    "                                      "
+                        \    "             PLEASE  WAIT             "
+
  JSR sub_C1163
  LDA L05F4
  BMI C17BA
@@ -4448,7 +4495,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   0 or 1
 \
 \ ******************************************************************************
 
@@ -4480,7 +4529,9 @@ ORG &0B00
  ADC #0
  STA L06E4,X
  BPL C17F9
- JSR sub_C5011
+
+ JSR sub_C5011          \ Zero L06B4+X, L06CC+X and L06E4+X
+
  LDY L006F
  LDA #&80
  STA L04DC,Y
@@ -4493,23 +4544,30 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C17FC
+\       Name: PrintSecondLineGap
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Prints a text token on the second text line at the top of the
+\             driving screen, with an empty gap on the line above
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The token number (0 to 54) to print on the second text
+\                       line at the top of the screen
 \
 \ ******************************************************************************
 
-.sub_C17FC
+.PrintSecondLineGap
 
- JSR sub_C4D70
- LDX #&2D
- JSR sub_C4D74
- RTS
+ JSR PrintSecondLine    \ Print token X on the second text line at the top of
+                        \ the screen
+
+ LDX #45                \ Print token 45 (38 spaces) on the first text line of
+ JSR PrintFirstLine     \ at the top of the screen, which blanks the top line
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4605,23 +4663,37 @@ ORG &0B00
  JSR PrintGearNumber
  LDA L006C
  BMI C18A5
- LDX #&28
- JSR sub_C17FC
- LDX #1
+
+ LDX #40                \ Blank out the first text line at the top of the screen
+ JSR PrintSecondLineGap \ and print token 40 on the second line, to give:
+                        \
+                        \    "                                      "
+                        \    "Lap Time   :         Best Time        "
+
+ LDX #1                 \ Zero L06B5, L06CD and L06E5
  JSR sub_C5011
+
  JSR sub_C501D
+
  LDA #&DF
- STA L62EF
+ STA L62EFHi
+
  RTS
 
 .C18A5
 
  STA L0066
  STA L62FE
- LDX #&2B
- JSR sub_C4D74
- LDX #&2C
- JSR sub_C4D70
+
+ LDX #43                \ Print token 43 on the first text line at the top of
+ JSR PrintFirstLine     \ the screen and token 44 on the second line, to give:
+ LDX #44                \
+ JSR PrintSecondLine    \    "Position        In front:             "
+                        \    "Laps to go        Behind:                  "
+                        \
+                        \ Token 44 includes five extra spaces at the end, though
+                        \ I'm not sure why
+
  LDA L0003
  JSR sub_C65C8
  STA L002F
@@ -5465,7 +5537,7 @@ ORG &0B00
 
 .C1C0B
 
- STA L62E2
+ STA L62E2Hi
  LDA #&80
  STA L62A6
  STA L62A7
@@ -7378,7 +7450,7 @@ ORG &0B00
 
  LDA L0044
  SEC
- SBC L62E2
+ SBC L62E2Hi
  BPL C24C3
  EOR #&FF
 
@@ -14945,29 +15017,29 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: sub_C43F6
+\       Name: FlushSoundBuffers
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Sound
+\    Summary: Flush all four specified sound buffers
 \
 \ ******************************************************************************
 
-.sub_C43F6
+.FlushSoundBuffers
 
- LDX #3
+ LDX #3                 \ We are about to flush all four sound channel buffers
+                        \ (0 to 3), so set a loop counter in X
 
 .P43F8
 
- JSR sub_C0E5A
- DEX
- BPL P43F8
- RTS
+ JSR FlushSoundBuffer   \ Flush the buffer for sound channel X
 
- EQUB 0
+ DEX                    \ Decrement the loop counter
+
+ BPL P43F8              \ Loop back until we have flushed all four buffers
+
+ RTS                    \ Return from the subroutine
+
+ EQUB 0                 \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -15561,13 +15633,13 @@ LDA #&20
  LDX L000A
  JSR sub_C0D01
  JSR sub_C48B9
- LDA L62D8
+ LDA L62D8Lo
  STA L0038
- LDA L62E8
+ LDA L62E8Hi
  STA L0039
- LDA L62D9
+ LDA L62D9Lo
  STA T
- LDA L62E9
+ LDA L62E9Hi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
@@ -15588,16 +15660,16 @@ LDA #&20
  LDX #1
  JSR sub_C4779
  LDA L0038
- STA L62D8
+ STA L62D8Lo
  LDA L0039
- STA L62E8
- LDA L62D8
+ STA L62E8Hi
+ LDA L62D8Lo
  CLC
  ADC L003A
- STA L62D8
- LDA L62E8
+ STA L62D8Lo
+ LDA L62E8Hi
  ADC L003B
- STA L62E8
+ STA L62E8Hi
  JSR sub_C47A5
  LDX #0
  JSR sub_C4779
@@ -15611,8 +15683,8 @@ LDA #&20
 
 .P4710
 
- STA L62D5,X
- STA L62E5,X
+ STA L62D5Lo,X
+ STA L62E5Hi,X
  DEX
  BPL P4710
 
@@ -15640,19 +15712,19 @@ LDA #&20
 
 .sub_C4729
 
- LDA L62D2
+ LDA L62D2Lo
  STA T
  LDY #&58
- LDA L62E2
+ LDA L62E2Hi
  JSR sub_C4753
  STA U
- LDA L62D8
+ LDA L62D8Lo
  SEC
  SBC T
- STA L62D8
- LDA L62E8
+ STA L62D8Lo
+ LDA L62E8Hi
  SBC U
- STA L62E8
+ STA L62E8Hi
  JSR sub_C4765
  STA L003B
  LDA T
@@ -15749,8 +15821,8 @@ LDA #&20
 
 .C478F
 
- LDX #3
- JSR sub_C0E5A
+ LDX #3                 \ Flush the buffer for sound channel 3
+ JSR FlushSoundBuffer
 
 .C4794
 
@@ -15759,7 +15831,7 @@ LDA #&20
 .C4795
 
  JSR sub_C4AF7
- LDA L62C0
+ LDA soundBuffer+3
  BNE C47A4
  LDY #1
  LDA #3
@@ -15796,9 +15868,11 @@ LDA #&20
  STA H
  LDA #9
  JSR sub_C4874
- LDX #8
+
+ LDX #8                 \ Add (L62EEHi L62DELo) to (L62E8Hi L62D8Lo)
  JSR sub_C47E5
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -15827,33 +15901,43 @@ LDA #&20
  STA H
  LDA #&0C
  JSR sub_C4874
- LDX #&0A
+
+ LDX #10                 \ Add (L62EEHi L62DELo) to (L62EAHi L62DAHi)
  JSR sub_C47E5
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: sub_C47E5
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Utility routines
+\    Summary: Add (L62EEHi L62DELo) to (L62E0Hi+X L62D0Lo+X)
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   Called with either 8 or 10:
+\
+\                         *  8 = add (L62EEHi L62DELo) to (L62E8Hi L62D8Lo)
+\
+\                         * 10 = add (L62EEHi L62DELo) to (L62EAHi L62DAHi)
 \
 \ ******************************************************************************
 
 .sub_C47E5
 
- LDA L62D0,X
- CLC
- ADC L62DE
- STA L62D0,X
- LDA L62E0,X
- ADC L62EE
- STA L62E0,X
- RTS
+ LDA L62D0Lo,X          \ Add (L62EEHi L62DELo) to (L62E0Hi+X L62D0Lo+X),
+ CLC                    \ starting with the low bytes
+ ADC L62DELo
+ STA L62D0Lo,X
+
+ LDA L62E0Hi,X          \ And then the high bytes
+ ADC L62EEHi
+ STA L62E0Hi,X
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -15871,16 +15955,16 @@ LDA #&20
 .sub_C47F9
 
  LDY #&4E
- LDA L62DA
+ LDA L62DAHi
  SEC
- SBC L62DB
+ SBC L62DBHi
  STA T
- LDA L62EA
- SBC L62EB
+ LDA L62EAHi
+ SBC L62EBHi
  JSR sub_C4753
- STA L62E5
+ STA L62E5Hi
  LDA T
- STA L62D5
+ STA L62D5Lo
  LDY #1
 
 .P4817
@@ -15889,15 +15973,15 @@ LDA #&20
 
 .P4819
 
- LDA L62EA,X
+ LDA L62EAHi,X
  CLC
  BPL C4820
  SEC
 
 .C4820
 
- ROR L62EA,X
- ROR L62DA,X
+ ROR L62EAHi,X
+ ROR L62DAHi,X
  DEX
  BPL P4819
  DEY
@@ -15908,31 +15992,31 @@ LDA #&20
 
 .C4832
 
- LDA L62DB,X
+ LDA L62DBHi,X
  STA T
- LDA L62EB,X
+ LDA L62EBHi,X
  STA U
  JSR sub_C4765
  STA U
  LDA T
  CLC
- ADC L62DA,X
+ ADC L62DAHi,X
  STA T
  LDY #&CD
  LDA U
- ADC L62EA,X
+ ADC L62EAHi,X
  JSR sub_C4753
  ASL T
  ROL A
  LDY G
- STA L62E6,Y
+ STA L62E6Hi,Y
  LDA T
- STA L62D6,Y
+ STA L62D6Lo,Y
  DEC G
  DEX
  DEX
  BPL C4832
- LDA L62E7
+ LDA L62E7Hi
  STA L62FF
  RTS
 
@@ -15974,9 +16058,9 @@ LDA #&20
 
 .C4876
 
- LDA L62D0,Y
+ LDA L62D0Lo,Y
  STA L0080
- LDA L62E0,Y
+ LDA L62E0Hi,Y
  STA L0081
  LDA L62A0,X
  STA L0082
@@ -15988,9 +16072,9 @@ LDA #&20
  BIT H
  BVS C48A7
  LDA T
- STA L62D0,Y
+ STA L62D0Lo,Y
  LDA U
- STA L62E0,Y
+ STA L62E0Hi,Y
  RTS
 
 \ ******************************************************************************
@@ -16016,13 +16100,13 @@ LDA #&20
 
 .C48A7
 
- LDA L62D0,Y
+ LDA L62D0Lo,Y
  CLC
  ADC T
- STA L62D0,Y
- LDA L62E0,Y
+ STA L62D0Lo,Y
+ LDA L62E0Hi,Y
  ADC U
- STA L62E0,Y
+ STA L62E0Hi,Y
  RTS
 
 \ ******************************************************************************
@@ -16109,9 +16193,9 @@ LDA #&20
 
  LDA #0
  STA V
- LDA L62D0,X
+ LDA L62D0Lo,X
  STA T
- LDA L62E0,X
+ LDA L62E0Hi,X
  BPL C4903
  DEC V
 
@@ -16136,10 +16220,10 @@ LDA #&20
  BPL C48F3
  LDA L000A
  CLC
- ADC L62D2
+ ADC L62D2Lo
  STA L000A
  LDA L000B
- ADC L62E2
+ ADC L62E2Hi
  STA L000B
  RTS
 
@@ -16164,9 +16248,9 @@ LDA #&20
 
  LDA #0
  STA V
- LDA L62D3,X
+ LDA L62D3Lo,X
  STA T
- LDA L62E3,X
+ LDA L62E3Hi,X
  BPL C4949
  DEC V
 
@@ -16189,12 +16273,12 @@ LDA #&20
  CLC
  ADC T
  STA L62AE,X
- LDA L62D0,X
+ LDA L62D0Lo,X
  ADC U
- STA L62D0,X
- LDA L62E0,X
+ STA L62D0Lo,X
+ LDA L62E0Hi,X
  ADC V
- STA L62E0,X
+ STA L62E0Hi,X
  DEX
  BPL C4939
  RTS
@@ -16473,11 +16557,11 @@ LDA #&20
 
 .sub_C4A91
 
- LDA L62D8
+ LDA L62D8Lo
  STA T
- ORA L62E8
+ ORA L62E8Hi
  PHP
- LDA L62E8
+ LDA L62E8Hi
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
 
@@ -16489,23 +16573,23 @@ LDA #&20
  ROL A
  DEY
  BNE P4AA2
- STA L62EA,X
+ STA L62EAHi,X
  PLP
  BEQ C4AB4
- EOR L62E8
+ EOR L62E8Hi
  SEC
  BPL C4AF3
 
 .C4AB4
 
  LDA T
- STA L62DA,X
+ STA L62DAHi,X
  JSR sub_C4B88
  BCC C4ACF
  LDA #0
- STA L62DC
- STA L62EC
- LDA L62EA
+ STA L62DCHi
+ STA L62ECHi
+ LDA L62EAHi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -16514,12 +16598,12 @@ LDA #&20
 .C4ACF
 
  JSR sub_C4B42
- LDA L62EC,X
+ LDA L62ECHi,X
 
  JSR Absolute8Bit       \ Set A = |A|
 
  STA T
- LDA L62EA,X
+ LDA L62EAHi,X
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -16564,11 +16648,11 @@ LDA #&20
 .sub_C4AF7
 
  LDA #0
- STA L62EC,X
- STA L62DC,X
+ STA L62ECHi,X
+ STA L62DCHi,X
  LDY #8
  JSR sub_C4B61
- LDA L62E8
+ LDA L62E8Hi
  EOR #&80
  STA H
  LDA #0
@@ -16590,8 +16674,8 @@ LDA #&20
  CPX #0
  BEQ C4B41
  LDA #0
- STA L62EA,X
- STA L62DA,X
+ STA L62EAHi,X
+ STA L62DAHi,X
  BEQ C4B41
 
 .C4B3E
@@ -16649,9 +16733,9 @@ LDA #&20
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  LDY G
- STA L62EA,Y
+ STA L62EAHi,Y
  LDA T
- STA L62DA,Y
+ STA L62DAHi,Y
  RTS
 
 \ ******************************************************************************
@@ -16669,16 +16753,16 @@ LDA #&20
 
 .sub_C4B61
 
- LDA L62D0,Y
+ LDA L62D0Lo,Y
  STA L008E
- LDA L62E0,Y
+ LDA L62E0Hi,Y
  BPL C4B77
  LDA #0
  SEC
  SBC L008E
  STA L008E
  LDA #0
- SBC L62E0,Y
+ SBC L62E0Hi,Y
 
 .C4B77
 
@@ -16726,7 +16810,7 @@ LDA #&20
  BEQ C4BAF
  LDY #9
  JSR sub_C4B61
- LDA L62E9
+ LDA L62E9Hi
  EOR #&80
  STA H
  LDA L62AA,X
@@ -16859,7 +16943,7 @@ LDA #&20
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- BIT L62E9
+ BIT L62E9Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -16973,7 +17057,7 @@ LDA #&20
  STA U
  JSR sub_C0DBF
  LDY #7
- LDA L62E9
+ LDA L62E9Hi
  JSR sub_C48A0
  RTS
 
@@ -17161,45 +17245,68 @@ LDA #&20
 
 \ ******************************************************************************
 \
-\       Name: sub_C4D70
+\       Name: PrintSecondLine
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Prints a text token on the second text line at the top of the
+\             driving screen
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The token number (0 to 54)
 \
 \ ******************************************************************************
 
-.sub_C4D70
+.PrintSecondLine
 
- LDA #&21
- BNE C4D76
+ LDA #33                \ Set A = 33 to use as the value for yCursor below, so
+                        \ we print the text token on the second text line at the
+                        \ top of the driving screen
+
+ BNE PrintFirstLine+2   \ Jump to PrintFirstLine+2 to print the token in X on
+                        \ the second text line in the driving screen (this BNE
+                        \ is effectively a JMP as A is never zero)
 
 \ ******************************************************************************
 \
-\       Name: sub_C4D74
+\       Name: PrintFirstLine
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Prints a text token on the first text line at the top of the
+\             driving screen
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The token number (0 to 54)
+\
+\ Other entry points:
+\
+\   PrintFirstLine+2    Print the token on the second text line at the top of
+\                       the driving screen
 \
 \ ******************************************************************************
 
-.sub_C4D74
+.PrintFirstLine
 
- LDA #&18
+ LDA #24                \ Set A = 24 to use as the value for yCursor below, so
+                        \ we print the text token on the first line of the two
+                        \ text lines at the top of the driving screen
 
 .C4D76
 
- STA yCursor
+ STA yCursor            \ Move the cursor to pixel row A (which will either be
+                        \ the first or the second text line at the top of the
+                        \ screen)
 
- LDA #1                 \ Set xCursor = 1
+ LDA #1                 \ Move the cursor to character column 1
  STA xCursor
+
+                        \ Fall through into PrintToken to print the token in X
+                        \ at (xCursor, yCursor)
 
 \ ******************************************************************************
 \
@@ -17224,6 +17331,8 @@ LDA #&20
 \ Arguments:
 \
 \   X                   The token number (0 to 54)
+\
+\   (xCursor, yCursor)  The on-screen position for the token
 \
 \ ******************************************************************************
 
@@ -17360,7 +17469,7 @@ LDA #&20
  STA L0028
  INC L002D
  SEC
- ROR L62D2
+ ROR L62D2Lo
  LDA #4
  JSR sub_C0B47
  RTS
@@ -17727,7 +17836,8 @@ LDA #&20
  LDA #&40
  STA VIA+&6E            \ user_via_ier
  CLI
- JSR sub_C43F6
+
+ JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
 \ ******************************************************************************
 \
@@ -17937,22 +18047,31 @@ LDA #&20
 \
 \       Name: sub_C5011
 \       Type: Subroutine
-\   Category: 
+\   Category: Utility routines
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   0 or 1
+\
+\ Returns:
+\
+\   A                   A = 0 and the Z flag is set (so a BEQ will branch)
 \
 \ ******************************************************************************
 
 .sub_C5011
 
- LDA #0
+ LDA #0                 \ Zero L06B4+X
  STA L06B4,X
- STA L06CC,X
- STA L06E4,X
- RTS
+
+ STA L06CC,X            \ Zero L06CC+X
+
+ STA L06E4,X            \ Zero L06E4+X
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -17969,10 +18088,12 @@ LDA #&20
 
 .sub_C501D
 
- LDX #&20
+ LDX #32                \ Move the cursor to character column 32
  STX xCursor
- INX
+
+ INX                    \ Move the cursor to character row 33
  STX yCursor
+
  LDX L006F
  LDA #&26
  JSR sub_C7B9C
@@ -18009,10 +18130,12 @@ LDA #&20
 
 .sub_C502F
 
- LDX #&0A
+ LDX #10                \ Move the cursor to character column 10
  STX xCursor
- LDX #&21
+
+ LDX #33                \ Move the cursor to character row 33
  STX yCursor
+
  LDX #&15
  JSR sub_C7B9C
  RTS
@@ -18084,7 +18207,7 @@ LDA #&20
 
  INC L006A
  BNE C506F
- INC L62DF
+ INC L62DFHi
 
 .C506F
 
@@ -18166,11 +18289,12 @@ LDA #&20
 \   printMode           Bit 7 determines how the character is printed on-screen:
 \
 \                         * 0 = poke the character directly into screen memory
+\                               (for the custom screen mode)
 \
 \                         * 1 = print the character with OSWRCH (for mode 7)
 \
-\   (Q P)               The screen address to print the character when bit 7 of
-\                       printMode is clear
+\   (xCursor, yCursor)  The pixel coordinate for the character (for the custom
+\                       screen mode only)
 \
 \ Returns:
 \
@@ -18271,8 +18395,8 @@ LDA #&20
 
 .char5
 
- LDY yCursor            \ Set (Q P) to the screen address for column xCursor and
- LDA xCursor            \ row yCursor
+ LDY yCursor            \ Set (Q P) to the screen address for character column
+ LDA xCursor            \ xCursor and pixel row yCursor
  JSR GetScreenAddress-2
 
  LDX #8                 \ We are now going to work our way through each pixel
@@ -18304,7 +18428,7 @@ LDA #&20
  BNE char6              \ Loop back to poke the next row into screen memory
                         \ until we have poked all eight rows
 
- INC xCursor
+ INC xCursor            \ Move the cursor to the right by one character
 
  PLA                    \ Retrieve X and Y from the stack
  TAY
@@ -18322,26 +18446,25 @@ LDA #&20
 
  RTS                    \ Return from the subroutine
 
-
-
 \ ******************************************************************************
 \
 \       Name: GetScreenAddress
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Return the screen address for a specified screen coordinate
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   A                   x-coordinate
+\   A                   The pixel x-coordinate
 \
-\   Y                   y-coordinate
+\   Y                   The pixel y-coordinate
 \
 \ Other entry points:
 \
-\   GetScreenAddress-2  Divides A by 8 at the start rather than 2
+\   GetScreenAddress-2  Treat the x-coordinate as a character coordinate rather
+\                       than a pixel coordinate
 \
 \ ******************************************************************************
 
@@ -18492,7 +18615,10 @@ LDA #&20
  ADC #&50
  STA W
  AND #&FC
- JSR GetScreenAddress
+
+ JSR GetScreenAddress   \ Set (Q P) to the screen address for pixel coordinate
+                        \ (xCursor, yCursor)
+
  LDA W
  ASL A
  AND #7
@@ -20146,37 +20272,16 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L62BD
+\       Name: soundBuffer
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Sound
+\    Summary: Details of each sound channel's buffer status
 \
 \ ******************************************************************************
 
-.L62BD
+.soundBuffer
 
- EQUB 0, 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L62C0
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L62C0
-
- EQUB 0, 0, 0
+ EQUB 0, 0, 0, 0, 0, 0
 
 \ ******************************************************************************
 \
@@ -20198,12 +20303,9 @@ ORG &5E40
 \
 \       Name: xCursor
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: The cursor's x-coordinate, which can either be a pixel coordinate
+\             or a character row
 \
 \ ******************************************************************************
 
@@ -20215,22 +20317,20 @@ ORG &5E40
 \
 \       Name: yCursor
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: The cursor's pixel y-coordinate
 \
 \ ******************************************************************************
 
 .yCursor
 
- EQUB 0, 0, 0
+ EQUB 0
+
+ EQUB 0, 0              \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
-\       Name: L62D0
+\       Name: L62D0Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20241,13 +20341,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D0
+.L62D0Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62D2
+\       Name: L62D2Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20258,13 +20358,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D2
+.L62D2Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62D3
+\       Name: L62D3Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20275,13 +20375,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D3
+.L62D3Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62D5
+\       Name: L62D5Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20292,13 +20392,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D5
+.L62D5Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62D6
+\       Name: L62D6Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20309,13 +20409,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D6
+.L62D6Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62D8
+\       Name: L62D8Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20326,13 +20426,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D8
+.L62D8Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62D9
+\       Name: L62D9Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20343,13 +20443,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62D9
+.L62D9Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DA
+\       Name: L62DAHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20360,13 +20460,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62DA
+.L62DAHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DB
+\       Name: L62DBHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20377,13 +20477,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62DB
+.L62DBHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DC
+\       Name: L62DCHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20394,13 +20494,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62DC
+.L62DCHi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62DE
+\       Name: L62DELo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20411,13 +20511,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62DE
+.L62DELo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DF
+\       Name: L62DFHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20428,13 +20528,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62DF
+.L62DFHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E0
+\       Name: L62E0Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20445,13 +20545,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E0
+.L62E0Hi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62E2
+\       Name: L62E2Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20462,13 +20562,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E2
+.L62E2Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E3
+\       Name: L62E3Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20479,13 +20579,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E3
+.L62E3Hi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62E5
+\       Name: L62E5Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20496,13 +20596,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E5
+.L62E5Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E6
+\       Name: L62E6Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20513,13 +20613,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E6
+.L62E6Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E7
+\       Name: L62E7Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20530,13 +20630,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E7
+.L62E7Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E8
+\       Name: L62E8Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20547,13 +20647,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E8
+.L62E8Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E9
+\       Name: L62E9Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20564,13 +20664,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62E9
+.L62E9Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EA
+\       Name: L62EAHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20581,13 +20681,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62EA
+.L62EAHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EB
+\       Name: L62EBHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20598,13 +20698,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62EB
+.L62EBHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EC
+\       Name: L62ECHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20615,13 +20715,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62EC
+.L62ECHi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62EE
+\       Name: L62EEHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20632,13 +20732,13 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62EE
+.L62EEHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EF
+\       Name: L62EFHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -20649,7 +20749,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L62EF
+.L62EFHi
 
  EQUB 0
 
@@ -21940,6 +22040,7 @@ ORG &5E40
 .sub_C6673
 
  STA yCursor
+
  LDA #&1B
  STA xCursor
 
