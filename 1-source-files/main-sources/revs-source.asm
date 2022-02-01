@@ -404,9 +404,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L004D
+.driverInFront
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of the driver in front of us
 
 .L004E
 
@@ -460,9 +460,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L005B
+.driverBehind
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of the driver behind us
 
 .L005C
 
@@ -2729,7 +2729,7 @@ ORG &0B00
  EOR #&FF
  ADC L006E
  PHP
- JSR sub_C65C8
+ JSR GetDriverNumberBCD
  LDX #&0C
  LDY #&21
  JSR sub_C37D0
@@ -2763,8 +2763,13 @@ ORG &0B00
  STA L62EFHi
  BEQ C104F
 
- LDA #%00100110
- JSR PrintThisLapTime+2
+ LDA #%00100110         \ Print the current lap time at the top of the screen in
+ JSR PrintThisLapTime+2 \ the following format:
+                        \
+                        \   * %00 Minutes: No leading zeroes, print both digits
+                        \   * %10 Seconds: Leading zeroes, print both digits
+                        \   * %0  Tenths: Print tenths of a second
+                        \   * %11 Tenths: Leading zeroes, no second digit
 
 .C104F
 
@@ -2790,7 +2795,13 @@ ORG &0B00
 .C106A
 
  BCC C106F
- JSR PrintThisLapTime
+
+ JSR PrintThisLapTime   \ Print the current lap time at the top of the screen in
+                        \ the following format:
+                        \
+                        \   * Minutes: No leading zeroes, print both digits
+                        \   * Seconds: Leading zeroes, print both digits
+                        \   * Tenths: Do not print tenths of a second
 
 .C106F
 
@@ -4074,8 +4085,10 @@ ORG &0B00
 
  BIT L05F5
  BPL C15B3
- LDX #1
- JSR sub_C503F
+
+ LDX #1                 \ Read the joystick x-coordinate into A and X
+ JSR GetADCChannel
+
  STA U
 
  JSR Multiply8x8        \ Set (A T) = A * U
@@ -4214,9 +4227,12 @@ ORG &0B00
  BNE C1678
  BIT L05F5
  BPL C165E
- LDX #2
- JSR sub_C503F
- BCC C1678
+
+ LDX #2                 \ Read the joystick y-coordinate into A and X, clearing
+ JSR GetADCChannel      \ the C flag if A < 10
+
+ BCC C1678              \ If A < 10, jump to C1678
+
  STA T
  LSR T
  ASL A
@@ -4227,9 +4243,11 @@ ORG &0B00
 
 .C1658
 
- CPX #0
- BEQ C1674
- BNE C1667
+ CPX #0                 \ If X = 0 then the joystick y-coordinate is negative
+ BEQ C1674              \ (down), so jump to C1674
+
+ BNE C1667              \ Otherwise the joystick y-coordinate is positive (up)
+                        \ so jump to C1667
 
 .C165E
 
@@ -4702,7 +4720,7 @@ ORG &0B00
                         \ I'm not sure why
 
  LDA L0003
- JSR sub_C65C8
+ JSR GetDriverNumberBCD
  STA L002F
  RTS
 
@@ -5456,15 +5474,16 @@ ORG &0B00
 
  BIT L62FE
  BPL C1BB5
- LDY L004D
 
- LDA #24
- JSR sub_C6673
+ LDY driverInFront      \ Set Y to the number of the driver in front of us
 
- LDY L005B
+ LDA #24                \ Print the name of driver Y in the "In front:" part of
+ JSR PrintNearestDriver \ the header
 
- LDA #33
- JSR sub_C6673
+ LDY driverBehind       \ Set Y to the number of the driver behind us
+
+ LDA #33                \ Print the name of driver Y in the "Behind:" part of
+ JSR PrintNearestDriver \ the header
 
 .C1BB5
 
@@ -6426,7 +6445,7 @@ ORG &0B00
  BEQ C1FDE
  CMP #&14
  BCC C1FD5
- LDX L004D
+ LDX driverInFront
  LDA driverPosition,X
 
 .C1FD5
@@ -7830,7 +7849,7 @@ ORG &0B00
 
  LDA L5F3B
  BMI Delay
- LDX L005B
+ LDX driverBehind
  LDY driverPosition,X
  LDA L018C,Y
  AND #&7F
@@ -7865,7 +7884,7 @@ ORG &0B00
  DEY
  BPL P2659
  JSR sub_C66DF
- LDX L005B
+ LDX driverBehind
  JSR sub_C28F2
  RTS
 
@@ -8593,7 +8612,7 @@ ORG &0B00
  CMP #3
  BCS C2A50
  LDA L001D
- CMP L004D
+ CMP driverInFront
  BNE C2A4D
  LDA L018C,X
  BMI C2A0F
@@ -14358,10 +14377,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ResetDriver060A
+\       Name: ResetLapTime
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the lap time for a specific driver
+\    Summary: Reset the best lap time for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14371,7 +14390,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.ResetDriver060A
+.ResetLapTime
 
  LDA #0                 \ Zero the driverTenths entry for driver X
  STA driverTenths,X
@@ -14817,21 +14836,21 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ResetDrivers060A
+\       Name: ResetLapTimes
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the lap times for all drivers
+\    Summary: Reset the best lap times for all drivers
 \
 \ ******************************************************************************
 
-.ResetDrivers060A
+.ResetLapTimes
 
- LDX #19                \ We are about to reset the lap times for all 20
+ LDX #19                \ We are about to reset the best lap times for all 20
                         \ drivers, so set a driver counter in X
 
 .rall1
 
- JSR ResetDriver060A    \ Reset the lap time for driver X
+ JSR ResetLapTime       \ Reset the best lap time for driver X
 
  DEX                    \ Decrement the driver counter
 
@@ -18136,19 +18155,32 @@ ORG &0B00
 
  LDX L006F              \ Set the driver number in X to L006F
 
- LDA #%00100110         \ Print the lap time for driver X (i.e. the driver's
- JSR PrintLapTime       \ best lap time)
+ LDA #%00100110         \ Print the best lap time for driver X in the following
+ JSR PrintLapTime       \ format:
+                        \
+                        \   * %00 Minutes: No leading zeroes, print both digits
+                        \   * %10 Seconds: Leading zeroes, print both digits
+                        \   * %0  Tenths: Print tenths of a second
+                        \   * %11 Tenths: Leading zeroes, no second digit
 
-                        \ Fall through into PrintThisLapTime
+                        \ Fall through into PrintThisLapTime to print the
+                        \ current lap time at the top of the screen
 
 \ ******************************************************************************
 \
 \       Name: PrintThisLapTime
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print the current lap time
+\    Summary: Print the current lap time at the top of the screen
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine prints the current lap time in the header at the top of the
+\ screen in the following format:
+\
+\   * Minutes: No leading zeroes, print both digits
+\   * Seconds: Leading zeroes, print both digits
+\   * Tenths: Do not print tenths of a second
 \
 \ Other entry points:
 \
@@ -18159,7 +18191,12 @@ ORG &0B00
 
 .PrintThisLapTime
 
- LDA #%00101000
+ LDA #%00101000         \ Set A so the current lap time is printed in the
+                        \ following format by the call to PrintLapTime:
+                        \
+                        \   * %00 Minutes: No leading zeroes, print both digits
+                        \   * %10 Seconds: Leading zeroes, print both digits
+                        \   * %1  Tenths: Do not print tenths of a second
 
  LDX #10                \ Move the cursor to character column 10 (to just after
  STX xCursor            \ "Lap time" in token 40)
@@ -18168,40 +18205,85 @@ ORG &0B00
  STX yCursor            \ line at the top of the screen)
 
  LDX #21                \ Print the lap time for the current lap (which is
- JSR PrintLapTime       \ stored just after driver 20's lap time, i.e. for
-                        \ driver 21, if there was one)
+ JSR PrintLapTime       \ stored just after driver 20's best lap time, i.e. for
+                        \ driver 21, if there was one) in the format given in A
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C503F
+\       Name: GetADCChannel
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: Read the value of an ADC channel (used to read the joystick)
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine reads a joystick axis and returns a value with 0 representing the
+\ stick being at the centre point, and -127 and +127 representing the right/left
+\ or down/up values.
+\
+\ Arguments:
+\
+\   X                   The ADC channel to read:
+\
+\                         * 1 = joystick X
+\
+\                         * 2 = joystick Y
+\
+\ Returns:
+\
+\   A                   The high byte of the channel value, converted to an
+\                       absolute figure in the range 0 to 127
+\
+\   X                   The sign of the result (1 = positive, 0 = negative)
+\
+\   C flag              Clear if A < 10
 \
 \ ******************************************************************************
 
-.sub_C503F
+.GetADCChannel
 
- LDA #128               \ osbyte_read_adc_or_get_buffer_status
- JSR OSBYTE
- TYA
- LDX #1
- CLC
- ADC #&80
- BPL C504F
- EOR #&FF
- DEX
+ LDA #128               \ Call OSBYTE with A = 128 to fetch the 16-bit value
+ JSR OSBYTE             \ from ADC channel X, returning (Y X), i.e. the high
+                        \ byte in Y and the low byte in X
 
-.C504F
+ TYA                    \ Copy Y to A, so A contains the high byte of the
+                        \ channel value
 
- CMP #&0A
- RTS
+                        \ The channel value in A will be in the range 0 to 255,
+                        \ with 128 representing the stick being in the centre,
+                        \ so now we need to flip this around into the range 0 to
+                        \ 127, with the sign given in X
+
+ LDX #1                 \ Set X = 1
+
+ CLC                    \ Set A = A + 128, so in terms of 8-bit mumbers, this
+ ADC #128               \ does the following:
+                        \
+                        \   * 0-127 goes to 128-255
+                        \
+                        \   * 128-255 goes to 256-383, i.e. 0-127
+                        \
+                        \ So A is now in the range 128 to 255 for low readings
+                        \ from the ADC (right or down), or 0 to 127 for high
+                        \ readings (left or up)
+
+ BPL adcc1              \ If A is in the range 0 to 127, skip the following two
+                        \ instructions as the result is already in the correct
+                        \ range, 0 to 127
+
+ EOR #&FF               \ Flip the value of A, so the range 128 to 255 flips to
+                        \ the range 127 to 0
+ 
+ DEX                    \ Set X = 0 to denote a negative result, so the result
+                        \ is in the range -127 to 0
+
+.adcc1
+
+ CMP #10                \ Clear the C flag if A < 10
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -21330,12 +21412,12 @@ ORG &5E40
 
  JSR NextDriver         \ Increment X to the next driver number
 
- STX L005B
+ STX driverBehind
  LDX L0003
 
  JSR PreviousDriver     \ Decrement X to the previous driver number
 
- STX L004D
+ STX driverInFront
  RTS
 
 \ ******************************************************************************
@@ -21432,7 +21514,7 @@ ORG &5E40
  DEX                    \ Set L5F3B = 255
  STX L5F3B
 
- JSR ResetDrivers060A
+ JSR ResetLapTimes      \ Reset the best lap times for all drivers
 
  JSR sub_C655A
 
@@ -21479,7 +21561,7 @@ ORG &5E40
  LDA L3DF0,X
  STA L5F3B
 
- JSR ResetDrivers060A
+ JSR ResetLapTimes      \ Reset the best lap times for all drivers
 
  LDA #&14
  STA L006F
@@ -21490,7 +21572,7 @@ ORG &5E40
 
  LDX L006F
 
- JSR ResetDriver060A
+ JSR ResetLapTime       \ Reset the best lap time for driver X
 
  LDA L5F3C
  BEQ game4
@@ -21650,7 +21732,7 @@ ORG &5E40
  DEX
  BPL game14
 
- JSR ResetDrivers060A
+ JSR ResetLapTimes      \ Reset the best lap times for all drivers
 
  LDA #&80
  JSR sub_C655C
@@ -21897,29 +21979,53 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C65C8
+\       Name: GetDriverNumberBCD
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Convert a driver number into binary coded decimal (BCD), ready for
+\             printing
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine converts a driver number in the range 0 to 19 into a BCD number
+\ in the range 1 to 20, so the driver number can be printed.
+\
+\ Arguments:
+\
+\   A                   The driver number to be converted into BCD (0 to 19)
+\
+\ Returns:
+\
+\   A                   The driver number in BCD (1 to 20)
 \
 \ ******************************************************************************
 
-.sub_C65C8
+.GetDriverNumberBCD
 
- CMP #&0A
- BCC C65CE
- ADC #5
+ CMP #10                \ If A < 10, skip the following instruction as A is in
+ BCC ibcd1              \ the range 0 to 9, which is the same number in BCD
 
-.C65CE
+ ADC #5                 \ A >= 10, so set A = A + 6 (as the C flag is set) to
+                        \ convert the number into BCD, like this:
+                        \
+                        \   * 10 = &0A -> &10 (i.e. 10 in BCD)
+                        \   * 11 = &0B -> &11 (i.e. 11 in BCD)
+                        \   * 12 = &0C -> &12 (i.e. 12 in BCD)
+                        \   * 13 = &0D -> &13 (i.e. 13 in BCD)
+                        \   * 14 = &0E -> &14 (i.e. 14 in BCD)
+                        \   * 15 = &0F -> &15 (i.e. 15 in BCD)
+                        \   * 16 = &10 -> &16 (i.e. 16 in BCD)
+                        \   * 17 = &11 -> &17 (i.e. 17 in BCD)
+                        \   * 18 = &12 -> &18 (i.e. 18 in BCD)
+                        \   * 19 = &13 -> &19 (i.e. 19 in BCD)
 
- SED
- ADC #1
+.ibcd1
+
+ SED                    \ Increment A in BCD mode, so the result is in the
+ ADC #1                 \ range 1 to 20
  CLD
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -21971,7 +22077,7 @@ ORG &5E40
 
 .C65F5
 
- JSR sub_C65C8
+ JSR GetDriverNumberBCD
 
  JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
 
@@ -21990,8 +22096,13 @@ ORG &5E40
  PHA
  BNE C6618
 
- LDA #%00100110
- JSR PrintLapTime
+ LDA #%00100110         \ Print the best lap time for driver X in the following
+ JSR PrintLapTime       \ format:
+                        \
+                        \   * %00 Minutes: No leading zeroes, print both digits
+                        \   * %10 Seconds: Leading zeroes, print both digits
+                        \   * %0  Tenths: Print tenths of a second
+                        \   * %11 Tenths: Leading zeroes, no second digit
 
  JMP C6643
 
@@ -22067,10 +22178,11 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C6673
+\       Name: PrintNearestDriver
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print a driver's name in the correct 
+\    Summary: Print a driver's name in the "In front" or "Behind" slot in the
+\             header
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22084,11 +22196,11 @@ ORG &5E40
 \                                (i.e. the "In front:" section of token 43)
 \
 \                         * 33 = the second line of text at the top of the
-\                                screen (i.e. the "Behind:" section of token 43)
+\                                screen (i.e. the "Behind:" section of token 44)
 \
 \ ******************************************************************************
 
-.sub_C6673
+.PrintNearestDriver
 
  STA yCursor            \ Move the cursor to the pixel row in A
 
@@ -22130,15 +22242,15 @@ ORG &5E40
 \       Name: PrintDriverPrompt
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print the "DRIVER >" prompt and a driver's name, to show whose
-\             turn it is in a multi-player game
+\    Summary: Print the "DRIVER ->" prompt and a driver's name, to show whose
+\             turn it is next when playing a multi-player game
 \
 \ ******************************************************************************
 
 .PrintDriverPrompt
 
  LDX #29                \ Print token 29, which clears the screen, displays the
- JSR PrintToken         \ F3 header, and shows a " DRIVER > " prompt
+ JSR PrintToken         \ F3 header, and shows a " DRIVER -> " prompt
 
  LDX L006F              \ Set the driver number in X to L006F
 
@@ -22266,7 +22378,7 @@ ORG &5E40
 
  JSR NextDriver         \ Increment X to the next driver number
 
- CPX L004D
+ CPX driverInFront
  BNE P66E3
  LDX #&16
 
@@ -22277,7 +22389,7 @@ ORG &5E40
  DEX
  CPX #&14
  BCS P66EF
- LDX L004D
+ LDX driverInFront
  JSR sub_C2ACB
  RTS
 
@@ -22314,7 +22426,7 @@ ORG &6C00
 
 .sub_C7B00
 
- LDY L005B
+ LDY driverBehind
  LDX driverPosition,Y
  LDA L018C,X
  BMI L7B2A
@@ -22460,7 +22572,7 @@ ORG &6C00
 \       Name: PrintLapTime
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print the lap time for a specific driver
+\    Summary: Print the best lap time for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
