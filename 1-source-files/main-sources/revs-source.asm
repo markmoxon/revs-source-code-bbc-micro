@@ -1570,7 +1570,7 @@ ORG &0B00
 
 .P0B79
 
- LDA L5F3D,X
+ LDA frontWingSetting,X
  ASL A
  ASL A
  STA U
@@ -1583,10 +1583,10 @@ ORG &0B00
  STA L62A8,X
  DEX
  BPL P0B79
- LDA L5F3E
+ LDA rearWingSetting
  ASL A
- ADC L5F3E
- ADC L5F3D
+ ADC rearWingSetting
+ ADC frontWingSetting
  LSR A
  ADC #&3C
  STA L62F1
@@ -10520,35 +10520,46 @@ ORG &0B00
 .ConvertTextToNumber
 
  LDA T
- CMP #&20
- BNE C32D8
+
+ CMP #' '
+ BNE tnum1
+
  LDA #&30
 
-.C32D8
+.tnum1
 
  SEC
- SBC #&30
- CMP #&0A
- BCS C32FB
+ SBC #'0'
+
+ CMP #10
+ BCS tnum2
+
  STA T
+
  LDX U
+
  CPX #&20
  CLC
- BEQ C32FB
+ BEQ tnum2
+
  ASL A
  ASL A
  ADC T
  ASL A
  STA T
  TXA
- SEC
- SBC #&30
- CMP #&0A
- BCS C32FB
- ADC T
- CMP #&29
 
-.C32FB
+ SEC
+ SBC #'0'
+
+ CMP #10
+ BCS tnum2
+
+ ADC T
+
+ CMP #41
+
+.tnum2
 
  RTS
 
@@ -13066,12 +13077,8 @@ ORG &0B00
 \
 \       Name: GetWingSettings
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Keyboard
+\    Summary: Get the front and rear wing settings from the player
 \
 \ ******************************************************************************
 
@@ -13084,18 +13091,20 @@ ORG &0B00
  JSR PrintToken         \ SETTINGS > range 0 to 40" and a further prompt of
                         \ "rear > "
 
- JSR GetNumberInput
- STA L5F3E
+ JSR GetNumberInput     \ Fetch a number from the keyboard
+
+ STA rearWingSetting    \ Store the entered number in rearWingSetting
 
  LDX #25                \ Print token 25, which shows a prompt of "front > "
  JSR PrintToken
 
- JSR GetNumberInput
- STA L5F3D
+ JSR GetNumberInput     \ Fetch a number from the keyboard
+
+ STA frontWingSetting   \ Store the entered number in frontWingSetting
 
  JSR WaitForSpace       \ Print a prompt and wait for SPACE to be pressed
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14023,21 +14032,29 @@ ORG &0B00
 .GetNumberInput
 
  LDA #&74
- LDY #0
- LDX #2
- JSR GetTextInput
- JSR ConvertTextToNumber
- BCC C3EF9
 
-.P3EEE
+ LDY #0
+
+ LDX #2
+
+ JSR GetTextInput
+
+ JSR ConvertTextToNumber
+
+ BCC numb2
+
+.numb1
 
  DEY
- BMI GetNumberInput
- LDA #&7F
- JSR OSWRCH
- JMP P3EEE
 
-.C3EF9
+ BMI GetNumberInput
+
+ LDA #127
+ JSR OSWRCH
+
+ JMP numb1
+
+.numb2
 
  RTS
 
@@ -19540,9 +19557,9 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F3D
+\       Name: frontWingSetting
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19551,15 +19568,15 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5F3D
+.frontWingSetting
 
  SKIP 1
 
 \ ******************************************************************************
 \
-\       Name: L5F3E
+\       Name: rearWingSetting
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19568,7 +19585,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5F3E
+.rearWingSetting
 
  SKIP 1
 
@@ -21158,82 +21175,103 @@ ORG &5E40
 .GetTextInput
 
  STA P
+
  STY Q
+
  STX W
+
  LDA #2                 \ osbyte_select_input_stream
  LDX #0
  JSR OSBYTE
+
  LDA #21                \ osbyte_flush_buffer
  LDX #0
  JSR OSBYTE
 
-.P6314
+.text1
 
  LDY #0
 
-.C6316
+.text2
 
  JSR OSRDCH
- BCS C6345
- CMP #&0D
- BEQ C6352
- CMP #&20
- BCC C6316
- BNE C6329
+
+ BCS text7
+
+ CMP #13
+ BEQ text9
+
+ CMP #' '
+ BCC text2
+
+ BNE text3
+
  CPY #0
- BEQ C6316
+ BEQ text2
 
-.C6329
+.text3
 
- CMP #&7F
- BCC C6334
- BNE C6316
+ CMP #127
+ BCC text4
+
+ BNE text2
+
  DEY
- BPL C633F
- BMI P6314
 
-.C6334
+ BPL text6
+
+ BMI text1
+
+.text4
 
  CPY W
- BNE C633C
- LDA #7
- BNE C633F
+ BNE text5
 
-.C633C
+ LDA #7
+ BNE text6
+
+.text5
 
  STA (P),Y
+
  INY
 
-.C633F
+.text6
 
  JSR OSWRCH
- JMP C6316
 
-.C6345
+ JMP text2
+
+.text7
 
  TYA
  PHA
+
  LDA #126               \ osbyte_acknowledge_escape
  JSR OSBYTE
+
  PLA
  TAY
- JMP C6316
 
-.P6351
+ JMP text2
+
+.text8
 
  INY
 
-.C6352
+.text9
 
  CPY W
- BNE C6357
+ BNE text10
+
  RTS
 
-.C6357
+.text10
 
- LDA #&20
+ LDA #' '
  STA (P),Y
- BNE P6351
+
+ BNE text8
 
 \ ******************************************************************************
 \
