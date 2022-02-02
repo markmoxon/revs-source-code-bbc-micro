@@ -197,7 +197,7 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L001B
+.rowCounter
 
  SKIP 1                 \ 
 
@@ -360,9 +360,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0042
+.temp1
 
- SKIP 1                 \ 
+ SKIP 1                 \ Colour scheme in SetRowColours
 
 .L0043
 
@@ -700,10 +700,13 @@ ORG &0100
 
 .driverSpeed
 
- SKIP 19                \ Indexed by driver number (0 to 19)
+ SKIP 19                \ The speed of this driver in the race (88 to 162)
                         \
-                        \ Gets set in SetDriverSpeed, contains the speed of
-                        \ each driver?
+                        \ The speed for each driver depends on a number of
+                        \ factors, and is calculated in the SetDriverSpeed
+                        \ routine
+                        \
+                        \ Indexed by driver number (0 to 19)
 
 .L013B
 
@@ -789,9 +792,16 @@ ORG &0380
 
  SKIP 80                \ 
 
-.L04A0
+.driverGridRow
 
- SKIP 20                \ Indexed by driver number (0 to 19)
+ SKIP 20                \ The grid row for each driver (0 to 9)
+                        \
+                        \ There are two cars per grid row, with grid row 0 at
+                        \ the front including the car in pole position
+                        \
+                        \ There are 20 cars, in rows 0 to 9
+                        \
+                        \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDrivers
 
@@ -1972,12 +1982,12 @@ ORG &0B00
  LDA U
  STA H
  LDX #1
- STX L0042
+ STX temp1
  LDX #0
  BIT J
  BVC C0D1B
  INX
- DEC L0042
+ DEC temp1
 
 .C0D1B
 
@@ -2043,9 +2053,9 @@ ORG &0B00
 
 .C0D7F
 
- CPX L0042
+ CPX temp1
  BEQ C0D97
- LDX L0042
+ LDX temp1
  LDA #0
  SEC
  SBC G
@@ -2916,7 +2926,7 @@ ORG &0B00
  LDX #&17
  LDA #&31
  STA V
- STA L0042
+ STA temp1
 
 .P10F2
 
@@ -2926,7 +2936,7 @@ ORG &0B00
 
 .P10F9
 
- INC L0042
+ INC temp1
  JSR sub_C14C3
  BCC P10F9
  LDA #&50
@@ -2945,7 +2955,7 @@ ORG &0B00
 .P1113
 
  JSR sub_C12F7
- DEC L0042
+ DEC temp1
  BNE P1113
  LSR L62F8
  RTS
@@ -3139,7 +3149,7 @@ ORG &0B00
 
  LDX L006F
  STX L0045
- STX L0042
+ STX temp1
  LDY L0022
  JSR C2937
  LDX #2
@@ -3748,12 +3758,12 @@ ORG &0B00
  EOR #&80
  STA L0025
  JSR sub_C13DA
- STX L0042
+ STX temp1
 
 .P142B
 
  JSR sub_C12F7
- DEC L0042
+ DEC temp1
  BNE P142B
  RTS
 
@@ -5985,7 +5995,7 @@ ORG &0B00
 
 .sub_C1DEF
 
- STA L0042
+ STA temp1
 
 .C1DF1
 
@@ -6003,7 +6013,7 @@ ORG &0B00
  INC L0085
  JSR sub_C1DA6
  LDX L0085
- CPX L0042
+ CPX temp1
  BNE C1DF1
  RTS
 
@@ -6661,7 +6671,7 @@ ORG &0B00
  STA L0083
  LDA L3750,Y
  STA L0084
- STY L001B
+ STY rowCounter
  LDY #1
  JSR sub_C1C1C
 
@@ -6674,7 +6684,7 @@ ORG &0B00
  JSR sub_C1C1C
  BIT L0084
  BVS C2106
- LDY L001B
+ LDY rowCounter
 
 .P2102
 
@@ -6701,9 +6711,9 @@ ORG &0B00
 
 .C2117
 
- LDY L001B
+ LDY rowCounter
  INY
- STY L001B
+ STY rowCounter
  LDX L3650,Y
  LDA L5EF8,X
  STA L0083
@@ -6711,7 +6721,7 @@ ORG &0B00
  STA L0084
  LDY #0
  JSR sub_C1C1C
- LDY L001B
+ LDY rowCounter
  LDX L3550,Y
  LDA L5EF8,X
  STA L0083
@@ -7179,11 +7189,11 @@ ORG &0B00
 
 .C2360
 
- STX L0042
+ STX temp1
  LDX #&FD
  JSR sub_C1208
  JSR sub_C2145
- LDY L0042
+ LDY temp1
  BIT L0025
  BPL C2374
  TYA
@@ -7193,12 +7203,12 @@ ORG &0B00
 .C2374
 
  JSR sub_C23C0
- LDX L0042
+ LDX temp1
  CPX #&28
  BCS C239A
  LDX #&FD
  JSR sub_C2285
- LDX L0042
+ LDX temp1
  LDA L008D
  STA L5F20,X
  STA L5F48,X
@@ -7300,7 +7310,7 @@ ORG &0B00
 
  STA L0012
  LDA #0
- STA L0042
+ STA temp1
 
 .C23D8
 
@@ -7318,7 +7328,7 @@ ORG &0B00
  STA L0011
  LDA K
  STA L0010
- LDA L0042
+ LDA temp1
  STA L0013
  LDY L0012
  STY L005C
@@ -7333,7 +7343,7 @@ ORG &0B00
 
 .C2403
 
- LDA L0042
+ LDA temp1
  BNE C2408
  RTS
 
@@ -7404,7 +7414,7 @@ ORG &0B00
 .C246A
 
  JSR sub_C2565
- LDA L0042
+ LDA temp1
  CMP L0013
  BEQ C2490
  BCC C2490
@@ -7431,8 +7441,8 @@ ORG &0B00
 
  STX L0014
  INC L0012
- INC L0042
- LDY L0042
+ INC temp1
+ LDY temp1
  CPY #&12
  BCS C24B8
  LDA L3DD0,Y
@@ -7664,7 +7674,7 @@ ORG &0B00
  TAY
  LDA L306E,Y
  STA V
- LDA L0042
+ LDA temp1
  CMP #3
  BCS C2589
  JMP C25FD
@@ -8440,7 +8450,7 @@ ORG &0B00
 
  LDA driverPosition,X
  STA L0045
- STA L0042
+ STA temp1
  TAX
  LDY #&17
  SEC
@@ -8633,16 +8643,16 @@ ORG &0B00
  LDX #&FD
  JSR sub_C0BCC
  LDA #&14
- STA L0042
+ STA temp1
  LDA #2
  JSR sub_C2A5D
  LDA #&15
- STA L0042
+ STA temp1
  LDA #1
  LDX #&F4
  JSR sub_C2A5F
  LDA #&16
- STA L0042
+ STA temp1
  LDA #0
  LDX #&FA
  JSR sub_C2A5F
@@ -8695,7 +8705,7 @@ ORG &0B00
 
  STA L0037
  JSR sub_C2145
- LDY L0042
+ LDY temp1
  LDA L008A
  STA L0380,Y
  LDA L008B
@@ -8718,7 +8728,7 @@ ORG &0B00
 
 .sub_C2A76
 
- LDY L0042
+ LDY temp1
  BCS C2AA6
  SEC
  SBC #1
@@ -8756,7 +8766,7 @@ ORG &0B00
 
 .C2AA6
 
- LDY L0042
+ LDY temp1
  LDA L018C,Y
  ORA #&80
 
@@ -8806,7 +8816,7 @@ ORG &0B00
  DEC L0068
  LDA K
  STA L0041
- LDA L0042
+ LDA temp1
  STA L0067
 
 .C2ACA
@@ -9002,7 +9012,7 @@ ORG &0B00
  LDA L5F20,Y
  STA L0082
  STX L0045
- STY L001B
+ STY rowCounter
  PLP
  BCS C2BCA
  BIT L0088
@@ -9176,7 +9186,7 @@ ORG &0B00
  ORA #&80
  ORA T
  STA L0033
- LDA L001B
+ LDA rowCounter
  CLC
  ADC #1
  CMP L004B
@@ -9294,7 +9304,7 @@ ORG &0B00
 .C2D08
 
  LDX L0045
- LDY L001B
+ LDY rowCounter
  RTS
 
  LDA L0053
@@ -12674,20 +12684,42 @@ ORG &0B00
 \       Name: yLookupHi
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Lookup table for converting pixel y-coordinate to high byte of
+\             screen address
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ For character rows 0 to 7 and 16 to 31, this table returns the high byte of
+\ the screen address of the start of the row, for the custom screen mode.
+\
+\ For character rows 8 to 15, it returns a different value, which I am still
+\ investigating.
 \
 \ ******************************************************************************
 
 .yLookupHi
 
- EQUB &58, &59, &5A, &5B, &5D, &5E, &5F, &60
- EQUB &62, &63, &64, &65, &67, &68, &69, &6A
- EQUB &6C, &6D, &6E, &6F, &71, &72, &73, &74
- EQUB &76, &77, &78, &79, &7B, &7C, &7D, &7E
+FOR I%, 0, 7
+
+ EQUB HI(&5800 + (I% * &140))
+
+NEXT
+
+ EQUB HI(&5800 + ( 8 * &140) + &77)     \ &62
+ EQUB HI(&5800 + ( 9 * &140) + &7B)     \ &63
+ EQUB HI(&5800 + (10 * &140) + &5D)     \ &64
+ EQUB HI(&5800 + (11 * &140) + &2E)     \ &65
+
+ EQUB HI(&5800 + (12 * &140) + &77)     \ &67
+ EQUB HI(&5800 + (13 * &140) + &7B)     \ &68
+ EQUB HI(&5800 + (14 * &140) + &5D)     \ &69
+ EQUB HI(&5800 + (15 * &140) + &2E)     \ &6A
+
+FOR I%, 16, 31
+
+ EQUB HI(&5800 + (I% * &140))
+
+NEXT
 
 \ ******************************************************************************
 \
@@ -13132,27 +13164,25 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3C6F
+\       Name: PrintRaceClass
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: Print the race class
 \
 \ ******************************************************************************
 
-.sub_C3C6F
+.PrintRaceClass
 
- LDA raceClass
- CLC
- ADC #7
- TAX
+ LDA raceClass          \ Set A to the race class + 7, so that gives us:
+ CLC                    \
+ ADC #7                 \   * 7 for Novice
+ TAX                    \   * 8 for Amateur
+                        \   * 9 for Professional
 
- JSR PrintToken         \ Print token X
+ JSR PrintToken         \ Print token X, which will be token 7 ("Novice"), token
+                        \ 8 ("Amateur") or token 9 ("Professional")
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13884,63 +13914,68 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C3E60
+\       Name: SetRowColours
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Set the foreground and background colorus for a table row
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   Table row number
+\
+\   temp1               Colour scheme: 0, 4, 8
 \
 \ ******************************************************************************
 
-.sub_C3E60
+.SetRowColours
 
- TYA
- AND #1
- CLC
- ADC L0042
- TAX
- LDA L3E74,X
- STA token31+5
- LDA L3E76,X
- STA token31+3
- RTS
+ TYA                    \ Set X = temp1      if Y is even
+ AND #1                 \       = temp1 + 1  if Y is odd
+ CLC                    \
+ ADC temp1              \ So X is now one of the following, depending on the
+ TAX                    \ colour scheme and whether the row number is even or
+                        \ odd:
+                        \
+                        \   * Scheme 0: 0 (even) or 1 (odd)
+                        \   * Scheme 4: 4 (even) or 5 (odd)
+                        \   * Scheme 8: 8 (even) or 9 (odd)
+                        \
+                        \ We now fetch the colour palette from the rowColours
+                        \ table using the following offsets:
+                        \
+                        \   * Scheme 0: 0 on 2  (even) or 1 on 3  (odd)
+                        \   * Scheme 4: 4 on 6  (even) or 5 on 7  (odd)
+                        \   * Scheme 8: 8 on 10 (even) or 9 on 11 (odd)
+
+ LDA rowColours,X       \ Set the configurable foreground colour in token 31 to
+ STA token31+5          \ the X-th entry in the rowColours table
+
+ LDA rowColours+2,X     \ Set the configurable background colour in token 31 to
+ STA token31+3          \ the X+2-th entry in the rowColours table
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: L3E74
+\       Name: rowColours
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: Three different palettes for displaying even-odd rows in tables
 \
 \ ******************************************************************************
 
-.L3E74
+.rowColours
 
- EQUB &84, &85
+ EQUB 132, 133          \ Scheme 0: Even rows: 132 on 134 (blue on cyan)
+ EQUB 134, 135          \           Odd rows:  134 on 135 (cyan on white)
 
-\ ******************************************************************************
-\
-\       Name: L3E76
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ EQUB 129, 132          \ Scheme 4: Even rows: 129 on 132 (red on blue)
+ EQUB 131, 130          \           Odd rows:  131 on 130 (yellow on green)
 
-.L3E76
-
- EQUB &86, &87, &81, &84, &83, &82, &83, &84, &81, &87
+ EQUB 131, 132          \ Scheme 8: Even rows: 131 on 132 (yellow on blue)
+ EQUB 129, 135          \           Odd rows:  129 on 135 (red on white)
 
 \ ******************************************************************************
 \
@@ -14279,20 +14314,42 @@ ORG &0B00
 \       Name: yLookupLo
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Lookup table for converting pixel y-coordinate to low byte of
+\             screen address
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ For character rows 0 to 7 and 16 to 31, this table returns the low byte of
+\ the screen address of the start of the row, for the custom screen mode.
+\
+\ For character rows 8 to 15, it returns a different value, which I am still
+\ investigating.
 \
 \ ******************************************************************************
 
 .yLookupLo
 
- EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
- EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE
- EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
- EQUB &00, &40, &80, &C0, &00, &40, &80, &C0
+FOR I%, 0, 7
+
+ EQUB LO(&5800 + (I% * &140))
+
+NEXT
+
+ EQUB LO(&5800 + ( 8 * &140) + &77)     \ &77
+ EQUB LO(&5800 + ( 9 * &140) + &7B)     \ &BB
+ EQUB LO(&5800 + (10 * &140) + &5D)     \ &DD
+ EQUB LO(&5800 + (11 * &140) + &2E)     \ &EE
+
+ EQUB LO(&5800 + (12 * &140) + &77)     \ &77
+ EQUB LO(&5800 + (13 * &140) + &7B)     \ &BB
+ EQUB LO(&5800 + (14 * &140) + &5D)     \ &DD
+ EQUB LO(&5800 + (15 * &140) + &2E)     \ &EE
+
+FOR I%, 16, 31
+
+ EQUB LO(&5800 + (I% * &140))
+
+NEXT
 
 \ ******************************************************************************
 \
@@ -17250,7 +17307,7 @@ ORG &0B00
 .C4D11
 
  LDA #&17
- STA L0042
+ STA temp1
  JSR sub_C2AB3
  LDY #6
  JSR sub_C2287
@@ -17334,9 +17391,10 @@ ORG &0B00
 
  STA driverPosition,X   \ Set driverPosition for driver X to the driver number
 
- LSR A                  \ Set L04A0 for driver X to driver number >> 1
- NOP
- STA L04A0,X
+ LSR A                  \ Set the grid row for driver X to driver number >> 1,
+ NOP                    \ so drivers 0 and 1 are on row 0, drivers 2 and 3 are
+ STA driverGridRow,X    \ on row 1, and so on, up to row 9 at the back of the
+                        \ grid
 
  JSR SetDriverSpeed     \ Set the base speed for driver X
                         \
@@ -18639,7 +18697,7 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   A                   The screen x-coordinate in pixels
+\   A                   The screen x-coordinate in pixels (0 to 159)
 \
 \   Y                   The screen y-coordinate in pixels
 \
@@ -18654,22 +18712,29 @@ ORG &0B00
 \ Other entry points:
 \
 \   GetScreenAddress-2  Treat the x-coordinate as a character column number
-\                       rather than a pixel coordinate
+\                       rather than a pixel coordinate (0 to 39)
 \
 \ ******************************************************************************
 
  ASL A                  \ Set A = A << 2
  ASL A                  \       = x-coord << 2
                         \
-                        \ so in the following, (Q P) gets set to x-coord << 3
+                        \ so in the following, (Q P) gets set to x-coord << 3,
+                        \ or x-coord * 8, which gives us the correct byte number
+                        \ for this coordinate on the character row, as each
+                        \ character block contains eight bytes
 
 .GetScreenAddress
 
  STA P                  \ Set (Q P) = A << 1
  LDA #0                 \           = x-coord << 1
- ASL P                  \
- ROL A
- STA Q
+ ASL P                  \           = x-coord * 2
+ ROL A                  \
+ STA Q                  \ so (Q P) contains the correct byte number for this
+                        \ coordinate as an offset from the start address of the
+                        \ character row, as each character row contains 320
+                        \ bytes, and the x-coordinate in A is in the range 0 to
+                        \ 160 (i.e. each character block is two pixels wide)
 
  TYA                    \ Set X = Y
  LSR A                  \       = y-coord >> 3
@@ -18677,7 +18742,13 @@ ORG &0B00
  LSR A                  \ so X is the character row number for this coordinate
  TAX
 
- LDA yLookupLo,X        \ Set (Q P) = (Q P) + X-th (yLookupHi yLookupLo) entry
+                        \ The X-th entry in the (yLookupHi yLookupLo) table
+                        \ contains the screen address of the start of character
+                        \ row X in the custom screen, so we now add this to
+                        \ (Q P) to get the screen address of the correct
+                        \ character block on this row
+
+ LDA yLookupLo,X        \ Set (Q P) = (Q P) + X-th yLookup entry
  CLC                    \
  ADC P                  \ starting with the low bytes
  STA P
@@ -18687,7 +18758,7 @@ ORG &0B00
  STA Q
 
  TYA                    \ Set Y = Y mod 8, to set it to the pixel row within the
- AND #7                 \ character block
+ AND #7                 \ character block for the coordinate
  TAY
 
  RTS                    \ Return from the subroutine
@@ -21385,9 +21456,40 @@ ORG &5E40
 \       Name: SetDriverSpeed
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Set the base speed for a specific driver
+\    Summary: Set the speed for a specific driver
 \
 \ ------------------------------------------------------------------------------
+\
+\ The speed for a specific driver is based on a number of elements:
+\
+\   * A random element that is weighted to being small, but can sometimes be
+\     larger
+\
+\   * The speed is affected by the driver's position on the grid: cars at the
+\     front of the grid are faster than those at the back
+\
+\   * The speed is affected by the race class, with the range of different car
+\     speeds in Professional races being tighter than in Amateur races, which
+\     in turn are tighter than Novice races
+\
+\ This speed is then added to the track's base speed, which is stored as part of
+\ the track data. The track's base speed is different depending on the race
+\ class, so taking Silverstone as an example, we get these final ranges for the
+\ front two cars:
+\
+\   * Novice       = 134 plus -28 to +28 = 106 to 162
+\   * Amateur      = 146 plus -14 to +14 = 132 to 160
+\   * Professional = 153 plus  -7 to  +7 = 146 to 160
+\
+\ and these final ranges for the two cars at the back:
+\
+\   * Novice       = 134 plus -46 to +8 =  88 to 142
+\   * Amateur      = 146 plus -23 to +4 = 123 to 150
+\   * Professional = 153 plus -12 to +2 = 141 to 155
+\
+\ So on Silverstone, the cars on the front of the grid in a Novice race can
+\ actually be faster than those on the front of the grid in a Professional race,
+\ though it's unlikely.
 \
 \ Arguments:
 \
@@ -21402,6 +21504,11 @@ ORG &5E40
 .SetDriverSpeed
 
  LDX driverNumber       \ Set X to the driver number to initialise
+
+                        \ We now start a lengthy calculation of a figure in A
+                        \ that we will add to the track's base speed to
+                        \ determine the speed for this driver, with a higher
+                        \ figure in A giving the car a higher speed in the race
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which will be a pretty random figure
@@ -21435,16 +21542,16 @@ ORG &5E40
 
  LDY #16                \ Set a loop counter in Y to subtract 16 lots of 4
 
-.P6367
+.fast1
 
- CMP #4                 \ If A < 4, jump to C637B, as A now contains the
- BCC C637B              \ original value of A mod 4
+ CMP #4                 \ If A < 4, jump to fast3, as A now contains the
+ BCC fast3              \ original value of A mod 4
 
  SBC #4                 \ A >= 4, so set A = A - 4
 
  DEY                    \ Decrement the loop counter
 
- BNE P6367              \ Loop back until we have either reduced A to be less
+ BNE fast1              \ Loop back until we have either reduced A to be less
                         \ than 4, or we have subtracted 16 * 4 = 64
 
                         \ If we get here then the original A was 64 or more,
@@ -21452,22 +21559,22 @@ ORG &5E40
 
  LDY #9                 \ Set a loop counter in Y to subtract 9 lots of 7
 
-.P6372
+.fast2
 
- CMP #7                 \ If A < 7, jump to C637B, as A now contains the
- BCC C637B              \ original value of (A - 64) mod 7
+ CMP #7                 \ If A < 7, jump to fast3, as A now contains the
+ BCC fast3              \ original value of (A - 64) mod 7
 
  SBC #7                 \ A >= 7, so set A = A - 7
 
  DEY                    \ Decrement the loop counter
 
- BNE P6372              \ Loop back until we have either reduced A to be less
+ BNE fast2              \ Loop back until we have either reduced A to be less
                         \ than 7, or we have subtracted 9 * 7 = 63
 
                         \ If we get here then the original A was 127, and we
                         \ first subtracted 64 and then 63 to give us 0
 
-.C637B
+.fast3
 
                         \ We now have our random number in the range 0 to 7,
                         \ with 0 to 3 more likely than 4 to 7
@@ -21486,37 +21593,94 @@ ORG &5E40
  ASL A                  \ Set A = A << 1, so A is now in the range -14 to +14,
                         \ with -6 to +6 more likely than -14 to -7 or 7 to 14
 
- SEC                    \ Set T = A - L04A0 for this driver
- SBC L04A0,X
- STA T
+ SEC                    \ Set A = A - driverGridRow for this driver
+ SBC driverGridRow,X    \
+                        \ So A is left alone for the two cars at the front of
+                        \ the grid, is reduced by 1 for the next two cars, and
+                        \ is reduced by 9 for the two cars at the back
 
-                        \ We now 
+ STA T                  \ Set T = A
+
+                        \ By this point, the value in A (and T) is in the range:
+                        \
+                        \   * -14 to +14 for the front two cars
+                        \   * -15 to +13 for the next two cars
+                        \     ...
+                        \   * -23 to +4 for the last two cars
+                        \
+                        \ We now alter this according to the race class
 
  LDY raceClass          \ Set Y to the race class
 
  DEY                    \ Decrement Y, so it will be -1 for Novice, 0 for
                         \ Amateur and 1 for Professional
 
- BEQ C6395              \ If Y = 0 (Amateur), jump to C6395
+ BEQ fast5              \ If Y = 0 (Amateur), jump to fast5 to leave A alone
 
- BPL C6392              \ If Y = 1 (Professional), jump to C6392
+ BPL fast4              \ If Y = 1 (Professional), jump to fast4 to 
 
                         \ If we get here, then the race class is Novice
 
  ASL A                  \ Set A = A << 1
+                        \
+                        \ so A is now in the range:
+                        \
+                        \   * -28 to +28 for the front two cars
+                        \   * -30 to +26 for the next two cars
+                        \     ...
+                        \   * -46 to +8 for the last two cars
+                        \
+                        \ This makes the range of speeds less tightly bunched,
+                        \ so the race is less intense
 
- JMP C6395              \ Jump to C6395 to skip the following
+ JMP fast5              \ Jump to fast5 to skip the following
 
-.C6392
+.fast4
 
                         \ If we get here, then the race class is Professional
 
- ROL T                  \ Shift bit 7 of T into bit 7 of A
- ROR A
+ ROL T                  \ Shift bit 7 of T into the C flag, and because T = A,
+                        \ this puts bit 7 of A into the C flag
 
-.C6395
+ ROR A                  \ Shift A right while inserting a copt of bit 7 into
+                        \ bit 7, so this effectively divides A by two while
+                        \ keeping the sign intact:
+                        \
+                        \   A = A / 2
+                        \
+                        \ So A is now in the range:
+                        \
+                        \   * -7 to +7 for the front two cars
+                        \   * -8 to +6 for the next two cars
+                        \     ...
+                        \   * -12 to +2 for the last two cars
+                        \
+                        \ This makes the range of speeds more tightly bunched,
+                        \ so the race is more intense
 
- CLC                    \ Set driverSpeed for driver X to baseSpeed = A
+.fast5
+
+                        \ By this point we have our value A, which determines
+                        \ the speed of the driver based on our random number,
+                        \ the car's grid position and the race class, so now we
+                        \ add this to the track's base speed to get the driver's
+                        \ speed for the race
+                        \
+                        \ The track's base speed is different depending on the
+                        \ race class, so taking Silverstone as an example, we
+                        \ get these final ranges for the front two cars:
+                        \
+                        \   * Novice       = 134 plus -28 to +28 = 106 to 162
+                        \   * Amateur      = 146 plus -14 to +14 = 132 to 160
+                        \   * Professional = 153 plus  -7 to  +7 = 146 to 160
+                        \
+                        \ and these final ranges for the two cars at the back:
+                        \
+                        \   * Novice       = 134 plus -46 to +8 =  88 to 142
+                        \   * Amateur      = 146 plus -23 to +4 = 123 to 150
+                        \   * Professional = 153 plus -12 to +2 = 141 to 155
+
+ CLC                    \ Set the driverSpeed for driver X to baseSpeed + A
  ADC baseSpeed
  STA driverSpeed,X
 
@@ -21807,7 +21971,7 @@ ORG &5E40
  LDX #26                \ Print token 26, which is a double-height header with
  JSR PrintToken         \ the text "STANDARD OF RACE"
 
- JSR sub_C3C6F
+ JSR PrintRaceClass     \ Print the race class
 
  JSR WaitForSpace       \ Print a prompt and wait for SPACE to be pressed
 
@@ -21816,6 +21980,7 @@ ORG &5E40
  LDX #2
  LDA #0
  JSR sub_C65D3
+
  LDY #&13
 
 .game10
@@ -21827,7 +21992,7 @@ ORG &5E40
  TAX
  LDA L0100,Y
  LSR A
- STA L04A0,X
+ STA driverGridRow,X
 
 .game11
 
@@ -21900,20 +22065,26 @@ ORG &5E40
 
  LDA #&80
  JSR sub_C0F64
+
  LDX #1
  LDA #4
  JSR sub_C65D3
+
  LDA #0
  JSR sub_C0F64
+
  LDX #6
  LDA #0
  JSR sub_C65D3
+
  LDA #&40
  JSR sub_C0F64
+
  LDX #3
  STX L5F3C
  LDA #&88
  JSR sub_C65D3
+
  BIT G
  BPL game16
 
@@ -22188,6 +22359,9 @@ ORG &5E40
 \   X                   The number of the token to print as the header (see
 \                       PrintHeader for a list of values)
 \
+\   L006C               Bit 7 set = table is in order of driver number
+\                             clear = table is in race position order
+\
 \ ******************************************************************************
 
 .sub_C65D3
@@ -22195,46 +22369,59 @@ ORG &5E40
  PHA                    \ Store the value of A on the stack so we can retrieve
                         \ it below
 
- AND #&0F
- STA L0042
+ AND #%00001111         \ Set temp1 to the lower nibble of A, which contains the
+ STA temp1              \ colour scheme to use for the table
 
  JSR PrintHeader        \ Print the header specified in X
 
- LDY #0
+ LDY #0                 \ We are about to print a table containing 20 rows, one
+                        \ for each driver, so set a row counter in Y
 
 .C65DD
 
- STY L001B
+ STY rowCounter         \ Store the row counter in rowCounter
 
- LDA #%00000000
- STA G
+ LDA #%00000000         \ Set G = 0 so the call to PrintBCDNumber below will
+ STA G                  \ print the second digit and will not print leading
+                        \ zeroes when printing the driver number
 
- JSR sub_C3E60
+ JSR SetRowColours      \ Set the colours for this table row according to the
+                        \ colour scheme we stored in temp1 above
 
  LDX #32                \ Print token 32, which prints two spaces and backspaces
- JSR PrintToken
+ JSR PrintToken         \ Why???
 
- LDY L001B
- LDA L0100,Y
- BIT L006C
- BMI C65F5
- TYA
+ LDY rowCounter         \ Set Y to the table row number
+
+ LDA L0100,Y            \ Set A to the L0100 value for this row (is L0100,Y the
+                        \ driver in position Y?)
+
+ BIT L006C              \ If bit 7 of L006C is set, skip the following
+ BMI C65F5              \ instruction
+
+ TYA                    \ Set A to the row number
 
 .C65F5
 
- JSR GetDriverNumberBCD
+ JSR GetDriverNumberBCD \ Convert the driver number in A into binary coded
+                        \ decimal (BCD), so we can print it
 
- JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
+ JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A, so
+                        \ this prints the driver number, and because we set G to
+                        \ 0 above, it will print the second digit and will not
+                        \ print leading zeroes
 
- LDX #31                \ Print token 31, which prints two spaces and sets
- JSR PrintToken         \ configurable colours
+ LDX #31                \ Print token 31, which prints two spaces and sets the
+ JSR PrintToken         \ colours as configured above
 
- LDY L001B
+ LDY rowCounter         \ Set Y to the table row number
 
- JSR PrintPositionName  \ Print the name of the driver in position Y
+ JSR PrintPositionName  \ Print the name of the driver in position Y, so row Y
+                        \ of the table contains the details of the driver in
+                        \ position Y
 
- LDX #31                \ Print token 31, which prints two spaces and sets
- JSR PrintToken         \ configurable colours
+ LDX #31                \ Print token 31, which prints two spaces and sets the
+ JSR PrintToken         \ colours as configured above
 
  LDX L0045
  PLA
@@ -22254,7 +22441,7 @@ ORG &5E40
 .C6618
 
  BMI C662B
- LDA L001B
+ LDA rowCounter
  CLC
  ADC #&14
  CMP #&1A
@@ -22286,9 +22473,11 @@ ORG &5E40
 
 .C6643
 
- LDY L001B
- INY
- CPY #&14
+ LDY rowCounter
+
+ INY                    \ Increment the table row number
+
+ CPY #20
  BNE C65DD
 
  LDA #3                 \ Print three spaces
@@ -22302,7 +22491,8 @@ ORG &5E40
  LDX #49                \ Print token 49, which moves the cursor to column 9,
  JSR PrintToken         \ row 2
 
- JSR sub_C3C6F
+ JSR PrintRaceClass     \ Print the race class
+
  LDA L5F3F
  CLC
  ADC #&DA
