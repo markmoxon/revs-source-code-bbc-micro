@@ -10506,62 +10506,86 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ConvertTextToNumber
+\       Name: GetNumberFromText
 \       Type: Subroutine
 \   Category: Text
-\    Summary: 
+\    Summary: Convert a two-digit string into a number
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   T                   The first digit of the number, as text
+\
+\   U                   The second digit of the number, as text
+\
+\ Returns:
+\
+\   A                   The numerical value of the number
+\
+\   C flag              The status of the conversion:
+\
+\                         * Clear if the string is a valid number and A <= 40
+\
+\                         * Set if string is not a valid number, or A > 40
 \
 \ ******************************************************************************
 
-.ConvertTextToNumber
+.GetNumberFromText
 
- LDA T
+ LDA T                  \ Set A to the character containing the first digit
 
- CMP #' '
- BNE tnum1
+ CMP #' '               \ If the first digit is not a space, skip the following
+ BNE tnum1              \ instruction
 
- LDA #&30
+ LDA #'0'               \ The first digit is a space, so convert it to a "0"
 
 .tnum1
 
- SEC
- SBC #'0'
+ SEC                    \ Subtract the ASCII value for "0" to get the numerical
+ SBC #'0'               \ value of the first digit into A
 
- CMP #10
- BCS tnum2
+ CMP #10                \ If the value of the first digit is greater than 10,
+ BCS tnum2              \ then this is not a valid number, so jump to tnum2 to
+                        \ return from the subroutine with the C flag set, to
+                        \ indicate an error
 
- STA T
+ STA T                  \ Set T = the value of the first digit
 
- LDX U
+ LDX U                  \ Set X to the character containing the second digit
 
- CPX #&20
- CLC
- BEQ tnum2
+ CPX #' '               \ If the second digit is a space, then jump to tnum2 to
+ CLC                    \ return from the subroutine with the value of the first
+ BEQ tnum2              \ digit in A and the C flag clear, to indicate success
 
- ASL A
- ASL A
- ADC T
- ASL A
- STA T
- TXA
+ ASL A                  \ Set T = (A << 2 + T) << 1
+ ASL A                  \       = (A * 4 + A) * 2
+ ADC T                  \       = 10 * A
+ ASL A                  \
+ STA T                  \ So T contains 10 * the numerical value of the first
+                        \ digit
 
- SEC
- SBC #'0'
+ TXA                    \ Set A to the character containing the second digit
 
- CMP #10
- BCS tnum2
+ SEC                    \ Subtract the ASCII value for "0" to get the numerical
+ SBC #'0'               \ value of the second digit
 
- ADC T
+ CMP #10                \ If the value of the second digit is greater than 10,
+ BCS tnum2              \ then this is not a valid number, so jump to tnum2 to
+                        \ return from the subroutine with the C flag set, to
+                        \ indicate an error
 
- CMP #41
+ ADC T                  \ Set A = A + T
+                        \       = the numerical value of the second digit
+                        \         + 10 * the numerical value of the first digit
+                        \
+                        \ which is the numerical value of the two-digit string
+
+ CMP #41                \ If A < 41, clear the C flag, otherwise set it
 
 .tnum2
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14021,42 +14045,51 @@ ORG &0B00
 \       Name: GetNumberInput
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Fetch a number between 0 and 40 from the keyboard
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Returns:
+\
+\   A                   The value of the number entered (0 to 40)
 \
 \ ******************************************************************************
 
 .GetNumberInput
 
- LDA #&74
+ LDA #LO(T)             \ Set (Y A) = T
+ LDY #HI(T)
 
- LDY #0
+ LDX #2                 \ Fetch a string of up to two characters from the
+ JSR GetTextInput       \ keyboard, store the characters at location T and U (as
+                        \ U = T + 1), and set Y to the number of characters
+                        \ entered
 
- LDX #2
+ JSR GetNumberFromText  \ Convert the two-character input into a number in A,
+                        \ and report the conversion status in the C flag
 
- JSR GetTextInput
-
- JSR ConvertTextToNumber
-
- BCC numb2
+ BCC numb2              \ If we got a valid number that is 40 or less then the C
+                        \ flag will be clear, so jump to numb2 to return from
+                        \ the subroutine
 
 .numb1
 
- DEY
+ DEY                    \ Decrement the number of characters in the entered
+                        \ string, which is in Y
 
- BMI GetNumberInput
+ BMI GetNumberInput     \ If Y is now negative, then there are no characters
+                        \ left on-screen, so jump back to the start of the
+                        \ routine to try fetching another number
 
- LDA #127
- JSR OSWRCH
+ LDA #127               \ Otherwise delete the last character shown on-screen by
+ JSR OSWRCH             \ printing a delete character (ASCII 127)
 
- JMP numb1
+ JMP numb1              \ Jump back to numb1 to delete any other on-screen
+                        \ characters before starting again
 
 .numb2
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -17271,7 +17304,7 @@ ORG &0B00
 \       Name: InitialiseDrivers
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Set the base speed f all 20 drivers
+\    Summary: Initialise all 20 drivers on the starting grid
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17295,7 +17328,7 @@ ORG &0B00
                         \ loops down from 19 to 1, working its way through each
                         \ of the 20 drivers
 
-.P4D55
+.driv1
 
  TXA                    \ Set A to the current driver number in X
 
@@ -17317,8 +17350,8 @@ ORG &0B00
 
  STA L04F0,X            \ Zero L04F0 for driver X
 
- TXA                    \ If X <> 0, loop back to P4D55 to process the next
- BNE P4D55              \ driver, until we have processed all 20 of them
+ TXA                    \ If X <> 0, loop back to driv1 to process the next
+ BNE driv1              \ driver, until we have processed all 20 of them
 
  RTS                    \ Return from the subroutine
 
@@ -18416,7 +18449,7 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   A                   Character number (0 to 159)
+\   A                   Character number (ASCII code, 0 to 159)
 \
 \   printMode           Bit 7 determines how the character is printed on-screen:
 \
@@ -18425,8 +18458,10 @@ ORG &0B00
 \
 \                         * 1 = print the character with OSWRCH (for mode 7)
 \
-\   (xCursor, yCursor)  The pixel coordinate for the character (for the custom
-\                       screen mode only)
+\   (xCursor, yCursor)  For the custom screen only, this is the coordinate where
+\                       we should print the character, where xCursor is the
+\                       character column and yCursor is the pixel row of the
+\                       bottom of the character
 \
 \ Returns:
 \
@@ -18462,8 +18497,8 @@ ORG &0B00
 
  STA characterDef       \ Store the character number in characterDef
 
- LDA #0                 \ Set W = 0
- STA W
+ LDA #0                 \ Set W = 0 to indicate we should print a single-width
+ STA W                  \ character
 
 .char1
 
@@ -18527,31 +18562,45 @@ ORG &0B00
 
 .char5
 
- LDY yCursor            \ Set (Q P) to the screen address for character column
- LDA xCursor            \ xCursor and pixel row yCursor
- JSR GetScreenAddress-2
+ LDY yCursor            \ Set (Q P) to the screen address of the character block
+ LDA xCursor            \ containing character column xCursor and pixel row
+ JSR GetScreenAddress-2 \ yCursor, and set Y to the pixel row number within that
+                        \ block
+                        \
+                        \ As yCursor is the pixel row of the bottom of where we
+                        \ should print the character, (Q P) now points to the
+                        \ address where the bottom pixel row of the character
+                        \ should go
 
  LDX #8                 \ We are now going to work our way through each pixel
                         \ row of the character definition, poking each row to
-                        \ screen memory, so set a counter in X
+                        \ screen memory, from the bottom row of the character
+                        \ to the top, so set a counter in X for eight rows
 
 .char6
 
  LDA characterDef,X     \ Store the X-th row of the character definition in the
  STA (P),Y              \ Y-th byte of (Q P)
 
- DEY
+ DEY                    \ Decrement the pixel row number to point to the row
+                        \ above
 
- BPL char7
+ BPL char7              \ If Y is positive then we are still within the
+                        \ character block, so jump to char7
 
- LDA P
- SEC
- SBC #&40
- STA P
- LDA Q
- SBC #1
- STA Q
- LDY #7
+ LDA P                  \ Otherwise we need to move to the bottom pixel row of
+ SEC                    \ the character row above, so set:
+ SBC #&40               \
+ STA P                  \   (Q P) = (Q P) - &140
+                        \
+                        \ starting with the high bytes
+
+ LDA Q                  \ And then the low bytes, so (Q P) contains the screen
+ SBC #1                 \ address of the character block above (as each
+ STA Q                  \ character row contains &140 bytes)
+
+ LDY #7                 \ Set Y = 7 to point to the bottom pixel row in the new
+                        \ character block
 
 .char7
 
@@ -18560,7 +18609,8 @@ ORG &0B00
  BNE char6              \ Loop back to poke the next row into screen memory
                         \ until we have poked all eight rows
 
- INC xCursor            \ Move the cursor to the right by one character
+ INC xCursor            \ Move the cursor to the right by one character, as we
+                        \ have just printed a full character
 
  PLA                    \ Retrieve X and Y from the stack
  TAY
@@ -18589,26 +18639,36 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   A                   The pixel x-coordinate
+\   A                   The screen x-coordinate in pixels
 \
-\   Y                   The pixel y-coordinate
+\   Y                   The screen y-coordinate in pixels
+\
+\ Returns:
+\
+\   (Q P)               The address of the character block containing the screen
+\                       coordinates
+\
+\   Y                   The pixel row within the character block containing the
+\                       screen coordinates
 \
 \ Other entry points:
 \
-\   GetScreenAddress-2  Treat the x-coordinate as a character coordinate rather
-\                       than a pixel coordinate
+\   GetScreenAddress-2  Treat the x-coordinate as a character column number
+\                       rather than a pixel coordinate
 \
 \ ******************************************************************************
 
  ASL A                  \ Set A = A << 2
  ASL A                  \       = x-coord << 2
+                        \
+                        \ so in the following, (Q P) gets set to x-coord << 3
 
 .GetScreenAddress
 
  STA P                  \ Set (Q P) = A << 1
  LDA #0                 \           = x-coord << 1
  ASL P                  \
- ROL A                  \ (or x-coordinate << 3 if we called GetScreenAddress-2)
+ ROL A
  STA Q
 
  TYA                    \ Set X = Y
@@ -21162,116 +21222,163 @@ ORG &5E40
 \       Name: GetTextInput
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Fetch a string from the keyboard, padded with spaces if required
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine fetches a string of characters from the keyboard and stores the
+\ result in memory. The string is entered by pressing RETURN, at which point the
+\ string in memory is padded with spaces so that it meets the required length.
+\
+\ The DELETE key is supported, leading spaces are ignored, and the ESCAPE key is
+\ trapped and has no effect.
+\
 \ Arguments:
 \
-\   X                   String length?
+\   (Y A)               The address where the string should be stored
+\
+\   X                   The length of string that we require
+\
+\ Returns:
+\
+\   Y                   The number of characters entered, before any padding is
+\                       applied
 \
 \ ******************************************************************************
 
 .GetTextInput
 
- STA P
-
+ STA P                  \ Set (Q P) = (Y A)
  STY Q
 
- STX W
+ STX W                  \ Store the required length of input in W 
 
- LDA #2                 \ osbyte_select_input_stream
- LDX #0
+ LDA #2                 \ Call OSBYTE with A = 2 and X = 0 to select the 
+ LDX #0                 \ keyboard as the input stream and disable RS423
  JSR OSBYTE
 
- LDA #21                \ osbyte_flush_buffer
- LDX #0
+ LDA #21                \ Call OSBYTE with A = 21 and X = 0 to flush the
+ LDX #0                 \ keyboard buffer
  JSR OSBYTE
 
 .text1
 
- LDY #0
+ LDY #0                 \ Set Y = 0 to use as a counter for the number of
+                        \ characters entered
 
 .text2
 
- JSR OSRDCH
+ JSR OSRDCH             \ Call OSRDCH to read a character from the currently
+                        \ selected input stream (i.e. the keyboard) into A
 
- BCS text7
+ BCS text7              \ If the call to OSRDCH set the C flag then there was an
+                        \ error (probably caused by pressing ESCAPE), so jump to
+                        \ text7 to process this
 
- CMP #13
+ CMP #13                \ If RETURN was pressed, jump to text9
  BEQ text9
 
- CMP #' '
- BCC text2
+ CMP #' '               \ If a control character was entered (i.e. with an ASCII
+ BCC text2              \ code less than tyat of " "), jump back to text2 to
+                        \ ignore it and wait for another key press
 
- BNE text3
+ BNE text3              \ If a key other than SPACE was pressed, jump to text3
+                        \ skip the next two instructions
 
- CPY #0
- BEQ text2
+ CPY #0                 \ SPACE was pressed, so if no other characters have been
+ BEQ text2              \ (i.e. Y = 0), jump back to text2 to ignore it
 
 .text3
 
- CMP #127
- BCC text4
+ CMP #127               \ If the character entered has an ASCII value < 127,
+ BCC text4              \ jump to text4 to process it as a valid character
 
- BNE text2
+ BNE text2              \ If the character entered has an ASCII value > 127,
+                        \ jump back to text2 to ignore it
 
- DEY
+                        \ If we get here then the DELETE key was pressed, which
+                        \ has an ASCII value of 127
 
- BPL text6
+ DEY                    \ Decrement the number of characters entered in Y, to
+                        \ process the deletion
 
- BMI text1
+ BPL text6              \ If Y is still positive, jump to text6 to print the
+                        \ delete character, which will delete the last character
+                        \ entered on-screen
+
+ BMI text1              \ Y is negative, so we just deleted past the start of
+                        \ the entered string, so jump to text1 to set Y to 0 and
+                        \ start again (this BMI is effectively a JMP as we just
+                        \ passed through a BPL)
 
 .text4
 
- CPY W
- BNE text5
+                        \ If we get here then a valid character was entered
 
- LDA #7
- BNE text6
+ CPY W                  \ If the number of characters entered in Y is not yet
+ BNE text5              \ the required number in W, jump to text5 to store the
+                        \ new character
+
+ LDA #7                 \ Otherwise set A = 7 (the ASCII code for a beep) and
+ BNE text6              \ jump to text6 to skip storing the new character and
+                        \ make a beep, as we already have enough characters
 
 .text5
 
- STA (P),Y
+                        \ If we get here then we have successfully fetched a new
+                        \ character, so now we store it
 
- INY
+ STA (P),Y              \ Store the character entered in the Y-th byte of (Q P)
+
+ INY                    \ Increment the character counter in Y
 
 .text6
 
- JSR OSWRCH
+ JSR OSWRCH             \ Print the character in A, which will either be the new
+                        \ character, or a beep, or a delete
 
- JMP text2
+ JMP text2              \ Jump up to text2 to fetch the next character
 
 .text7
 
- TYA
+                        \ If we get here then ESCAPE was pressed
+
+ TYA                    \ Store the character count in Y on the stack
  PHA
 
- LDA #126               \ osbyte_acknowledge_escape
- JSR OSBYTE
+ LDA #126               \ Call OSBYTE with A = 126 to acknowledge the ESCAPE
+ JSR OSBYTE             \ condition
 
- PLA
+ PLA                    \ Retrieve the character count from the stack into Y
  TAY
 
- JMP text2
+ JMP text2              \ Jump up to text2 to fetch the next character
 
 .text8
 
- INY
+ INY                    \ We get here from below after appending a space to the
+                        \ stored string, so we increment Y and repeat the
+                        \ padding process until the string is full
 
 .text9
 
- CPY W
- BNE text10
+                        \ If we get here then RETURN was pressed
 
- RTS
+ CPY W                  \ If the number of characters entered in Y is not yet
+ BNE text10             \ the required number in W, jump to text10 to pad out
+                        \ the string with spaces
+
+ RTS                    \ Otherwise the string is the correct size, so we now
+                        \ return from the subroutine
 
 .text10
 
- LDA #' '
+ LDA #' '               \ Append a space to the end of the stored string
  STA (P),Y
 
- BNE text8
+ BNE text8              \ Jump back to text8 to keep padding the string with
+                        \ spaces (this BNE is effectively a JMP as A is never
+                        \ zero)
 
 \ ******************************************************************************
 \
@@ -22371,11 +22478,7 @@ ORG &5E40
 \       Name: GetDriverName
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Fetch a driver's name from the keyboa4
 \
 \ ******************************************************************************
 
@@ -22385,8 +22488,9 @@ ORG &5E40
 
  JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
 
- LDX #12
- JSR GetTextInput
+ LDX #12                \ Fetch a string of length 12 from the keyboard and
+ JSR GetTextInput       \ store it in (Y A), padding the string out with spaces
+                        \ if required
 
  RTS                    \ Return from the subroutine
 
