@@ -4400,7 +4400,7 @@ ORG &0B00
 
 .sub_C16DC
 
- JSR sub_C4DDD
+ JSR setCustomScreenMode
  LDA #0
  STA printMode
  JSR CopyDashData
@@ -4454,9 +4454,9 @@ ORG &0B00
  JSR sub_C1BB9
  JSR sub_C111E
  JSR sub_C7BE2
- LDA L4F43
+ LDA screenSection
  BPL C1753
- INC L4F43
+ INC screenSection
 
 .C1753
 
@@ -10844,71 +10844,72 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3458
+\       Name: paletteSection2
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Colour palette for screen section 2 in the custom screen mode
 \
 \ ******************************************************************************
 
-.L3458
+.paletteSection2
 
- EQUB &07, &17, &47, &57, &23, &33, &63, &73, &80, &90, &C0, &D0
+ EQUB &07, &17, &47, &57
+ EQUB &23, &33, &63, &73
+ EQUB &80, &90, &C0, &D0
  EQUB &A5, &B5, &E5, &F5
 
 \ ******************************************************************************
 \
-\       Name: L3468
+\       Name: paletteSection0
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Screen mode
+\    Summary: Colour palette for screen section 0 in the custom screen mode (the
+\             mode 4 section)
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Palette data is given as a set of bytes, with each byte mapping a logical
+\ colour to a physical one. In each byte, the logical colour is given in bits
+\ 4-7 and the physical colour in bits 0-3. See p.379 of the Advanced User Guide
+\ for details of how palette mapping works, as in modes 4 and 5 we have to do
+\ multiple palette commands to change the colours correctly, and the physical
+\ colour value is EOR'd with 7, just to make things even more confusing.
+\
+\ Each of these mappings requires six calls to SHEILA &21 - see p.379 of the
+\ Advanced User Guide for an explanation.
 \
 \ ******************************************************************************
 
-.L3468
+.paletteSection0
 
- EQUB &03, &13, &23, &33, &43, &53, &63, &73, &84, &94, &A4, &B4
+ EQUB &03, &13, &23, &33
+ EQUB &43, &53, &63, &73
+ EQUB &84, &94, &A4, &B4
  EQUB &C4, &D4, &E4, &F4
 
 \ ******************************************************************************
 \
-\       Name: L3478
+\       Name: paletteSection3
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Colour palette for screen section 3 in the custom screen mode
 \
 \ ******************************************************************************
 
-.L3478
+.paletteSection3
 
  EQUB &26, &36, &66, &76
 
 \ ******************************************************************************
 \
-\       Name: L347C
+\       Name: paletteSection4
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Colour palette for screen section 4 in the custom screen mode
 \
 \ ******************************************************************************
 
-.L347C
+.paletteSection4
 
  EQUB &A1, &B1, &E1, &F1
 
@@ -17684,10 +17685,10 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C4DDD
+\       Name: setCustomScreenMode
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Screen mode
+\    Summary: Switch to the custom screen mode
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17695,263 +17696,550 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C4DDD
+.setCustomScreenMode
 
- SEI
- LDX #&0D
+ SEI                    \ Disable interrupts so we can update the 6845
 
-.P4DE0
+                        \ First we switch screen mode to the custom screen mode
+                        \ used for the race, which is based on mode 5 but is
+                        \ shorter at 26 character rows rather than 40
+                        \
+                        \ We do this by first reprogramming registers R0 to R13
+                        \ of the 6845 CRTC chip using the values in the
+                        \ screenRegisters table (see the screenRegisters
+                        \ variable for details), and then programming register 0
+                        \ of the Video ULA to the same value as standard mode 5,
+                        \ which switches the scren mode
 
- STX VIA+&00            \ crtc_horz_total
- LDA L4F0F,X
- STA VIA+&01            \ crtc_horz_displayed
- DEX
- BPL P4DE0
- DEX
- STX L4F43
- CLI
- LDA #154               \ osbyte_write_video_ula_control
- LDX #&C4
- JSR OSBYTE
- CLC
- LDA #7
+ LDX #13                \ We are about to write values into registers R0 to R13
+                        \ so set a register counter in X to count down from 13
+                        \ to 0
 
-.P4DFB
+.cust1
 
- STA VIA+&21            \ video_ula_palette
- ADC #&10
- BCC P4DFB
- SEI
- LDA IRQ1V
- STA L4F1D
- LDA IRQ1V+1
- STA L4F1E
- LDA #2
+ STX VIA+&00            \ Put register number X into SHEILA &00, so we can now
+                        \ set the value of this 6845 register
 
-.P4E11
+ LDA screenRegisters,X  \ Set register X to the X-th value of screenRegisters
+ STA VIA+&01
 
- BIT VIA+&4D            \ system_via_ifr
- BEQ P4E11
- LDA #&40
- STA VIA+&6B            \ user_via_acr
- ORA VIA+&4B            \ system_via_acr
- STA VIA+&4B            \ system_via_acr
- LDA #&C0
- STA VIA+&6E            \ user_via_ier
- STA VIA+&4E            \ system_via_ier
- LDA #&D4
- STA VIA+&64            \ user_via_t1c_l
- LDA #&11
- STA VIA+&65            \ user_via_t1c_h
- LDA #1
- STA VIA+&46            \ system_via_t1l_l
- LDA #&3D
- STA VIA+&45            \ system_via_t1c_h
- LDA #&1E
- STA VIA+&46            \ system_via_t1l_l
- STA VIA+&66            \ user_via_t1l_l
- LDA #&4E
- STA VIA+&47            \ system_via_t1l_h
- STA VIA+&67            \ user_via_t1l_h
- LDA #&4E
- STA IRQ1V+1
- LDA #&5C
+ DEX                    \ Decrement the register counter
+
+ BPL cust1              \ Loop back until we have set registers R0 to R13 to the
+                        \ values in the screenRegisters table
+
+ DEX                    \ Set screenSection = 255
+ STX screenSection
+
+ CLI                    \ Re-enable interrupts
+
+ LDA #154               \ Call OSBYTE with A = 154 to set register 0 of the
+ LDX #%11000100         \ Video ULA to the value in X, which sets the following,
+ JSR OSBYTE             \ reading from bit 7 to bit 0:
+                        \
+                        \   %1  = master cursor size = large cursor
+                        \   %10 = width of cursor in bytes = 2
+                        \   %0  = 6845 clock rate select = low frequency clock
+                        \   %01 = number of characters per line = 20
+                        \   %0  = teletext output select = on-chip serialiser
+                        \   %0  = flash colour select = first colour selected
+                        \
+                        \ These values are the same as in standard mode 5, and
+                        \ this call switches into our custom screen mode
+ 
+ CLC                    \ Clear the C flag for the additions in the following
+                        \ loop
+
+                        \ We now send the following bytes to the Video ULA
+                        \ palette in SHEILA &21, by starting at 7 and adding &10
+                        \ to send &07, &17, &27 ... &E7, &F7
+                        \
+                        \ This maps all four logical colours (the top nibble) to
+                        \ &7 EOR 7 (the bottom nibble, EOR 7), which maps them to
+                        \ colour 0, or black
+
+ LDA #&07               \ Set A = &07 as the first byte to send
+
+.cust2
+
+ STA VIA+&21            \ Send A to SHEILA &21 to send the palette byte in A to
+                        \ the Video ULA
+
+ ADC #&10               \ Set A = A + &10
+
+ BCC cust2              \ Loop back until the addition overflows after we send
+                        \ &F7 to the ULA
+
+ SEI                    \ Disable interrupts so we can update the VIAs
+
+ LDA IRQ1V              \ Store the current address from the IRQ1V vector in
+ STA irq1Address        \ irq1Address, so the IRQ handler can jump to it after
+ LDA IRQ1V+1            \ implementing the custom screen mode
+ STA irq1Address+1
+
+ LDA #2                 \ This instruction appears to have no effect, as we are
+                        \ about to overwrite A and the processor flags
+
+.cust3
+
+ BIT VIA+&4D            \ Read the 6522 System VIA interrupt flag register IFR
+                        \ (SHEILA &4D), which has bit 1 set if vertical sync
+                        \ has occurred on the video system
+
+ BEQ cust3              \ Loop back to cust3 to keep reading the System VIA
+                        \ until the vertical sync occurs
+
+ LDA #%01000000         \ Set 6522 User VIA auxiliary control register ACR
+ STA VIA+&6B            \ (SHEILA &6B) bits 7 and 6 to disable PB7 (which is one
+                        \ of the pins on the user port) and set continuous
+                        \ interrupts for Timer1
+
+ ORA VIA+&4B            \ Set 6522 System VIA auxiliary control register ACR
+ STA VIA+&4B            \ (SHEILA &6B) bit 6 to set continuous interrupts for
+                        \ Timer1
+
+ LDA #%11000000         \ Set 6522 User VIA interrupt enable register IER
+ STA VIA+&6E            \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
+                        \ interrupt from the System VIA)
+
+ STA VIA+&4E            \ Set 6522 System VIA interrupt enable register IER
+                        \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
+                        \ interrupt from the User VIA)
+
+ LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter to
+ STA VIA+&64            \ (SHEILA &44) to &D4
+
+ LDA #&11               \ Set 6522 User VIA T1C-H timer 1 high-order counter
+ STA VIA+&65            \ (SHEILA &45) to &11 to start the T1 counter
+                        \ counting down from &1164 (4452) at a rate of 1 MHz
+
+ LDA #1                 \ Set 6522 System VIA T1L-L timer 1 low-order latches
+ STA VIA+&46            \ to 1 (so this sets the low-order counter)
+
+ LDA #&3D               \ Set 6522 System VIA T1C-H timer 1 high-order counter
+ STA VIA+&45            \ to &3D, so it counts down from &3D01
+
+ LDA #&1E               \ Set 6522 System VIA T1C-L timer 1 low-order latches
+ STA VIA+&46            \ to &1E (so this sets the low-order counter)
+
+ STA VIA+&66            \ Set 6522 User VIA T1L-L timer 1 low-order latches
+                        \ to &1E (so this sets the low-order counter)
+
+ LDA #&4E               \ Set 6522 System VIA T1C-H timer 1 high-order latches
+ STA VIA+&47            \ to &4E (so this sets the timer to &4E1E (19998) but
+                        \ doesn't latch it in to the counter)
+
+ STA VIA+&67            \ Set 6522 User VIA T1C-H timer 1 high-order latches
+                        \ to &4E (so this sets the timer to &4E1E (19998) but
+                        \ doesn't latch it in to the counter)
+
+ LDA #HI(screenHandler) \ Set the IRQ1V vector to screenHandler, so the
+ STA IRQ1V+1            \ screenHandler routine is now the interrupt handler
+ LDA #LO(screenHandler)
  STA IRQ1V
- CLI
- RTS
+
+ CLI                    \ Re-enable interrupts
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C4E59
+\       Name: screenHandler
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Screen mode
+\    Summary: The IRQ handler for the custom screen mode
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The screen handler starts a new screen with screenSection = 255, and then
+\ increments it through 0, 1, 2, 3, 4 and 5, at which point this handler stops
+\ doing anything.
+\
+\ Other entry points:
+\
+\   screenHandler-3     Jump to the original IRQ handler
 \
 \ ******************************************************************************
 
-.sub_C4E59
+ JMP (irq1Address)      \ Jump to the original address from IRQV1 to pass
+                        \ control to the next interrupt handler
 
- JMP (L4F1D)
+.screenHandler
 
- LDA VIA+&6D            \ user_via_ifr
- AND #&40
- BEQ sub_C4E59
- STA VIA+&6D            \ user_via_ifr
- TXA
- PHA
- CLD
- LDA L4F43
- BEQ C4E7C
- BMI C4E92
- CMP #2
- BCC C4E9B
- BEQ C4EC3
- CMP #3
- BEQ C4ED6
- BCS C4EE7
+ LDA VIA+&6D            \ Set A to the 6522 User VIA interrupt flag register IFR
+                        \ (SHEILA &46D)
 
-.C4E7C
+ AND #%01000000         \ Extract bit 6, which is set when 6522 User VIA timer 1
+                        \ runs down to zero
 
- LDA #&88
- STA VIA+&20            \ video_ula_control
- LDX #&0F
+ BEQ screenHandler-3    \ If the Timer1 interrupt has not fired, jump up to
+                        \ screenHandler-3 as we do not need to do anything at
+                        \ this point
 
-.P4E83
+ STA VIA+&6D            \ Set bit 6 of the 6522 User VIA interrupt flag register
+                        \ IFR (SHEILA &46D) to reset timer 1
 
- LDA L3468,X
- STA VIA+&21            \ video_ula_palette
- DEX
- BPL P4E83
+ TXA                    \ Store X on the stack so we can preserve it through the
+ PHA                    \ interrupt handler
 
-.P4E8C
+ CLD                    \ Clear the D flag to switch arithmetic to normal
 
- LDA #&C4
- LDX #&0F
- BNE C4F01
+ LDA screenSection      \ If screenSection = 0, jump to hand1
+ BEQ hand1
 
-.C4E92
+ BMI hand4              \ If screenSection is negative, jump to hand4
 
- CMP #&FF
- BNE C4F0A
- INC L4F43
- BEQ P4E8C
+ CMP #2                 \ If screenSection < 2, i.e. screenSection = 1, jump to hand5
+ BCC hand5
 
-.C4E9B
+ BEQ hand7              \ If screenSection = 2, jump to hand7
 
- LDA #&C4
- STA VIA+&20            \ video_ula_control
- CLC
- LDA #3
+ CMP #3                 \ If screenSection = 3, jump to hand9
+ BEQ hand9
 
-.P4EA3
+ BCS hand11             \ If screenSection >= 3, i.e. screenSection = 4, jump to hand11
 
- STA VIA+&21            \ video_ula_palette
- ADC #&10
- BCC P4EA3
+.hand1
+
+                        \ If we get here, then screenSection = 0, so we set the
+                        \ screen mode to 4 and the palette for the top two lines
+                        \ of text (where the race information is printed)
+
+ LDA #%10001000         \ Set the Video ULA control register (SHEILA &20) to
+ STA VIA+&20            \ %10001000, which is the same as switching to mode 4
+
+ LDX #15                \ We now send the 16 palette bytes at paletteSection0 to
+                        \ the Video ULA palette in SHEILA &21, so set a loop
+                        \ counter in X
+
+
+.hand2
+
+ LDA paletteSection0,X  \ Set the X-th byte of paletteSection0 to the Video ULA
+ STA VIA+&21            \ palette
+
+ DEX                    \ Decrement the loop counter
+
+ BPL hand2              \ Loop back until we have sent all 16 bytes
+
+.hand3
+
+ LDA #&C4               \ Set (X A) = &0FC4 so we set timer 1 counting down from
+ LDX #&0F               \ 4036
+
+ BNE hand13             \ Jump to hand13 to set timer 1 and return from the
+                        \ subroutine (this BNE is effectively a JMP as X is
+                        \ never zero)
+
+.hand4
+
+                        \ If we get here, then screenSection is negative
+
+ CMP #&FF               \ If screenSection <> 255, then jump to hand14 to
+ BNE hand14             \ return from the interrupt handler
+
+                        \ If we get here, then screenSection = 255
+
+ INC screenSection      \ Set screenSection = 0
+
+ BEQ hand3              \ Jump to hand3 to set timer 1 counting down from 4036
+                        \ and return from the interrupt handler (this BNE is
+                        \ effectively a JMP as screenSection is always zero)
+
+.hand5
+
+                        \ If we get here, then screenSection = 1, so we change
+                        \ the palette so everything is blue, as this is the
+                        \ portion of cloudless sky between the text at the top
+                        \ of the screen and the car and track at the bottom
+
+ LDA #%11000100         \ Set the Video ULA control register (SHEILA &20) to
+ STA VIA+&20            \ %11000100, which is the same as switching to mode 5
+
+ CLC                    \ Clear the C flag for the additions in the following
+                        \ loop
+
+                        \ We now send the following bytes to the Video ULA
+                        \ palette in SHEILA &21, by starting at 3 and adding &10
+                        \ to send &03, &13, &23 ... &E3, &F3
+                        \
+                        \ This maps all four logical colours (the top nibble) to
+                        \ &3 EOR 7 (the bottom nibble, EOR 7), which maps them to
+                        \ colour 4, or blue
+
+ LDA #&03               \ Set A = &03 as the first byte to send
+
+.hand6
+
+ STA VIA+&21            \ Send A to SHEILA &21 to send the palette byte in A to
+                        \ the Video ULA
+
+ ADC #&10               \ Set A = A + &10
+
+ BCC hand6              \ Loop back until the addition overflows after we send
+                        \ &F3 to the ULA
+
  LDA #&3C
  SEC
  SBC L4F1F
  STA L4F21
+
  LDA #&15
  SBC L4F20
  STA L4F22
+
  LDA L4F1F
  LDX L4F20
- BCS C4F01
 
-.C4EC3
+ BCS hand13             \ Jump to hand13 to set timer 1 and return from the
+                        \ subroutine (this BCS is effectively a JMP as the C
+                        \ flag is still set from above)
 
- LDX #&0F
+.hand7
 
-.P4EC5
+                        \ If we get here, then screenSection = 2
 
- LDA L3458,X
- STA VIA+&21            \ video_ula_palette
- DEX
- BPL P4EC5
+ LDX #15                \ We now send the 16 palette bytes at paletteSection2 to
+                        \ the Video ULA palette in SHEILA &21, so set a loop
+                        \ counter in X
+
+.hand8
+
+ LDA paletteSection2,X  \ Set the X-th byte of paletteSection2 to the Video ULA
+ STA VIA+&21            \ palette
+
+ DEX                    \ Decrement the loop counter
+
+ BPL hand8              \ Loop back until we have sent all 16 bytes
+
  LDA L4F21
  LDX L4F22
- BNE C4F01
 
-.C4ED6
+ BNE hand13             \ Jump to hand13 to set timer 1 and return from the
+                        \ subroutine (this BNE is effectively a JMP as X is
+                        \ never zero)
 
- LDX #3
+.hand9
 
-.P4ED8
+                        \ If we get here, then screenSection = 3
 
- LDA L3478,X
- STA VIA+&21            \ video_ula_palette
- DEX
- BPL P4ED8
- LDA #0
- LDX #&1E
- BNE C4F01
+ LDX #3                 \ We now send the 3 palette bytes at paletteSection3 to
+                        \ the Video ULA palette in SHEILA &21, so set a loop
+                        \ counter in X
 
-.C4EE7
+.hand10
 
- LDX #3
+ LDA paletteSection3,X  \ Set the X-th byte of paletteSection2 to the Video ULA
+ STA VIA+&21            \ palette
 
-.P4EE9
+ DEX                    \ Decrement the loop counter
 
- LDA L347C,X
- STA VIA+&21            \ video_ula_palette
- DEX
- BPL P4EE9
- STX L4F43
- JSR sub_C52A4
+ BPL hand10             \ Loop back until we have sent all 16 bytes
+
+ LDA #&00               \ Set (X A) = &1E00 so we set timer 1 counting down from
+ LDX #&1E               \ 7680
+
+ BNE hand13             \ Jump to hand13 to set timer 1 and return from the
+                        \ subroutine (this BNE is effectively a JMP as X is
+                        \ never zero)
+
+.hand11
+
+                        \ If we get here, then screenSection = 4
+
+ LDX #3                 \ We now send the 3 palette bytes at paletteSection4 to
+                        \ the Video ULA palette in SHEILA &21, so set a loop
+                        \ counter in X
+
+.hand12
+
+ LDA paletteSection4,X  \ Set the X-th byte of paletteSection2 to the Video ULA
+ STA VIA+&21            \ palette
+
+ DEX                    \ Decrement the loop counter
+
+ BPL hand12             \ Loop back until we have sent all 16 bytes
+
+ STX screenSection      \ Set screenSection = 255
+
+ JSR sub_C52A4          \ ???
+
  LDA #&FF
  STA VIA+&69            \ user_via_t2c_h
- LDA #&16
- LDX #&0B
 
-.C4F01
+ LDA #&16               \ Set (X A) = &0B16 so we set timer 1 counting down from
+ LDX #&0B               \ 2838
 
- STX VIA+&67            \ user_via_t1l_h
- STA VIA+&66            \ user_via_t1l_l
- INC L4F43
+.hand13
 
-.C4F0A
+ STX VIA+&67            \ Set 6522 System VIA T1L-H and T1L-L to set timer 1
+ STA VIA+&66            \ counting down from (X A)
 
- PLA
+ INC screenSection      \ Increment the screen section counter to move on to the
+                        \ next section
+
+.hand14
+
+ PLA                    \ Restore X from the stack
  TAX
- LDA &FC
- RTI
+
+ LDA &FC                \ Set A to the interrupt accumulator save register,
+                        \ which restores A to the value it had on entering the
+                        \ interrupt
+
+ RTI                    \ Return from interrupts, so this interrupt is not
+                        \ passed on to the next interrupt handler, but instead
+                        \ the interrupt terminates here
 
 \ ******************************************************************************
 \
-\       Name: L4F0F
+\       Name: screenRegisters
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Screen mode
+\    Summary: The 6845 registers for the custom screen mode
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The custom screen mode used during the race is based on standard mode 5, but
+\ with the following differences:
+\
+\   * Horizontal sync position = 45 instead of 49
+\   * Vertical displayed       = 26 instead of 32
+\   * Vertical sync position   = 32 instead of 34
+\   * Screen memory start      = &5A80 instead of &5800
+\
+\ So essentially it is a shorter mode 5 that takes up less memory, adjusts the
+\ vertical and horizontal sync positions accordingly, and lives in screen memory
+\ from &5A80 to &7AFF (as there are 26 character rows of 40 characters, with 8
+\ bytes per character, giving 26 * 40 * 8 = 8320 bytes of screen memory, and
+\ &5A80 + 8320 = &7B00).
 \
 \ ******************************************************************************
 
-.L4F0F
+.screenRegisters
 
- EQUB &3F, &28, &31, &24, &26, &00, &1A, &20, &01, &07, &67, &08
- EQUB &0B, &50
+ EQUB 63                \ Set 6845 register R0 = 63
+                        \
+                        \ This is the "horizontal total" register, which sets
+                        \ the horizontal sync frequency, i.e. the number of
+                        \ horizontal characters minus one. This value is the
+                        \ same as in standard mode 5
+
+ EQUB 40                \ Set 6845 register R1 = 40
+                        \
+                        \ This is the "horizontal displayed" register, which
+                        \ defines the number of character blocks per horizontal
+                        \ character row. This value is the same as in standard
+                        \ mode 5
+
+ EQUB 49                \ Set 6845 register R2 = 45
+                        \
+                        \ This is the "horizontal sync position" register, which
+                        \ defines the position of the horizontal sync pulse on
+                        \ the horizontal line in terms of character widths from
+                        \ the left-hand side of the screen. For comparison this
+                        \ is 49 for mode 5, but is adjusted for our custom
+                        \ screen
+
+ EQUB &24               \ Set 6845 register R3 = &24
+                        \
+                        \ This is the "sync width" register, which sets the
+                        \ horizontal sync width in characters using the low
+                        \ nibble (i.e. 4), and the vertical sync width in the
+                        \ high nibble (i.e. 2). These values are the same as in
+                        \ standard mode 5
+
+ EQUB 38                \ Set 6845 register R4 = 38
+                        \
+                        \ This is the "vertical total" register, which contains
+                        \ the integer part of the vertical sync frequency minus
+                        \ one. This value is the same as in standard mode 5
+
+ EQUB 0                 \ Set 6845 register R5 = 0
+                        \
+                        \ This is the "vertical total adjust" register, which
+                        \ contains the fractional part of the vertical sync
+                        \ frequency. This value is the same as in standard mode
+                        \ 5
+
+ EQUB 26                \ Set 6845 register R6 = 26
+                        \
+                        \ This is the "vertical displayed" register, which sets
+                        \ the number of displayed character rows to 26. For
+                        \ comparison, this value is 32 for standard modes 4 and
+                        \ 5, but we claw back six rows for storing code above
+                        \ the end of screen memory
+
+ EQUB 32                \ Set 6845 register R7 = 32
+                        \
+                        \ This is the "vertical sync position" register, which
+                        \ determines the vertical sync position with respect to
+                        \ the reference, programmed in character row times. For
+                        \ comparison this is 34 for mode 5, but needs to be
+                        \ adjusted for our custom screen's vertical sync
+
+ EQUB %00000001         \ Set 6845 register R8 = %00000001
+                        \
+                        \ This is the "interlace and display" register, which
+                        \ sets the following, reading from bit 7 to bit 0:
+                        \
+                        \   %00 = no delay in the cursor blanking signal
+                        \   %00 = no delay in the display blanking signal
+                        \   %00 = not used
+                        \   %01 = interlace sync mode
+                        \
+                        \ These values are the same as in standard mode 5
+
+ EQUB 7                 \ Set 6845 register R9 = 7
+                        \
+                        \ This is the "scan lines per character" register, and
+                        \ contains the number of scan lines per character row,
+                        \ including spacing, minus one. This value is the same
+                        \ as in standard mode 5
+
+ EQUB %01100111         \ Set 6845 register R10 = %01100111
+                        \
+                        \ This is the "cursor start" register, which sets the
+                        \ following, reading from bit 7 to bit 0:
+                        \
+                        \   %0 = not used
+                        \   %1 = enable blink feature
+                        \   %1 = set blink frequency to 32 times the field rate
+                        \   %00111 = cursor end scan line
+                        \
+                        \ These values are the same as in standard mode 5
+
+ EQUB 8                 \ Set 6845 register R11 = 8
+                        \
+                        \ This is the "cursor end" register, which sets the
+                        \ cursor end scan line. This value is the same as in
+                        \ standard mode 5
+
+ EQUB &0B               \ Set 6845 register R12 = &0B and R13 = &50
+ EQUB &50               \
+                        \ This sets 6845 registers (R12 R13) = &0B50 to point
+                        \ to the start of screen memory in terms of character
+                        \ rows. There are 8 pixel lines in each character row,
+                        \ so to get the actual address of the start of screen
+                        \ memory, we multiply by 8:
+                        \
+                        \   &0B50 * 8 = &5A80
+                        \
+                        \ So this sets the start of screen memory to &5A80
 
 \ ******************************************************************************
 \
-\       Name: L4F1D
+\       Name: irq1Address
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Stores the previous value of IRQ1V before we install our custom
+\             IRQ handler
 \
 \ ******************************************************************************
 
-.L4F1D
+.irq1Address
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L4F1E
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L4F1E
-
- EQUB 0
+ EQUW 0
 
 \ ******************************************************************************
 \
@@ -18037,9 +18325,9 @@ NEXT
 .sub_C4F23
 
  SEI
- LDA L4F1D
+ LDA irq1Address
  STA IRQ1V
- LDA L4F1E
+ LDA irq1Address+1
  STA IRQ1V+1
  LDA #&40
  STA VIA+&6E            \ user_via_ier
@@ -18051,7 +18339,7 @@ NEXT
 \
 \       Name: SetScreenMode7
 \       Type: Subroutine
-\   Category: Setup
+\   Category: Screen mode
 \    Summary: Change to screen mode 7 and hide the cursor
 \
 \ ******************************************************************************
@@ -18068,18 +18356,18 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L4F43
+\       Name: screenSection
 \       Type: Variable
 \   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This timer increments 
 \
 \ ******************************************************************************
 
-.L4F43
+.screenSection
 
  EQUB 0
 
@@ -22574,7 +22862,7 @@ ORG &5E40
 
 .dtab5
 
- JSR Print2Or4DigitBCD
+ JSR Print2Or4DigitBCD   \ 
 
 .dtab6
 
