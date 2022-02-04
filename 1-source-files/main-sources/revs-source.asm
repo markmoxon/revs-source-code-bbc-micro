@@ -360,9 +360,13 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.temp1
+.colourScheme
 
- SKIP 1                 \ Colour scheme in SetRowColours
+ SKIP 0                 \ L0042 in SetRowColours
+
+.L0042
+
+ SKIP 1                 \ 
 
 .L0043
 
@@ -371,6 +375,10 @@ ORG &0000
 .L0044
 
  SKIP 1                 \ 
+
+.driverPrinted
+
+ SKIP 0                 \ L0045 in PrintPositionName
 
 .L0045
 
@@ -536,19 +544,25 @@ ORG &0000
 
 .L006C
 
- SKIP 1                 \ 
+ SKIP 1                 \ Bit 7 affects a lot of things, e.g. the number that
+                        \ appears in the first column of the driver table
+                        \ (1-20 is bit 7 clear, numbers from L0100 if bit 7 set)
 
 .L006D
 
  SKIP 1                 \ 
 
-.L006E
+.numberOfLaps
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of laps in the race (5, 10 or 20)
 
-.L006F
+.currentPlayer
 
- SKIP 1                 \ 
+ SKIP 1                 \ The driver number of the current player
+                        \
+                        \   * 0 for practice
+                        \
+                        \   * 20+ for competition/multi-player
 
 .P
 
@@ -1982,12 +1996,12 @@ ORG &0B00
  LDA U
  STA H
  LDX #1
- STX temp1
+ STX L0042
  LDX #0
  BIT J
  BVC C0D1B
  INX
- DEC temp1
+ DEC L0042
 
 .C0D1B
 
@@ -2053,9 +2067,9 @@ ORG &0B00
 
 .C0D7F
 
- CPX temp1
+ CPX L0042
  BEQ C0D97
- LDX temp1
+ LDX L0042
  LDA #0
  SEC
  SBC G
@@ -2733,11 +2747,11 @@ ORG &0B00
  LDA #0
  STA L0066
  STA G
- LDX L006F
+ LDX currentPlayer
  LDA L04B4,X
  CMP #1
  EOR #&FF
- ADC L006E
+ ADC numberOfLaps
  PHP
  JSR GetDriverNumberBCD
  LDX #&0C
@@ -2917,7 +2931,7 @@ ORG &0B00
  LDX #&17
  JSR sub_C147C
  LDY #&17
- LDX L006F
+ LDX currentPlayer
  SEC
  JSR sub_C27AB
  BCS C10D7
@@ -2926,7 +2940,7 @@ ORG &0B00
  LDX #&17
  LDA #&31
  STA V
- STA temp1
+ STA L0042
 
 .P10F2
 
@@ -2936,7 +2950,7 @@ ORG &0B00
 
 .P10F9
 
- INC temp1
+ INC L0042
  JSR sub_C14C3
  BCC P10F9
  LDA #&50
@@ -2955,7 +2969,7 @@ ORG &0B00
 .P1113
 
  JSR sub_C12F7
- DEC temp1
+ DEC L0042
  BNE P1113
  LSR L62F8
  RTS
@@ -3041,7 +3055,7 @@ ORG &0B00
  STA L0000
  STA L006D
  JSR SetL018CBit7
- LDX L006F
+ LDX currentPlayer
  JSR sub_C11BE
 
 .C1171
@@ -3057,7 +3071,7 @@ ORG &0B00
  LDX #&13
  LDA L006C
  BMI C1199
- CPX L006F
+ CPX currentPlayer
  BNE C11AA
  LDA L62DFHi
  CMP #&0E
@@ -3069,7 +3083,7 @@ ORG &0B00
  LDA L018C,X
  AND #&40
  BNE C11A7
- LDA L006E
+ LDA numberOfLaps
  CMP L04B4,X
  BCS C1171
 
@@ -3121,7 +3135,7 @@ ORG &0B00
 
 .sub_C11BE
 
- LDA L006E
+ LDA numberOfLaps
  CMP L04B4,X
  LDA #&C0
  STA L018C,X
@@ -3147,9 +3161,9 @@ ORG &0B00
 
 .sub_C11CE
 
- LDX L006F
+ LDX currentPlayer
  STX L0045
- STX temp1
+ STX L0042
  LDY L0022
  JSR C2937
  LDX #2
@@ -3758,12 +3772,12 @@ ORG &0B00
  EOR #&80
  STA L0025
  JSR sub_C13DA
- STX temp1
+ STX L0042
 
 .P142B
 
  JSR sub_C12F7
- DEC temp1
+ DEC L0042
  BNE P142B
  RTS
 
@@ -3782,7 +3796,7 @@ ORG &0B00
 
 .sub_C1433
 
- LDX L006F
+ LDX currentPlayer
  ROR A
  EOR L0025
  BMI C143E
@@ -3962,7 +3976,7 @@ ORG &0B00
  STA L08D0,X
  LDA trackData+1789
  STA L08E8,X
- CPX L006F
+ CPX currentPlayer
  BNE C14E4
  LDA L04B4,X
  BEQ C14E4
@@ -4567,7 +4581,7 @@ ORG &0B00
 
  JSR sub_C5011          \ Zero L06B4+X, L06CC+X and L06E4+X
 
- LDY L006F
+ LDY currentPlayer
  LDA #&80
  STA L04DC,Y
 
@@ -5532,7 +5546,7 @@ ORG &0B00
  ASL A
  STA U
  LDX L0067
- LDY L006F
+ LDY currentPlayer
  CMP #&28
  BCC C1BDF
  LDA L006C
@@ -5995,7 +6009,7 @@ ORG &0B00
 
 .sub_C1DEF
 
- STA temp1
+ STA L0042
 
 .C1DF1
 
@@ -6013,7 +6027,7 @@ ORG &0B00
  INC L0085
  JSR sub_C1DA6
  LDX L0085
- CPX temp1
+ CPX L0042
  BNE C1DF1
  RTS
 
@@ -7189,11 +7203,11 @@ ORG &0B00
 
 .C2360
 
- STX temp1
+ STX L0042
  LDX #&FD
  JSR sub_C1208
  JSR sub_C2145
- LDY temp1
+ LDY L0042
  BIT L0025
  BPL C2374
  TYA
@@ -7203,12 +7217,12 @@ ORG &0B00
 .C2374
 
  JSR sub_C23C0
- LDX temp1
+ LDX L0042
  CPX #&28
  BCS C239A
  LDX #&FD
  JSR sub_C2285
- LDX temp1
+ LDX L0042
  LDA L008D
  STA L5F20,X
  STA L5F48,X
@@ -7310,7 +7324,7 @@ ORG &0B00
 
  STA L0012
  LDA #0
- STA temp1
+ STA L0042
 
 .C23D8
 
@@ -7328,7 +7342,7 @@ ORG &0B00
  STA L0011
  LDA K
  STA L0010
- LDA temp1
+ LDA L0042
  STA L0013
  LDY L0012
  STY L005C
@@ -7343,7 +7357,7 @@ ORG &0B00
 
 .C2403
 
- LDA temp1
+ LDA L0042
  BNE C2408
  RTS
 
@@ -7414,7 +7428,7 @@ ORG &0B00
 .C246A
 
  JSR sub_C2565
- LDA temp1
+ LDA L0042
  CMP L0013
  BEQ C2490
  BCC C2490
@@ -7441,8 +7455,8 @@ ORG &0B00
 
  STX L0014
  INC L0012
- INC temp1
- LDY temp1
+ INC L0042
+ LDY L0042
  CPY #&12
  BCS C24B8
  LDA L3DD0,Y
@@ -7674,7 +7688,7 @@ ORG &0B00
  TAY
  LDA L306E,Y
  STA V
- LDA temp1
+ LDA L0042
  CMP #3
  BCS C2589
  JMP C25FD
@@ -7982,14 +7996,14 @@ ORG &0B00
  JSR SwapDriverPosition
  SEC
  ROR L62FE
- CPY L006F
+ CPY currentPlayer
  BNE C26CB
  LDA #&99
  BNE C26D1
 
 .C26CB
 
- CPX L006F
+ CPX currentPlayer
  BNE C26E6
  LDA #1
 
@@ -8425,7 +8439,7 @@ ORG &0B00
 
  DEX
  BMI C28F1
- CPX L006F
+ CPX currentPlayer
  BEQ C28E7
  JMP C27F6
 
@@ -8450,7 +8464,7 @@ ORG &0B00
 
  LDA driverPosition,X
  STA L0045
- STA temp1
+ STA L0042
  TAX
  LDY #&17
  SEC
@@ -8643,16 +8657,16 @@ ORG &0B00
  LDX #&FD
  JSR sub_C0BCC
  LDA #&14
- STA temp1
+ STA L0042
  LDA #2
  JSR sub_C2A5D
  LDA #&15
- STA temp1
+ STA L0042
  LDA #1
  LDX #&F4
  JSR sub_C2A5F
  LDA #&16
- STA temp1
+ STA L0042
  LDA #0
  LDX #&FA
  JSR sub_C2A5F
@@ -8705,7 +8719,7 @@ ORG &0B00
 
  STA L0037
  JSR sub_C2145
- LDY temp1
+ LDY L0042
  LDA L008A
  STA L0380,Y
  LDA L008B
@@ -8728,7 +8742,7 @@ ORG &0B00
 
 .sub_C2A76
 
- LDY temp1
+ LDY L0042
  BCS C2AA6
  SEC
  SBC #1
@@ -8766,7 +8780,7 @@ ORG &0B00
 
 .C2AA6
 
- LDY temp1
+ LDY L0042
  LDA L018C,Y
  ORA #&80
 
@@ -8816,7 +8830,7 @@ ORG &0B00
  DEC L0068
  LDA K
  STA L0041
- LDA temp1
+ LDA L0042
  STA L0067
 
 .C2ACA
@@ -11682,7 +11696,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: PrintBCDNumber
+\       Name: Print2DigitBCD
 \       Type: Subroutine
 \   Category: Text
 \    Summary: Print a binary coded decimal (BCD) number in the specified format
@@ -11705,11 +11719,11 @@ ORG &0B00
 \
 \   G                   G is shifted left by two places, so bits 4 and 5 will be
 \                       used to determine the printing style in the next call to
-\                       PrintBCDNumber
+\                       Print2DigitBCD
 \
 \ ******************************************************************************
 
-.PrintBCDNumber
+.Print2DigitBCD
 
  PHA                    \ Store A on the stack so we can retrieve it later
 
@@ -13788,20 +13802,17 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3DF4
+\       Name: lapsFromOption
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: Table to convert from the laps menu option numbers to the actual
+\             number of laps
 \
 \ ******************************************************************************
 
-.L3DF4
+.lapsFromOption
 
- EQUB &05, &0A, &14
+ EQUB 5, 10, 20
 
 \ ******************************************************************************
 \
@@ -13925,16 +13936,16 @@ NEXT
 \
 \   Y                   Table row number
 \
-\   temp1               Colour scheme: 0, 4, 8
+\   colourScheme        Colour scheme: 0, 4, 8
 \
 \ ******************************************************************************
 
 .SetRowColours
 
- TYA                    \ Set X = temp1      if Y is even
- AND #1                 \       = temp1 + 1  if Y is odd
+ TYA                    \ Set X = colourScheme      if Y is even
+ AND #1                 \       = colourScheme + 1  if Y is odd
  CLC                    \
- ADC temp1              \ So X is now one of the following, depending on the
+ ADC colourScheme       \ So X is now one of the following, depending on the
  TAX                    \ colour scheme and whether the row number is even or
                         \ odd:
                         \
@@ -15142,47 +15153,74 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C43D0
+\       Name: Print2Or4DigitBCD
 \       Type: Subroutine
-\   Category: 
+\   Category: Text
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Print the X-th (L39E4 SetupGame+20) value as a 4-digit number, followed by a
+\ space. The first two digits are printed as spaces if the high byte is zero.
 \
 \ ******************************************************************************
 
-.sub_C43D0
+.Print2Or4DigitBCD
 
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
  
- LDA #%00100000
+ LDA #%00100000         \ Set G = %00100000
  STA G
- LDA L39E4,X
- BNE C43E7
 
- LDA #2                 \ Print two spaces
+ LDA L39E4,X            \ Set A to the X-th L39E4 value
+
+ BNE Print4DigitBCD     \ If A is non-zero, jump to Print4DigitBCD to print the
+                        \ X-th (L39E4 SetupGame+20) value as a 4-digit number
+
+ LDA #2                 \ Otherwise print two spaces for the first two digits
  JSR PrintSpaces
 
- LSR G
- BNE C43EA
+ LSR G                  \ Shift G right one place to give to %00010000
 
-.C43E7
+ BNE Print4DigitBCD+3   \ Jump to Print4DigitBCD+3 to print the second two
+                        \ digits in SetupGame+20 (this BNE is effectively a JMP
+                        \ as the result of the LSR ia never zero)
 
- JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
+\ ******************************************************************************
+\
+\       Name: Print4DigitBCD
+\       Type: Subroutine
+\   Category: Text
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ Print the X-th (L39E4 SetupGame+20) value as a 4-digit number, followed by a
+\ space. The second digit is always printed.
+\
+\ Arguments:
+\
+\   A                   Always called with L39E4,X
+\
+\ Other entry points:
+\
+\   Print4DigitBCD+3    Do not print the first two digits (i.e. omit printing A)
+\
+\ ******************************************************************************
 
-.C43EA
+.Print4DigitBCD
+
+ JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A
 
  LDA SetupGame+20,X
 
- JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
+ JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A
 
  LDA #1                 \ Print a space
  JSR PrintSpaces
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -15574,7 +15612,7 @@ NEXT
  ASL A
  ROL W
  STA V
- LDX L006F
+ LDX currentPlayer
  LDA L0164,X
  JSR sub_C4610
  BPL C45DF
@@ -15682,7 +15720,7 @@ NEXT
 
 .C4647
 
- LDX L006F
+ LDX currentPlayer
  BIT L0025
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -17245,7 +17283,7 @@ NEXT
 
 .sub_C4CA4
 
- LDX L006F
+ LDX currentPlayer
  LDY L06E8,X
  LDA trackData,Y
  LSR A
@@ -17307,7 +17345,7 @@ NEXT
 .C4D11
 
  LDA #&17
- STA temp1
+ STA L0042
  JSR sub_C2AB3
  LDY #6
  JSR sub_C2287
@@ -18119,7 +18157,7 @@ NEXT
  LDA L018C,X
  ASL A
  BMI C4F90
- CPX L006F
+ CPX currentPlayer
  BNE C4F95
  DEC L0030
  BEQ C4F91
@@ -18144,21 +18182,21 @@ NEXT
 
  BIT L006C
  BPL C4FA8
- CMP L006E
+ CMP numberOfLaps
  BCC C4FB7
  BEQ C4FAF
  RTS
 
 .C4FA8
 
- CPX L006F
+ CPX currentPlayer
  BEQ C4FB7
  BCC C4FB7
  RTS
 
 .C4FAF
 
- CPX L006F
+ CPX currentPlayer
  BNE C4FB7
  LDA #&50
  STA L000F
@@ -18261,7 +18299,7 @@ NEXT
  INX                    \ Move the cursor to pixel row 33 (i.e. the second text
  STX yCursor            \ line at the top of the screen)
 
- LDX L006F              \ Set the driver number in X to L006F
+ LDX currentPlayer              \ Set the driver number in X to currentPlayer
 
  LDA #%00100110         \ Print the best lap time for driver X in the following
  JSR PrintLapTime       \ format:
@@ -19296,7 +19334,7 @@ NEXT
  SEC
  SBC #1
  BEQ C5A5A
- CPY L006F
+ CPY currentPlayer
  BEQ C5A4D
  CPY L5F39
  BCS C5A5A
@@ -19722,18 +19760,14 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F3F
+\       Name: lapsMenuOption
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The menu option chosen from the laps menu (0 to 2)
 \
 \ ******************************************************************************
 
-.L5F3F
+.lapsMenuOption
 
  SKIP 1
 
@@ -21705,7 +21739,7 @@ ORG &5E40
 
 .sub_C63A2
 
- LDA L006F
+ LDA currentPlayer
  LDX #&13
 
 .P63A6
@@ -21817,8 +21851,8 @@ ORG &5E40
  CPX #1                 \ If X >= 1, then the choice was competition, so jump to
  BCS game1              \ game1
 
- STX L006F              \ Otherwise X = 0 and the choice was practice, so set
-                        \ L006F = 0
+ STX currentPlayer              \ Otherwise X = 0 and the choice was practice, so set
+                        \ currentPlayer = 0
 
  DEX                    \ Set L5F3B = 255
  STX L5F3B
@@ -21872,14 +21906,14 @@ ORG &5E40
 
  JSR ResetLapTimes      \ Reset the best lap times for all drivers
 
- LDA #&14
- STA L006F
+ LDA #20
+ STA currentPlayer
 
 .game3
 
- DEC L006F
+ DEC currentPlayer
 
- LDX L006F
+ LDX currentPlayer
 
  JSR ResetLapTime       \ Reset the best lap time for driver X
 
@@ -21890,7 +21924,7 @@ ORG &5E40
 
  JSR sub_C655A
 
- LDA L006F
+ LDA currentPlayer
  CMP L5F39
  BNE game3
 
@@ -21912,7 +21946,7 @@ ORG &5E40
 
  JSR GetDriverName
  JSR sub_C655A
- LDX L006F
+ LDX currentPlayer
  BEQ game5
 
  LDX #27                \ Print token 27, which shows a menu with the following
@@ -21930,7 +21964,7 @@ ORG &5E40
 
 .game5
 
- LDA L006F
+ LDA currentPlayer
  STA L5F39
  LDA #0
  JSR sub_C0F64
@@ -21977,9 +22011,9 @@ ORG &5E40
 
 .game9
 
- LDX #2
+ LDX #2                 \ "GRID POSITIONS", best lap time
  LDA #0
- JSR sub_C65D3
+ JSR PrintDriverTable
 
  LDY #&13
 
@@ -22020,18 +22054,20 @@ ORG &5E40
  LDX #3                 \ Fetch the menu choice into X
  JSR GetMenuOption
 
- LDA L3DF4,X
- STA L006E
- STX L5F3F
+ LDA lapsFromOption,X   \ Convert the menu choice (0 to 2) into the number of
+ STA numberOfLaps       \ laps (5, 10, 20) using the lapsFromOption lookup, and
+                        \ store the result in numberOfLaps
+
+ STX lapsMenuOption     \ Store the menu choice (0 to 2) in lapsMenuOption
 
 .game12
 
- LDA #&14
- STA L006F
+ LDA #20
+ STA currentPlayer
 
 .game13
 
- DEC L006F
+ DEC currentPlayer
  JSR PrintDriverPrompt
  LDX #&13
 
@@ -22066,29 +22102,29 @@ ORG &5E40
  LDA #&80
  JSR sub_C0F64
 
- LDX #1
+ LDX #1                 \ "POINTS", points awarded in the last race
  LDA #4
- JSR sub_C65D3
+ JSR PrintDriverTable
 
  LDA #0
  JSR sub_C0F64
 
- LDX #6
+ LDX #6                 \ "BEST LAP TIMES", best lap time
  LDA #0
- JSR sub_C65D3
+ JSR PrintDriverTable
 
  LDA #&40
  JSR sub_C0F64
 
- LDX #3
+ LDX #3                 \ "ACCUMULATED POINTS", accumulated points
  STX L5F3C
  LDA #&88
- JSR sub_C65D3
+ JSR PrintDriverTable
 
  BIT G
  BPL game16
 
- LDA L006F
+ LDA currentPlayer
 
  CMP L5F39
  BNE game13
@@ -22345,88 +22381,127 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C65D3
+\       Name: PrintDriverTable
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Print the table of drivers
 \
 \ ------------------------------------------------------------------------------
 \
+\ The driver table consists of the following:
+\
+\   * A header, as specified by the argument in X
+\
+\   * A table with one row for each driver, showing a number, a driver name and
+\     a third column as specified by the argument in A
+\
+\   * A "PRESS SPACE TO CONTINUE" prompt below the table
+\
+\ The routine also waits for SPACE or RETURN to be pressed before returning.
+\
 \ Arguments:
 \
-\   A                   0, 4 or &88
-\
 \   X                   The number of the token to print as the header (see
-\                       PrintHeader for a list of values)
+\                       PrintHeader for more details):
 \
-\   L006C               Bit 7 set = table is in order of driver number
-\                             clear = table is in race position order
+\                         * 1 = "POINTS"
+\
+\                         * 2 = "GRID POSITIONS"
+\
+\                         * 3 = "ACCUMULATED POINTS"
+\
+\                         * 6 = "BEST LAP TIMES"
+\
+\   L006C               Defines what to show in the first column in the table:
+\
+\                         * Bit 7 clear = 1, 2, 3 ... 19, 20
+\                                 set = numbers in L0100
+\                                       print race class at top
+\
+\   A                   Defines what to show in the third column in the table:
+\
+\                         * 0 = best lap time
+\
+\                         * 4 = points awarded in the last race
+\
+\                         * &88 = accumulated points
 \
 \ ******************************************************************************
 
-.sub_C65D3
+.PrintDriverTable
 
  PHA                    \ Store the value of A on the stack so we can retrieve
                         \ it below
 
- AND #%00001111         \ Set temp1 to the lower nibble of A, which contains the
- STA temp1              \ colour scheme to use for the table
+ AND #%00001111         \ Set colourScheme to the lower nibble of A, which
+ STA colourScheme       \ contains the colour scheme to use for the table, so we
+                        \ can pass it to SetRowColours below
 
  JSR PrintHeader        \ Print the header specified in X
 
  LDY #0                 \ We are about to print a table containing 20 rows, one
                         \ for each driver, so set a row counter in Y
 
-.C65DD
+.dtab1
 
  STY rowCounter         \ Store the row counter in rowCounter
 
- LDA #%00000000         \ Set G = 0 so the call to PrintBCDNumber below will
+ LDA #%00000000         \ Set G = 0 so the call to Print2DigitBCD below will
  STA G                  \ print the second digit and will not print leading
                         \ zeroes when printing the driver number
 
- JSR SetRowColours      \ Set the colours for this table row according to the
-                        \ colour scheme we stored in temp1 above
+ JSR SetRowColours      \ Set the colours in token 31 according to the colour
+                        \ scheme we stored in colourScheme above, so they can be
+                        \ used to set the colours of each table cell
 
  LDX #32                \ Print token 32, which prints two spaces and backspaces
- JSR PrintToken         \ Why???
+ JSR PrintToken         \ followed by token 31, so this sets up the colours for
+                        \ the first column
 
  LDY rowCounter         \ Set Y to the table row number
 
- LDA L0100,Y            \ Set A to the L0100 value for this row (is L0100,Y the
-                        \ driver in position Y?)
+ LDA L0100,Y            \ Set A to the L0100 value for this row
 
- BIT L006C              \ If bit 7 of L006C is set, skip the following
- BMI C65F5              \ instruction
+ BIT L006C              \ If bit 7 of L006C is set, jump to dtab2 to skip the
+ BMI dtab2              \ following instruction, so we print the numbers from
+                        \ L0100 in the first column
 
- TYA                    \ Set A to the row number
+ TYA                    \ Set A to the row number, so we print the row number in
+                        \ the first column (i.e. 1 to 20, as )
 
-.C65F5
+.dtab2
 
- JSR GetDriverNumberBCD \ Convert the driver number in A into binary coded
-                        \ decimal (BCD), so we can print it
+ JSR GetDriverNumberBCD \ Convert the number in A into binary coded decimal
+                        \ (BCD), adding 1 in the process
 
- JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A, so
-                        \ this prints the driver number, and because we set G to
-                        \ 0 above, it will print the second digit and will not
-                        \ print leading zeroes
+ JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A, and
+                        \ because we set G to 0 above, it will print the second
+                        \ digit and will not print leading zeroes
 
  LDX #31                \ Print token 31, which prints two spaces and sets the
- JSR PrintToken         \ colours as configured above
+ JSR PrintToken         \ colours as configured above, so this inserts a black
+                        \ gap between the first and second table columns
 
  LDY rowCounter         \ Set Y to the table row number
 
  JSR PrintPositionName  \ Print the name of the driver in position Y, so row Y
                         \ of the table contains the details of the driver in
-                        \ position Y
+                        \ position Y, and set driverPrinted to the number of the
+                        \ driver that was printed
 
  LDX #31                \ Print token 31, which prints two spaces and sets the
- JSR PrintToken         \ colours as configured above
+ JSR PrintToken         \ colours as configured above, so this inserts a black
+                        \ gap between the second and third table columns
 
- LDX L0045
- PLA
- PHA
- BNE C6618
+ LDX driverPrinted      \ Set X to the number of the driver we just printed
+
+ PLA                    \ If the value of A that we stored on the stack at the
+ PHA                    \ start of the routine is non-zero, jump to dtab3 to
+ BNE dtab3              \ skip the following
+
+                        \ If we get here then the value of A passed to the
+                        \ routine was 0, so we now print the third column
+                        \ containing the driver's best lap time
 
  LDA #%00100110         \ Print the best lap time for driver X in the following
  JSR PrintLapTime       \ format:
@@ -22436,72 +22511,106 @@ ORG &5E40
                         \   * %0  Tenths: Print tenths of a second
                         \   * %11 Tenths: Leading zeroes, no second digit
 
- JMP C6643
+ JMP dtab6              \ Jump down to dtab6 to move on to the next table row
 
-.C6618
+.dtab3
 
- BMI C662B
- LDA rowCounter
+                        \ If we get here then the value of A passed to the
+                        \ routine was non-zero (i.e. 4 or &88)
+
+ BMI dtab4              \ If bit 7 of A is set (i.e. A = &88), jump to dtab4
+
+                        \ If we get here then the value of A passed to the
+                        \ routine was 4, so we now print the third column
+                        \ containing the points awarded to the driver in the
+                        \ last race
+                        \
+                        \ Only the top six drivers from each race get points,
+                        \ so we print a blank column for the other drivers
+
+ LDA rowCounter         \ Set A = rowCounter + 20
  CLC
- ADC #&14
- CMP #&1A
- TAX
- BCC C6640
+ ADC #20
 
- LDA #7                 \ Print seven spaces
- JSR PrintSpaces
+ CMP #26                \ Set X = A, and if A < 26 (so rowCounter is 0 to 5),
+ TAX                    \ jump to dtab5 to print the race points
+ BCC dtab5
 
- BEQ C6643
+ LDA #7                 \ A >= 26 (so rowCounter is 6 to 19), so print seven
+ JSR PrintSpaces        \ spaces in the last column
 
-.C662B
+ BEQ dtab6              \ Jump to dtab6 to move on to the next table row (this
+                        \ BEQ is effectively a JMP, as PrintSpaces sets the Z
+                        \ flag)
 
- LDA #%00101000
- STA G
+.dtab4
 
- LDA L04F0,X
- BEQ C6640
+                        \ If we get here then the value of A passed to the
+                        \ routine had bit 7 set, so it must have been &88, so
+                        \ we now print the third column containing the driver's
+                        \ accumulated points
 
- JSR PrintBCDNumber     \ Print the binary coded decimal (BCD) number in A
+ LDA #%00101000         \ Set G, so the next three calls to Print2DigitBCD do
+ STA G                  \ the following:
+                        \
+                        \   * No leading zeroes, print second digit
+                        \   * Leading zeroes, print second digit
+                        \   * Leading zeroes, print second digit
+                        \
+                        \ The second and third two calls to Print2DigitBCD are
+                        \ in the Print4DigitBCD routine below
 
- LDA L39E4,X
- JSR C43E7
- JMP C6643
+ LDA L04F0,X            \ If this row's L04F0 figure is zero, jump to dtab5
+ BEQ dtab5
 
-.C6640
+ JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A,
+                        \ which contains this row's L04F0 figure
 
- JSR sub_C43D0
+ LDA L39E4,X            \ Fetch this row's L39E4 figure
 
-.C6643
+ JSR Print4DigitBCD
 
- LDY rowCounter
+ JMP dtab6              \ Jump to dtab6 to move on to the next table row
+
+.dtab5
+
+ JSR Print2Or4DigitBCD
+
+.dtab6
+
+ LDY rowCounter         \ Set Y to the table row number
 
  INY                    \ Increment the table row number
 
- CPY #20
- BNE C65DD
+ CPY #20                \ Loop back to print the next table row, until we have
+ BNE dtab1              \ printed all 20
 
- LDA #3                 \ Print three spaces
+ LDA #3                 \ Print three spaces to pad out the final row
  JSR PrintSpaces
 
- LDA #&9C
+ LDA #156               \ Print ASCII 156 to switch to a black background
  JSR OSWRCH
- LDA L006C
- BPL C666E
+
+ LDA L006C              \ If bit 7 of L006C is clear, jump to dtab7 to skip the
+ BPL dtab7              \ following and do not print the race class
+
+                        \ We now print the race class and number of laps in the
+                        \ gap between the page header and the top of the table
 
  LDX #49                \ Print token 49, which moves the cursor to column 9,
  JSR PrintToken         \ row 2
 
  JSR PrintRaceClass     \ Print the race class
 
- LDA L5F3F
- CLC
- ADC #&DA
+ LDA lapsMenuOption     \ Set the configurable token in token 50 to 218 plus the
+ CLC                    \ figure in lapsMenuOption, to give 218, 219 or 220,
+ ADC #218               \ which correspond to the tokens for " 5", "10" and "20"
  STA token50+3
 
  LDX #50                \ Print token 50, which is "n laps", where n is the
  JSR PrintToken         \ number of laps we just configured
 
-.C666E
+.dtab7
 
  PLA                    \ Retrieve the value of A that we stored on the stack at
                         \ the start of the routine
@@ -22558,13 +22667,18 @@ ORG &5E40
 \
 \   Y                   The position of the driver whose name we print
 \
+\ Returns:
+\
+\   driverPrinted       The number of the driver that we printed
+\
 \ ******************************************************************************
 
 .PrintPositionName
 
  LDX driverPosition,Y   \ Set X to the number of the driver in position Y
 
- STX L0045              \ Store the driver number in L0045
+ STX driverPrinted      \ Store the driver number in driverPrinted, so we can
+                        \ return it
 
  JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
 
@@ -22587,7 +22701,7 @@ ORG &5E40
  LDX #29                \ Print token 29, which clears the screen, displays the
  JSR PrintToken         \ F3 header, and shows a " DRIVER -> " prompt
 
- LDX L006F              \ Set the driver number in X to L006F
+ LDX currentPlayer      \ Set X to the driver number of thc current player
 
  JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
 
@@ -22674,7 +22788,7 @@ ORG &5E40
 
 .GetDriverName
 
- LDX L006F              \ Set the driver number in X to L006F
+ LDX currentPlayer      \ Set X to the driver number of thc current player
 
  JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
 
@@ -22942,13 +23056,13 @@ ORG &6C00
  STA G                  \ Store A in G so we can check the value of bit 7 below
 
  LDA driverMinutes,X    \ Print the number of minutes in driver X's lap time
- JSR PrintBCDNumber
+ JSR Print2DigitBCD
 
  LDA #&3A               \ Print ":"
  JSR PrintCharacter
 
  LDA driverSeconds,X    \ Print the number of seconds in driver X's lap time
- JSR PrintBCDNumber
+ JSR Print2DigitBCD
 
  ASL G                  \ If bit 7 of G is set, we do not want to print tenths
  BCS plap1              \ of a second, so jump to plap1 to return from the 
@@ -22958,7 +23072,7 @@ ORG &6C00
  JSR PrintCharacter
 
  LDA driverTenths,X     \ Print the number of tenths of a second in driver X's
- JSR PrintBCDNumber     \ lap time
+ JSR Print2DigitBCD     \ lap time
 
 .plap1
 
