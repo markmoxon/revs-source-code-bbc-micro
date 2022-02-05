@@ -4411,37 +4411,38 @@ ORG &0B00
 
  JSR SetCustomScreen    \ Switch to the custom screen mode
 
- LDA #0
- STA printMode
+ LDA #0                 \ Set printMode = 0 so text printing pokes directly into
+ STA printMode          \ screen memory
 
- JSR CopyDashData
+ JSR CopyDashData       \ Copy the dash data from the main game code to screen
+                        \ memory
 
  JSR sub_C7BE2
 
  BIT L05F4
- BVS C16F9
+ BVS main4
 
-.C16EE
+.main1
 
  LDX #0                 \ Zero L06B4, L06CC and L06E4
  JSR sub_C5011
 
-.C16F3
+.main2
 
  JSR sub_C1805
 
-.C16F6
+.main3
 
  JSR sub_C11CE
 
-.C16F9
+.main4
 
  LDA #0
  STA L05F4
 
  JSR sub_C0B77
 
-.C1701
+.main5
 
  JSR sub_C5052
 
@@ -4492,46 +4493,46 @@ ORG &0B00
 
  JSR sub_C7BE2
 
- LDA screenSection      \ If screenSection is positive, jump to C1753 to skip
- BPL C1753              \ the following instruction
+ LDA screenSection      \ If screenSection is positive, jump to main6 to skip
+ BPL main6              \ the following instruction
 
  INC screenSection      \ screenSection is negative, so increment screenSection
 
-.C1753
+.main6
 
  LDA L62F6
- BEQ C178F
+ BEQ main10
 
  INC L62F6
 
  LDA #156               \ Set irqCounter = 156
  STA irqCounter
 
-.P1760
+.main7
 
  LDA irqCounter         \ Fetch irqCounter, which gets incremented every time
                         \ the IRQ routine reaches section 4 of the custom screen
 
- BMI P1760              \ Loop back to P1760 until irqCounter increments round
+ BMI main7              \ Loop back to main7 until irqCounter increments round
                         \ to zero (so we wait for it to go from 156 to 0)
 
-.P1765
+.main8
 
  LDA L5F3B
- BMI C16EE
+ BMI main1
 
  LDA L006C
- BPL C16F3
+ BPL main2
 
  LDA raceClass
- BEQ C16F6
+ BEQ main3
 
-.C1773
+.main9
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
  LDA L5F3B
- BMI P1765
+ BMI main8
 
  LDX #48                \ Blank out the first text line at the top of the screen
  JSR PrintSecondLineGap \ and print token 48 on the second line, to give:
@@ -4542,54 +4543,54 @@ ORG &0B00
  JSR sub_C1163
 
  LDA L05F4
- BMI C17BA
+ BMI main13
 
  LDA #&20
  STA L05F4
 
- BNE C17BA
+ BNE main13
 
-.C178F
+.main10
 
  LDY #&0B
  JSR sub_C0EE5
 
  LDA L05F4
- BEQ C17A8
- BPL C1773
+ BEQ main11
+ BPL main9
 
  AND #&40
- BEQ C17BA
+ BEQ main13
 
  LDA carMoving
- BEQ C17BA
+ BEQ main13
 
  LDA #0
  STA L05F4
 
-.C17A8
+.main11
 
  LDX L000F
- BEQ C17B1
+ BEQ main12
 
  DEX
 
- BEQ C1773
+ BEQ main9
 
  STX L000F
 
-.C17B1
+.main12
 
  JSR sub_C0E74
 
  JSR sub_C513A
 
- JMP C1701
+ JMP main5
 
-.C17BA
+.main13
 
- LDA #&80
- JSR CopyDashData
+ LDA #&80               \ Copy the dash data from screen memory back to the main
+ JSR CopyDashData       \ game code
 
  JSR KillCustomScreen   \ Disable the custom screen mode and switch to mode 7
 
@@ -4864,8 +4865,8 @@ ORG &0B00
 \       Name: CopyDashData
 \       Type: Subroutine
 \   Category: Dashboard
-\    Summary: Copy dash data from the main game code to screen memory, and vice
-\             versa
+\    Summary: Copy the dash data from the main game code to screen memory, and
+\             vice versa
 \  Deep dive: The jigsaw puzzle binary
 \
 \ ------------------------------------------------------------------------------
@@ -10908,23 +10909,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 2 in the custom screen mode
-\
-\ ******************************************************************************
-
-.paletteSection2
-
- EQUB &07, &17, &47, &57
- EQUB &23, &33, &63, &73
- EQUB &80, &90, &C0, &D0
- EQUB &A5, &B5, &E5, &F5
-
-\ ******************************************************************************
-\
-\       Name: paletteSection0
-\       Type: Variable
-\   Category: Screen mode
-\    Summary: Colour palette for screen section 0 in the custom screen mode (the
-\             mode 4 section)
+\             (part of the mode 5 portion)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -10940,12 +10925,41 @@ ORG &0B00
 \
 \ ******************************************************************************
 
+.paletteSection2
+
+ EQUB &07, &17          \ Map logical colour 0 to physical colour 0 (black)
+ EQUB &47, &57
+
+ EQUB &23, &33          \ Map logical colour 1 to physical colour 4 (blue)
+ EQUB &63, &73
+
+ EQUB &80, &90          \ Map logical colour 2 to physical colour 7 (white)
+ EQUB &C0, &D0
+
+ EQUB &A5, &B5          \ Map logical colour 3 to physical colour 2 (green)
+ EQUB &E5, &F5
+
+\ ******************************************************************************
+\
+\       Name: paletteSection0
+\       Type: Variable
+\   Category: Screen mode
+\    Summary: Colour palette for screen section 0 in the custom screen mode (the
+\             mode 4 portion)
+\
+\ ******************************************************************************
+
 .paletteSection0
 
- EQUB &03, &13, &23, &33
- EQUB &43, &53, &63, &73
- EQUB &84, &94, &A4, &B4
- EQUB &C4, &D4, &E4, &F4
+ EQUB &03, &13          \ Map logical colour 0 to physical colour 4 (blue)
+ EQUB &23, &33
+ EQUB &43, &53
+ EQUB &63, &73
+
+ EQUB &84, &94          \ Map logical colour 1 to physical colour 3 (yellow)
+ EQUB &A4, &B4
+ EQUB &C4, &D4
+ EQUB &E4, &F4
 
 \ ******************************************************************************
 \
@@ -10953,12 +10967,14 @@ ORG &0B00
 \       Type: Variable
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 3 in the custom screen mode
+\             (part of the mode 5 portion)
 \
 \ ******************************************************************************
 
 .paletteSection3
 
- EQUB &26, &36, &66, &76
+ EQUB &26, &36          \ Map logical colour 1 to physical colour 6 (cyan)
+ EQUB &66, &76
 
 \ ******************************************************************************
 \
@@ -10966,12 +10982,14 @@ ORG &0B00
 \       Type: Variable
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 4 in the custom screen mode
+\             (part of the mode 5 portion)
 \
 \ ******************************************************************************
 
 .paletteSection4
 
- EQUB &A1, &B1, &E1, &F1
+ EQUB &A1, &B1          \ Map logical colour 3 to physical colour 1 (red)
+ EQUB &E1, &F1
 
 \ ******************************************************************************
 \
@@ -18430,7 +18448,7 @@ NEXT
 \       Type: Variable
 \   Category: Screen mode
 \    Summary: The section of the screen that is currently being drawn by the
-\             custom screen interrupt handler
+\             custom screen interrupt handler (0 to 4)
 \
 \ ******************************************************************************
 
