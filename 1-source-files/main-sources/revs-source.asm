@@ -10973,7 +10973,7 @@ ORG &0B00
 
 .paletteSection3
 
- EQUB &26, &36          \ Map logical colour 1 to physical colour 6 (cyan)
+ EQUB &26, &36          \ Map logical colour 1 to physical colour 1 (red)
  EQUB &66, &76
 
 \ ******************************************************************************
@@ -10988,7 +10988,7 @@ ORG &0B00
 
 .paletteSection4
 
- EQUB &A1, &B1          \ Map logical colour 3 to physical colour 1 (red)
+ EQUB &A1, &B1          \ Map logical colour 3 to physical colour 6 (cyan)
  EQUB &E1, &F1
 
 \ ******************************************************************************
