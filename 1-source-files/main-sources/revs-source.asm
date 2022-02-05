@@ -58,13 +58,14 @@ trackLoad = &70DB       \ The load address of the track data file
 trackChecksum = &7800   \ The address of the checksums in the track data file
                         \ after it is loaded but before it is moved in memory
 
-L6E85 = &6E85           \ Dashboard screen memory, always there
-L6E8A = &6E8A
-L6FB2 = &6FB2
-L6FBD = &6FBD
-L6FC0 = &6FC0
+tyreLeft1 = &6E85       \ The left and right tyres in screen memory
+tyreLeft2 = &6E8A
+tyreRight1 = &6FB2
+tyreRight2 = &6FBD
+tyreLeft3 = &6FC0
+tyreRight3 = &70F8
+
 L7000 = &7000
-L70F8 = &70F8
 L713D = &713D
 L7205 = &7205
 
@@ -89,9 +90,13 @@ row24_column5 = &7FC5   \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
 
 ORG &0000
 
-.L0000
+.carMoving
 
- SKIP 1                 \ 
+ SKIP 1                 \ Flag to denote whether the car is moving
+                        \
+                        \   * 0 = not moving
+                        \
+                        \   * Non-zero = moving
 
 .L0001
 
@@ -274,9 +279,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L002E
+.speedLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ Low byte of the car's speed
+                        \
+                        \ In mph? This looks like the fractional part
 
 .L002F
 
@@ -500,9 +507,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0063
+.speedHi
 
- SKIP 1                 \ 
+ SKIP 1                 \ High byte of the car's speed
+                        \
+                        \ In mph? This looks like the integer part
 
 .printMode
 
@@ -3052,7 +3061,7 @@ ORG &0B00
 .sub_C1163
 
  LDA #0
- STA L0000
+ STA carMoving
  STA L006D
  JSR SetL018CBit7
  LDX currentPlayer
@@ -4387,9 +4396,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C16DC
+\       Name: MainDrivingLoop
 \       Type: Subroutine
-\   Category: 
+\   Category: Main loop
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -4398,13 +4407,17 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C16DC
+.MainDrivingLoop
 
- JSR setCustomScreenMode
+ JSR SetCustomScreen    \ Switch to the custom screen mode
+
  LDA #0
  STA printMode
+
  JSR CopyDashData
+
  JSR sub_C7BE2
+
  BIT L05F4
  BVS C16F9
 
@@ -4425,58 +4438,91 @@ ORG &0B00
 
  LDA #0
  STA L05F4
+
  JSR sub_C0B77
 
 .C1701
 
  JSR sub_C5052
+
  JSR sub_C7B4A
+
  JSR sub_C1579
+
  JSR sub_C46A1
+
  JSR sub_C24F6
+
  JSR sub_C4626
+
  JSR sub_C24B9
+
  JSR sub_C0FFE
+
  JSR sub_C0E74
+
  JSR sub_C66B6
+
  JSR sub_C1A20
+
  JSR sub_C0E74
+
  JSR sub_C18BC
+
  JSR sub_C4CA4
+
  LDX #&17
  JSR sub_C2AD1
+
  JSR sub_C1B12
+
  JSR sub_C2637
+
  JSR sub_C1E15
+
  JSR sub_C7B00
+
  JSR sub_C0E74
+
  JSR sub_C4F44
+
  JSR sub_C1BB9
+
  JSR sub_C111E
+
  JSR sub_C7BE2
- LDA screenSection
- BPL C1753
- INC screenSection
+
+ LDA screenSection      \ If screenSection is positive, jump to C1753 to skip
+ BPL C1753              \ the following instruction
+
+ INC screenSection      \ screenSection is negative, so increment screenSection
 
 .C1753
 
  LDA L62F6
  BEQ C178F
+
  INC L62F6
- LDA #&9C
- STA L62F7
+
+ LDA #156               \ Set irqCounter = 156
+ STA irqCounter
 
 .P1760
 
- LDA L62F7
- BMI P1760
+ LDA irqCounter         \ Fetch irqCounter, which gets incremented every time
+                        \ the IRQ routine reaches section 4 of the custom screen
+
+ BMI P1760              \ Loop back to P1760 until irqCounter increments round
+                        \ to zero (so we wait for it to go from 156 to 0)
 
 .P1765
 
  LDA L5F3B
  BMI C16EE
+
  LDA L006C
  BPL C16F3
+
  LDA raceClass
  BEQ C16F6
 
@@ -4494,23 +4540,30 @@ ORG &0B00
                         \    "             PLEASE  WAIT             "
 
  JSR sub_C1163
+
  LDA L05F4
  BMI C17BA
+
  LDA #&20
  STA L05F4
+
  BNE C17BA
 
 .C178F
 
  LDY #&0B
  JSR sub_C0EE5
+
  LDA L05F4
  BEQ C17A8
  BPL C1773
+
  AND #&40
  BEQ C17BA
- LDA L0000
+
+ LDA carMoving
  BEQ C17BA
+
  LDA #0
  STA L05F4
 
@@ -4518,22 +4571,29 @@ ORG &0B00
 
  LDX L000F
  BEQ C17B1
+
  DEX
+
  BEQ C1773
+
  STX L000F
 
 .C17B1
 
  JSR sub_C0E74
+
  JSR sub_C513A
+
  JMP C1701
 
 .C17BA
 
  LDA #&80
  JSR CopyDashData
- JSR sub_C4F23
- RTS
+
+ JSR KillCustomScreen   \ Disable the custom screen mode and switch to mode 7
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4638,7 +4698,7 @@ ORG &0B00
 
 .P1809
 
- STA L0000,X
+ STA carMoving,X
  DEX
  BPL P1809
  LDX #&7F
@@ -6331,7 +6391,7 @@ ORG &0B00
  LDY L0022
  LDA #&3C
  SEC
- SBC L0063
+ SBC speedHi
  BPL C1F59
  LDA #0
 
@@ -13615,7 +13675,7 @@ NEXT
 .sub_C3D5C
 
  LDA #0
- STA L0000
+ STA carMoving
  STA T
  STA P
  LDA #&30
@@ -15451,7 +15511,7 @@ NEXT
 
 .C450C
 
- LDA L0063
+ LDA speedHi
  BNE C4521
 
 .C4510
@@ -15638,7 +15698,7 @@ NEXT
  PLP
  ADC #0
  STA L6284
- LDA L0063
+ LDA speedHi
  STA U
  LDA #&21
 
@@ -15841,27 +15901,31 @@ NEXT
  LDX L000A
  JSR sub_C0D01
  JSR sub_C48B9
+
  LDA L62D8Lo
  STA L0038
  LDA L62E8Hi
  STA L0039
+
  LDA L62D9Lo
  STA T
  LDA L62E9Hi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
- STA L0063
+ STA speedHi
+
  LDA T
- STA L002E
- LDY L0063
+ STA speedLo
+
+ LDY speedHi
  BNE C46CD
  AND #&F0
  TAY
 
 .C46CD
 
- STY L0000
+ STY carMoving
  JSR sub_C4729
  JSR sub_C4BCF
  JSR sub_C49CE
@@ -16514,7 +16578,7 @@ NEXT
  LDY gearNumber
  DEY
  BEQ C4988
- LDA L0063
+ LDA speedHi
  BNE C4993
 
 .C4988
@@ -16606,9 +16670,9 @@ NEXT
  LDY gearNumber
  DEY
  BEQ C499F
- LDA L002E
+ LDA speedLo
  STA T
- LDA L0063
+ LDA speedHi
  ASL T
  ROL A
  PHP
@@ -16638,7 +16702,7 @@ NEXT
  LDY L003E
  DEY
  BNE C4A26
- LDY L0063
+ LDY speedHi
  CPY #&16
  BCS C4A26
  LDY L006D
@@ -17097,7 +17161,7 @@ NEXT
  CLC
  ADC #1
  STA G
- LDA L0063
+ LDA speedHi
  STA U
  LDX #0
  LDA L713D
@@ -17139,7 +17203,7 @@ NEXT
 
 .C4C28
 
- LDA L0063
+ LDA speedHi
  CMP #&35
  BCC C4C30
  LDA #&35
@@ -17232,9 +17296,9 @@ NEXT
  JSR Absolute8Bit       \ Set A = |A|
 
  STA U
- CMP L0063
+ CMP speedHi
  BCS C4C72
- LDA L0063
+ LDA speedHi
 
 .C4C72
 
@@ -17252,7 +17316,7 @@ NEXT
  LDY #6
  LDA L0039
  JSR sub_C48A0
- LDA L0063
+ LDA speedHi
  STA U
  LDA L62F1
 
@@ -17655,7 +17719,7 @@ NEXT
 
 .sub_C4DC9
 
- LDA L0063
+ LDA speedHi
 
 \ ******************************************************************************
 \
@@ -17685,20 +17749,16 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: setCustomScreenMode
+\       Name: SetCustomScreen
 \       Type: Subroutine
 \   Category: Screen mode
 \    Summary: Switch to the custom screen mode
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
-.setCustomScreenMode
+.SetCustomScreen
 
- SEI                    \ Disable interrupts so we can update the 6845
+ SEI                    \ Disable interrupts so we can update the 6845 registers
 
                         \ First we switch screen mode to the custom screen mode
                         \ used for the race, which is based on mode 5 but is
@@ -17728,8 +17788,8 @@ NEXT
  BPL cust1              \ Loop back until we have set registers R0 to R13 to the
                         \ values in the screenRegisters table
 
- DEX                    \ Set screenSection = 255
- STX screenSection
+ DEX                    \ Set screenSection = -1, as the above loop finishes
+ STX screenSection      \ with X = 0
 
  CLI                    \ Re-enable interrupts
 
@@ -17800,11 +17860,11 @@ NEXT
 
  LDA #%11000000         \ Set 6522 User VIA interrupt enable register IER
  STA VIA+&6E            \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
-                        \ interrupt from the System VIA)
+                        \ interrupt from the User VIA)
 
  STA VIA+&4E            \ Set 6522 System VIA interrupt enable register IER
                         \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
-                        \ interrupt from the User VIA)
+                        \ interrupt from the System VIA)
 
  LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter to
  STA VIA+&64            \ (SHEILA &44) to &D4
@@ -17851,7 +17911,7 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ The screen handler starts a new screen with screenSection = 255, and then
+\ The screen handler starts a new screen with screenSection = -1, and then
 \ increments it through 0, 1, 2, 3, 4 and 5, at which point this handler stops
 \ doing anything.
 \
@@ -17861,7 +17921,7 @@ NEXT
 \
 \ ******************************************************************************
 
- JMP (irq1Address)      \ Jump to the original address from IRQV1 to pass
+ JMP (irq1Address)      \ Jump to the original address from IRQ1V to pass
                         \ control to the next interrupt handler
 
 .screenHandler
@@ -17935,10 +17995,10 @@ NEXT
 
                         \ If we get here, then screenSection is negative
 
- CMP #&FF               \ If screenSection <> 255, then jump to hand14 to
+ CMP #&FF               \ If screenSection <> -1, then jump to hand14 to
  BNE hand14             \ return from the interrupt handler
 
-                        \ If we get here, then screenSection = 255
+                        \ If we get here, then screenSection = -1
 
  INC screenSection      \ Set screenSection = 0
 
@@ -17979,17 +18039,17 @@ NEXT
  BCC hand6              \ Loop back until the addition overflows after we send
                         \ &F3 to the ULA
 
- LDA #&3C
- SEC
- SBC L4F1F
- STA L4F21
+ LDA #&3C               \ Set (timer2Hi timer2Lo) = &153C - (timer1Hi timer1Lo)
+ SEC                    \
+ SBC timer1Lo           \ starting with the low bytes
+ STA timer2Lo
 
- LDA #&15
- SBC L4F20
- STA L4F22
+ LDA #&15               \ And then the high bytes
+ SBC timer1Hi
+ STA timer2Hi
 
- LDA L4F1F
- LDX L4F20
+ LDA timer1Lo           \ Set (X A) = (timer1Hi timer1Lo)
+ LDX timer1Hi
 
  BCS hand13             \ Jump to hand13 to set timer 1 and return from the
                         \ subroutine (this BCS is effectively a JMP as the C
@@ -18012,8 +18072,8 @@ NEXT
 
  BPL hand8              \ Loop back until we have sent all 16 bytes
 
- LDA L4F21
- LDX L4F22
+ LDA timer2Lo           \ Set (X A) = (timer2Hi timer2Lo)
+ LDX timer2Hi
 
  BNE hand13             \ Jump to hand13 to set timer 1 and return from the
                         \ subroutine (this BNE is effectively a JMP as X is
@@ -18060,12 +18120,14 @@ NEXT
 
  BPL hand12             \ Loop back until we have sent all 16 bytes
 
- STX screenSection      \ Set screenSection = 255
+ STX screenSection      \ Set screenSection = -1, as the above loop finishes
+                        \ with X = 255
 
- JSR sub_C52A4          \ ???
+ JSR AnimateTyres       \ Animate the tyres on either side of the screen
 
- LDA #&FF
- STA VIA+&69            \ user_via_t2c_h
+ LDA #&FF               \ Set 6522 User VIA T2C-H timer 2 high-order counter
+ STA VIA+&69            \ (SHEILA &69) to &FF to start the T2 counter
+                        \ counting down from &FFxx at a rate of 1 MHz
 
  LDA #&16               \ Set (X A) = &0B16 so we set timer 1 counting down from
  LDX #&0B               \ 2838
@@ -18243,97 +18305,84 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L4F1F
+\       Name: timer1Lo
 \       Type: Variable
-\   Category: 
+\   Category: Screen mode
 \    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
 \
 \ ******************************************************************************
 
-.L4F1F
+.timer1Lo
 
  EQUB &D8
 
 \ ******************************************************************************
 \
-\       Name: L4F20
+\       Name: timer1Hi
 \       Type: Variable
-\   Category: 
+\   Category: Screen mode
 \    Summary: 
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
-.L4F20
+.timer1Hi
 
- EQUB 4
+ EQUB &04
 
 \ ******************************************************************************
 \
-\       Name: L4F21
+\       Name: timer2Lo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Low byte of the timer for screen section 2
 \
 \ ******************************************************************************
 
-.L4F21
+.timer2Lo
 
  EQUB &64
 
 \ ******************************************************************************
 \
-\       Name: L4F22
+\       Name: timer2Hi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: High byte of the timer for screen section 2
 \
 \ ******************************************************************************
 
-.L4F22
+.timer2Hi
 
  EQUB &10
 
 \ ******************************************************************************
 \
-\       Name: sub_C4F23
+\       Name: KillCustomScreen
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Disable the custom screen mode and switch to mode 7
 \
 \ ******************************************************************************
 
-.sub_C4F23
+.KillCustomScreen
 
- SEI
- LDA irq1Address
- STA IRQ1V
+ SEI                    \ Disable interrupts so we can update the interrupt
+                        \ vector and VIA
+
+ LDA irq1Address        \ Set the IRQ1V vector to irq1Address, which removes the
+ STA IRQ1V              \ custom screen interrupt handler from the chain
  LDA irq1Address+1
  STA IRQ1V+1
- LDA #&40
- STA VIA+&6E            \ user_via_ier
- CLI
+
+ LDA #%01000000         \ Set 6522 User VIA interrupt enable register IER
+ STA VIA+&6E            \ (SHEILA &4E) bit 6 (i.e. disable the Timer1 interrupt
+                        \ from the User VIA, as we no longer neeed it)
+
+ CLI                    \ Re-enable interrupts
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
+
+                        \ Fall througn into SetScreenMode7 to switch to mode 7
 
 \ ******************************************************************************
 \
@@ -18358,12 +18407,9 @@ NEXT
 \
 \       Name: screenSection
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ This timer increments 
+\   Category: Screen mode
+\    Summary: The section of the screen that is currently being drawn by the
+\             custom screen interrupt handler
 \
 \ ******************************************************************************
 
@@ -18413,14 +18459,20 @@ NEXT
  PLP
  ROR U
  ROR A
- SEI
- CLC
- ADC #&D8
- STA L4F1F
- LDA #4
+
+ SEI                    \ Disable interrupts so we can update the custom screen
+                        \ variables
+
+ CLC                    \ Set (timer1Hi timer1Lo) = (U A) + &04D8
+ ADC #&D8               \
+ STA timer1Lo           \ starting with the low bytes
+
+ LDA #&04               \ And then the high bytes
  ADC U
- STA L4F20
- CLI
+ STA timer1Hi
+
+ CLI                    \ Re-enable interrupts
+
  RTS
 
 \ ******************************************************************************
@@ -19429,97 +19481,100 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C52A4
+\       Name: AnimateTyres
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Update screen memory to animate the tyres
 \
 \ ******************************************************************************
 
-.sub_C52A4
+.AnimateTyres
 
- INC L62F7
- LDA L0063
+ INC irqCounter         \ Increment irqCounter, so it gets incremented every
+                        \ time the IRQ routine reaches section 4 of the custom
+                        \ screen
+
+ LDA speedHi            \ Set tyreTravel = tyreTravel + speedHi + 48
  CLC
- ADC #&30
- ADC L62FA
- STA L62FA
- BCC C52F5
- LDA L0000
- BEQ C52F5
- LDX #4
+ ADC #48
+ ADC tyreTravel
+ STA tyreTravel
 
-.C52BA
+ BCC tyre4              \ If the addition didn't overflow, jump to tyre4 to
+                        \ return from the subroutine
 
- LDA L6FC0,X
- EOR L52F6,X
- STA L6FC0,X
- LDA L70F8,X
- EOR L52FB,X
- STA L70F8,X
- CPX #3
- BCS C52E2
- LDA L6E85,X
- EOR #&F0
- STA L6E85,X
- LDA L6FBD,X
- EOR #&F0
- STA L6FBD,X
- BNE C52F2
+ LDA carMoving          \ If carMoving = 0 then the car is not moving and we
+ BEQ tyre4              \ don't need to animate the tyres, so jump to tyre4 to
+                        \ return from the subroutine
 
-.C52E2
+ LDX #4                 \ Set a loop counter to go from 4 to 0
 
- LDA L6E8A,X
- EOR #&C0
- STA L6E8A,X
- LDA L6FB2,X
- EOR #&30
- STA L6FB2,X
+.tyre1
 
-.C52F2
+ LDA tyreLeft3,X        \ Set tyreLeft3 = tyreLeft3 EOR tyreTread1
+ EOR tyreTread1,X
+ STA tyreLeft3,X
 
- DEX
- BPL C52BA
+ LDA tyreRight3,X       \ Set tyreRight3 = tyreRight3 EOR tyreTread2
+ EOR tyreTread2,X
+ STA tyreRight3,X
 
-.C52F5
+ CPX #3                 \ If X >= 3, jump to tyre2 to skip the following
+ BCS tyre2
 
- RTS
+ LDA tyreLeft1,X        \ Flip the top four bits of tyreLeft1
+ EOR #%11110000
+ STA tyreLeft1,X
+
+ LDA tyreRight2,X       \ Flip the top four bits of tyreRight2
+ EOR #%11110000
+ STA tyreRight2,X
+
+ BNE tyre3              \ If A is non-zero, jump to tyre3 to continue the loop
+
+.tyre2
+
+ LDA tyreLeft2,X        \ Flip bits 6 and 7 of tyreLeft2
+ EOR #%11000000
+ STA tyreLeft2,X
+
+ LDA tyreRight1,X       \ Flip bits 4 and 5 of tyreRight1
+ EOR #%00110000
+ STA tyreRight1,X
+
+.tyre3
+
+ DEX                    \ Decrement the loop counter
+
+ BPL tyre1              \ Loop back to 
+
+.tyre4
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: L52F6
+\       Name: tyreTread1
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Tyre tread pattern
 \
 \ ******************************************************************************
 
-.L52F6
+.tyreTread1
 
  EQUB &F0, &F0, &C0, &C0, &80
 
 \ ******************************************************************************
 \
-\       Name: L52FB
+\       Name: tyreTread2
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Tyre tread pattern
 \
 \ ******************************************************************************
 
-.L52FB
+.tyreTread2
 
  EQUB &F0, &F0, &30, &30, &10
 
@@ -21459,18 +21514,15 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L62F7
+\       Name: irqCounter
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Counter that gets incremented every time the IRQ routine reaches
+\             section 4 of the custom screen
 \
 \ ******************************************************************************
 
-.L62F7
+.irqCounter
 
  EQUB 0
 
@@ -21510,18 +21562,15 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L62FA
+\       Name: tyreTravel
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Keeps track of how far we have travelled so we know when to
+\             animate the tyres
 \
 \ ******************************************************************************
 
-.L62FA
+.tyreTravel
 
  EQUB 0
 
@@ -22457,7 +22506,7 @@ ORG &5E40
 .P6560
 
  JSR GetWingSettings
- JSR sub_C16DC
+ JSR MainDrivingLoop
  BIT L05F4
  BVS P6560
  BPL C6570
