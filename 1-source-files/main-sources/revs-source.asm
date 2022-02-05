@@ -17852,11 +17852,11 @@ NEXT
  LDA #%01000000         \ Set 6522 User VIA auxiliary control register ACR
  STA VIA+&6B            \ (SHEILA &6B) bits 7 and 6 to disable PB7 (which is one
                         \ of the pins on the user port) and set continuous
-                        \ interrupts for Timer1
+                        \ interrupts for timer 1
 
  ORA VIA+&4B            \ Set 6522 System VIA auxiliary control register ACR
  STA VIA+&4B            \ (SHEILA &6B) bit 6 to set continuous interrupts for
-                        \ Timer1
+                        \ timer 1
 
  LDA #%11000000         \ Set 6522 User VIA interrupt enable register IER
  STA VIA+&6E            \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
@@ -17867,35 +17867,46 @@ NEXT
                         \ interrupt from the System VIA)
 
  LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter to
- STA VIA+&64            \ (SHEILA &44) to &D4
+ STA VIA+&64            \ (SHEILA &44) to &D4 (so this sets the low-order
+                        \ counter but does not start counting until the
+                        \ high-order counter is set)
 
  LDA #&11               \ Set 6522 User VIA T1C-H timer 1 high-order counter
  STA VIA+&65            \ (SHEILA &45) to &11 to start the T1 counter
                         \ counting down from &1164 (4452) at a rate of 1 MHz
 
- LDA #1                 \ Set 6522 System VIA T1L-L timer 1 low-order latches
- STA VIA+&46            \ to 1 (so this sets the low-order counter)
+ LDA #&01               \ Set 6522 System VIA T1L-L timer 1 low-order latches
+ STA VIA+&46            \ to &01 (so this sets the low-order counter but does
+                        \ not start counting until the high-order counter is
+                        \ set)
 
  LDA #&3D               \ Set 6522 System VIA T1C-H timer 1 high-order counter
- STA VIA+&45            \ to &3D, so it counts down from &3D01
+ STA VIA+&45            \ to &3D, to start the T1 counter counting down from
+                        \ &3D01
 
- LDA #&1E               \ Set 6522 System VIA T1C-L timer 1 low-order latches
- STA VIA+&46            \ to &1E (so this sets the low-order counter)
+ LDA #&1E               \ Set 6522 System VIA T1L-L timer 1 low-order latches
+ STA VIA+&46            \ to &1E (so this sets the low-order counter but does
+                        \ not start counting until the high-order counter is
+                        \ set)
 
  STA VIA+&66            \ Set 6522 User VIA T1L-L timer 1 low-order latches
-                        \ to &1E (so this sets the low-order counter)
+                        \ to &1E (so this sets the low-order counter but does
+                        \ not start counting until the high-order counter is
+                        \ set)
 
- LDA #&4E               \ Set 6522 System VIA T1C-H timer 1 high-order latches
+ LDA #&4E               \ Set 6522 System VIA T1L-H timer 1 high-order latches
  STA VIA+&47            \ to &4E (so this sets the timer to &4E1E (19998) but
-                        \ doesn't latch it in to the counter)
+                        \ does not start counting until the current timer has
+                        \ run down)
 
- STA VIA+&67            \ Set 6522 User VIA T1C-H timer 1 high-order latches
+ STA VIA+&67            \ Set 6522 User VIA T1L-H timer 1 high-order latches
                         \ to &4E (so this sets the timer to &4E1E (19998) but
-                        \ doesn't latch it in to the counter)
+                        \ does not start counting until the current timer has
+                        \ run down)
 
- LDA #HI(screenHandler) \ Set the IRQ1V vector to screenHandler, so the
- STA IRQ1V+1            \ screenHandler routine is now the interrupt handler
- LDA #LO(screenHandler)
+ LDA #HI(ScreenHandler) \ Set the IRQ1V vector to ScreenHandler, so the
+ STA IRQ1V+1            \ ScreenHandler routine is now the interrupt handler
+ LDA #LO(ScreenHandler)
  STA IRQ1V
 
  CLI                    \ Re-enable interrupts
@@ -17904,7 +17915,7 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: screenHandler
+\       Name: ScreenHandler
 \       Type: Subroutine
 \   Category: Screen mode
 \    Summary: The IRQ handler for the custom screen mode
@@ -17917,14 +17928,14 @@ NEXT
 \
 \ Other entry points:
 \
-\   screenHandler-3     Jump to the original IRQ handler
+\   ScreenHandler-3     Jump to the original IRQ handler
 \
 \ ******************************************************************************
 
  JMP (irq1Address)      \ Jump to the original address from IRQ1V to pass
                         \ control to the next interrupt handler
 
-.screenHandler
+.ScreenHandler
 
  LDA VIA+&6D            \ Set A to the 6522 User VIA interrupt flag register IFR
                         \ (SHEILA &46D)
@@ -17932,12 +17943,14 @@ NEXT
  AND #%01000000         \ Extract bit 6, which is set when 6522 User VIA timer 1
                         \ runs down to zero
 
- BEQ screenHandler-3    \ If the Timer1 interrupt has not fired, jump up to
-                        \ screenHandler-3 as we do not need to do anything at
+ BEQ ScreenHandler-3    \ If the Timer1 interrupt has not fired, jump up to
+                        \ ScreenHandler-3 as we do not need to do anything at
                         \ this point
 
  STA VIA+&6D            \ Set bit 6 of the 6522 User VIA interrupt flag register
-                        \ IFR (SHEILA &46D) to reset timer 1
+                        \ IFR (SHEILA &6D) to clear the timer 1 interrupt (the
+                        \ timer will already have restarted as we set it to
+                        \ continuous interrupts in SetCustomScreen)
 
  TXA                    \ Store X on the stack so we can preserve it through the
  PHA                    \ interrupt handler
@@ -17957,7 +17970,8 @@ NEXT
  CMP #3                 \ If screenSection = 3, jump to hand9
  BEQ hand9
 
- BCS hand11             \ If screenSection >= 3, i.e. screenSection = 4, jump to hand11
+ BCS hand11             \ If screenSection >= 3, i.e. screenSection = 4, jump
+                        \ to hand11
 
 .hand1
 
@@ -17984,12 +17998,13 @@ NEXT
 
 .hand3
 
- LDA #&C4               \ Set (X A) = &0FC4 so we set timer 1 counting down from
- LDX #&0F               \ 4036
+ LDA #&C4               \ Set (X A) = &0FC4 to latch into the User VIA timer 1,
+ LDX #&0F               \ so on the next timer loop it counts down from &0FC4
+                        \ (4036)
 
- BNE hand13             \ Jump to hand13 to set timer 1 and return from the
-                        \ subroutine (this BNE is effectively a JMP as X is
-                        \ never zero)
+ BNE hand13             \ Jump to hand13 to latch (X A) into User VIA timer 1
+                        \ and return from the subroutine (this BNE is
+                        \ effectively a JMP as X is never zero)
 
 .hand4
 
@@ -18048,12 +18063,14 @@ NEXT
  SBC timer1Hi
  STA timer2Hi
 
- LDA timer1Lo           \ Set (X A) = (timer1Hi timer1Lo)
- LDX timer1Hi
+ LDA timer1Lo           \ Set (X A) = (timer1Hi timer1Lo) to latch into the User
+ LDX timer1Hi           \ VIA timer 1, so on the next timer loop it counts down
+                        \ from (timer1Hi timer1Lo)
 
- BCS hand13             \ Jump to hand13 to set timer 1 and return from the
-                        \ subroutine (this BCS is effectively a JMP as the C
-                        \ flag is still set from above)
+ BCS hand13             \ Jump to hand13 to latch (X A) into User VIA timer 1
+                        \ and return from the subroutine (this BCS is
+                        \ effectively a JMP as the C flag is still set from
+                        \ above)
 
 .hand7
 
@@ -18072,12 +18089,13 @@ NEXT
 
  BPL hand8              \ Loop back until we have sent all 16 bytes
 
- LDA timer2Lo           \ Set (X A) = (timer2Hi timer2Lo)
- LDX timer2Hi
+ LDA timer2Lo           \ Set (X A) = (timer2Hi timer2Lo) to latch into the User
+ LDX timer2Hi           \ VIA timer 1, so on the next timer loop it counts down
+                        \ from (timer2Hi timer2Lo)
 
- BNE hand13             \ Jump to hand13 to set timer 1 and return from the
-                        \ subroutine (this BNE is effectively a JMP as X is
-                        \ never zero)
+ BNE hand13             \ Jump to hand13 to latch (X A) into User VIA timer 1
+                        \ and return from the subroutine (this BNE is
+                        \ effectively a JMP as X is never zero)
 
 .hand9
 
@@ -18096,12 +18114,13 @@ NEXT
 
  BPL hand10             \ Loop back until we have sent all 16 bytes
 
- LDA #&00               \ Set (X A) = &1E00 so we set timer 1 counting down from
- LDX #&1E               \ 7680
+ LDA #&00               \ Set (X A) = &1E00 to latch into the User VIA timer 1,
+ LDX #&1E               \ so on the next timer loop it counts down from &1E00
+                        \ (7680)
 
- BNE hand13             \ Jump to hand13 to set timer 1 and return from the
-                        \ subroutine (this BNE is effectively a JMP as X is
-                        \ never zero)
+ BNE hand13             \ Jump to hand13 to latch (X A) into User VIA timer 1
+                        \ and return from the subroutine (this BNE is
+                        \ effectively a JMP as X is never zero)
 
 .hand11
 
@@ -18129,13 +18148,15 @@ NEXT
  STA VIA+&69            \ (SHEILA &69) to &FF to start the T2 counter
                         \ counting down from &FFxx at a rate of 1 MHz
 
- LDA #&16               \ Set (X A) = &0B16 so we set timer 1 counting down from
- LDX #&0B               \ 2838
+ LDA #&16               \ Set (X A) = &0B16 to latch into the User VIA timer 1,
+ LDX #&0B               \ so on the next timer loop it counts down from &0B16
+                        \ (2838)
 
 .hand13
 
- STX VIA+&67            \ Set 6522 System VIA T1L-H and T1L-L to set timer 1
- STA VIA+&66            \ counting down from (X A)
+ STX VIA+&67            \ Set 6522 User VIA T1L-H and T1L-L to set both timer 1
+ STA VIA+&66            \ latches (so this sets the timer to (X A) but does not
+                        \ start counting until the current timer has run down)
 
  INC screenSection      \ Increment the screen section counter to move on to the
                         \ next section
