@@ -551,11 +551,13 @@ ORG &0000
  SKIP 1                 \ The value of the stack pointer when the game starts,
                         \ so we can restore it when restarting the game
 
-.L006C
+.raceStarted
 
- SKIP 1                 \ Bit 7 affects a lot of things, e.g. the number that
-                        \ appears in the first column of the driver table
-                        \ (1-20 is bit 7 clear, numbers from L0100 if bit 7 set)
+ SKIP 1                 \ Flag determining whether the race has started
+                        \
+                        \   * Bit 7 clear = this is practice or a qualifying lap
+                        \
+                        \   * Bit 7 set = the race has started
 
 .L006D
 
@@ -709,13 +711,9 @@ ORG &0000
 
 ORG &0100
 
-.L0100
+.sortedDrivers
 
- SKIP 1                 \ 
-
-.L0101
-
- SKIP 19                \ 
+ SKIP 20                \ Driver numbers, sorted for display in the driver table
 
 .L0114
 
@@ -723,7 +721,7 @@ ORG &0100
 
 .driverSpeed
 
- SKIP 19                \ The speed of this driver in the race (88 to 162)
+ SKIP 20                \ The speed of this driver in the race (88 to 162)
                         \
                         \ The speed for each driver depends on a number of
                         \ factors, and is calculated in the SetDriverSpeed
@@ -731,14 +729,9 @@ ORG &0100
                         \
                         \ Indexed by driver number (0 to 19)
 
-.L013B
-
- SKIP 1                 \ 
-
-
 .driverPosition
 
- SKIP 19                \ The current position of each driver in the race (i.e.
+ SKIP 20                \ The current position of each driver in the race (i.e.
                         \ first place, second place etc.)
                         \
                         \ Indexed by driver number (0 to 19)
@@ -746,11 +739,7 @@ ORG &0100
                         \ Gets set in InitialiseDrivers to the number of each
                         \ driver
 
-.L014F
-
- SKIP 1                 \ 
-
-.L0150
+.L3850Hi
 
  SKIP 20                \ 
 
@@ -836,15 +825,20 @@ ORG &0380
 
  SKIP 20                \ 
 
-.L04DC
+.bestLapMinutes
 
  SKIP 20                \ 
 
-.L04F0
+.totalPointsTop
 
- SKIP 20                \ Indexed by driver number (0 to 19)
+ SKIP 20                \ Top byte of total accumulated points for each driver
                         \
-                        \ Gets set in InitialiseDrivers
+                        \ Indexed by driver number (0 to 19)
+                        \
+                        \ Gets set to 0 in InitialiseDrivers
+                        \
+                        \ Stored as a 24-bit value (totalPointsTop totalPointsHi
+                        \ totalPointsLo)
 
 .L0504
 
@@ -901,18 +895,18 @@ ORG &0380
                         \
                         \ Indexed by driver number (0 to 19)
 
-.L06B4
+.currentTenths
 
- SKIP 4                 \ Tenths for current lap time?
+ SKIP 4                 \ Tenths for current lap time for multi-player X
 
 .driverSeconds
 
  SKIP 20                \ The seconds of each driver's lap time, stored in BCD
                         \
                         \ Indexed by driver number (0 to 19)
-.L06CC
+.currentSeconds
 
- SKIP 4                 \ Seconds for current lap time?
+ SKIP 4                 \ Seconds for current lap time for multi-player X
 
 .driverMinutes
 
@@ -920,9 +914,9 @@ ORG &0380
                         \
                         \ Indexed by driver number (0 to 19)
 
-.L06E4
+.currentMinutes
 
- SKIP 4                 \ Minutes for current lap time?
+ SKIP 4                 \ Minutes for current lap time for multi-player X
 
 .L06E8
 
@@ -966,11 +960,11 @@ ORG &0880
 
  SKIP 1                 \ 
 
-.L0898
+.bestLapTenths
 
  SKIP 20                \ 
 
-.L08AC
+.bestLapSeconds
 
  SKIP 36                \ 
 
@@ -2631,108 +2625,153 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0F64
+\       Name: SortDriverTable
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Create a sorted table of driver numbers, ordered as specified
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   Determines the order of the sorted table to create:
+\
+\                           * 0 = most recent lap times
+\
+\                           * Bit 6 set = accumulated points
+\
+\                           * Bit 7 set = best lap times
+\
+\ Returns:
+\
+\   sortedDrivers        A table of driver numbers, sorted as specified
 \
 \ ******************************************************************************
 
-.sub_C0F64
+.SortDriverTable
 
- STA G
- SED
+ STA G                  \ Store A in G
 
-.C0F67
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
 
- LDX #0
- STX V
- STX L0100
- INX
+.sort1
 
-.C0F6F
+ LDX #0                 \ Set V = 0, which indicates that the table is sorted
+ STX V                  \ (we will change this as we process each table row)
 
- STX W
- LDY driverPosition,X
- TXA
- STA L0100,X
- LDA L013B,X
+ STX sortedDrivers      \ Set sortedDrivers = 0
+
+ INX                    \ Set X = 1 as a row counter, counting through 1 to 19,
+                        \ skipping 0 as each iteration compares row X with row
+                        \ X - 1
+
+.sort2
+
+ STX W                  \ Store the row counter in W
+
+ LDY driverPosition,X   \ Set Y to the driver in position X
+
+ TXA                    \ Set the X-th entry in sortedDrivers to the loop counter
+ STA sortedDrivers,X
+
+ LDA driverPosition-1,X \ Set X to the driver in position X - 1
  TAX
- SEC
- BIT G
- BVS C0FBA
- BMI C0FD4
- LDA driverTenths,Y
- SBC driverTenths,X
- STA U
- LDA driverSeconds,Y
+
+ SEC                    \ Set the C flag for the subtraction below
+
+ BIT G                  \ If bit 6 of G is set, jump to sort5
+ BVS sort5
+
+ BMI sort6              \ If bit 7 of G is set, jump to sort6
+
+ LDA driverTenths,Y     \ Set (A H U) = position X time - position X-1 time
+ SBC driverTenths,X     \
+ STA U                  \ starting with the low bytes
+
+ LDA driverSeconds,Y    \ Then the high bytes
  SBC driverSeconds,X
  STA H
- LDA driverMinutes,Y
- SBC driverMinutes,X
- BCC C0FEC
 
-.C0F9B
+ LDA driverMinutes,Y    \ And then the top bytes
+ SBC driverMinutes,X
+
+ BCC sort7              \ If the subtraction underflowed, then position X-1's
+                        \ lap time is bigger than position X's lap time, which
+                        \ is the wrong way round, as so jump to sort7 to swap
+                        \ them around
+
+.sort3
 
  ORA U
  ORA H
- BNE C0FAA
+ BNE sort4
+
  LDX W
  DEX
- LDA L0100,X
- STA L0101,X
+ LDA sortedDrivers,X
+ STA sortedDrivers+1,X
 
-.C0FAA
+.sort4
 
- LDX W
- INX
- CPX #&14
- BCC C0F6F
- LDA V
- BNE C0F67
- CLD
+ LDX W                  \ Fetch the row counter that we stored in W above
+
+ INX                    \ Increment the row counter to the next table row
+
+ CPX #20                \ Loop back until we have gone through the whole table
+ BCC sort2              \ of 20 rows (i.e. 19 consecutive pairs)
+
+ LDA V                  \ If V <> 0 then the table is not fully sorted, so jump
+ BNE sort1              \ back to sort1 to repeat the sorting process
+
+ CLD                    \ Otherwise the table is sorted, so clear the D flag to
+                        \ switch arithmetic to normal
+
  JSR sub_C63A2
- RTS
 
-.C0FBA
+ RTS                    \ Return from the subroutine
 
- LDA SetupGame+20,X
- SBC SetupGame+20,Y
+.sort5
+
+ LDA totalPointsLo,X
+ SBC totalPointsLo,Y
  STA U
- LDA L39E4,X
- SBC L39E4,Y
+
+ LDA totalPointsHi,X    \ Then the high bytes
+ SBC totalPointsHi,Y
  STA H
- LDA L04F0,X
- SBC L04F0,Y
- BCC C0FEC
- BCS C0F9B
 
-.C0FD4
+ LDA totalPointsTop,X   \ And then the top bytes
+ SBC totalPointsTop,Y
 
- LDA L0898,Y
- SBC L0898,X
+ BCC sort7
+ BCS sort3
+
+.sort6
+
+ LDA bestLapTenths,Y
+ SBC bestLapTenths,X
  STA U
- LDA L08AC,Y
- SBC L08AC,X
- STA H
- LDA L04DC,Y
- SBC L04DC,X
- BCS C0FAA
 
-.C0FEC
+ LDA bestLapSeconds,Y   \ Then the high bytes
+ SBC bestLapSeconds,X
+ STA H
+
+ LDA bestLapMinutes,Y   \ And then the top bytes
+ SBC bestLapMinutes,X
+
+ BCS sort4
+
+.sort7
 
  STX T
  LDX W
  TYA
- STA L013B,X
+ STA driverPosition-1,X
  LDA T
  STA driverPosition,X
  DEC V
- JMP C0FAA
+ JMP sort4
 
 \ ******************************************************************************
 \
@@ -2749,7 +2788,7 @@ ORG &0B00
 
 .sub_C0FFE
 
- LDA L006C
+ LDA raceStarted
  BPL C1032
  BIT L0066
  BPL C102A
@@ -2840,7 +2879,7 @@ ORG &0B00
 
  LDA L5F3B
  BMI C109A
- CMP L06E4
+ CMP currentMinutes
  BCC C1089
  BNE C109A
  BIT L0065
@@ -3078,7 +3117,7 @@ ORG &0B00
  JSR sub_C2692
  JSR sub_C63A2
  LDX #&13
- LDA L006C
+ LDA raceStarted
  BMI C1199
  CPX currentPlayer
  BNE C11AA
@@ -3127,7 +3166,7 @@ ORG &0B00
  ORA #&45
  STA L0114,X
  LDA #&91
- STA L0100,X
+ STA sortedDrivers,X
 
 \ ******************************************************************************
 \
@@ -3149,7 +3188,7 @@ ORG &0B00
  LDA #&C0
  STA L018C,X
  BCC C11CD
- STA L04DC,X
+ STA bestLapMinutes,X
 
 .C11CD
 
@@ -4424,7 +4463,7 @@ ORG &0B00
 
 .main1
 
- LDX #0                 \ Zero L06B4, L06CC and L06E4
+ LDX #0                 \ Zero currentTenths, currentSeconds and currentMinutes
  JSR sub_C5011
 
 .main2
@@ -4521,7 +4560,7 @@ ORG &0B00
  LDA L5F3B
  BMI main1
 
- LDA L006C
+ LDA raceStarted
  BPL main2
 
  LDA raceClass
@@ -4613,7 +4652,9 @@ ORG &0B00
 
 .sub_C17C3
 
- SED
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
+
  LDA #9
  LDY L0046
  CPY trackData+1817
@@ -4623,10 +4664,10 @@ ORG &0B00
 .C17CF
 
  CLC
- ADC L06B4,X
- STA L06B4,X
+ ADC currentTenths,X
+ STA currentTenths,X
  PHP
- LDA L06CC,X
+ LDA currentSeconds,X
  ADC #0
  CMP #&60
  BCC C17E2
@@ -4634,22 +4675,24 @@ ORG &0B00
 
 .C17E2
 
- STA L06CC,X
- LDA L06E4,X
+ STA currentSeconds,X
+ LDA currentMinutes,X
  ADC #0
- STA L06E4,X
+ STA currentMinutes,X
  BPL C17F9
 
- JSR sub_C5011          \ Zero L06B4+X, L06CC+X and L06E4+X
+ JSR sub_C5011          \ Zero currentTenths+X, currentSeconds+X and currentMinutes+X
 
  LDY currentPlayer
  LDA #&80
- STA L04DC,Y
+ STA bestLapMinutes,Y
 
 .C17F9
 
  PLP
- CLD
+
+ CLD                    \ Clear the D flag to switch arithmetic to normal
+
  RTS
 
 \ ******************************************************************************
@@ -4726,7 +4769,7 @@ ORG &0B00
  BPL P181E
  JSR sub_C63A2
  LDA #1
- BIT L006C
+ BIT raceStarted
  BMI C184C
  LDX trackData+1815
  LDY L0003
@@ -4743,14 +4786,14 @@ ORG &0B00
 
  LDA #&80
  STA L018C,X
- STA L04DC,X
+ STA bestLapMinutes,X
  LDA #0
  STA L04B4,X
  STA L0114,X
  STA L0164,X
- STA L0150,X
- STA L0100,X
- STA SetupGame,X
+ STA L3850Hi,X
+ STA sortedDrivers,X
+ STA L3850Lo,X
  LDA #&FF
  STA L01A4,X
  DEX
@@ -4771,7 +4814,7 @@ ORG &0B00
  DEX
  BPL P1885
  JSR PrintGearNumber
- LDA L006C
+ LDA raceStarted
  BMI C18A5
 
  LDX #40                \ Blank out the first text line at the top of the screen
@@ -5540,11 +5583,16 @@ ORG &0B00
 
  LDA L002F
  BEQ C1BA2
- SED
+
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
+
  CLC
  ADC L0031
  STA L0031
- CLD
+
+ CLD                    \ Clear the D flag to switch arithmetic to normal
+
  BEQ C1BA2
  CMP #&21
  BCS C1BA2
@@ -5610,7 +5658,7 @@ ORG &0B00
  LDY currentPlayer
  CMP #&28
  BCC C1BDF
- LDA L006C
+ LDA raceStarted
  BPL C1BDF
  JSR sub_C11AB
 
@@ -5622,18 +5670,18 @@ ORG &0B00
  ASL A
  ASL A
  PHP
- LDA L0150,Y
+ LDA L3850Hi,Y
  CPX #&14
  BCS C1BFE
- CMP L0150,X
+ CMP L3850Hi,X
  BCS C1BF9
- LDA L0150,X
+ LDA L3850Hi,X
  BNE C1BFE
 
 .C1BF9
 
  ADC #&0B
- STA L0150,X
+ STA L3850Hi,X
 
 .C1BFE
 
@@ -8075,12 +8123,16 @@ ORG &0B00
  ROL H
  SBC L04B4,X
  BNE C26E6
- SED
+
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
+
  CLC
  LDA T
  ADC L002F
  STA L002F
- CLD
+
+ CLD                    \ Clear the D flag to switch arithmetic to normal
 
 .C26E6
 
@@ -8090,11 +8142,11 @@ ORG &0B00
 
  CMP #5
  BCS C26E6
- LDA SetupGame,X
+ LDA L3850Lo,X
  CLC
- SBC SetupGame,Y
- LDA L0150,X
- SBC L0150,Y
+ SBC L3850Lo,Y
+ LDA L3850Hi,X
+ SBC L3850Hi,Y
  ROR V
  BPL C26E6
  LSR A
@@ -8113,7 +8165,7 @@ ORG &0B00
  STA L0083
  LDA T
  CMP #4
- LDA L0100,Y
+ LDA sortedDrivers,Y
  AND #&40
  BEQ C2729
  BCS C271C
@@ -8203,11 +8255,11 @@ ORG &0B00
 
 .C278C
 
- LDA L0100,X
+ LDA sortedDrivers,X
  LSR A
  LDA N
  BCS C2797
- STA L0100,X
+ STA sortedDrivers,X
 
 .C2797
 
@@ -8331,12 +8383,12 @@ ORG &0B00
 
 .C27F6
 
- LDA L0100,X
+ LDA sortedDrivers,X
  BMI C285B
  LDY L06E8,X
  LDA trackData+1536,Y
  BPL C280D
- LDA L0150,X
+ LDA L3850Hi,X
  CMP L01A4,X
  BCS C287F
  BCC C282F
@@ -8348,7 +8400,7 @@ ORG &0B00
  LDA trackData+7,Y
  STA L01A4,X
  CLC
- SBC L0150,X
+ SBC L3850Hi,X
  BCS C282F
  LSR A
  LSR A
@@ -8363,7 +8415,7 @@ ORG &0B00
 
 .C282F
 
- LDA L0150,X
+ LDA L3850Hi,X
  CMP #&3C
  BCS C2838
  LDA #&16
@@ -8371,7 +8423,7 @@ ORG &0B00
 .C2838
 
  STA T
- LDA L0100,X
+ LDA sortedDrivers,X
  AND #&40
  BEQ C2843
  LDA #5
@@ -8380,7 +8432,7 @@ ORG &0B00
 
  CLC
  ADC driverSpeed,X
- BIT L006C
+ BIT raceStarted
  BPL C284E
  SBC trackData+1818
 
@@ -8410,18 +8462,18 @@ ORG &0B00
  ASL A
  ROL U
  CLC
- ADC SetupGame,X
- STA SetupGame,X
+ ADC L3850Lo,X
+ STA L3850Lo,X
  LDA U
- ADC L0150,X
+ ADC L3850Hi,X
  CMP #&BE
  BCC C287C
  LDA #0
- STA SetupGame,X
+ STA L3850Lo,X
 
 .C287C
 
- STA L0150,X
+ STA L3850Hi,X
 
 .C287F
 
@@ -8430,7 +8482,7 @@ ORG &0B00
 
 .P2883
 
- LDA L0150,X
+ LDA L3850Hi,X
  CLC
  ADC L0164,X
  STA L0164,X
@@ -8560,10 +8612,10 @@ ORG &0B00
 .C2922
 
  TAY
- LDA L0100,X
+ LDA sortedDrivers,X
  AND #&10
  BNE C2937
- LDA L0150,X
+ LDA L3850Hi,X
  CMP #&32
  BCC C2937
  LDA L0701,Y
@@ -10910,6 +10962,7 @@ ORG &0B00
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 2 in the custom screen mode
 \             (part of the mode 5 portion)
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ------------------------------------------------------------------------------
 \
@@ -10946,6 +10999,7 @@ ORG &0B00
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 0 in the custom screen mode (the
 \             mode 4 portion)
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -10968,6 +11022,7 @@ ORG &0B00
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 3 in the custom screen mode
 \             (part of the mode 5 portion)
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -10983,6 +11038,7 @@ ORG &0B00
 \   Category: Screen mode
 \    Summary: Colour palette for screen section 4 in the custom screen mode
 \             (part of the mode 5 portion)
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -11954,12 +12010,74 @@ ORG &0B00
 
 \ ******************************************************************************
 \
+\       Name: L3850Lo
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ******************************************************************************
+
+.L3850Lo
+
+ SKIP 20
+
+\ ******************************************************************************
+\
+\       Name: totalPointsLo
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ******************************************************************************
+
+.totalPointsLo
+
+ SKIP 20                \ Low byte of total accumulated points for each driver
+                        \
+                        \ Indexed by driver number (0 to 19)
+                        \
+                        \ Gets set to 0 in InitialiseDrivers
+                        \
+                        \ Stored as a 24-bit value (totalPointsTop totalPointsHi
+                        \ totalPointsLo)
+
+\ ******************************************************************************
+\
+\       Name: racePointsLo
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ******************************************************************************
+
+.racePointsLo
+
+ SKIP 20
+
+\ ******************************************************************************
+\
 \       Name: SetupGame
 \       Type: Subroutine
 \   Category: Setup
 \    Summary: Set the screen mode, clear various variables and start the game
 \
+\ ------------------------------------------------------------------------------
+\
+\ The memory taken up by the SetupGame routine is reused after the routine has
+\ run, as we no longer need it.
+\
 \ ******************************************************************************
+
+CLEAR &3850, P%         \ The memory taken up by the SetupGame routine is reused
+ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
+                        \ variables after the routine has finished running, as
+                        \ we no longer to set up the game
+                        \
+                        \ These lines rewind BeebAsm's assembly back to L3850Lo
+                        \ (which is at address &3850), and clear the block, so
+                        \ we can assemble SetupGame in the right place while
+                        \ retaining the correct addressed for the L3850Lo,
+                        \ totalPointsLo and totalPointsLo variables
 
 .SetupGame
 
@@ -12421,10 +12539,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L39E4
+\       Name: totalPointsHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: High byte of total accumulated points for each driver
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12432,18 +12550,22 @@ ORG &0B00
 \
 \ Gets set in InitialiseDrivers
 \
+\ Stored as a 24-bit value (totalPointsTop totalPointsHi totalPointsLo)
+\
 \ ******************************************************************************
 
-.L39E4
+.totalPointsHi
 
- EQUB &DD, &EE, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &DD, &EE
+ EQUB 0, 0, 0, 0, 0, 0
+ EQUB 0, 0, 0, 0, 0, 0
+ EQUB 0, 0, 0, 0, 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L39F8
+\       Name: racePointsHi
 \       Type: Variable
-\   Category: 
+\   Category: Drivers
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -12452,7 +12574,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.L39F8
+.racePointsHi
 
  EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE
 
@@ -15232,38 +15354,43 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: Print2Or4DigitBCD
+\       Name: Print234DigitBCD
 \       Type: Subroutine
 \   Category: Text
-\    Summary: 
+\    Summary: Print a specific driver's accumulated points as a padded two-,
+\             three- or four-digit number
 \
 \ ------------------------------------------------------------------------------
 \
-\ Print the X-th (L39E4 SetupGame+20) value as a 4-digit number, followed by a
-\ space. The first two digits are printed as spaces if the high byte is zero.
+\ Print (totalPointsHi totalPointsLo) for driver X as a four-digit number,
+\ followed by a space. The first two digits are printed as spaces if the high
+\ byte is zero, and the third digit is printed as a space if applicable.
 \
 \ ******************************************************************************
 
-.Print2Or4DigitBCD
+.Print234DigitBCD
 
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
  
- LDA #%00100000         \ Set G = %00100000
- STA G
+ LDA #%00100000         \ Set G = %00100000, so if we print the high byte and
+ STA G                  \ the first digit is 0, it will be replaced by a space
 
- LDA L39E4,X            \ Set A to the X-th L39E4 value
+ LDA totalPointsHi,X    \ Set A to the X-th totalPointsHi value
 
  BNE Print4DigitBCD     \ If A is non-zero, jump to Print4DigitBCD to print the
-                        \ X-th (L39E4 SetupGame+20) value as a 4-digit number
+                        \ (totalPointsHi totalPointsLo) for driver X as a
+                        \ four-digit number
 
- LDA #2                 \ Otherwise print two spaces for the first two digits
- JSR PrintSpaces
+ LDA #2                 \ Otherwise print two spaces for the first two digits,
+ JSR PrintSpaces        \ as the high byte is zero
 
- LSR G                  \ Shift G right one place to give to %00010000
+ LSR G                  \ Shift G right one place to give to %00010000, so the
+                        \ next call to Print2DigitBCD will print a space for the
+                        \ first digit if it is zero
 
  BNE Print4DigitBCD+3   \ Jump to Print4DigitBCD+3 to print the second two
-                        \ digits in SetupGame+20 (this BNE is effectively a JMP
+                        \ digits in totalPointsLo (this BNE is effectively a JMP
                         \ as the result of the LSR ia never zero)
 
 \ ******************************************************************************
@@ -15271,16 +15398,17 @@ NEXT
 \       Name: Print4DigitBCD
 \       Type: Subroutine
 \   Category: Text
-\    Summary: 
+\    Summary: Print a specific driver's accumulated points as a four-digit
+\             number
 \
 \ ------------------------------------------------------------------------------
 \
-\ Print the X-th (L39E4 SetupGame+20) value as a 4-digit number, followed by a
-\ space. The second digit is always printed.
+\ Print (totalPointsHi totalPointsLo) for driver X as a 4-digit number, followed
+\ by a space. The second digit is always printed.
 \
 \ Arguments:
 \
-\   A                   Always called with L39E4,X
+\   A                   Always called with totalPointsHi,X
 \
 \ Other entry points:
 \
@@ -15292,9 +15420,8 @@ NEXT
 
  JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A
 
- LDA SetupGame+20,X
-
- JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A
+ LDA totalPointsLo,X    \ Print the low byte of the total accumulated points for
+ JSR Print2DigitBCD     \ driver X, which is a binary coded decimal (BCD) number
 
  LDA #1                 \ Print a space
  JSR PrintSpaces
@@ -15725,7 +15852,7 @@ NEXT
  ASL U
  CLC
  ADC U
- STA L0150,X
+ STA L3850Hi,X
  RTS
 
 \ ******************************************************************************
@@ -17522,12 +17649,10 @@ NEXT
                         \ It also decrements X to the next driver number and
                         \ updates driverNumber accordingly
 
- LDA #0                 \ Zero SetupGame+20 for driver X
- STA SetupGame+20,X
-
- STA L39E4,X            \ Zero L39E4 for driver X
-
- STA L04F0,X            \ Zero L04F0 for driver X
+ LDA #0                 \ Zero (totalPointsTop totalPointsHi totalPointsLo) for
+ STA totalPointsLo,X    \ driver X
+ STA totalPointsHi,X
+ STA totalPointsTop,X
 
  TXA                    \ If X <> 0, loop back to driv1 to process the next
  BNE driv1              \ driver, until we have processed all 20 of them
@@ -17771,6 +17896,7 @@ NEXT
 \       Type: Subroutine
 \   Category: Screen mode
 \    Summary: Switch to the custom screen mode
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -17786,8 +17912,7 @@ NEXT
                         \ of the 6845 CRTC chip using the values in the
                         \ screenRegisters table (see the screenRegisters
                         \ variable for details), and then programming register 0
-                        \ of the Video ULA to the same value as standard mode 5,
-                        \ which switches the scren mode
+                        \ of the Video ULA to the same value as standard mode 5
 
  LDX #13                \ We are about to write values into registers R0 to R13
                         \ so set a register counter in X to count down from 13
@@ -17823,7 +17948,8 @@ NEXT
                         \   %0  = flash colour select = first colour selected
                         \
                         \ These values are the same as in standard mode 5, and
-                        \ this call switches into our custom screen mode
+                        \ this call finishes the switch to our custom screen
+                        \ mode
  
  CLC                    \ Clear the C flag for the additions in the following
                         \ loop
@@ -17833,8 +17959,8 @@ NEXT
                         \ to send &07, &17, &27 ... &E7, &F7
                         \
                         \ This maps all four logical colours (the top nibble) to
-                        \ &7 EOR 7 (the bottom nibble, EOR 7), which maps them to
-                        \ colour 0, or black
+                        \ &7 EOR 7 (the bottom nibble, EOR 7), which maps them
+                        \ to colour 0, or black
 
  LDA #&07               \ Set A = &07 as the first byte to send
 
@@ -17937,6 +18063,7 @@ NEXT
 \       Type: Subroutine
 \   Category: Screen mode
 \    Summary: The IRQ handler for the custom screen mode
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17980,8 +18107,8 @@ NEXT
 
  BMI hand4              \ If screenSection is negative, jump to hand4
 
- CMP #2                 \ If screenSection < 2, i.e. screenSection = 1, jump to hand5
- BCC hand5
+ CMP #2                 \ If screenSection < 2, i.e. screenSection = 1, jump to
+ BCC hand5              \ hand5
 
  BEQ hand7              \ If screenSection = 2, jump to hand7
 
@@ -18057,8 +18184,8 @@ NEXT
                         \ to send &03, &13, &23 ... &E3, &F3
                         \
                         \ This maps all four logical colours (the top nibble) to
-                        \ &3 EOR 7 (the bottom nibble, EOR 7), which maps them to
-                        \ colour 4, or blue
+                        \ &3 EOR 7 (the bottom nibble, EOR 7), which maps them
+                        \ to colour 4, or blue
 
  LDA #&03               \ Set A = &03 as the first byte to send
 
@@ -18198,6 +18325,7 @@ NEXT
 \       Type: Variable
 \   Category: Screen mode
 \    Summary: The 6845 registers for the custom screen mode
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ------------------------------------------------------------------------------
 \
@@ -18347,7 +18475,9 @@ NEXT
 \       Name: timer1Lo
 \       Type: Variable
 \   Category: Screen mode
-\    Summary: 
+\    Summary: Low byte of the timer offset between the start of section 2 and
+\             the start of section 3
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -18360,7 +18490,9 @@ NEXT
 \       Name: timer1Hi
 \       Type: Variable
 \   Category: Screen mode
-\    Summary: 
+\    Summary: High byte of the timer offset between the start of section 2 and
+\             the start of section 3
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -18373,7 +18505,9 @@ NEXT
 \       Name: timer2Lo
 \       Type: Variable
 \   Category: Screen mode
-\    Summary: Low byte of the timer for screen section 2
+\    Summary: Low byte of the timer offset between the start of section 3 and
+\             the start of section 4
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -18386,7 +18520,9 @@ NEXT
 \       Name: timer2Hi
 \       Type: Variable
 \   Category: Screen mode
-\    Summary: High byte of the timer for screen section 2
+\    Summary: High byte of the timer offset between the start of section 3 and
+\             the start of section 4
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -18400,6 +18536,7 @@ NEXT
 \       Type: Subroutine
 \   Category: Screen mode
 \    Summary: Disable the custom screen mode and switch to mode 7
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -18449,6 +18586,7 @@ NEXT
 \   Category: Screen mode
 \    Summary: The section of the screen that is currently being drawn by the
 \             custom screen interrupt handler (0 to 4)
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
@@ -18559,7 +18697,7 @@ NEXT
 
 .C4F9D
 
- BIT L006C
+ BIT raceStarted
  BPL C4FA8
  CMP numberOfLaps
  BCC C4FB7
@@ -18582,13 +18720,15 @@ NEXT
 
 .C4FB7
 
- SED
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
+
  SEC
- LDA L06B4
- SBC L0898,X
+ LDA currentTenths
+ SBC bestLapTenths,X
  STA T
- LDA L06CC
- SBC L08AC,X
+ LDA currentSeconds
+ SBC bestLapSeconds,X
  BCS C4FCC
  ADC #&60
  CLC
@@ -18596,8 +18736,8 @@ NEXT
 .C4FCC
 
  STA U
- LDA L06E4
- SBC L04DC,X
+ LDA currentMinutes
+ SBC bestLapMinutes,X
  STA H
  BCC C4FFB
  SEC
@@ -18618,13 +18758,15 @@ NEXT
 
 .C4FFB
 
- LDA L06B4
- STA L0898,X
- LDA L06CC
- STA L08AC,X
- LDA L06E4
- STA L04DC,X
- CLD
+ LDA currentTenths
+ STA bestLapTenths,X
+ LDA currentSeconds
+ STA bestLapSeconds,X
+ LDA currentMinutes
+ STA bestLapMinutes,X
+
+ CLD                    \ Clear the D flag to switch arithmetic to normal
+
  RTS
 
  NOP
@@ -18651,12 +18793,12 @@ NEXT
 
 .sub_C5011
 
- LDA #0                 \ Zero L06B4+X
- STA L06B4,X
+ LDA #0                 \ Zero currentTenths+X
+ STA currentTenths,X
 
- STA L06CC,X            \ Zero L06CC+X
+ STA currentSeconds,X            \ Zero currentSeconds+X
 
- STA L06E4,X            \ Zero L06E4+X
+ STA currentMinutes,X            \ Zero currentMinutes+X
 
  RTS                    \ Return from the subroutine
 
@@ -18678,7 +18820,7 @@ NEXT
  INX                    \ Move the cursor to pixel row 33 (i.e. the second text
  STX yCursor            \ line at the top of the screen)
 
- LDX currentPlayer              \ Set the driver number in X to currentPlayer
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
  LDA #%00100110         \ Print the best lap time for driver X in the following
  JSR PrintLapTime       \ format:
@@ -18851,7 +18993,7 @@ NEXT
 
 .C506F
 
- LDA L06CC
+ LDA currentSeconds
  BEQ C507A
  LDA L006A
  AND #&1F
@@ -19692,18 +19834,13 @@ NEXT
 \   Category: 
 \    Summary: 
 \
-\ ------------------------------------------------------------------------------
-\
-\ The memory taken up by the SetupGame routine is reused in this routine, as we
-\ no longer need it.
-\
 \ ******************************************************************************
 
 .sub_C5A25
 
  LDA #0
- STA SetupGame+40,X
- STA L39F8,X
+ STA racePointsLo,X
+ STA racePointsHi,X
  STA U
  LDY driverPosition,X
  CPX #6
@@ -19744,22 +19881,26 @@ NEXT
 
 .C5A61
 
- SED
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
 
 .C5A62
 
  LDA L3DF7,X
  CLC
- ADC SetupGame+40,X
- STA SetupGame+40,X
- LDA L39F8,X
+ ADC racePointsLo,X
+ STA racePointsLo,X
+ LDA racePointsHi,X
  ADC #0
- STA L39F8,X
+ STA racePointsHi,X
  DEC T
  BNE C5A62
  DEC U
  BPL C5A62
- JSR sub_C6698
+
+ JSR AddRacePoints      \ Add the race points from position Y to the accumulated
+                        \ points for driver X
+
  RTS
 
 \ ******************************************************************************
@@ -22137,7 +22278,8 @@ ORG &5E40
  JSR PreviousDriver     \ Decrement X to the previous driver number
 
  STX driverInFront
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -22227,7 +22369,7 @@ ORG &5E40
  CPX #1                 \ If X >= 1, then the choice was competition, so jump to
  BCS game1              \ game1
 
- STX currentPlayer              \ Otherwise X = 0 and the choice was practice, so set
+ STX currentPlayer      \ Otherwise X = 0 and the choice was practice, so set
                         \ currentPlayer = 0
 
  DEX                    \ Set L5F3B = 255
@@ -22305,7 +22447,7 @@ ORG &5E40
  BNE game3
 
  LDA #0
- JSR sub_C0F64
+ JSR SortDriverTable
 
  JMP game9
 
@@ -22342,13 +22484,15 @@ ORG &5E40
 
  LDA currentPlayer
  STA L5F39
+
  LDA #0
- JSR sub_C0F64
+ JSR SortDriverTable
+
  LDX #0
 
 .game6
 
- LDY L014F
+ LDY driverPosition+19
 
  CPY L5F39
  BCC game8
@@ -22400,7 +22544,7 @@ ORG &5E40
  CMP L5F39
  BCC game11
  TAX
- LDA L0100,Y
+ LDA sortedDrivers,Y
  LSR A
  STA driverGridRow,X
 
@@ -22457,9 +22601,11 @@ ORG &5E40
  JSR ResetLapTimes      \ Reset the best lap times for all drivers
 
  LDA #&80
+
  JSR sub_C655C
- LDA #&80
- JSR sub_C0F64
+ LDA #%10000000
+ JSR SortDriverTable
+
  LDX #5
 
 .game15
@@ -22469,28 +22615,28 @@ ORG &5E40
  BPL game15
 
  LDA #0
- JSR sub_C0F64
+ JSR SortDriverTable
  LDX #6
  JSR sub_C5A25
 
 .game16
 
- LDA #&80
- JSR sub_C0F64
+ LDA #%10000000
+ JSR SortDriverTable
 
  LDX #1                 \ "POINTS", points awarded in the last race
  LDA #4
  JSR PrintDriverTable
 
  LDA #0
- JSR sub_C0F64
+ JSR SortDriverTable
 
  LDX #6                 \ "BEST LAP TIMES", best lap time
  LDA #0
  JSR PrintDriverTable
 
- LDA #&40
- JSR sub_C0F64
+ LDA #%01000000
+ JSR SortDriverTable
 
  LDX #3                 \ "ACCUMULATED POINTS", accumulated points
  STX L5F3C
@@ -22539,7 +22685,7 @@ ORG &5E40
 
 .sub_C655C
 
- STA L006C
+ STA raceStarted
  STA L006D
 
 .P6560
@@ -22749,9 +22895,13 @@ ORG &5E40
 
 .ibcd1
 
- SED                    \ Increment A in BCD mode, so the result is in the
- ADC #1                 \ range 1 to 20
- CLD
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
+
+ ADC #1                 \ Increment A in BCD mode, so the result is in the
+                        \ range 1 to 20
+
+ CLD                    \ Clear the D flag to switch arithmetic to normal
 
  RTS                    \ Return from the subroutine
 
@@ -22773,6 +22923,11 @@ ORG &5E40
 \
 \   * A "PRESS SPACE TO CONTINUE" prompt below the table
 \
+\ If the table is being shown after practice or qualifying, the drivers are
+\ shown in driver order, from 1 to 20, but if it is shown after a race, they are
+\ shown in the order from the sortedDrivers table, and the race class is printed
+\ above the table.
+\
 \ The routine also waits for SPACE or RETURN to be pressed before returning.
 \
 \ Arguments:
@@ -22788,12 +22943,6 @@ ORG &5E40
 \
 \                         * 6 = "BEST LAP TIMES"
 \
-\   L006C               Defines what to show in the first column in the table:
-\
-\                         * Bit 7 clear = 1, 2, 3 ... 19, 20
-\                                 set = numbers in L0100
-\                                       print race class at top
-\
 \   A                   Defines what to show in the third column in the table:
 \
 \                         * 0 = best lap time
@@ -22801,6 +22950,8 @@ ORG &5E40
 \                         * 4 = points awarded in the last race
 \
 \                         * &88 = accumulated points
+\
+\   sortedDrivers       A sorted table of driver numbers (for race tables only)
 \
 \ ******************************************************************************
 
@@ -22836,11 +22987,14 @@ ORG &5E40
 
  LDY rowCounter         \ Set Y to the table row number
 
- LDA L0100,Y            \ Set A to the L0100 value for this row
+ LDA sortedDrivers,Y    \ Set A to the sortedDrivers value for this row, so the
+                        \ table will show the drivers in the order that they
+                        \ appear in the sortedDrivers table
 
- BIT L006C              \ If bit 7 of L006C is set, jump to dtab2 to skip the
- BMI dtab2              \ following instruction, so we print the numbers from
-                        \ L0100 in the first column
+ BIT raceStarted        \ If bit 7 of raceStarted is set, that means the results
+ BMI dtab2              \ are from a finished race, so jump to dtab2 to skip the
+                        \ following instruction, so we print the numbers from
+                        \ sortedDrivers in the first column
 
  TYA                    \ Set A to the row number, so we print the row number in
                         \ the first column (i.e. 1 to 20, as )
@@ -22936,23 +23090,30 @@ ORG &5E40
                         \ The second and third two calls to Print2DigitBCD are
                         \ in the Print4DigitBCD routine below
 
- LDA L04F0,X            \ If this row's L04F0 figure is zero, jump to dtab5
- BEQ dtab5
+ LDA totalPointsTop,X   \ If the top byte of the driver's total points is zero,
+ BEQ dtab5              \ jump to dtab5
 
- JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A,
-                        \ which contains this row's L04F0 figure
+ JSR Print2DigitBCD     \ Otherwise print the top byte of the driver's total
+                        \ points, which is a binary coded decimal (BCD) number
 
- LDA L39E4,X            \ Fetch this row's L39E4 figure
+ LDA totalPointsHi,X    \ Fetch the high byte of the driver's total points, to
+                        \ pass to Print4DigitBCD
 
- JSR Print4DigitBCD
+ JSR Print4DigitBCD     \ Print both the high and low bytes of the driver's
+                        \ total points in full, followed by a space
 
  JMP dtab6              \ Jump to dtab6 to move on to the next table row
 
 .dtab5
 
- JSR Print2Or4DigitBCD   \ 
+ JSR Print234DigitBCD   \ Print the high and low bytes of the driver's total
+                        \ points, replacing leading zeroes with spaces, and
+                        \ followed by a space
 
 .dtab6
+
+                        \ If we get here then we have finished printing the
+                        \ current table row, so now we move on to the next row
 
  LDY rowCounter         \ Set Y to the table row number
 
@@ -22967,8 +23128,10 @@ ORG &5E40
  LDA #156               \ Print ASCII 156 to switch to a black background
  JSR OSWRCH
 
- LDA L006C              \ If bit 7 of L006C is clear, jump to dtab7 to skip the
- BPL dtab7              \ following and do not print the race class
+ LDA raceStarted        \ If bit 7 of raceStarted is clear, that means the
+ BPL dtab7              \ results are from qualifying or practice, so jump to
+                        \ dtab7 to skip the following so we do not print the
+                        \ race class above ths table
 
                         \ We now print the race class and number of laps in the
                         \ gap between the page header and the top of the table
@@ -23077,7 +23240,7 @@ ORG &5E40
  LDX #29                \ Print token 29, which clears the screen, displays the
  JSR PrintToken         \ F3 header, and shows a " DRIVER -> " prompt
 
- LDX currentPlayer      \ Set X to the driver number of thc current player
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
  JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
 
@@ -23089,33 +23252,43 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C6698
+\       Name: AddRacePoints
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving
+\    Summary: Add the race points to the driver's total points
 \
 \ ------------------------------------------------------------------------------
 \
-\ The memory taken up by the SetupGame routine is reused in this routine, as we
-\ no longer need it.
+\ Arguments:
+\
+\   X                   The race position whose points should be added
+\
+\   Y                   The driver who receives those points, i.e. who has then
+\                       added to their total accumulated points
 \
 \ ******************************************************************************
 
-.sub_C6698
+.AddRacePoints
 
- SED
- LDA SetupGame+20,Y
- CLC
- ADC SetupGame+40,X
- STA SetupGame+20,Y
- LDA L39E4,Y
- ADC L39F8,X
- STA L39E4,Y
- LDA L04F0,Y
+ SED                    \ Set the D flag to switch arithmetic to Binary Coded
+                        \ Decimal (BCD)
+
+ LDA totalPointsLo,Y    \ Add (racePointsHi racePointsLo) for the driver in
+ CLC                    \ position X to the accumulated total for driver Y in
+ ADC racePointsLo,X     \ (totalPointsTop totalPointsHi totalPointsLo), starting
+ STA totalPointsLo,Y    \ with the low bytes
+
+ LDA totalPointsHi,Y    \ And then the high bytes
+ ADC racePointsHi,X
+ STA totalPointsHi,Y
+
+ LDA totalPointsTop,Y   \ And then the top bytes
  ADC #0
- STA L04F0,Y
- CLD
- RTS
+ STA totalPointsTop,Y
+
+ CLD                    \ Clear the D flag to switch arithmetic to normal
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -23164,7 +23337,7 @@ ORG &5E40
 
 .GetDriverName
 
- LDX currentPlayer      \ Set X to the driver number of thc current player
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
  JSR GetDriverAddress   \ Set (Y A) to the address of driver X's name
 
@@ -23318,7 +23491,7 @@ ORG &6C00
 
 .sub_C7B4A
 
- LDA L006C
+ LDA raceStarted
  BPL L7B9B
  LDX L006D
  BEQ L7B9B
