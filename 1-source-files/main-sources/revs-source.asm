@@ -540,7 +540,7 @@ ORG &0000
 
 .L0069
 
- SKIP 1                 \ 
+ SKIP 1                 \ Zeroed in SetupGame
 
 .L006A
 
@@ -569,11 +569,11 @@ ORG &0000
 
 .currentPlayer
 
- SKIP 1                 \ The driver number of the current player
+ SKIP 1                 \ The number of the current player
                         \
                         \   * 0 for practice
                         \
-                        \   * 20+ for competition/multi-player
+                        \   * 0 to 19 for competition
 
 .P
 
@@ -828,9 +828,9 @@ ORG &0380
 
  SKIP 20                \ 
 
-.L04C8
+.driversInOrder2
 
- SKIP 20                \ 
+ SKIP 20                \ Used to store a copy of the driversInOrder list
 
 .bestLapMinutes
 
@@ -861,27 +861,27 @@ ORG &0380
 
 .L05F4
 
- SKIP 1                 \ 
+ SKIP 1                 \ Zeroed in SetupGame
 
 .L05F5
 
- SKIP 1                 \ 
+ SKIP 1                 \ Zeroed in SetupGame
 
 .L05F6
 
- SKIP 1                 \ 
+ SKIP 1                 \ Zeroed in SetupGame
 
 .L05F7
 
- SKIP 1                 \ 
+ SKIP 1                 \ Zeroed in SetupGame
 
 .L05F8
 
- SKIP 6                 \ 
+ SKIP 6                 \ Zeroed in SetupGame
 
 .L05FE
 
- SKIP 2                 \ 
+ SKIP 2                 \ Set to 246 in SetupGame
 
 .L0600
 
@@ -2955,7 +2955,7 @@ ORG &0B00
 
 .C106F
 
- LDA L5F3B
+ LDA qualifyingTime
  BMI C109A
  CMP currentMinutes
  BCC C1089
@@ -4536,7 +4536,7 @@ ORG &0B00
 
  JSR sub_C7BE2
 
- BIT L05F4
+ BIT L05F4              \ If bit 6 of L05F4 is set, jump to main4
  BVS main4
 
 .main1
@@ -4554,7 +4554,7 @@ ORG &0B00
 
 .main4
 
- LDA #0
+ LDA #0                 \ Set L05F4 = 0
  STA L05F4
 
  JSR sub_C0B77
@@ -4635,7 +4635,7 @@ ORG &0B00
 
 .main8
 
- LDA L5F3B
+ LDA qualifyingTime
  BMI main1
 
  LDA raceStarted
@@ -4648,7 +4648,7 @@ ORG &0B00
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
- LDA L5F3B
+ LDA qualifyingTime
  BMI main8
 
  LDX #48                \ Blank out the first text line at the top of the screen
@@ -4659,10 +4659,10 @@ ORG &0B00
 
  JSR sub_C1163
 
- LDA L05F4
+ LDA L05F4              \ If bit 7 of L05F4 is set, jump to main13
  BMI main13
 
- LDA #&20
+ LDA #%00100000         \ Set bit 5 of L05F4
  STA L05F4
 
  BNE main13
@@ -4672,9 +4672,10 @@ ORG &0B00
  LDY #&0B
  JSR sub_C0EE5
 
- LDA L05F4
+ LDA L05F4              \ If L05F4 = 0, jump to main11
  BEQ main11
- BPL main9
+
+ BPL main9              \ If bit 7 of L05F4 is clear, jump to main9
 
  AND #&40
  BEQ main13
@@ -4682,7 +4683,7 @@ ORG &0B00
  LDA carMoving
  BEQ main13
 
- LDA #0
+ LDA #0                 \ Set L05F4 = 0
  STA L05F4
 
 .main11
@@ -4706,7 +4707,7 @@ ORG &0B00
 
 .main13
 
- LDA #&80               \ Copy the dash data from screen memory back to the main
+ LDA #%10000000         \ Copy the dash data from screen memory back to the main
  JSR CopyDashData       \ game code
 
  JSR KillCustomScreen   \ Disable the custom screen mode and switch to mode 7
@@ -8058,7 +8059,7 @@ ORG &0B00
 
 .sub_C2637
 
- LDA L5F3B
+ LDA qualifyingTime
  BMI Delay
  LDX driverBehind
  LDY driversInOrder,X
@@ -10616,7 +10617,7 @@ ORG &0B00
 
  LDY #0                 \ Set a character counter in Y
 
-.P3256
+.name1
 
  LDA (R),Y              \ Set A to the Y-th character from (S R)
 
@@ -10625,7 +10626,7 @@ ORG &0B00
  INY                    \ Increment the character counter
 
  CPY #12                \ Loop back to print the next character until we have
- BNE P3256              \ printed all 12 characters
+ BNE name1              \ printed all 12 characters
 
  RTS                    \ Return from the subroutine
 
@@ -10676,7 +10677,8 @@ ORG &0B00
 
  ROR pressingShiftArrow \ Shift the C flag into bit 7 of pressingShiftArrow
 
- JMP StartGame          \ Start the game again
+ JMP MainLoop           \ Jump to the start of the main gane loop to restart the
+                        \ game
 
 .rest1
 
@@ -11213,7 +11215,12 @@ ORG &0B00
 \
 \                         * Bit 7 clear = wait for SPACE to be pressed
 \
-\                         * Bit 7 set = wait for RETURN to be pressed
+\                         * Bit 7 set = wait for SPACE or RETURN to be pressed
+\
+\ Returns:
+\
+\   G                   If bit 7 was set on entry, then it is cleared if RETURN
+\                       was pressed, but remains set if SPACE was pressed
 \
 \ ******************************************************************************
 
@@ -12187,7 +12194,7 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
  LDX #32                \ values of 8 and 12 are supported, so this is odd)
  JSR OSBYTE
 
- JMP StartGame          \ Jump to StartGame to start the game
+ JMP MainLoop           \ Jump to the main game loop to start the game
 
  EQUB &FF               \ This byte appears to be unused
 
@@ -14055,28 +14062,32 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3DF0
+\       Name: timeFromOption
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Table to convert from the option numbers in the qualifying lap
+\             duration menu to the actual number of minutes
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Interestingly, the menu offers 5, 10 and 20 minutes, but these translate into
+\ 5, 10 and 26 minutes of actual qualifying time.
 \
 \ ******************************************************************************
 
-.L3DF0
+.timeFromOption
 
- EQUB &04, &09, &19, &00
+ EQUB 4, 9, 25
+
+ EQUB 0                 \ This byte appears to be unused
 
 \ ******************************************************************************
 \
 \       Name: lapsFromOption
 \       Type: Variable
 \   Category: Drivers
-\    Summary: Table to convert from the laps menu option numbers to the actual
-\             number of laps
+\    Summary: Table to convert from the option numbers in the laps menu to the
+\             actual number of laps
 \
 \ ******************************************************************************
 
@@ -14768,7 +14779,7 @@ NEXT
 \       Name: ResetLapTime
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the current lap time for a specific driver
+\    Summary: Reset the current lap time to 10:00.0 for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15460,7 +15471,7 @@ NEXT
 
  BNE Print4DigitBCD+3   \ Jump to Print4DigitBCD+3 to print the second two
                         \ digits in totalPointsLo (this BNE is effectively a JMP
-                        \ as the result of the LSR ia never zero)
+                        \ as the result of the LSR is never zero)
 
 \ ******************************************************************************
 \
@@ -18865,9 +18876,9 @@ NEXT
  LDA #0                 \ Zero currentTenths+X
  STA currentTenths,X
 
- STA currentSeconds,X            \ Zero currentSeconds+X
+ STA currentSeconds,X   \ Zero currentSeconds+X
 
- STA currentMinutes,X            \ Zero currentMinutes+X
+ STA currentMinutes,X   \ Zero currentMinutes+X
 
  RTS                    \ Return from the subroutine
 
@@ -19898,79 +19909,106 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C5A25
+\       Name: AwardRacePoints
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Award points following a race
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   X                   The race position number to calculate the points for:
+\
+\                         * 0 to 5 for the first six places (9, 6, 4, 3, 2, 1)
+\
+\                         * 6 to award a point for the fastest lap
 \
 \ ******************************************************************************
 
-.sub_C5A25
+.AwardRacePoints
 
- LDA #0
- STA racePointsLo,X
+ LDA #0                 \ Zero the points in (racePointsHi racePointsLo) for
+ STA racePointsLo,X     \ race position X
  STA racePointsHi,X
- STA U
- LDY driversInOrder,X
- CPX #6
- BNE C5A39
- LDY driversInOrder
 
-.C5A39
+ STA U                  \ Set U = 0
 
- LDA L5F38
+ LDY driversInOrder,X   \ Set Y to the number of the driver in race position X
+
+ CPX #6                 \ If we called the routine with X = 6, then jump to
+ BNE poin1              \ poin1 to calculate the points for the fastest lap time
+
+ LDY driversInOrder     \ Set Y to the winning driver's number
+
+.poin1
+
+ LDA numberOfPlayers
+
  SEC
  SBC #1
- BEQ C5A5A
- CPY currentPlayer
- BEQ C5A4D
- CPY L5F39
- BCS C5A5A
- ASL A
- BNE C5A5F
+ BEQ poin3
 
-.C5A4D
+ CPY currentPlayer
+ BEQ poin2
+
+ CPY lowestPlayerNumber
+ BCS poin3
+
+ ASL A
+
+ BNE poin4
+
+.poin2
 
  STA U
- LDA L5F38
+
+ LDA numberOfPlayers
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
  STA U
- JMP C5A61
 
-.C5A5A
+ JMP poin5
 
- LDA L5F38
- BNE C5A5F
+.poin3
 
-.C5A5F
+ LDA numberOfPlayers
+
+ BNE poin4
+
+.poin4
 
  STA T
 
-.C5A61
+.poin5
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
-.C5A62
+.poin6
 
- LDA L3DF7,X
+ LDA L3DF7,X            \ Set (racePointsHi racePointsLo) += (0 L3DF7+X)
  CLC
  ADC racePointsLo,X
  STA racePointsLo,X
+
  LDA racePointsHi,X
  ADC #0
  STA racePointsHi,X
+
  DEC T
- BNE C5A62
+
+ BNE poin6
+
  DEC U
- BPL C5A62
+
+ BPL poin6
 
  JSR AddRacePoints      \ Add the race points from position Y to the accumulated
                         \ points for driver X
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -20231,37 +20269,45 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F38
+\       Name: numberOfPlayers
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The number of players
 \
 \ ******************************************************************************
 
-.L5F38
+.numberOfPlayers
 
  SKIP 1
 
 \ ******************************************************************************
 \
-\       Name: L5F39
+\       Name: lowestPlayerNumber
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The number of the player with the lowest player number
 \
 \ ******************************************************************************
 
-.L5F39
+.lowestPlayerNumber
 
- SKIP 1
+ SKIP 1                 \ Contains 20 minus the number of players, so that's:
+                        \
+                        \   * 19 if there is one player
+                        \   * 18 if there are two players
+                        \
+                        \ and so on, down to 0 if there are 20 players
+                        \
+                        \ Human players take the place of drivers with higher
+                        \ numbers, so the first player takes the place of driver
+                        \ 19 (the aptly called Dummy Driver, as they never get
+                        \ to race), and the second player takes the place of
+                        \ driver 18 (Peter Out), the third player replaces
+                        \ driver 17 (Rick Shaw) and so on
+                        \
+                        \ So this not only represents the lowest player number,
+                        \ but also the highest non-human driver number (which is
+                        \ lowestPlayerNumber - 1)
 
 \ ******************************************************************************
 \
@@ -20284,37 +20330,46 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F3B
+\       Name: qualifyingTime
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The number of minutes of qualifying lap time
 \
 \ ******************************************************************************
 
-.L5F3B
+.qualifyingTime
 
- SKIP 1
+ SKIP 1                 \ The number of minutes of qualifying lap time, minus
+                        \ one, as follows:
+                        \
+                        \   * 4 gives us 5 minutes of qualifying time
+                        \
+                        \   * 9 gives us 10 minutes of qualifying time
+                        \
+                        \   * 25 gives us 26 minutes of qualifying time
+                        \
+                        \   * 255 gives us infinite time (for practice)
+                        \
+                        \ Note that the third value should be 19 to match the
+                        \ menu option of 20 minutes, but the value in the
+                        \ timeFromOption table is incorrect
 
 \ ******************************************************************************
 \
-\       Name: L5F3C
+\       Name: competitionStarted
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: A flag to indicate whether or not the competition has started
 \
 \ ******************************************************************************
 
-.L5F3C
+.competitionStarted
 
- SKIP 1
+ SKIP 1                 \ Flag to indicate whether the competition has started:
+                        \
+                        \   * 0 = the competition has not started
+                        \
+                        \   * Non-zero = the competition has started
 
 \ ******************************************************************************
 \
@@ -22401,18 +22456,18 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: StartGame
+\       Name: MainLoop (Part 1 of 6)
 \       Type: Subroutine
 \   Category: Main loop
-\    Summary: 
+\    Summary: The main game loop: practice laps
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part of the main loop implements practice laps.
 \
 \ ******************************************************************************
 
-.StartGame
+.MainLoop
 
  LDX #0                 \ Set L05F4 = 0
  STX L05F4
@@ -22432,26 +22487,45 @@ ORG &5E40
                         \
                         \   2 = COMPETITION
 
- LDX #2                 \ Fetch the menu choice into X
+ LDX #2                 \ Fetch the menu choice into X (0 to 1)
  JSR GetMenuOption
 
  CPX #1                 \ If X >= 1, then the choice was competition, so jump to
- BCS game1              \ game1
+ BCS game1              \ game1 to start setting up the competition races
 
  STX currentPlayer      \ Otherwise X = 0 and the choice was practice, so set
                         \ currentPlayer = 0
 
- DEX                    \ Set L5F3B = 255
- STX L5F3B
+ DEX                    \ Set qualifyingTime = 255, so that the time we spend
+ STX qualifyingTime     \ practicing is as long as we want
 
  JSR ResetLapTimes      \ Reset the current lap times for all drivers
 
- JSR sub_C655A
+ JSR HeadToTrack        \ Head to the track to choose the wing settings and
+                        \ start the practice laps, which the player exits by
+                        \ pressing SHIFT and right arrow to restart the game
+                        \ (so we don't return from this call)
+
+\ ******************************************************************************
+\
+\       Name: MainLoop (Part 2 of 6)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: The main game loop: competition setup
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the main loop gets all the general information required for the
+\ competition: the race class and the duration of qualifying laps.
+\
+\ ******************************************************************************
 
 .game1
 
- LDA #0
- STA L5F3C
+ LDA #0                 \ Set competitionStarted = 0, to indicate that the
+ STA competitionStarted \ competition hasn't started yet (so we still need to
+                        \ get the race class, the number of laps, and the
+                        \ players' names)
 
  LDX #21                \ Print token 21, which shows a menu with the following
  JSR PrintToken         \ options:
@@ -22464,10 +22538,10 @@ ORG &5E40
                         \
                         \   3 = Professional
 
- LDX #3                 \ Fetch the menu choice into X
+ LDX #3                 \ Fetch the menu choice into X (0 to 2)
  JSR GetMenuOption
 
- STX raceClass          \ Set raceClass to the chosen race class (0-2)
+ STX raceClass          \ Set raceClass to the chosen race class (0 to 2)
 
  JSR Set5FB0            \ Call Set5FB0 to set up the 24 bytes at L5FB0 according
                         \ to the race class
@@ -22485,42 +22559,72 @@ ORG &5E40
                         \
                         \   3 = 20 mins
 
- LDX #3                 \ Fetch the menu choice into X
+ LDX #3                 \ Fetch the menu choice into X (0 to 2)
  JSR GetMenuOption
 
- LDA L3DF0,X
- STA L5F3B
+ LDA timeFromOption,X   \ Set the value of qualifyingTime to 4, 9 or 25, which
+ STA qualifyingTime     \ should be the number of minutes of qualifying time
+                        \ minus one, but the latter seems to be a bug
 
- JSR ResetLapTimes      \ Reset the current lap times for all drivers
+\ ******************************************************************************
+\
+\       Name: MainLoop (Part 3 of 6)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: The main game loop: qualifying laps
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the main loop gets the players' driver names, and heads to the
+\ track for their qualifying laps.
+\
+\ ******************************************************************************
 
- LDA #20
- STA currentPlayer
+ JSR ResetLapTimes      \ Reset the current lap times to 10:00.0 for all drivers
+
+ LDA #20                \ Set currentPlayer = 20, so the first human player will
+ STA currentPlayer      \ be number 19, the next one will be 18, and so on
 
 .game3
 
- DEC currentPlayer
+ DEC currentPlayer      \ Decrement currentPlayer so it points to the next human
+                        \ player
 
- LDX currentPlayer
+ LDX currentPlayer      \ Set X to the new player number
 
- JSR ResetLapTime       \ Reset the current lap time for driver X
+ JSR ResetLapTime       \ Reset the current lap time for the new player
 
- LDA L5F3C
- BEQ game4
+ LDA competitionStarted \ If competitionStarted = 0, jump to game4 to ask for
+ BEQ game4              \ the player's name, as the competition hasn't started
+                        \ yet and we are still running qualifying laps
 
- JSR PrintDriverPrompt
+                        \ If we get here then the competition is in full swing,
+                        \ so we need to run qualifying laps for all the human
+                        \ players
 
- JSR sub_C655A
+ JSR PrintDriverPrompt  \ Print the "DRIVER ->" prompt and the player's name
 
- LDA currentPlayer
- CMP L5F39
- BNE game3
+ JSR HeadToTrack        \ Head to the track to choose the wing settings and
+                        \ drive the qualifying laps, returning here when the
+                        \ laps are finished
+
+ LDA currentPlayer      \ If currentPlayer <> lowestPlayerNumber, then we still
+ CMP lowestPlayerNumber \ have more qualifying laps to get, so jump back to
+ BNE game3              \ game3 for the next player's qualifying laps
+
+                        \ By this point we have all the qualifying times for the
+                        \ human players
 
  LDA #0                 \ Sort the drivers by lap time, putting the results into
  JSR SortDrivers        \ positionNumber and driversInOrder
 
- JMP game9
+ JMP game9              \ Jump down to game9 to print the driver table, showing
+                        \ the grid positions for the race
 
 .game4
+
+                        \ If we get here then we need to get the player's name,
+                        \ as the competition has not yet started
 
  LDX #23                \ Print token 23, which shows the following prompt:
  JSR PrintToken         \
@@ -22531,12 +22635,15 @@ ORG &5E40
                         \   > 
                         \     ------------
 
- JSR GetDriverName
+ JSR GetDriverName      \ Fetch the player's name from the keyboard
 
- JSR sub_C655A
+ JSR HeadToTrack        \ Head to the track to choose the wing settings and
+                        \ start the qualifying laps, returning here when the
+                        \ laps are finished
 
- LDX currentPlayer
- BEQ game5
+ LDX currentPlayer      \ If currentPlayer = 0 then we have got as many players
+ BEQ game5              \ as we can handle (20 of them), so jump to game5 to
+                        \ skip asking for another driver
 
  LDX #27                \ Print token 27, which shows a menu with the following
  JSR PrintToken         \ options:
@@ -22545,52 +22652,138 @@ ORG &5E40
                         \
                         \   2 = START RACE
 
- LDX #2                 \ Fetch the menu choice into X
+ LDX #2                 \ Fetch the menu choice into X (0 to 1)
  JSR GetMenuOption
 
- CPX #0
- BEQ game3
+ CPX #0                 \ If X = 0, then the choice was to enter another driver,
+ BEQ game3              \ so jump back to game3 to add the new player and head
+                        \ to the track for their qualifying laps
+
+\ ******************************************************************************
+\
+\       Name: MainLoop (Part 4 of 6)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: The main game loop: the competition race
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the main loop checks the slowest qualifying lap times to see if
+\ we should make the game easier.
+\
+\ ******************************************************************************
 
 .game5
 
- LDA currentPlayer
- STA L5F39
+ LDA currentPlayer      \ We have now got all the player names and qualifying
+ STA lowestPlayerNumber \ times that we need, so store the player number in
+                        \ lowestPlayerNumber, which will contain 19 if there is
+                        \ one player, 18 if there are two, and so on
+                        \
+                        \ Human players take the place of drivers with higher
+                        \ numbers, so the first player takes the place of driver
+                        \ 19 (the aptly called Dummy Driver, as they never get
+                        \ to race), and the second player takes the place of
+                        \ driver 18 (Peter Out), the third player replaces
+                        \ driver 17 (Rick Shaw) and so on
+                        \
+                        \ So this not only represents the lowest player number,
+                        \ but also the highest non-human driver number (which is
+                        \ lowestPlayerNumber - 1)
 
  LDA #0                 \ Sort the drivers by lap time, putting the results into
- JSR SortDrivers        \ positionNumber and driversInOrder
+ JSR SortDrivers        \ positionNumber and driversInOrder, so they now contain
+                        \ the order of the drivers on the grid for the coming
+                        \ race
 
- LDX #0
+                        \ We now adjust the class of the race to cater for the
+                        \ player's qualifying lap time, which makes things more
+                        \ fun for a mixed group of player skills
+
+ LDX #0                 \ Set X to the race class number for Novice
 
 .game6
 
- LDY driversInOrder+19
+ LDY driversInOrder+19  \ Set Y to the driver number with the slowest lap time
 
- CPY L5F39
- BCC game8
+ CPY lowestPlayerNumber \ If Y < lowestPlayerNumber, then driver Y is one of the
+ BCC game8              \ computer-controlled drivers and they have the slowest
+                        \ lap time, so jump to game8 as the race class doesn't
+                        \ need changing
 
- LDA driverSeconds,Y
- SEC
+                        \ Otherwise the slowest lap time is by one of the human
+                        \ players, so we now set the race class (i.e. the race
+                        \ difficulty setting) according to the figures in the
+                        \ track data)
+
+ LDA driverSeconds,Y    \ Calculate the slowest lap time minus the time for
+ SEC                    \ class X from the track data, starting with the seconds
  SBC trackData+1792,X
 
- LDA driverMinutes,Y
+ LDA driverMinutes,Y    \ And then the minutes
  SBC trackData+1795,X
 
- BCS game7
+                        \ Note that for X = 2 (professional), the track data
+                        \ figure is 0, so the C flag will always be set
 
- INX
+ BCS game7              \ If the slowest lap time is longer than the figure from
+                        \ trackData, jump to game7 to consider setting the class
+                        \ to X, if it is easier than the current class
+                        \
+                        \ In other words, if the slowest lap time is really slow
+                        \ and is by a human player, this can make the game
+                        \ easier if the race class isn't already on Novice
+                        \
+                        \ For example, for Silverstone:
+                        \
+                        \   * We will consider setting the class to Novice if
+                        \     the longest lap is > 1:51 and by a human player
+                        \
+                        \   * We will consider setting the class to Amateur if
+                        \     the longest lap is <= 1:51 and > 1:41 and by a
+                        \     human player
+                        \
+                        \   * We will consider setting the class to Professional
+                        \     if the longest lap is <= 1:41 and by a human
+                        \     player
 
- BNE game6
+                        \ If we get here, the slowest lap time is quicker than
+                        \ the figure from the track data, so we now check the
+                        \ next figure from the track data and try again
+
+ INX                    \ Increment X to the next difficulty level
+
+ BNE game6              \ Jump back to game6 to check the next race class (this
+                        \ BNE is effectively a JMP as X is never zero)
 
 .game7
 
- CPX raceClass
- BCS game8
+ CPX raceClass          \ If X >= raceClass then X is the same or more difficult
+ BCS game8              \ than the current setting, so jump to game8 to leave the
+                        \ class unchanged
 
- STX raceClass
+ STX raceClass          \ Otherwise set the race class to the easier class in X
+
+\ ******************************************************************************
+\
+\       Name: MainLoop (Part 5 of 6)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: The main game loop: the competition race
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the main loop heads to the track to run the actual race. We
+\ print the driver table showing the grid positions, and set the grid row for
+\ any human drivers. We then start a loop, running a race for each human player,
+\ and asking for the number of laps in the race for the first such race. The
+\ loop concludes in the next part of the main loop.
+\
+\ ******************************************************************************
 
 .game8
 
- LDX raceClass
+ LDX raceClass          \ Set X to the race class
 
  JSR Set5FB0            \ Call Set5FB0 to set up the 24 bytes at L5FB0 according
                         \ to the race class
@@ -22608,30 +22801,45 @@ ORG &5E40
  LDA #0                 \ heading "GRID POSITIONS", so this shows the drivers
  JSR PrintDriverTable   \ in their starting positions on the grid
 
- LDY #&13
+                        \ We now make a copy of the driversInOrder list into
+                        \ driversInOrder2, so we can retrieve it below, and at
+                        \ the same time we set the correct grid row for any
+                        \ human players, depending on their starting position
+                        \ on the grid (there are two cars per grid row)
+
+ LDY #19                \ Set up a counter in Y so we can work through the
+                        \ drivers in order, from the back of the grid to the
+                        \ front
 
 .game10
 
- LDA driversInOrder,Y
- STA L04C8,Y
+ LDA driversInOrder,Y   \ Copy the Y-th positon from driversInOrder to
+ STA driversInOrder2,Y  \ driversInOrder2, setting A to the number of the driver
+                        \ in position Y
 
- CMP L5F39
- BCC game11
+ CMP lowestPlayerNumber \ If A < lowestPlayerNumber, then driver A is one of the
+ BCC game11             \ computer-controlled drivers, so jump to game11 to skip
+                        \ setting the grid number for the driver
 
- TAX
+                        \ If we get here then driver A is a human player
 
- LDA positionNumber,Y
- LSR A
- STA driverGridRow,X
+ TAX                    \ Set X = the player's driver number
+
+ LDA positionNumber,Y   \ Set A = the position of the player on the grid
+
+ LSR A                  \ Set the driver's grid row to A / 2, so the first two
+ STA driverGridRow,X    \ drivers are on grid row 0, then the next two are on
+                        \ grid row 1, and so on
 
 .game11
 
- DEY
+ DEY                    \ Decrement the counter
 
- BPL game10
+ BPL game10             \ Loop back until we have saved all the positions
 
- LDA L5F3C
- BNE game12
+ LDA competitionStarted \ If competitionStarted <> 0, then the competition has
+ BNE game12             \ already started, so jump to game12 to skip the lap
+                        \ selection process
 
  LDX #28                \ Print token 28, which shows a menu with the following
  JSR PrintToken         \ options:
@@ -22644,12 +22852,12 @@ ORG &5E40
                         \
                         \   3 = 20 laps
 
- LDA #20
- SEC
- SBC L5F39
- STA L5F38
+ LDA #20                \ Set numberOfPlayers = 20 - lowestPlayerNumber
+ SEC                    \
+ SBC lowestPlayerNumber \ so numberOfPlayers is 1 if there is one player, 2 if
+ STA numberOfPlayers    \ there are two players, and so on
 
- LDX #3                 \ Fetch the menu choice into X
+ LDX #3                 \ Fetch the menu choice into X (0 to 2)
  JSR GetMenuOption
 
  LDA lapsFromOption,X   \ Convert the menu choice (0 to 2) into the number of
@@ -22660,50 +22868,70 @@ ORG &5E40
 
 .game12
 
- LDA #20
- STA currentPlayer
+ LDA #20                \ We now work our way through the human players so each
+ STA currentPlayer      \ one can race in turn, so set currentPlayer to 20 so
+                        \ it gets decremented to 19 for the first player
 
 .game13
 
- DEC currentPlayer
+ DEC currentPlayer      \ Decrement currentPlayer to move on to the next player
 
- JSR PrintDriverPrompt
+ JSR PrintDriverPrompt  \ Print the "DRIVER ->" prompt and the player's name
 
- LDX #&13
+ LDX #19                \ We now restore the grid positions we saved above, so
+                        \ set a counter in X
 
 .game14
 
- LDA L04C8,X
- STA driversInOrder,X
+ LDA driversInOrder2,X  \ Restore the X-th positon from driversInOrder2 to
+ STA driversInOrder,X   \ driversInOrder
 
- DEX
+ DEX                    \ Decrement the counter
 
- BPL game14
+ BPL game14             \ Loop back until we have restored all the positions
 
  JSR ResetLapTimes      \ Reset the current lap times for all drivers
 
- LDA #&80
+ LDA #%10000000         \ Head to the track to choose the wing settings and
+ JSR HeadToTrack+2      \ start the race (as bit 7 of A is set), returning here
+                        \ when the race is finished
 
- JSR sub_C655C
+\ ******************************************************************************
+\
+\       Name: MainLoop (Part 6 of 6)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: The main game loop: race points and competition results
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the main loop processes the points from the race and displays the
+\ driver tables, and loops back to the previous part if there are more human
+\ players in the race. When all the players have raced, we loop back to part 2
+\ for the next race in the championship.
+\
+\ ******************************************************************************
 
  LDA #%10000000         \ Sort the drivers by best lap time, putting the results
  JSR SortDrivers        \ into positionNumber and driversInOrder
 
- LDX #5
+ LDX #5                 \ We now award points to the top six drivers in the
+                        \ race, so set a counter in X
 
 .game15
 
- JSR sub_C5A25
+ JSR AwardRacePoints    \ Award points to the driver in race position X
 
- DEX
+ DEX                    \ Decrement the counter
 
- BPL game15
+ BPL game15             \ Loop back until we have awarded points to the top six
+                        \ drivers
 
  LDA #0                 \ Sort the drivers by lap time, putting the results into
  JSR SortDrivers        \ positionNumber and driversInOrder
 
- LDX #6
- JSR sub_C5A25
+ LDX #6                 \ Award a point to the driver with the fastest lap
+ JSR AwardRacePoints
 
 .game16
 
@@ -22725,70 +22953,76 @@ ORG &5E40
  LDA #%01000000         \ Sort the drivers by accumulated points, putting the
  JSR SortDrivers        \ results into positionNumber and driversInOrder
 
- LDX #3                 \ Set L5F3C = 3
- STX L5F3C
+ LDX #3                 \ Set competitionStarted = 3, which is non-zero, so this
+ STX competitionStarted \ indicates that the competition has started (so we
+                        \ don't get asked to choose the number of laps or player
+                        \ names)
 
  LDA #&88               \ Print the driver table, showing accumulated points,
  JSR PrintDriverTable   \ under the heading "ACCUMULATED POINTS", so this shows
                         \ the cumulative results of all races
 
- BIT G
- BPL game16
+ BIT G                  \ If bit 7 of G is clear, then RETURN was pressed, so
+ BPL game16             \ jump back to game16 to show the driver tables again
 
- LDA currentPlayer
+ LDA currentPlayer      \ If currentPlayer <> lowestPlayerNumber, then we still
+ CMP lowestPlayerNumber \ have more players to race, so jump back to game13 to
+ BNE game13             \ start the next player's race
 
- CMP L5F39
- BNE game13
-
- JMP game2
+ JMP game2              \ Jump back to game2 to move on to the next race in the
+                        \ competition
 
 \ ******************************************************************************
 \
-\       Name: sub_C655A
+\       Name: HeadToTrack
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Main Loop
+\    Summary: Get the wing settings and start a race, practice or qualifying lap
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   HeadToTrack+2       Called with A = %10000000 to start a race, as opposed to
+\                       practice or a qualifying lap
 \
 \ ******************************************************************************
 
-.sub_C655A
+.HeadToTrack
 
- LDA #&28
+ LDA #%00101000         \ Set A to the value for practice or a qualifying lap
+                        \ (this instruction will be skipped when starting a race
+                        \ by calling HeadToTrack+2)
 
-\ ******************************************************************************
-\
-\       Name: sub_C655C
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ STA raceStarted        \ Set raceStarted to the value of A, so bit 7 gets set
+                        \ if this is a race, but is clear for practice or a
+                        \ qualifying lap
 
-.sub_C655C
+ STA L006D              \ Set L006D to the value of A, so bit 7 gets set
+                        \ if this is a race, but is clear for practice or a
+                        \ qualifying lap
 
- STA raceStarted
- STA L006D
+.race1
 
-.P6560
+ JSR GetWingSettings    \ Get the front and rear wing settings from the player
 
- JSR GetWingSettings
- JSR MainDrivingLoop
- BIT L05F4
- BVS P6560
- BPL C6570
- JSR RestartGame
+ JSR MainDrivingLoop    \ Call the main driving loop to switch to the custom
+                        \ mode, implement the driving part of the game, and
+                        \ return here with the screen mode back to mode 7
 
-.C6570
+ BIT L05F4              \ If bit 6 of L05F4 is set, loop back to race1
+ BVS race1
 
- RTS
+ BPL race2              \ If bit 7 of L05F4 is clear, jump to race2 to return
+                        \ from the subroutine
+
+ JSR RestartGame        \ Jump to RestartGame to restart the game, which removes
+                        \ the return address from the stack and jumps to the
+                        \ main loop, so this call acts like JMP RestartGame
+
+.race2
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -23044,6 +23278,11 @@ ORG &5E40
 \   positionNumber      A list of position numbers (for race tables only), which
 \                       contains the numbers 0 to 19 in sequence, with tied
 \                       positions represented by shared position numbers
+\
+\ Returns:
+\
+\   G                   Bit 7 is clear if RETURN was pressed, set if SPACE was
+\                       pressed
 \
 \ ******************************************************************************
 
@@ -23423,7 +23662,7 @@ ORG &5E40
 \       Name: GetDriverName
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: Fetch a driver's name from the keyboa4
+\    Summary: Fetch a player's name from the keyboard
 \
 \ ******************************************************************************
 

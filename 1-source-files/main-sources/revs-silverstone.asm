@@ -328,12 +328,22 @@ ORG CODE%
  EQUB &03
 
 \ trackData+1792 = 5A00
+\ Race class adjuster: seconds
+\ See MainLoop (Part 4 of 6)
+\ If the slowest lap time is a human player, and it's slower than one of these
+\ times, then we set the race class to the relevant difficulty
 
- EQUB &33, &29, &00
+ EQUB 51                \ Set class to Novice if slowest lap time > 1:51
+ EQUB 41                \ Set class to Amateur if slowest lap time > 1:41
+ EQUB 0                 \ Otherwise set class to Professional
 
 \ trackData+1795 = 5A03
+\ See MainLoop (Part 4 of 6)
+\ Race class adjuster: minutes
 
- EQUB &01, &01, &00
+ EQUB 1                 \ Set class to Novice if slowest lap time > 1:51
+ EQUB 1                 \ Set class to Amateur if slowest lap time > 1:41
+ EQUB 0                 \ Otherwise set class to Professional
 
 \ trackData+1798 = 5A06
 \ Called "ratios" in car performance hack
