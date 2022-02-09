@@ -711,9 +711,10 @@ ORG &0000
 
 ORG &0100
 
-.sortedDrivers
+.positionNumber
 
- SKIP 20                \ Driver numbers, sorted for display in the driver table
+ SKIP 20                \ Position numbers to show in the first column of the
+                        \ driver table
 
 .L0114
 
@@ -729,15 +730,21 @@ ORG &0100
                         \
                         \ Indexed by driver number (0 to 19)
 
-.driverPosition
+.driversInOrder
 
- SKIP 20                \ The current position of each driver in the race (i.e.
-                        \ first place, second place etc.)
+ SKIP 20                \ A list of driver numbers in order
+                        \
+                        \ For example, during a race, this contains the race
+                        \ position of each driver in the race (i.e. first place,
+                        \ second place etc.)
+                        \
+                        \ It is also used to sort drivers by lap time and points
+                        \ for the driver table
                         \
                         \ Indexed by driver number (0 to 19)
                         \
                         \ Gets set in InitialiseDrivers to the number of each
-                        \ driver
+                        \ driver, so the initial order is driver number
 
 .L3850Hi
 
@@ -2625,16 +2632,26 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: SortDriverTable
+\       Name: SortDrivers
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Create a sorted table of driver numbers, ordered as specified
+\    Summary: Create a sorted list of driver numbers, ordered as specified
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine sorts the driver list in driversInOrder according to the value
+\ specified by argument A. It also populates positionNumber with the position
+\ numbers for the sorted driver list, which will typically run from 0 to 19,
+\ but may also contain repeated numbers in the case of a tie.
+\
+\ The routine uses a basic bubble sort algorithm, swapping neighbouring drivers
+\ repeatedly until the whole list is sorted. This is not very efficient, but as
+\ this is only done when showing the driver table between races, that doesn't
+\ matter.
+\
 \ Arguments:
 \
-\   A                   Determines the order of the sorted table to create:
+\   A                   Determines the order of the sorted list to create:
 \
 \                           * 0 = most recent lap times
 \
@@ -2644,11 +2661,17 @@ ORG &0B00
 \
 \ Returns:
 \
-\   sortedDrivers        A table of driver numbers, sorted as specified
+\   positionNumber      A list of position numbers, from 0 to 19, ready to print
+\                       in the first column of the driver table (with 1 added),
+\                       with drivers who are tied in the same position sharing
+\                       the same number
+\
+\   driversInOrder      A list of driver numbers, sorted according to the value
+\                       specified by argument A
 \
 \ ******************************************************************************
 
-.SortDriverTable
+.SortDrivers
 
  STA G                  \ Store A in G
 
@@ -2657,37 +2680,48 @@ ORG &0B00
 
 .sort1
 
- LDX #0                 \ Set V = 0, which indicates that the table is sorted
- STX V                  \ (we will change this as we process each table row)
+ LDX #0                 \ Set V = 0, which we will use to indicate whether the
+ STX V                  \ driversInOrder list is sorted
+                        \
+                        \ We start at 0 to indicate it is sorted, and change it
+                        \ if we have to reorder the list
 
- STX sortedDrivers      \ Set sortedDrivers = 0
+ STX positionNumber     \ Set the first entry in positionNumber to 0, as the
+                        \ winning driver will always be in position 0
 
- INX                    \ Set X = 1 as a row counter, counting through 1 to 19,
-                        \ skipping 0 as each iteration compares row X with row
-                        \ X - 1
+ INX                    \ Set X = 1 as a position counter, counting through 1 to
+                        \ 19, which denotes the position number that we are
+                        \ processing in this iteration of the loop (we skip the
+                        \ first position as we already set it)
 
 .sort2
 
- STX W                  \ Store the row counter in W
+ STX W                  \ Store the position counter in W
 
- LDY driverPosition,X   \ Set Y to the driver in position X
+ LDY driversInOrder,X   \ Set Y to the number of the driver at position X in the
+                        \ driversInOrder list ("this driver")
 
- TXA                    \ Set the X-th entry in sortedDrivers to the loop counter
- STA sortedDrivers,X
+ TXA                    \ Set the X-th entry in positionNumber to the position
+ STA positionNumber,X   \ counter (as the X-th driver is in position X)
 
- LDA driverPosition-1,X \ Set X to the driver in position X - 1
- TAX
+ LDA driversInOrder-1,X \ Set X to the number of the driver at position X - 1 in
+ TAX                    \ the driversInOrder list ("the driver ahead")
 
- SEC                    \ Set the C flag for the subtraction below
+ SEC                    \ Set the C flag for the subtractions below
 
- BIT G                  \ If bit 6 of G is set, jump to sort5
- BVS sort5
+ BIT G                  \ If bit 6 of G is set, jump to sort5 to compare total
+ BVS sort5              \ points
 
- BMI sort6              \ If bit 7 of G is set, jump to sort6
+ BMI sort6              \ If bit 7 of G is set, jump to sort6 to compare best
+                        \ lap times
 
- LDA driverTenths,Y     \ Set (A H U) = position X time - position X-1 time
- SBC driverTenths,X     \
- STA U                  \ starting with the low bytes
+                        \ If we get here then bit 6 and 7 of G are clear, so we
+                        \ compare most recent lap times
+
+ LDA driverTenths,Y     \ Set (A H U) =   this driver's lap time
+ SBC driverTenths,X     \               - lap time of the driver ahead
+ STA U                  \
+                        \ starting with the low bytes
 
  LDA driverSeconds,Y    \ Then the high bytes
  SBC driverSeconds,X
@@ -2696,36 +2730,43 @@ ORG &0B00
  LDA driverMinutes,Y    \ And then the top bytes
  SBC driverMinutes,X
 
- BCC sort7              \ If the subtraction underflowed, then position X-1's
-                        \ lap time is bigger than position X's lap time, which
-                        \ is the wrong way round, as so jump to sort7 to swap
-                        \ them around
+ BCC sort7              \ If the subtraction underflowed, then this driver's
+                        \ lap time is quicker than the lap time of the driver
+                        \ ahead, which is the wrong way round if we are trying
+                        \ to create a list where the winner has the fastest lap
+                        \ time, so jump to sort7 to swap them around in the
+                        \ driversInOrder list
 
 .sort3
 
- ORA U
- ORA H
- BNE sort4
+ ORA U                  \ At this point (A H U) contains the difference between
+ ORA H                  \ the two drivers' times/points, so this jumps to sort4
+ BNE sort4              \ if any of the bytes in (A U H) are non-zero, i.e. if
+                        \ the two drivers have different times/points
 
- LDX W
- DEX
- LDA sortedDrivers,X
- STA sortedDrivers+1,X
+ LDX W                  \ The two drivers have identical times/points, so set
+ DEX                    \ we need to set the current driver's position number to
+ LDA positionNumber,X   \ be the same as the position number of the driver ahead
+ STA positionNumber+1,X \ as there is a tie
 
 .sort4
 
- LDX W                  \ Fetch the row counter that we stored in W above
+                        \ If we get here then we move on to the next position
 
- INX                    \ Increment the row counter to the next table row
+ LDX W                  \ Fetch the position counter that we stored in W above
+
+ INX                    \ Increment the position counter to the next position
 
  CPX #20                \ Loop back until we have gone through the whole table
- BCC sort2              \ of 20 rows (i.e. 19 consecutive pairs)
+ BCC sort2              \ of 20 positions
 
- LDA V                  \ If V <> 0 then the table is not fully sorted, so jump
- BNE sort1              \ back to sort1 to repeat the sorting process
+ LDA V                  \ If V <> 0 then we had to alter the order of the
+ BNE sort1              \ driversInOrder list, as it wasn't fully sorted, so
+                        \ we jump back to sort1 to repeat the whole process as
+                        \ we don't yet know that the list is fully sorted
 
- CLD                    \ Otherwise the table is sorted, so clear the D flag to
-                        \ switch arithmetic to normal
+ CLD                    \ Otherwise the driversInOrder list is sorted, so clear
+                        \ the D flag to switch arithmetic to normal
 
  JSR sub_C63A2
 
@@ -2733,9 +2774,10 @@ ORG &0B00
 
 .sort5
 
- LDA totalPointsLo,X
- SBC totalPointsLo,Y
- STA U
+ LDA totalPointsLo,X    \ Set (A H U) =   total points of the driver ahead
+ SBC totalPointsLo,Y    \               - this driver's total points
+ STA U                  \
+                        \ starting with the low bytes
 
  LDA totalPointsHi,X    \ Then the high bytes
  SBC totalPointsHi,Y
@@ -2744,14 +2786,22 @@ ORG &0B00
  LDA totalPointsTop,X   \ And then the top bytes
  SBC totalPointsTop,Y
 
- BCC sort7
- BCS sort3
+ BCC sort7              \ If the subtraction underflowed, then this driver has
+                        \ more points than the driver ahead, which is the wrong
+                        \ way round if we are trying to create a list where the
+                        \ winner has the most points, so jump to sort7 to swap
+                        \ them around in the driversInOrder list
+
+ BCS sort3              \ Jump to sort3 to check for a tie and move on to the
+                        \ next position (this BCS is effectively a JMP as we
+                        \ just passed through a BCC)
 
 .sort6
 
- LDA bestLapTenths,Y
- SBC bestLapTenths,X
- STA U
+ LDA bestLapTenths,Y    \ Set (A H U) =   this driver's best lap time
+ SBC bestLapTenths,X    \               - best lap time of the driver ahead
+ STA U                  \
+                        \ starting with the low bytes
 
  LDA bestLapSeconds,Y   \ Then the high bytes
  SBC bestLapSeconds,X
@@ -2760,18 +2810,43 @@ ORG &0B00
  LDA bestLapMinutes,Y   \ And then the top bytes
  SBC bestLapMinutes,X
 
- BCS sort4
+ BCS sort4              \ If the subtraction didn't underflow then the drivers
+                        \ are in the correct order, so jump to sort4 to move on
+                        \ to the next position
+
+                        \ Otherwise the subtraction underflowed, so this
+                        \ driver's best lap time is quicker than the best lap
+                        \ time of the driver ahead, which is the wrong way round
+                        \ if we are trying to create a list where the winner has
+                        \ the fastest lap time, so fall through into sort7 to
+                        \ swap them around in the driversInOrder list
 
 .sort7
 
- STX T
- LDX W
- TYA
- STA driverPosition-1,X
- LDA T
- STA driverPosition,X
- DEC V
- JMP sort4
+                        \ If we get here then the two drivers we are comparing
+                        \ are in the wrong order in the driversInOrder list, so
+                        \ we need to swap them round
+                        \
+                        \ At this point X contains the number of the driver
+                        \ ahead and Y contains the number of this driver
+
+ STX T                  \ Store the number of the driver ahead in T
+
+ LDX W                  \ Set X to the position counter
+
+ TYA                    \ Set A to the number of this driver
+
+ STA driversInOrder-1,X \ Set the number of the driver ahead (i.e. the position
+                        \ before the one we are processing) to A (i.e. the
+                        \ number of this driver)
+
+ LDA T                  \ Set the number of this driver (i.e. the current
+ STA driversInOrder,X   \ position) to T (i.e. the number of the driver ahead)
+
+ DEC V                  \ Decrement V so that is it non-zero, to indicate that
+                        \ we had to swap an entry in the driversInOrder list
+
+ JMP sort4              \ Jump to sort4 to move on to the next position
 
 \ ******************************************************************************
 \
@@ -2801,10 +2876,13 @@ ORG &0B00
  EOR #&FF
  ADC numberOfLaps
  PHP
+
  JSR GetDriverNumberBCD
+
  LDX #&0C
  LDY #&21
- JSR sub_C37D0
+ JSR Print2DigitBCD-6
+
  PLP
  BPL C102A
 
@@ -2956,7 +3034,7 @@ ORG &0B00
 
  TXA
  PHA
- LDA driverPosition,X
+ LDA driversInOrder,X
  TAX
  JSR sub_C14C3
  PLA
@@ -3006,7 +3084,7 @@ ORG &0B00
 
 .P1104
 
- LDX driverPosition,Y
+ LDX driversInOrder,Y
  EOR #&FF
  STA L0178,X
  DEY
@@ -3166,7 +3244,7 @@ ORG &0B00
  ORA #&45
  STA L0114,X
  LDA #&91
- STA sortedDrivers,X
+ STA positionNumber,X
 
 \ ******************************************************************************
 \
@@ -4792,7 +4870,7 @@ ORG &0B00
  STA L0114,X
  STA L0164,X
  STA L3850Hi,X
- STA sortedDrivers,X
+ STA positionNumber,X
  STA L3850Lo,X
  LDA #&FF
  STA L01A4,X
@@ -5601,7 +5679,7 @@ ORG &0B00
  STX G
  LDX #&0A
  LDY #&18
- JSR sub_C37D0
+ JSR Print2DigitBCD-6
 
 .C1BA2
 
@@ -6579,7 +6657,7 @@ ORG &0B00
  CMP #&14
  BCC C1FD5
  LDX driverInFront
- LDA driverPosition,X
+ LDA driversInOrder,X
 
 .C1FD5
 
@@ -7983,7 +8061,7 @@ ORG &0B00
  LDA L5F3B
  BMI Delay
  LDX driverBehind
- LDY driverPosition,X
+ LDY driversInOrder,X
  LDA L018C,Y
  AND #&7F
  STA L018C,Y
@@ -8046,18 +8124,18 @@ ORG &0B00
 
 .SwapDriverPosition
 
- LDA driverPosition,X   \ Set T = driver X's current position
+ LDA driversInOrder,X   \ Set T = driver X's current position
  STA T
 
- LDA driverPosition,Y   \ Set A = driver Y's current position
+ LDA driversInOrder,Y   \ Set A = driver Y's current position
 
- STA driverPosition,X   \ Set driver X's new position to A (i.e. driver Y's old
+ STA driversInOrder,X   \ Set driver X's new position to A (i.e. driver Y's old
                         \ position) 
 
  TAX                    \ Set X = the new position for driver X
 
  LDA T                  \ Set driver Y's new position to T (i.e. driver X's old
- STA driverPosition,Y   \ position)
+ STA driversInOrder,Y   \ position)
 
  TAY                    \ Set Y = the new position for driver Y
 
@@ -8083,12 +8161,12 @@ ORG &0B00
 .C2694
 
  STX W
- LDA driverPosition,X
+ LDA driversInOrder,X
  STA T
 
  JSR PreviousDriver     \ Decrement X to the previous driver number
 
- LDA driverPosition,X
+ LDA driversInOrder,X
  STX G
  TAY
  LDX T
@@ -8165,7 +8243,7 @@ ORG &0B00
  STA L0083
  LDA T
  CMP #4
- LDA sortedDrivers,Y
+ LDA positionNumber,Y
  AND #&40
  BEQ C2729
  BCS C271C
@@ -8255,11 +8333,11 @@ ORG &0B00
 
 .C278C
 
- LDA sortedDrivers,X
+ LDA positionNumber,X
  LSR A
  LDA N
  BCS C2797
- STA sortedDrivers,X
+ STA positionNumber,X
 
 .C2797
 
@@ -8383,7 +8461,7 @@ ORG &0B00
 
 .C27F6
 
- LDA sortedDrivers,X
+ LDA positionNumber,X
  BMI C285B
  LDY L06E8,X
  LDA trackData+1536,Y
@@ -8423,7 +8501,7 @@ ORG &0B00
 .C2838
 
  STA T
- LDA sortedDrivers,X
+ LDA positionNumber,X
  AND #&40
  BEQ C2843
  LDA #5
@@ -8575,7 +8653,7 @@ ORG &0B00
 
 .sub_C28F2
 
- LDA driverPosition,X
+ LDA driversInOrder,X
  STA L0045
  STA L0042
  TAX
@@ -8612,7 +8690,7 @@ ORG &0B00
 .C2922
 
  TAY
- LDA sortedDrivers,X
+ LDA positionNumber,X
  AND #&10
  BNE C2937
  LDA L3850Hi,X
@@ -8966,7 +9044,7 @@ ORG &0B00
 .sub_C2ACB
 
  STX L0045
- LDA driverPosition,X
+ LDA driversInOrder,X
  TAX
 
 \ ******************************************************************************
@@ -11813,24 +11891,6 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C37D0
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C37D0
-
- STX xCursor
- STY yCursor
-
-\ ******************************************************************************
-\
 \       Name: Print2DigitBCD
 \       Type: Subroutine
 \   Category: Text
@@ -11856,7 +11916,16 @@ ORG &0B00
 \                       used to determine the printing style in the next call to
 \                       Print2DigitBCD
 \
+\ Other entry points:
+\
+\   (X, Y)              The screen coordinate where we should print the number,
+\                       where X is the character column and Y is the pixel row
+\                       of the bottom of the character
+\
 \ ******************************************************************************
+
+ STX xCursor            \ Set the cursor to (X, Y), so we print the number at
+ STY yCursor            \ the specified screen location
 
 .Print2DigitBCD
 
@@ -14699,7 +14768,7 @@ NEXT
 \       Name: ResetLapTime
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the best lap time for a specific driver
+\    Summary: Reset the current lap time for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15158,18 +15227,18 @@ NEXT
 \       Name: ResetLapTimes
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the best lap times for all drivers
+\    Summary: Reset the current lap times for all drivers
 \
 \ ******************************************************************************
 
 .ResetLapTimes
 
- LDX #19                \ We are about to reset the best lap times for all 20
-                        \ drivers, so set a driver counter in X
+ LDX #19                \ We are about to reset the current lap times for
+                        \ all 20 drivers, so set a driver counter in X
 
 .rall1
 
- JSR ResetLapTime       \ Reset the best lap time for driver X
+ JSR ResetLapTime       \ Reset the current lap time for driver X
 
  DEX                    \ Decrement the driver counter
 
@@ -17637,7 +17706,7 @@ NEXT
 
  TXA                    \ Set A to the current driver number in X
 
- STA driverPosition,X   \ Set driverPosition for driver X to the driver number
+ STA driversInOrder,X   \ Set driversInOrder for driver X to the driver number
 
  LSR A                  \ Set the grid row for driver X to driver number >> 1,
  NOP                    \ so drivers 0 and 1 are on row 0, drivers 2 and 3 are
@@ -19439,7 +19508,7 @@ NEXT
  AND #&FC
 
  JSR GetScreenAddress   \ Set (Q P) to the screen address for pixel coordinate
-                        \ (xCursor, yCursor)
+                        \ (A, Y)
 
  LDA W
  ASL A
@@ -19842,10 +19911,10 @@ NEXT
  STA racePointsLo,X
  STA racePointsHi,X
  STA U
- LDY driverPosition,X
+ LDY driversInOrder,X
  CPX #6
  BNE C5A39
- LDY driverPosition
+ LDY driversInOrder
 
 .C5A39
 
@@ -22261,7 +22330,7 @@ ORG &5E40
 
 .P63A6
 
- CMP driverPosition,X
+ CMP driversInOrder,X
  BEQ C63AE
  DEX
  BPL P63A6
@@ -22375,7 +22444,7 @@ ORG &5E40
  DEX                    \ Set L5F3B = 255
  STX L5F3B
 
- JSR ResetLapTimes      \ Reset the best lap times for all drivers
+ JSR ResetLapTimes      \ Reset the current lap times for all drivers
 
  JSR sub_C655A
 
@@ -22422,7 +22491,7 @@ ORG &5E40
  LDA L3DF0,X
  STA L5F3B
 
- JSR ResetLapTimes      \ Reset the best lap times for all drivers
+ JSR ResetLapTimes      \ Reset the current lap times for all drivers
 
  LDA #20
  STA currentPlayer
@@ -22433,7 +22502,7 @@ ORG &5E40
 
  LDX currentPlayer
 
- JSR ResetLapTime       \ Reset the best lap time for driver X
+ JSR ResetLapTime       \ Reset the current lap time for driver X
 
  LDA L5F3C
  BEQ game4
@@ -22446,8 +22515,8 @@ ORG &5E40
  CMP L5F39
  BNE game3
 
- LDA #0
- JSR SortDriverTable
+ LDA #0                 \ Sort the drivers by lap time, putting the results into
+ JSR SortDrivers        \ positionNumber and driversInOrder
 
  JMP game9
 
@@ -22463,7 +22532,9 @@ ORG &5E40
                         \     ------------
 
  JSR GetDriverName
+
  JSR sub_C655A
+
  LDX currentPlayer
  BEQ game5
 
@@ -22485,14 +22556,14 @@ ORG &5E40
  LDA currentPlayer
  STA L5F39
 
- LDA #0
- JSR SortDriverTable
+ LDA #0                 \ Sort the drivers by lap time, putting the results into
+ JSR SortDrivers        \ positionNumber and driversInOrder
 
  LDX #0
 
 .game6
 
- LDY driverPosition+19
+ LDY driversInOrder+19
 
  CPY L5F39
  BCC game8
@@ -22505,7 +22576,9 @@ ORG &5E40
  SBC trackData+1795,X
 
  BCS game7
+
  INX
+
  BNE game6
 
 .game7
@@ -22531,27 +22604,32 @@ ORG &5E40
 
 .game9
 
- LDX #2                 \ "GRID POSITIONS", best lap time
- LDA #0
- JSR PrintDriverTable
+ LDX #2                 \ Print the driver table, showing lap times, under the
+ LDA #0                 \ heading "GRID POSITIONS", so this shows the drivers
+ JSR PrintDriverTable   \ in their starting positions on the grid
 
  LDY #&13
 
 .game10
 
- LDA driverPosition,Y
+ LDA driversInOrder,Y
  STA L04C8,Y
+
  CMP L5F39
  BCC game11
+
  TAX
- LDA sortedDrivers,Y
+
+ LDA positionNumber,Y
  LSR A
  STA driverGridRow,X
 
 .game11
 
  DEY
+
  BPL game10
+
  LDA L5F3C
  BNE game12
 
@@ -22588,60 +22666,71 @@ ORG &5E40
 .game13
 
  DEC currentPlayer
+
  JSR PrintDriverPrompt
+
  LDX #&13
 
 .game14
 
  LDA L04C8,X
- STA driverPosition,X
+ STA driversInOrder,X
+
  DEX
+
  BPL game14
 
- JSR ResetLapTimes      \ Reset the best lap times for all drivers
+ JSR ResetLapTimes      \ Reset the current lap times for all drivers
 
  LDA #&80
 
  JSR sub_C655C
- LDA #%10000000
- JSR SortDriverTable
+
+ LDA #%10000000         \ Sort the drivers by best lap time, putting the results
+ JSR SortDrivers        \ into positionNumber and driversInOrder
 
  LDX #5
 
 .game15
 
  JSR sub_C5A25
+
  DEX
+
  BPL game15
 
- LDA #0
- JSR SortDriverTable
+ LDA #0                 \ Sort the drivers by lap time, putting the results into
+ JSR SortDrivers        \ positionNumber and driversInOrder
+
  LDX #6
  JSR sub_C5A25
 
 .game16
 
- LDA #%10000000
- JSR SortDriverTable
+ LDA #%10000000         \ Sort the drivers by lap time, putting the results into
+ JSR SortDrivers        \ positionNumber and driversInOrder
 
- LDX #1                 \ "POINTS", points awarded in the last race
- LDA #4
- JSR PrintDriverTable
+ LDX #1                 \ Print the driver table, showing points awarded in the
+ LDA #4                 \ last race, under the heading "POINTS", so this shows
+ JSR PrintDriverTable   \ the best drivers from the last race, along with the
+                        \ points awarded to the fastest six drivers
 
- LDA #0
- JSR SortDriverTable
+ LDA #0                 \ Sort the drivers by lap time, putting the results into
+ JSR SortDrivers        \ positionNumber and driversInOrder
 
- LDX #6                 \ "BEST LAP TIMES", best lap time
- LDA #0
- JSR PrintDriverTable
+ LDX #6                 \ Print the driver table, showing lap times, under the
+ LDA #0                 \ heading "BEST LAP TIMES", so this shows the lap times
+ JSR PrintDriverTable   \ from the race
 
- LDA #%01000000
- JSR SortDriverTable
+ LDA #%01000000         \ Sort the drivers by accumulated points, putting the
+ JSR SortDrivers        \ results into positionNumber and driversInOrder
 
- LDX #3                 \ "ACCUMULATED POINTS", accumulated points
+ LDX #3                 \ Set L5F3C = 3
  STX L5F3C
- LDA #&88
- JSR PrintDriverTable
+
+ LDA #&88               \ Print the driver table, showing accumulated points,
+ JSR PrintDriverTable   \ under the heading "ACCUMULATED POINTS", so this shows
+                        \ the cumulative results of all races
 
  BIT G
  BPL game16
@@ -22924,9 +23013,10 @@ ORG &5E40
 \   * A "PRESS SPACE TO CONTINUE" prompt below the table
 \
 \ If the table is being shown after practice or qualifying, the drivers are
-\ shown in driver order, from 1 to 20, but if it is shown after a race, they are
-\ shown in the order from the sortedDrivers table, and the race class is printed
-\ above the table.
+\ shown in driver order, from 1 to 20, but if it is shown after a race, the
+\ first column shows the numbers from the positionNumber table, the second
+\ colimn shows the drivers in the order that they appear in the ???
+\ list, and the race class is printed above the table.
 \
 \ The routine also waits for SPACE or RETURN to be pressed before returning.
 \
@@ -22945,13 +23035,15 @@ ORG &5E40
 \
 \   A                   Defines what to show in the third column in the table:
 \
-\                         * 0 = best lap time
+\                         * 0 = lap times
 \
 \                         * 4 = points awarded in the last race
 \
 \                         * &88 = accumulated points
 \
-\   sortedDrivers       A sorted table of driver numbers (for race tables only)
+\   positionNumber      A list of position numbers (for race tables only), which
+\                       contains the numbers 0 to 19 in sequence, with tied
+\                       positions represented by shared position numbers
 \
 \ ******************************************************************************
 
@@ -22987,14 +23079,13 @@ ORG &5E40
 
  LDY rowCounter         \ Set Y to the table row number
 
- LDA sortedDrivers,Y    \ Set A to the sortedDrivers value for this row, so the
-                        \ table will show the drivers in the order that they
-                        \ appear in the sortedDrivers table
+ LDA positionNumber,Y   \ Set A to the positionNumber for this row, to show in
+                        \ the first column
 
  BIT raceStarted        \ If bit 7 of raceStarted is set, that means the results
  BMI dtab2              \ are from a finished race, so jump to dtab2 to skip the
                         \ following instruction, so we print the numbers from
-                        \ sortedDrivers in the first column
+                        \ positionNumber in the first column
 
  TYA                    \ Set A to the row number, so we print the row number in
                         \ the first column (i.e. 1 to 20, as )
@@ -23033,7 +23124,7 @@ ORG &5E40
                         \ routine was 0, so we now print the third column
                         \ containing the driver's best lap time
 
- LDA #%00100110         \ Print the best lap time for driver X in the following
+ LDA #%00100110         \ Print the lap time for driver X in the following
  JSR PrintLapTime       \ format:
                         \
                         \   * %00 Minutes: No leading zeroes, print both digits
@@ -23198,7 +23289,8 @@ ORG &5E40
 \       Name: PrintPositionName
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print the name of the driver in a specific position in the race
+\    Summary: Print the name of the driver in a specific position in the driver
+\             position list
 \
 \ ------------------------------------------------------------------------------
 \
@@ -23214,7 +23306,7 @@ ORG &5E40
 
 .PrintPositionName
 
- LDX driverPosition,Y   \ Set X to the number of the driver in position Y
+ LDX driversInOrder,Y   \ Set X to the number of the driver in position Y
 
  STX driverPrinted      \ Store the driver number in driverPrinted, so we can
                         \ return it
@@ -23422,7 +23514,7 @@ ORG &6C00
 .sub_C7B00
 
  LDY driverBehind
- LDX driverPosition,Y
+ LDX driversInOrder,Y
  LDA L018C,X
  BMI L7B2A
  LDA L03C8,X
