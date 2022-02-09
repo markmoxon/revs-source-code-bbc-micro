@@ -3177,9 +3177,11 @@ ORG &0B00
 
 .sub_C1163
 
- LDA #0
+ LDA #0                 \ Set carMoving = 0 to denote that the car is stationary
  STA carMoving
- STA L006D
+
+ STA L006D              \ Set L006D = 0
+
  JSR SetL018CBit7
  LDX currentPlayer
  JSR sub_C11BE
@@ -8436,8 +8438,6 @@ ORG &0B00
  PLP
  SEC
 
-.P27EC
-
  RTS
 
 \ ******************************************************************************
@@ -8449,14 +8449,17 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   sub_C27ED-1         Contains an RTS
 \
 \ ******************************************************************************
 
 .sub_C27ED
 
- LDA L006D
- BMI P27EC
+ LDA L006D              \ If bit 7 of L006D is set, return from the subroutine
+ BMI sub_C27ED-1        \ (as sub_C27ED-1 contains an RTS)
+
  LDX #&14
  JMP C28E7
 
@@ -12121,8 +12124,9 @@ ORG &0B00
 \
 \       Name: racePointsLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Used to store the low byte of the race points being awarded to
+\             the driver in race position X
 \
 \ ******************************************************************************
 
@@ -14097,20 +14101,25 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3DF7
+\       Name: pointsForPlace
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: The points awarded for the top six places, plus the fastest lap
 \
 \ ******************************************************************************
 
-.L3DF7
+.pointsForPlace
 
- EQUB &09, &06, &04, &03, &02, &01, &01, &00, &00
+ EQUB 9                 \ Points for first place
+ EQUB 6                 \ Points for second place
+ EQUB 4                 \ Points for third place
+ EQUB 3                 \ Points for fourth place
+ EQUB 2                 \ Points for fifth place
+ EQUB 1                 \ Points for sixth place
+
+ EQUB 1                 \ Points for the fastest lap
+
+ EQUB 0, 0              \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -16930,10 +16939,14 @@ NEXT
  LDY speedHi
  CPY #&16
  BCS C4A26
- LDY L006D
- BPL C4A22
+
+ LDY L006D              \ Set Y = L006D
+
+ BPL C4A22              \ If bit 7 of L006D is clear, jump to C4A22
+
  CPY #&A0
  BNE C4A26
+
  PHA
  LDA L006A
  AND #&3F
@@ -19060,8 +19073,9 @@ NEXT
 
 .C505F
 
- LDA L006D
+ LDA L006D              \ If bit 7 of L006D is set, jump to C5068
  BMI C5068
+
  LDX #0
  JSR sub_C17C3
 
@@ -19916,11 +19930,22 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
+\ Points awarded = (U T) * (9, 6, 4, 3, 2 or 1)
+\
+\ * One player: (U T) = numberOfPlayers
+\
+\ * Multiple players:
+\   Current player: (U T) = (numberOfPlayers - 1) * numberOfPlayers
+\   Non-current player: (U T) = numberOfPlayers
+\
+\ * Computer driver: (U T) = (numberOfPlayers - 1) * 2
+\
 \ Arguments:
 \
 \   X                   The race position number to calculate the points for:
 \
-\                         * 0 to 5 for the first six places (9, 6, 4, 3, 2, 1)
+\                         * 0 to 5 for the first six places, which get awarded
+\                           the following points: 9, 6, 4, 3, 2, 1
 \
 \                         * 6 to award a point for the fastest lap
 \
@@ -19932,81 +19957,123 @@ NEXT
  STA racePointsLo,X     \ race position X
  STA racePointsHi,X
 
- STA U                  \ Set U = 0
+ STA U                  \ Set U = 0, to act as the high byte of (U T)
 
  LDY driversInOrder,X   \ Set Y to the number of the driver in race position X
 
- CPX #6                 \ If we called the routine with X = 6, then jump to
- BNE poin1              \ poin1 to calculate the points for the fastest lap time
+ CPX #6                 \ If we called the routine with X = 0 to 5, then jump to
+ BNE poin1              \ poin1 to skip the following instruction
 
- LDY driversInOrder     \ Set Y to the winning driver's number
+ LDY driversInOrder     \ We called the routine with X = 6, set Y to the winning
+                        \ driver's number, i.e. the driver with the fastest lap
+
+                        \ By this point, Y contains the number of the driver we
+                        \ want to give the points to
 
 .poin1
 
- LDA numberOfPlayers
-
+ LDA numberOfPlayers    \ Set A to the number of players - 1
  SEC
  SBC #1
- BEQ poin3
 
- CPY currentPlayer
- BEQ poin2
+ BEQ poin3              \ If A = 0 then there is only one player, so jump to
+                        \ poin3 to skip the following
 
- CPY lowestPlayerNumber
- BCS poin3
+ CPY currentPlayer      \ If Y is the number of the current player, jump to
+ BEQ poin2              \ poin2
 
- ASL A
+ CPY lowestPlayerNumber \ If Y >= lowestPlayerNumber then this is a human
+ BCS poin3              \ player, so jump to poin3
 
- BNE poin4
+                        \ If we get here then we are awarding points to a
+                        \ computer-controlled driver
+
+ ASL A                  \ Double the value of A, to use as the value of T, so
+                        \ we will get:
+                        \
+                        \   (U T) = (0 T)
+                        \         = T
+                        \         = A * 2
+                        \         = (numberOfPlayers - 1) * 2
+
+ BNE poin4              \ Jump to poin4 (this BNE is effectively a JMP, as A is
+                        \ never zero)
 
 .poin2
 
- STA U
+                        \ If we get here then we are awarding points to the
+                        \ current player
 
- LDA numberOfPlayers
+ STA U                  \ Set U = A = numberOfPlayers - 1
+
+ LDA numberOfPlayers    \ Set A = numberOfPlayers
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = (numberOfPlayers - 1) * numberOfPlayers
 
- STA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = (numberOfPlayers - 1) * numberOfPlayers
 
- JMP poin5
+ JMP poin5              \ Jump to poin5
 
 .poin3
 
- LDA numberOfPlayers
+                        \ If we get here then either there is only one player,
+                        \ or we are awarding points to a human player, but not
+                        \ the current player
 
- BNE poin4
+ LDA numberOfPlayers    \ Set A to the number of players, to use as the value of
+                        \ T, so we will get:
+                        \
+                        \   (U T) = (0 T)
+                        \         = (0 numberOfPlayers)
+                        \         = numberOfPlayers
+
+ BNE poin4              \ This instruction has no effect as poin4 is the next
+                        \ instruction anyway
 
 .poin4
 
- STA T
+ STA T                  \ Store A in T, so this sets (U T) = (U A)
 
 .poin5
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
+                        \ We now do the following addition 256 * U + T
+                        \ times, so the total number of points is:
+                        \
+                        \   (256 * U + T) * (9, 6, 4, 3, 2 or 1)
+                        \
+                        \ or putting it another way:
+                        \
+                        \   (U T) * (9, 6, 4, 3, 2 or 1)
+
 .poin6
 
- LDA L3DF7,X            \ Set (racePointsHi racePointsLo) += (0 L3DF7+X)
- CLC
- ADC racePointsLo,X
+ LDA pointsForPlace,X   \ Add the X-th entry in pointsForPlace to the X-th entry
+ CLC                    \ in (racePointsHi racePointsLo),  starting with the low
+ ADC racePointsLo,X     \ bytes
  STA racePointsLo,X
 
- LDA racePointsHi,X
+ LDA racePointsHi,X     \ And then the high bytes
  ADC #0
  STA racePointsHi,X
 
- DEC T
+ DEC T                  \ Decrement the counter in T
 
- BNE poin6
+ BNE poin6              \ Loop back to poin6 so we do the addition a total of T
+                        \ times
 
- DEC U
+ DEC U                  \ Decrement the counter in U
 
- BPL poin6
+ BPL poin6              \ Loop back to poin6 so we do an additional U loops,
+                        \ with the inner loop repeating 256 times as T is now 0,
+                        \ so this does a total of 256 * U additional additions
 
- JSR AddRacePoints      \ Add the race points from position Y to the accumulated
-                        \ points for driver X
+ JSR AddRacePoints      \ Add the race points from above to the accumulated
+                        \ points for driver Y
 
  RTS                    \ Return from the subroutine
 
@@ -22998,9 +23065,9 @@ ORG &5E40
                         \ if this is a race, but is clear for practice or a
                         \ qualifying lap
 
- STA L006D              \ Set L006D to the value of A, so bit 7 gets set
-                        \ if this is a race, but is clear for practice or a
-                        \ qualifying lap
+ STA L006D              \ Set L006D to the value of A, so bit 7 gets set if this
+                        \ is a race, but bit 7 is clear and bits 3 and 5 are set
+                        \ for practice or a qualifying lap
 
 .race1
 
@@ -23604,10 +23671,10 @@ ORG &5E40
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
- LDA totalPointsLo,Y    \ Add (racePointsHi racePointsLo) for the driver in
- CLC                    \ position X to the accumulated total for driver Y in
- ADC racePointsLo,X     \ (totalPointsTop totalPointsHi totalPointsLo), starting
- STA totalPointsLo,Y    \ with the low bytes
+ LDA totalPointsLo,Y    \ Add (0 racePointsHi racePointsLo) for position X to
+ CLC                    \ (totalPointsTop totalPointsHi totalPointsLo) for
+ ADC racePointsLo,X     \ driver Y, starting with the low bytes
+ STA totalPointsLo,Y
 
  LDA totalPointsHi,Y    \ And then the high bytes
  ADC racePointsHi,X
