@@ -18255,7 +18255,7 @@ NEXT
 
  INC screenSection      \ Set screenSection = 0
 
- BEQ hand3              \ Jump to hand3 to set timer 1 counting down from 4036
+ BEQ hand3              \ Jump to hand3 to set timer 1 counting down from &0FC4
                         \ and return from the interrupt handler (this BNE is
                         \ effectively a JMP as screenSection is always zero)
 
@@ -19930,24 +19930,55 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ Points awarded = (U T) * (9, 6, 4, 3, 2 or 1)
+\ This routine awards points to a driver for finishing in the top six in a race,
+\ or for getting the fastest lap time. The points awarded are based on the
+\ driver's race position, as per the pointsForPlace table:
 \
-\ * One player: (U T) = numberOfPlayers
+\   * 9 points for first place
+\   * 6 points for second place
+\   * 4 points for third place
+\   * 3 points for fourth place
+\   * 2 points for fifth place
+\   * 1 point for sixth place
+\   * 1 point for the fastest lap
 \
-\ * Multiple players:
-\   Current player: (U T) = (numberOfPlayers - 1) * numberOfPlayers
-\   Non-current player: (U T) = numberOfPlayers
+\ In single-player races, the points are awarded as above.
 \
-\ * Computer driver: (U T) = (numberOfPlayers - 1) * 2
+\ In multi-player races, an algorithm is used to share out the points in a way
+\ that takes the relative skills into consideration. Specifically, the routine
+\ awards this many points:
+\
+\   (U T) * the points from the above list
+\
+\ This is how (U T) is calculated:
+\
+\ * Single-player race:
+\
+\   (U T) = numberOfPlayers = 1, so we award the amount of points shown above
+\
+\ * Multi-player race:
+\
+\   If we are awarding points to the current player:
+\
+\       (U T) = (numberOfPlayers - 1) * numberOfPlayers
+\
+\   If we are awarding points to a human player but not the current player:
+\
+\       (U T) = numberOfPlayers
+\
+\   If we are awarding points to a computer driver:
+\
+\       (U T) = (numberOfPlayers - 1) * 2
+\
+\ I have no idea why the algorithm works like this. It needs more analysis!
 \
 \ Arguments:
 \
-\   X                   The race position number to calculate the points for:
+\   X                   The race position to award points to:
 \
-\                         * 0 to 5 for the first six places, which get awarded
-\                           the following points: 9, 6, 4, 3, 2, 1
+\                         * 0 to 5 for the first six places
 \
-\                         * 6 to award a point for the fastest lap
+\                         * 6 for the fastest lap
 \
 \ ******************************************************************************
 
@@ -19964,13 +19995,15 @@ NEXT
  CPX #6                 \ If we called the routine with X = 0 to 5, then jump to
  BNE poin1              \ poin1 to skip the following instruction
 
- LDY driversInOrder     \ We called the routine with X = 6, set Y to the winning
-                        \ driver's number, i.e. the driver with the fastest lap
-
-                        \ By this point, Y contains the number of the driver we
-                        \ want to give the points to
+ LDY driversInOrder     \ We called the routine with X = 6, so set Y to the
+                        \ winning driver's number, i.e. the driver with the
+                        \ fastest lap
 
 .poin1
+
+                        \ By this point, Y contains the number of the driver we
+                        \ want to give the points to, so now we calculate the
+                        \ number of points to award
 
  LDA numberOfPlayers    \ Set A to the number of players - 1
  SEC
@@ -19983,7 +20016,7 @@ NEXT
  BEQ poin2              \ poin2
 
  CPY lowestPlayerNumber \ If Y >= lowestPlayerNumber then this is a human
- BCS poin3              \ player, so jump to poin3
+ BCS poin3              \ player but not the current player, so jump to poin3
 
                         \ If we get here then we are awarding points to a
                         \ computer-controlled driver
@@ -20019,7 +20052,7 @@ NEXT
 .poin3
 
                         \ If we get here then either there is only one player,
-                        \ or we are awarding points to a human player, but not
+                        \ or we are awarding points to a human player but not
                         \ the current player
 
  LDA numberOfPlayers    \ Set A to the number of players, to use as the value of
@@ -20041,8 +20074,8 @@ NEXT
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
-                        \ We now do the following addition 256 * U + T
-                        \ times, so the total number of points is:
+                        \ We now do the following addition 256 * U + T times, so
+                        \ the total number of points added is:
                         \
                         \   (256 * U + T) * (9, 6, 4, 3, 2 or 1)
                         \
@@ -22826,8 +22859,8 @@ ORG &5E40
 .game7
 
  CPX raceClass          \ If X >= raceClass then X is the same or more difficult
- BCS game8              \ than the current setting, so jump to game8 to leave the
-                        \ class unchanged
+ BCS game8              \ than the current setting, so jump to game8 to leave
+                        \ the class unchanged
 
  STX raceClass          \ Otherwise set the race class to the easier class in X
 
