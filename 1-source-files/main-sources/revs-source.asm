@@ -106,9 +106,12 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0003
+.currentPosition
 
- SKIP 1                 \ 
+ SKIP 1                 \ The position of the current player
+                        \
+                        \ This refers to the current player's position in the
+                        \ driversInOrder list
 
 .L0004
 
@@ -419,9 +422,15 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.driverInFront
+.positionAhead
 
- SKIP 1                 \ The number of the driver in front of us
+ SKIP 1                 \ The number of the position ahead of the current
+                        \ player's position
+                        \
+                        \ This refers to the current player's position in the
+                        \ driversInOrder list
+                        \
+                        \ The position ahead of the leader is last place
 
 .L004E
 
@@ -475,9 +484,15 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.driverBehind
+.positionBehind
 
- SKIP 1                 \ The number of the driver behind us
+ SKIP 1                 \ The number of the position behind the current player's
+                        \ position
+                        \
+                        \ This refers to the current player's position in the
+                        \ driversInOrder list
+                        \
+                        \ The position behind last place is the leader
 
 .L005C
 
@@ -859,25 +874,70 @@ ORG &0380
 
  SKIP 80                \ 
 
-.L05F4
+.configStop
 
- SKIP 1                 \ Zeroed in SetupGame
+ SKIP 1                 \ A key has been pressed that stops the race
+                        \
+                        \   * Bit 5 set = retire from race/lap
+                        \     (SHIFT-f7 pressed)
+                        \
+                        \   * Bit 7 and bit 6 set = pit stop
+                        \     (SHIFT-f0 pressed)
+                        \
+                        \   * Bit 7 set and bit 6 clear = restart game
+                        \     (SHIFT and right arrow pressed)
+                        \
+                        \ Zeroed in SetupGame
 
-.L05F5
+.configJoystick
 
- SKIP 1                 \ Zeroed in SetupGame
+ SKIP 1                 \ A key has been pressed to set joystick or keyboard
+                        \
+                        \   * No bits set = keyboard
+                        \     (SHIFT-f1 pressed)
+                        \
+                        \   * Bit 7 set = joystick
+                        \     (SHIFT-f2 pressed)
+                        \
+                        \ Zeroed in SetupGame
 
-.L05F6
+.configVolume
 
- SKIP 1                 \ Zeroed in SetupGame
+ SKIP 1                 \ A key has been pressed to change the volume
+                        \
+                        \   * Bit 7 and bit 6 set = volume down
+                        \     (SHIFT-f4 pressed)
+                        \
+                        \   * Bit 7 clear and bit 6 set = volume up
+                        \     (SHIFT-f5 pressed)
+                        \
+                        \ Zeroed in SetupGame
 
-.L05F7
+.configPause
 
- SKIP 1                 \ Zeroed in SetupGame
+ SKIP 1                 \ A key has been pressed to pause the game
+                        \
+                        \   * Bit 7 set = pause game
+                        \     (COPY pressed)
+                        \
+                        \   * Bit 6 set = unpause game
+                        \     (DELETE pressed)
+                        \
+                        \ Zeroed in SetupGame
 
-.L05F8
+.configAssist
 
- SKIP 6                 \ Zeroed in SetupGame
+ SKIP 1                 \ A key has been pressed to toggle steering assist
+                        \
+                        \   * No bits set = disable steering assist
+                        \     (SHIFT-f3 pressed)
+                        \
+                        \   * Bit 7 set = enable steering assist
+                        \     (SHIFT-f6 pressed)
+                        \
+                        \ Zeroed in SetupGame
+
+ SKIP 5
 
 .L05FE
 
@@ -2516,25 +2576,28 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0EE5
+\       Name: ProcessShiftedKeys
 \       Type: Subroutine
-\   Category: 
+\   Category: Keyboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   Scan for the first Y + 1 keys from shiftedKeys
 \
 \ ******************************************************************************
 
-.sub_C0EE5
+.ProcessShiftedKeys
 
  STY T
 
  LDX #&FF               \ Scan the keyboard to see if SHIFT is being pressed
  JSR ScanKeyboard
 
- BNE C0F63              \ If SHIFT is not being pressed, jump to C0F63
+ BNE C0F63              \ If SHIFT is not being pressed, jump to C0F63 to return
+                        \ from the subroutine
 
  LDY T
 
@@ -2542,7 +2605,7 @@ ORG &0B00
 
  STY T
 
- LDX L3DE2,Y            \ Fetch the key number for ????
+ LDX shiftedKeys,Y      \ Fetch the key number for ????
 
  JSR ScanKeyboard       \ Scan the keyboard to see if this key is being pressed
 
@@ -2556,16 +2619,16 @@ ORG &0B00
 .C0F01
 
  LDY T
- LDA L39D4,Y
+ LDA configKeys,Y
  AND #&0F
  TAX
- LDA L39D4,Y
+ LDA configKeys,Y
  AND #&F0
- STA L05F4,X
+ STA configStop,X
 
 .C0F11
 
- LDA L05F7
+ LDA configPause
  BEQ C0F2C
  BPL C0F25
 
@@ -2584,7 +2647,7 @@ ORG &0B00
 
  INC L0060
  LDA #0
- STA L05F7
+ STA configPause
 
 .C0F2C
 
@@ -2592,7 +2655,7 @@ ORG &0B00
  LDA L006A
  AND #1
  BNE C0F5E
- LDA L05F6
+ LDA configVolume
  BEQ C0F63
  BPL C0F43
  INY
@@ -2624,7 +2687,7 @@ ORG &0B00
 .C0F5E
 
  LDA #0
- STA L05F6
+ STA configVolume
 
 .C0F63
 
@@ -2768,7 +2831,8 @@ ORG &0B00
  CLD                    \ Otherwise the driversInOrder list is sorted, so clear
                         \ the D flag to switch arithmetic to normal
 
- JSR sub_C63A2
+ JSR SetPlayerPositions \ Set the player's current position, plus the position
+                        \ ahead and the position behind
 
  RTS                    \ Return from the subroutine
 
@@ -3189,13 +3253,18 @@ ORG &0B00
 .C1171
 
  JSR sub_C5052
- LDY #0
- JSR sub_C0EE5
- LDA L05F4
+
+ LDY #0                 \ Check for SHIFT and right arrow
+ JSR ProcessShiftedKeys
+
+ LDA configStop
  BMI C11AA
  JSR sub_C27ED
  JSR sub_C2692
- JSR sub_C63A2
+
+ JSR SetPlayerPositions \ Set the player's current position, plus the position
+                        \ ahead and the position behind
+
  LDX #&13
  LDA raceStarted
  BMI C1199
@@ -4212,9 +4281,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C1579
+\       Name: ProcessDrivingKeys
 \       Type: Subroutine
-\   Category: 
+\   Category: Keyboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -4223,7 +4292,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C1579
+.ProcessDrivingKeys
 
  LDA #0
  STA V
@@ -4235,7 +4304,7 @@ ORG &0B00
 
  PHP                    \ Store the result of the scan on the stack
 
- BIT L05F5
+ BIT configJoystick
  BPL C15B3
 
  LDX #1                 \ Read the joystick x-coordinate into A and X
@@ -4377,7 +4446,7 @@ ORG &0B00
 
  LDA L000F
  BNE C1678
- BIT L05F5
+ BIT configJoystick
  BPL C165E
 
  LDX #2                 \ Read the joystick y-coordinate into A and X, clearing
@@ -4442,7 +4511,7 @@ ORG &0B00
 
  STX L003E
  STA L003F
- BIT L05F5
+ BIT configJoystick
  BPL C16A3
  LDX #0
  LDA #128               \ osbyte_read_adc_or_get_buffer_status
@@ -4538,7 +4607,7 @@ ORG &0B00
 
  JSR sub_C7BE2
 
- BIT L05F4              \ If bit 6 of L05F4 is set, jump to main4
+ BIT configStop         \ If bit 6 of configStop is set, jump to main4
  BVS main4
 
 .main1
@@ -4556,8 +4625,8 @@ ORG &0B00
 
 .main4
 
- LDA #0                 \ Set L05F4 = 0
- STA L05F4
+ LDA #0                 \ Set configStop = 0
+ STA configStop
 
  JSR sub_C0B77
 
@@ -4567,7 +4636,7 @@ ORG &0B00
 
  JSR sub_C7B4A
 
- JSR sub_C1579
+ JSR ProcessDrivingKeys
 
  JSR sub_C46A1
 
@@ -4591,7 +4660,7 @@ ORG &0B00
 
  JSR sub_C4CA4
 
- LDX #&17
+ LDX #23
  JSR sub_C2AD1
 
  JSR sub_C1B12
@@ -4600,7 +4669,7 @@ ORG &0B00
 
  JSR sub_C1E15
 
- JSR sub_C7B00
+ JSR UpdateMirrors
 
  JSR sub_C0E74
 
@@ -4661,23 +4730,23 @@ ORG &0B00
 
  JSR sub_C1163
 
- LDA L05F4              \ If bit 7 of L05F4 is set, jump to main13
+ LDA configStop         \ If bit 7 of configStop is set, jump to main13
  BMI main13
 
- LDA #%00100000         \ Set bit 5 of L05F4
- STA L05F4
+ LDA #%00100000         \ Set bit 5 of configStop
+ STA configStop
 
  BNE main13
 
 .main10
 
- LDY #&0B
- JSR sub_C0EE5
+ LDY #11
+ JSR ProcessShiftedKeys
 
- LDA L05F4              \ If L05F4 = 0, jump to main11
+ LDA configStop         \ If configStop = 0, jump to main11
  BEQ main11
 
- BPL main9              \ If bit 7 of L05F4 is clear, jump to main9
+ BPL main9              \ If bit 7 of configStop is clear, jump to main9
 
  AND #&40
  BEQ main13
@@ -4685,8 +4754,8 @@ ORG &0B00
  LDA carMoving
  BEQ main13
 
- LDA #0                 \ Set L05F4 = 0
- STA L05F4
+ LDA #0                 \ Set configStop = 0
+ STA configStop
 
 .main11
 
@@ -4703,7 +4772,7 @@ ORG &0B00
 
  JSR sub_C0E74
 
- JSR sub_C513A
+ JSR UpdateDashboard
 
  JMP main5
 
@@ -4848,14 +4917,20 @@ ORG &0B00
  STA L0880,X
  DEX
  BPL P181E
- JSR sub_C63A2
+
+ JSR SetPlayerPositions \ Set the player's current position, plus the position
+                        \ ahead and the position behind
+
  LDA #1
  BIT raceStarted
  BMI C184C
  LDX trackData+1815
- LDY L0003
+ LDY currentPosition
  JSR SwapDriverPosition
- JSR sub_C63A2
+
+ JSR SetPlayerPositions \ Set the player's current position, plus the position
+                        \ ahead and the position behind
+
  LDA trackData+1816
 
 .C184C
@@ -4928,7 +5003,7 @@ ORG &0B00
                         \ Token 44 includes five extra spaces at the end, though
                         \ I'm not sure why
 
- LDA L0003
+ LDA currentPosition
  JSR GetDriverNumberBCD
  STA L002F
  RTS
@@ -5689,12 +5764,12 @@ ORG &0B00
  BIT L62FE
  BPL C1BB5
 
- LDY driverInFront      \ Set Y to the number of the driver in front of us
+ LDY positionAhead      \ Set Y to the position of the driver in front of us
 
  LDA #24                \ Print the name of driver Y in the "In front:" part of
  JSR PrintNearestDriver \ the header
 
- LDY driverBehind       \ Set Y to the number of the driver behind us
+ LDY positionBehind     \ Set Y to the position of the driver behind us
 
  LDA #33                \ Print the name of driver Y in the "Behind:" part of
  JSR PrintNearestDriver \ the header
@@ -6659,7 +6734,7 @@ ORG &0B00
  BEQ C1FDE
  CMP #&14
  BCC C1FD5
- LDX driverInFront
+ LDX positionAhead
  LDA driversInOrder,X
 
 .C1FD5
@@ -8063,7 +8138,7 @@ ORG &0B00
 
  LDA qualifyingTime
  BMI Delay
- LDX driverBehind
+ LDX positionBehind
  LDY driversInOrder,X
  LDA L018C,Y
  AND #&7F
@@ -8071,8 +8146,11 @@ ORG &0B00
  JSR sub_C27ED
  JSR sub_C2692
  JSR SetL018CBit7
- JSR sub_C63A2
- LDX L0003
+
+ JSR SetPlayerPositions \ Set the player's current position, plus the position
+                        \ ahead and the position behind
+
+ LDX currentPosition
  LDY #5
 
 .P2659
@@ -8080,13 +8158,14 @@ ORG &0B00
  BIT L0025
  BPL C2663
 
- JSR NextDriver         \ Increment X to the next driver number
+ JSR GetPositionBehind  \ Set X to the number of the position behind position X
 
  JMP C2666
 
 .C2663
 
- JSR PreviousDriver     \ Decrement X to the previous driver number
+ JSR GetPositionAhead   \ Set X to the number of the position ahead of position
+                        \ X
 
 .C2666
 
@@ -8098,7 +8177,7 @@ ORG &0B00
  DEY
  BPL P2659
  JSR sub_C66DF
- LDX driverBehind
+ LDX positionBehind
  JSR sub_C28F2
  RTS
 
@@ -8159,7 +8238,7 @@ ORG &0B00
 
 .sub_C2692
 
- LDX L0003
+ LDX currentPosition
 
 .C2694
 
@@ -8167,7 +8246,8 @@ ORG &0B00
  LDA driversInOrder,X
  STA T
 
- JSR PreviousDriver     \ Decrement X to the previous driver number
+ JSR GetPositionAhead   \ Set X to the number of the position ahead of position
+                        \ X
 
  LDA driversInOrder,X
  STX G
@@ -8346,9 +8426,9 @@ ORG &0B00
 
  LDX W
 
- JSR NextDriver         \ Increment X to the next driver number
+ JSR GetPositionBehind  \ Set X to the number of the position behind position X
 
- CPX L0003
+ CPX currentPosition
  BEQ C27A3
  JMP C2694
 
@@ -8831,7 +8911,7 @@ ORG &0B00
  CMP #3
  BCS C2A50
  LDA L001D
- CMP driverInFront
+ CMP positionAhead
  BNE C2A4D
  LDA L018C,X
  BMI C2A0F
@@ -12168,15 +12248,15 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 
  JSR SetScreenMode7     \ Change to screen mode 7 and hide the cursor
 
- LDX #9                 \ We now zero the ten bytes at L05F4-L05FD, so set a
-                        \ loop counter in X
+ LDX #9                 \ We now zero the ten bytes starting at configStop, so
+                        \ set a loop counter in X
 
  LDA #0                 \ Set L0069 = 0
  STA L0069
 
 .setp1
 
- STA L05F4,X            \ Zero the X-th byte at L05F4
+ STA configStop,X       \ Zero the X-th byte at configStop
                         \
                         \ The address in this instruction gets modified
 
@@ -12586,20 +12666,39 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 
 \ ******************************************************************************
 \
-\       Name: L39D4
+\       Name: configKeys
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: Details of the configuration settings that are set by the shifted
+\             configuration keys
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The low nibble of each setting indicates which configuration byte should be
+\ updated when this key is pressed, as an offset from configStop, and the high
+\ nibble contains the value that it should be set to.
+\
+\ The values in this table correspond with the keys defined in the shiftedKeys
+\ table.
 \
 \ ******************************************************************************
 
-.L39D4
+.configKeys
 
- EQUB &80, &01, &C1, &81, &C2, &42, &C0, &83, &43, &20, &04, &84
+                        \ SHIFT + key   Bits affected     Config byte      Value
+
+ EQUB &80               \ Right arrow   Set bit 7         configStop         &80
+ EQUB &01               \ f1            Clear all bits    configJoystick     &00
+ EQUB &C1               \ f2            Set bits 6 & 7    configJoystick     &C0
+ EQUB &81               \ f2            Set bit 7         configJoystick     &80
+ EQUB &C2               \ f4            Set bits 6 & 7    configVolume       &C0
+ EQUB &42               \ f5            Set bit 6         configVolume       &40
+ EQUB &C0               \ f0            Set bits 6 & 7    configStop         &C0
+ EQUB &83               \ COPY          Set bit 7         configPause        &80
+ EQUB &43               \ DELETE        Set bit 6         configPause        &40
+ EQUB &20               \ f7            Set bit 5         configStop         &20
+ EQUB &04               \ f3            Clear all bits    configAssist       &00
+ EQUB &84               \ f6            Set bit 7         configAssist       &80
 
 \ ******************************************************************************
 \
@@ -12636,7 +12735,7 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 
 .totalPointsHi
 
- EQUB &DD, &EE
+ EQUB &DD, &EE          \ These values are workspace noise and have no meaning
  EQUB 0, 0, 0, 0, 0, 0
  EQUB 0, 0, 0, 0, 0, 0
  EQUB 0, 0, 0, 0, 0, 0
@@ -12646,17 +12745,16 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 \       Name: racePointsHi
 \       Type: Variable
 \   Category: Drivers
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of race points calculated for each position
 \
 \ ******************************************************************************
 
 .racePointsHi
 
- EQUB &77, &BB, &DD, &EE, &77, &BB, &DD, &EE
+ EQUB &77, &BB          \ These values are workspace noise and have no meaning
+ EQUB &DD, &EE
+ EQUB &77, &BB
+ EQUB &DD, &EE
 
 \ ******************************************************************************
 \
@@ -12984,33 +13082,43 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 \
 \ ------------------------------------------------------------------------------
 \
-\ For character rows 0 to 7 and 16 to 31, this table returns the high byte of
-\ the screen address of the start of the row, for the custom screen mode.
+\ This table returns the high byte of the screen address of the start of the
+\ row, for the custom screen mode.
 \
-\ For character rows 8 to 15, it returns a different value, which I am still
-\ investigating.
+\ Note that the custom screen mode starts at address &5A80, so the first two
+\ entries in this table do not point to screen memory; the first two character
+\ rows in this table are off the top of the custom screen, so the first row
+\ on-screen is the third row. This is why, when we print the top two lines of
+\ text in the custom screen with the PrintCharacter routine, we do so at the
+\ following y-coordinates:
+\
+\   * yCursor = 24 for the first line of text
+\
+\   * yCursor = 33 for the second line of text
+\
+\ To see where these are on-screen, we need to subtract 16 for the first two
+\ character rows which are off the top of the screen, to give:
+\
+\   * y-coordinate = 8 for the first line of text
+\
+\   * y-coordinate = 17 for the second line of text
+\
+\ The value passed to PrintCharacter points to the bottom row of the character
+\ to print, so the first coordinate points to the ninth pixel row (as the first
+\ pixel row is row 0), and the second points to the 18th pixel row. There are
+\ eight pixels in each character row, so this prints the first row of text so
+\ that it has a one-pixel margin between the top of the text and the top of the
+\ screen, and i prints the second row so that it has a one-pixel margin between
+\ the top of the text and the bottom of the line above.
+\
+\ I don't know why this table starts at &5800 and not &5A80, but that's how it
+\ is.
 \
 \ ******************************************************************************
 
 .yLookupHi
 
-FOR I%, 0, 7
-
- EQUB HI(&5800 + (I% * &140))
-
-NEXT
-
- EQUB HI(&5800 + ( 8 * &140) + &77)     \ &62
- EQUB HI(&5800 + ( 9 * &140) + &7B)     \ &63
- EQUB HI(&5800 + (10 * &140) + &5D)     \ &64
- EQUB HI(&5800 + (11 * &140) + &2E)     \ &65
-
- EQUB HI(&5800 + (12 * &140) + &77)     \ &67
- EQUB HI(&5800 + (13 * &140) + &7B)     \ &68
- EQUB HI(&5800 + (14 * &140) + &5D)     \ &69
- EQUB HI(&5800 + (15 * &140) + &2E)     \ &6A
-
-FOR I%, 16, 31
+FOR I%, 0, 31
 
  EQUB HI(&5800 + (I% * &140))
 
@@ -13018,9 +13126,9 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3B26
+\       Name: mirrorAddressLo
 \       Type: Variable
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13029,10 +13137,10 @@ NEXT
 \
 \ ******************************************************************************
 
-.L3B26
+.mirrorAddressLo
 
- EQUB &40, &48, &18, &30
- EQUB &70, &78
+ EQUB &40, &48, &18
+ EQUB &30, &70, &78
 
 \ ******************************************************************************
 \
@@ -13156,9 +13264,9 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3B9E
+\       Name: mirrorAddressHi
 \       Type: Variable
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13167,9 +13275,10 @@ NEXT
 \
 \ ******************************************************************************
 
-.L3B9E
+.mirrorAddressHi
 
- EQUB &75, &75, &74, &75, &76, &76
+ EQUB &75, &75, &74
+ EQUB &75, &76, &76
 
 \ ******************************************************************************
 \
@@ -14048,21 +14157,30 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3DE2
+\       Name: shiftedKeys
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Keyboard
+\    Summary: Negative inkey values for the configuration keys that are pressed
+\             in combination with SHIFT
 \
 \ ******************************************************************************
 
-.L3DE2
+.shiftedKeys
 
- EQUB &86, &8E, &8D, &8D, &EB, &8B, &DF, &96, &A6, &E9, &8C, &8A
- EQUB &CE, &EE
+ EQUB &86               \ Right arrow
+ EQUB &8E               \ f1
+ EQUB &8D               \ f2
+ EQUB &8D               \ f2
+ EQUB &EB               \ f4
+ EQUB &8B               \ f5
+ EQUB &DF               \ f0
+ EQUB &96               \ COPY
+ EQUB &A6               \ DELETE
+ EQUB &E9               \ f7
+ EQUB &8C               \ f3
+ EQUB &8A               \ f6
+
+ EQUB &CE, &EE          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -14624,7 +14742,9 @@ NEXT
 \ the screen address of the start of the row, for the custom screen mode.
 \
 \ For character rows 8 to 15, it returns a different value, which I am still
-\ investigating.
+\ investigating. (These values are currently read as yLookupLo+8 and don't
+\ appear to be related to screen address lookups, so perhaps these bytes are
+\ being reused for a different purpose?)
 \
 \ ******************************************************************************
 
@@ -19103,15 +19223,15 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: PreviousDriver
+\       Name: GetPositionAhead
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Decrement X to the previous driver number (from 19 to 0 and round
-\             again)
+\    Summary: Decrement X to the previous position number (from 19 to 0 and
+\             round again), which gives the position ahead of X
 \
 \ ******************************************************************************
 
-.PreviousDriver
+.GetPositionAhead
 
  DEX                    \ Decrement X
 
@@ -19127,15 +19247,15 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: NextDriver
+\       Name: GetPositionBehind
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Increment X to the next driver number (from 0 to 19 and round
-\             again)
+\    Summary: Increment X to the next position number (from 0 to 19 and round
+\             again), which gives the position behind X
 \
 \ ******************************************************************************
 
-.NextDriver
+.GetPositionBehind
 
  INX                    \ Increment X
 
@@ -19418,9 +19538,9 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C511E
+\       Name: EraseRevCounter
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19429,7 +19549,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C511E
+.EraseRevCounter
 
  LDX L0069
  BEQ C5139
@@ -19454,9 +19574,9 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C513A
+\       Name: UpdateDashboard
 \       Type: Subroutine
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19465,10 +19585,10 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C513A
+.UpdateDashboard
 
- JSR sub_C511E
- JSR sub_C51A8
+ JSR EraseRevCounter
+ JSR DrawRevCounter
  LDA L62A2
  STA T
  LSR A
@@ -19543,14 +19663,14 @@ NEXT
  STA H
  LDA #6
  STA U
- JSR sub_C5204
+ JSR DrawDashboardLine
  RTS
 
 \ ******************************************************************************
 \
-\       Name: sub_C51A8
+\       Name: DrawRevCounter
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19559,7 +19679,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C51A8
+.DrawRevCounter
 
  LDA #0
  STA H
@@ -19630,10 +19750,10 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C5204
+\       Name: DrawDashboardLine
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Draw a line on the rev counter or steering wheel
 \
 \ ------------------------------------------------------------------------------
 \
@@ -19641,7 +19761,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C5204
+.DrawDashboardLine
 
  LDX V
  LDA L3B86,X
@@ -20476,11 +20596,7 @@ ORG &5E40
 \       Name: frontWingSetting
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The front wing setting, as entered by the player
 \
 \ ******************************************************************************
 
@@ -20493,11 +20609,7 @@ ORG &5E40
 \       Name: rearWingSetting
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The rear wing setting, as entered by the player
 \
 \ ******************************************************************************
 
@@ -21363,6 +21475,17 @@ ORG &5E40
 \       Type: Variable
 \   Category: Text
 \    Summary: The cursor's pixel y-coordinate
+\
+\ ------------------------------------------------------------------------------
+\
+\ In terms of printing text on-screen, we need to set:
+\
+\   * yCursor = 24 for the first line of text
+\
+\   * yCursor = 33 for the second line of text
+\
+\ See the notes on the yLookupHi variable for information about the values of
+\ yCursor and how they relate to the custom screen.
 \
 \ ******************************************************************************
 
@@ -22459,7 +22582,8 @@ ORG &5E40
  ADC baseSpeed
  STA driverSpeed,X
 
- JSR PreviousDriver     \ Decrement X to the previous driver number
+ JSR GetPositionAhead   \ Set X to the number of the position ahead of position
+                        \ X
 
  STX driverNumber       \ Set driverNumber = X
 
@@ -22467,41 +22591,49 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C63A2
+\       Name: SetPlayerPositions
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: Set the player's current position, plus the positions behind and
+\             in front
 \
 \ ******************************************************************************
 
-.sub_C63A2
+.SetPlayerPositions
 
- LDA currentPlayer
- LDX #&13
+ LDA currentPlayer      \ Set A to the number of the current player
+
+ LDX #19                \ We are about to work our way through the ordered list
+                        \ of drivers in driversInOrder, so set a loop counter
+                        \ in X, starting at the end of the list (i.e. last
+                        \ place)
 
 .P63A6
 
- CMP driversInOrder,X
- BEQ C63AE
- DEX
- BPL P63A6
+ CMP driversInOrder,X   \ If the driver in position X in the list matches the
+ BEQ C63AE              \ current player, jump to C63AE
+
+ DEX                    \ Decrement the driver number
+
+ BPL P63A6              \ Loop back until we have gone through the whole table
 
 .C63AE
 
- STX L0003
+                        \ By this point, X contains the position within the
+                        \ driversInOrder list of the current player
 
- JSR NextDriver         \ Increment X to the next driver number
+ STX currentPosition    \ Store the current player's position in currentPosition
 
- STX driverBehind
- LDX L0003
+ JSR GetPositionBehind  \ Set X to the number of the position behind this one
 
- JSR PreviousDriver     \ Decrement X to the previous driver number
+ STX positionBehind     \ Store the position behind the current player in
+                        \ positionBehind
 
- STX driverInFront
+ LDX currentPosition    \ Set X to the number of the position ahead of the
+ JSR GetPositionAhead   \ current player's position
+
+ STX positionAhead      \ Store the position ahead of the current player in
+                        \ positionAhead
 
  RTS                    \ Return from the subroutine
 
@@ -22540,7 +22672,7 @@ ORG &5E40
 .sub_C63C5
 
  PHA
- LDA L05F8
+ LDA configAssist
  STA L77E3
  LSR A
  STA L77E4
@@ -22551,7 +22683,7 @@ ORG &5E40
  LDA L0025
  ROL A
  PLA
- LDX L05F8
+ LDX configAssist
  RTS
 
 \ ******************************************************************************
@@ -22569,8 +22701,8 @@ ORG &5E40
 
 .MainLoop
 
- LDX #0                 \ Set L05F4 = 0
- STX L05F4
+ LDX #0                 \ Set configStop = 0
+ STX configStop
 
  JSR InitialiseDrivers  \ Initialise all 20 drivers
 
@@ -23110,11 +23242,11 @@ ORG &5E40
                         \ mode, implement the driving part of the game, and
                         \ return here with the screen mode back to mode 7
 
- BIT L05F4              \ If bit 6 of L05F4 is set, loop back to race1
+ BIT configStop         \ If bit 6 of configStop is set, loop back to race1
  BVS race1
 
- BPL race2              \ If bit 7 of L05F4 is clear, jump to race2 to return
-                        \ from the subroutine
+ BPL race2              \ If bit 7 of configStop is clear, jump to race2 to
+                        \ return from the subroutine
 
  JSR RestartGame        \ Jump to RestartGame to restart the game, which removes
                         \ the return address from the stack and jumps to the
@@ -23793,7 +23925,7 @@ ORG &5E40
 
 .sub_C66DF
 
- LDX L0003
+ LDX currentPosition
  BPL C66E6
 
 .P66E3
@@ -23802,9 +23934,9 @@ ORG &5E40
 
 .C66E6
 
- JSR NextDriver         \ Increment X to the next driver number
+ JSR GetPositionBehind  \ Set X to the number of the position behind position X
 
- CPX driverInFront
+ CPX positionAhead
  BNE P66E3
  LDX #&16
 
@@ -23815,7 +23947,7 @@ ORG &5E40
  DEX
  CPX #&14
  BCS P66EF
- LDX driverInFront
+ LDX positionAhead
  JSR sub_C2ACB
  RTS
 
@@ -23837,9 +23969,9 @@ ORG &6C00
 
 \ ******************************************************************************
 \
-\       Name: sub_C7B00
+\       Name: UpdateMirrors
 \       Type: Subroutine
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -23850,9 +23982,9 @@ ORG &6C00
 
  ORG &7B00
 
-.sub_C7B00
+.UpdateMirrors
 
- LDY driverBehind
+ LDY positionBehind
  LDX driversInOrder,Y
  LDA L018C,X
  BMI L7B2A
@@ -23899,7 +24031,7 @@ ORG &6C00
 .L7B40
 
  STA L6293,Y
- JSR sub_C7FB6
+ JSR DrawCarInMirror
 
 .L7B46
 
@@ -24501,9 +24633,9 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: sub_C7FB6
+\       Name: DrawCarInMirror
 \       Type: Subroutine
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -24512,13 +24644,13 @@ ENDMACRO
 \
 \ ******************************************************************************
 
-.sub_C7FB6
+.DrawCarInMirror
 
  STA L0082
  STY G
- LDA L3B9E,Y
+ LDA mirrorAddressHi,Y
  STA Q
- LDA L3B26,Y
+ LDA mirrorAddressLo,Y
  STA P
 
  LDA L3EFA,Y
