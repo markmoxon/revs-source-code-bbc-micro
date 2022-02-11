@@ -939,9 +939,14 @@ ORG &0380
 
  SKIP 5
 
-.L05FE
+.volumeLevel
 
- SKIP 2                 \ Set to 246 in SetupGame
+ SKIP 2                 \ The game's volume level
+                        \
+                        \ This uses the operating system's volume scale, with
+                        \ -15 being full volume and 0 being silent
+                        \
+                        \ Set to -10 (246) in SetupGame
 
 .L0600
 
@@ -949,11 +954,7 @@ ORG &0380
 
 .L0650
 
- SKIP 58                \ 
-
-.L068A
-
- SKIP 22                \ 
+ SKIP 80                \ 
 
 .driverTenths
 
@@ -1527,123 +1528,256 @@ ORG &790E
 
 \ ******************************************************************************
 \
-\       Name: soundEnvelopes
+\       Name: soundBlock
 \       Type: Variable
 \   Category: Sound
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Temporary storage for data relating to sounds 0 to 3
 \
 \ ******************************************************************************
 
 ORG &0B00
 
-.soundEnvelopes
+.soundBlock
 
- EQUB &10, &10, &10, &10, &10, &10, &10, &10
- EQUB &10, &10, &10, &10, &10, &10, &10, &10
- EQUB &10, &00, &F6, &FF, &03, &00, &FF, &00
- EQUB &11, &00, &F6, &FF, &BB, &00, &FF, &00
- EQUB &12, &00, &F6, &FF, &28, &00, &FF, &00
- EQUB &13, &00, &01, &00, &82, &00, &FF, &00
- EQUB &10, &00, &F6, &FF, &06, &00, &04, &00
- EQUB &01, &01, &02, &FE, &FA, &04, &01, &01
- EQUB &0A, &00, &00, &00, &48, &00
+ EQUB &10, &10          \ Sound #0
+ EQUB &10, &10
+
+ EQUB &10, &10          \ Sound #1
+ EQUB &10, &10
+
+ EQUB &10, &10          \ Sound #2
+ EQUB &10, &10
+
+ EQUB &10, &10          \ Sound #3
+ EQUB &10, &10
 
 \ ******************************************************************************
 \
-\       Name: L0B46
+\       Name: soundData
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Sound
+\    Summary: OSWORD blocks for making the various game sounds
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Sound data. To make a sound, the MakeSound passes the bytes in this table to
+\ OSWORD 7. These bytes are the OSWORD equivalents of the parameters passed to
+\ the SOUND keyword in BASIC. The parameters have these meanings:
+\
+\   channel/flush, amplitude (or envelope number if 1-4), pitch, duration
+\
+\ where each value consists of two bytes, with the low byte first and the high
+\ byte second.
+\
+\ For the channel/flush parameter, the first byte is the channel while the
+\ second is the flush control (where a flush control of 0 queues the sound,
+\ while a flush control of 1 makes the sound instantly). When written in
+\ hexadecimal, the first figure gives the flush control, while the second is
+\ the channel (so &13 indicates flush control = 1 and channel = 3).
 \
 \ ******************************************************************************
 
-.L0B46
+.soundData
+
+ EQUB &10, &00          \ Sound #0
+ EQUB &F6, &FF
+
+ EQUB &03, &00          \ Sound #1
+ EQUB &FF, &00
+
+ EQUB &11, &00          \ Sound #2
+ EQUB &F6, &FF
+
+ EQUB &BB, &00          \ Sound #3
+ EQUB &FF, &00
+
+ EQUB &12, &00          \ Sound #4
+ EQUB &F6, &FF
+
+ EQUB &28, &00          \ Sound #5
+ EQUB &FF, &00
+
+ EQUB &13, &00          \ Sound #6
+ EQUB &01, &00
+
+ EQUB &82, &00          \ Sound #7
+ EQUB &FF, &00
+
+ EQUB &10, &00          \ Sound #8
+ EQUB &F6, &FF
+
+ EQUB &06, &00          \ Sound #9
+ EQUB &04, &00
+
+\ ******************************************************************************
+\
+\       Name: envelopeData
+\       Type: Variable
+\   Category: Sound
+\    Summary: Data for the sound envelope
+\
+\ ------------------------------------------------------------------------------
+\
+\ There is one sound envelope defined in Revs:
+\
+\   * Envelope 1 defines the engine sound
+\
+\ ******************************************************************************
+
+.envelopeData
+
+ EQUB 1, 1, 2, -2, -6, 4, 1, 1, 10, 0, 0, 0, 72, 0
+
+\ ******************************************************************************
+\
+\       Name: xTemp
+\       Type: Variable
+\   Category: Sound
+\    Summary: Temporary storage for X so it can be preserved through calls to
+\             the sound routines
+\
+\ ******************************************************************************
+
+.xTemp
 
  EQUB &FF
 
 \ ******************************************************************************
 \
-\       Name: sub_C0B47
+\       Name: MakeSound
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Sound
+\    Summary: Make a sound
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The sound number from the soundData table (0 to 7)
+\
+\   Y                   A value to store in byte #2 in this sound's soundBlock
+\
+\ Other entry points:
+\
+\   MakeSound-3         Use the current volume level for argument Y
 \
 \ ******************************************************************************
 
-.sub_C0B47
+ LDY volumeLevel        \ Set Y to the current volumeLevel, to store in byte #2
+                        \ in this sound's soundBlock
 
- LDY L05FE
+.MakeSound
+
+ STX xTemp              \ Store the value of X in xTemp, so we can preserve it
+                        \ through the routine
+
+ ASL A                  \ Set A = A * 8
+ ASL A                  \
+ ASL A                  \ so we can use it as an index into the soundData table,
+                        \ which has 8 bytes per entry
+
+ CLC                    \ Set (Y X) = soundData + A
+ ADC #LO(soundData)     \
+ TAX                    \ starting with the low byte in X
+
+                        \ We now use the low byte in X to point to this sound's
+                        \ corresponding four-byte block in soundBlock (though it
+                        \ is unclear what effect this has, as soundBlock is
+                        \ never written to and soundBlock+2 is never read)
+
+ TYA                    \ Store Y in byte #2 of this sound's soundBlock
+ STA soundBlock+2,X
+
+ LDA soundBlock,X       \ Set Y to byte #0 of this sound's soundBlock, reduced
+ AND #3                 \ to the range 0 to 3, to give us the relevant sound
+ TAY                    \ buffer for this sound
+
+ LDA #7                 \ Set A = 7 for the OSWORD command to make a sound
+
+ STA soundBuffer,Y      \ Set the Y-th sound buffer status to 7, which is
+                        \ non-zero and indicates that we are making a sound on
+                        \ this channel
+
+ BNE MakeSoundEnvelope  \ Jump to MakeSoundEnvelope to set up Y and apply the
+                        \ OSWORD command to the (Y X) block, which makes the
+                        \ relevant sound (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 \ ******************************************************************************
 \
-\       Name: sub_C0B4A
+\       Name: DefineEnvelope
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Sound
+\    Summary: Define a sound envelope
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The offset of the sound envelope data in envelopeData:
+\
+\                         * A = 0 for the first (and only) envelope definition
+\
+\ Returns:
+\
+\   X                   X is unchanged
 \
 \ ******************************************************************************
 
-.sub_C0B4A
+.DefineEnvelope
 
- STX L0B46
- ASL A
- ASL A
- ASL A
- CLC
- ADC #&10
- TAX
- TYA
- STA soundEnvelopes+2,X
- LDA soundEnvelopes,X
- AND #3
- TAY
- LDA #7
- STA soundBuffer,Y
- BNE C0B6E
+ STX xTemp              \ Store the value of X in xTemp, so we can preserve it
+                        \ through the routine
+
+ CLC                    \ Set (Y X) = envelopeData + A
+ ADC #LO(envelopeData)  \
+ TAX                    \ starting with the low byte
+
+ LDA #8                 \ Set A = 8 for the OSWORD command to define an envelope
+
+                        \ Fall through into MakeSoundEnvelope to set up Y and
+                        \ apply the OSWORD command to the (Y X) block, which
+                        \ defines the relevant sound envelope
 
 \ ******************************************************************************
 \
-\       Name: sub_C0B65
+\       Name: MakeSoundEnvelope
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Sound
+\    Summary: Either make a sound or set up an envelope
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The action:
+\
+\                         * A = 7 make a sound
+\
+\                         * A = 8 to define a sound envelope
+\
+\   X                   The low byte of the address of the OSWORD block
+\
+\   xTemp               The value of X to restore at the end of the routine
 \
 \ ******************************************************************************
 
-.sub_C0B65
+.MakeSoundEnvelope
 
- STX L0B46
- CLC
- ADC #&38
- TAX
- LDA #8                 \ osword_envelope
+ LDY #HI(soundData)     \ Set y to the high byte of the soundData block
+                        \ address, so (Y X) now points to the relevant envelope
+                        \ or sound data block
 
-.C0B6E
+ JSR OSWORD             \ Call OSWORD with action A, as follows:
+                        \
+                        \  * A = 7 to make the sound at location (Y X)
+                        \
+                        \  * A = 8 to set up the sound envelope at location (Y X)
 
- LDY #&0B
- JSR OSWORD
- LDX L0B46
- RTS
+ LDX xTemp              \ Fetch the value of X we stored before calling the
+                        \ routine, so it doesn't change
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2498,10 +2632,11 @@ ORG &0B00
  AND #3
  CLC
  ADC #&82
- STA soundEnvelopes+44
+ STA soundData+28
+
  LDA #3
  LDY #1
- JSR sub_C0B4A
+ JSR MakeSound
 
 .C0E92
 
@@ -2527,7 +2662,7 @@ ORG &0B00
  BCS C0EB8
  PHA
  LDA #0
- JSR sub_C0B47
+ JSR MakeSound-3
  PLA
  CLC
  ADC #&BB
@@ -2539,14 +2674,16 @@ ORG &0B00
  LDX #0                 \ Flush the buffer for sound channel 0
  JSR FlushSoundBuffer
 
- LDY L05FE
+ LDY volumeLevel
 
 .C0EC0
 
- STA soundEnvelopes+28
+ STA soundData+12
+
  LDA #1
- JSR sub_C0B4A
- LDY L05FE
+ JSR MakeSound
+
+ LDY volumeLevel
  BEQ C0EDB
  LDA L0060
  SEC
@@ -2557,12 +2694,12 @@ ORG &0B00
 
 .C0ED8
 
- STA soundEnvelopes+36
+ STA soundData+20
 
 .C0EDB
 
  LDA #2
- JSR sub_C0B4A
+ JSR MakeSound
 
 .C0EE0
 
@@ -2579,7 +2716,8 @@ ORG &0B00
 \       Name: ProcessShiftedKeys
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Check for shifted keys (i.e. those that need SHIFT holding down to
+\             trigger) and process them accordingly
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2591,107 +2729,172 @@ ORG &0B00
 
 .ProcessShiftedKeys
 
- STY T
+ STY T                  \ Set T to the number of keys to scan
 
  LDX #&FF               \ Scan the keyboard to see if SHIFT is being pressed
  JSR ScanKeyboard
 
- BNE C0F63              \ If SHIFT is not being pressed, jump to C0F63 to return
-                        \ from the subroutine
+ BNE shif10             \ If SHIFT is not being pressed, jump to shif10 to
+                        \ return from the subroutine
 
- LDY T
+ LDY T                  \ Set Y to the number of keys to scan, to use as a loop
+                        \ counter as we work our way backwards through the
+                        \ shiftedKeys table, from entry Y to entry 0
 
-.P0EF0
+.shif1
 
- STY T
+ STY T                  \ Set T to the loop counter
 
- LDX shiftedKeys,Y      \ Fetch the key number for ????
+ LDX shiftedKeys,Y      \ Fetch the next key number from the shiftedKeys table
 
  JSR ScanKeyboard       \ Scan the keyboard to see if this key is being pressed
 
- BEQ C0F01              \ If this key is being pressed, jump to C0F01
+ BEQ shif2              \ If this key is being pressed, jump to shif2 to update
+                        \ the relevant configuration setting
 
- LDY T
- DEY
- BPL P0EF0
- BMI C0F11
+ LDY T                  \ Otherwise set Y to the value of the loop counter
 
-.C0F01
+ DEY                    \ Decrement the loop counter to point to the next key in
+                        \ the table (working backwards)
 
- LDY T
- LDA configKeys,Y
- AND #&0F
- TAX
- LDA configKeys,Y
- AND #&F0
- STA configStop,X
+ BPL shif1              \ Loop back to check the next key in the table until we
+                        \ have checked them all
 
-.C0F11
+ BMI shif3              \ None of the keys are being pressed, so jump to shif3
+                        \ to skip updating the configuration bytes (this BMI is
+                        \ effectively a JMP as we just passed through a BPL)
 
- LDA configPause
- BEQ C0F2C
- BPL C0F25
+.shif2
 
- JSR FlushSoundBuffers  \ Flush all four sound channel buffers
+                        \ If we get here then the Y-th key is being pressed,
+                        \ along with SHIFT, so we now update the relevant
+                        \ configuration byte, according to the settings in the
+                        \ configKeys table
 
-.P0F1B
+ LDY T                  \ Otherwise set Y to the value of the loop counter,
+                        \ which gives us the offset of key that is being pressed
+                        \ within the shiftedKeys table
 
- JSR sub_C66B6
+ LDA configKeys,Y       \ Set X to the low nibble for this key's corresonding
+ AND #&0F               \ entry in the configKeys, which contains the offset of
+ TAX                    \ the configuration byte from the first configuration
+                        \ byte at configStop
+
+ LDA configKeys,Y       \ Set A to the high nibble for this key's corresonding
+ AND #&F0               \ entry in the configKeys, which contains the value that
+                        \ we need for the corresponding configuration byte
+
+ STA configStop,X       \ Set the coresponding configuration byte to the value
+                        \ in A
+
+.shif3
+
+ LDA configPause        \ If configPause = 0, then neither COPY nor DELETE are
+ BEQ shif6              \ being, so jump to shif6
+
+                        \ If we get here then one of the pause buttons is being
+                        \ pressed
+
+ BPL shif5              \ If bit 7 of configPause is clear, then this means bit
+                        \ 6 must be set, which only happens when the unpause key
+                        \ (DELETE) is being pressed, so jump to shif5 to unpause
+                        \ the game
+
+                        \ Otherwise we need to pause the game
+
+ JSR FlushSoundBuffers  \ Flush all four sound channel buffers to stop the sound
+                        \ while we are paused
+
+.shif4
+
+ JSR Reset0554          \ Reset the blocks at L05A4, L0554, L0600, L0650 and
+                        \ L5F60
 
  LDX #&A6               \ Scan the keyboard to see if DELETE is being pressed
  JSR ScanKeyboard
 
- BNE P0F1B              \ If DELETE is not being pressed, jump to P0F1B
+ BNE shif4              \ If DELETE is not being pressed, loop back to shif4 to
+                        \ remain paused, otherwise keep going to unpause the
+                        \ game
 
-.C0F25
+.shif5
 
- INC L0060
- LDA #0
- STA configPause
+ INC L0060              \ Increment L0060
 
-.C0F2C
+ LDA #0                 \ Set configPause = 0 to clear the pause/unpause key
+ STA configPause        \ press
 
- LDY L05FE
- LDA L006A
+.shif6
+
+ LDY volumeLevel        \ Set Y to the volume level, which uses the operating
+                        \ system's volume scale, with -15 being full volume and
+                        \ 0 being silent
+
+ LDA L006A              \ If bit 0 of L006A is set, jump to shif9
  AND #1
- BNE C0F5E
- LDA configVolume
- BEQ C0F63
- BPL C0F43
- INY
- BEQ C0F48
- BMI C0F48
- BPL C0F5E
+ BNE shif9
 
-.C0F43
+ LDA configVolume       \ If configVolume = 0, jump to shif10 to return from the
+ BEQ shif10             \ subroutine
 
- DEY
- CPY #&F1
- BCC C0F5E
+ BPL shif7              \ If bit 7 of configVolume is clear, then this means bit
+                        \ 6 must be set, which only happens when the volume up
+                        \ (f5) key is being pressed, so jump to shif7
 
-.C0F48
+                        \ If we get here then we need to turn the volume down
 
- STY L05FE
- TYA
+ INY                    \ Increment Y to decrease the volume
+
+ BEQ shif8              \ If Y is 0 or negative, then it is still a valid volume
+ BMI shif8              \ level, so jump to shif8 to update the volume setting
+
+ BPL shif9              \ Otherwise we have already turned the volume down as
+                        \ far as it will go, so jump to shif9 to clear the key
+                        \ press and return from the subroutine (this BPL is
+                        \ effectively a JMP as we just passed through a BMI)
+
+.shif7
+
+                        \ If we get here then we need to turn the volume up
+
+ DEY                    \ Decrement Y to increase the volume
+
+ CPY #241               \ If Y < -15, then we have already turned the volume up
+ BCC shif9              \ as far as it will go, so jump to shif9 to clear the
+                        \ key press and return from the subroutine
+
+                        \ Otherwise fall through into shif8 to update the
+                        \ volume setting
+
+.shif8
+
+ STY volumeLevel        \ Store the updated volume level in volumeLevel
+
+ TYA                    \ Set A = -Y, negated using two's complement 
  EOR #&FF
  CLC
  ADC #1
- ASL A
- ASL A
- ASL A
- STA soundEnvelopes+68
- LDA #0
- JSR sub_C0B65
- INC L0060
 
-.C0F5E
+ ASL A                  \ Set envelopeData+12 = A << 3
+ ASL A                  \                       = -Y * 8
+ ASL A                  \
+ STA envelopeData+12    \ which is 0 for no volume, or 120 for full volume, so
+                        \ this sets the target level for the end of the attack
+                        \ phase to a higher figure for higher volume settings
 
- LDA #0
+ LDA #0                 \ Set up the envelope for the engine sound, with the
+ JSR DefineEnvelope     \ volume changed accordingly
+
+ INC L0060              \ Increment L0060
+
+.shif9
+
+ LDA #0                 \ Set configVolume = 0 to clear the volume key press
  STA configVolume
 
-.C0F63
+.shif10
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2987,11 +3190,11 @@ ORG &0B00
 
 .C104F
 
- LDX #1                 \ Zero L06B5, L06CD and L06E5
- JSR sub_C5011
+ LDX #1                 \ Zero (currentTenths currentSeconds currentMinutes)+1
+ JSR ZeroLapTime
 
  BEQ C106F              \ Jump to C106F (this BNE is effectively a JMP as the
-                        \ sub_C5011 routine sets the Z flag)
+                        \ ZeroLapTime routine sets the Z flag)
 
 .C1056
 
@@ -3204,7 +3407,7 @@ ORG &0B00
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
  LDA #4
- JSR sub_C0B47
+ JSR MakeSound-3
  LDA #0
  LDX #&1E
 
@@ -4612,8 +4815,8 @@ ORG &0B00
 
 .main1
 
- LDX #0                 \ Zero currentTenths, currentSeconds and currentMinutes
- JSR sub_C5011
+ LDX #0                 \ Zero (currentTenths currentSeconds currentMinutes)
+ JSR ZeroLapTime
 
 .main2
 
@@ -4650,7 +4853,8 @@ ORG &0B00
 
  JSR sub_C0E74
 
- JSR sub_C66B6
+ JSR Reset0554          \ Reset the blocks at L05A4, L0554, L0600, L0650 and
+                        \ L5F60
 
  JSR sub_C1A20
 
@@ -4831,7 +5035,7 @@ ORG &0B00
  STA currentMinutes,X
  BPL C17F9
 
- JSR sub_C5011          \ Zero currentTenths+X, currentSeconds+X and currentMinutes+X
+ JSR ZeroLapTime          \ Zero (currentTenths currentSeconds currentMinutes)+X
 
  LDY currentPlayer
  LDA #&80
@@ -4902,7 +5106,9 @@ ORG &0B00
  STA L6280,X
  DEX
  BPL P1810
- JSR sub_C0B65
+
+ JSR DefineEnvelope
+
  LDX #&17
  STX L62F9
 
@@ -4979,8 +5185,8 @@ ORG &0B00
                         \    "                                      "
                         \    "Lap Time   :         Best Time        "
 
- LDX #1                 \ Zero L06B5, L06CD and L06E5
- JSR sub_C5011
+ LDX #1                 \ Zero (currentTenths currentSeconds currentMinutes)+1
+ JSR ZeroLapTime
 
  JSR PrintBestLapTime
 
@@ -5860,7 +6066,7 @@ ORG &0B00
  STA L62A6
  STA L62A7
  LDA #4
- JSR sub_C0B47
+ JSR MakeSound-3
 
 .C1C1B
 
@@ -7943,7 +8149,7 @@ ORG &0B00
 
 .C2570
 
- LDA L068A,X
+ LDA L0650+58,X
 
 .C2573
 
@@ -12264,8 +12470,8 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 
  BPL setp1              \ Loop back until we have zeroed all ten bytes
 
- LDA #246               \ Set L05FE = 246
- STA L05FE
+ LDA #246               \ Set volumeLevel = -10, which sets the sound level to
+ STA volumeLevel        \ medium (-15 is full volume, 0 is silent)
 
  TSX                    \ Store the stack pointer in startingStack so we can
  STX startingStack      \ restore it when restarting the game
@@ -16126,8 +16332,10 @@ NEXT
 .C4639
 
  PHA
- LDY #&BA
+
+ LDY #186
  JSR sub_C4676
+
  LDX L005C
  CPX #&28
  BCC C4647
@@ -16155,8 +16363,10 @@ NEXT
  EOR #&FF
  CLC
  ADC #&41
- LDY #&88
+
+ LDY #136
  JSR sub_C4676
+
  ASL A
  ASL A
  BIT L0043
@@ -16177,24 +16387,31 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   
+\
+\   Y                   Called with Y = 136 or 186
 \
 \ ******************************************************************************
 
 .sub_C4676
 
- JSR sub_C4687
- STA U
- TYA
+ JSR sub_C4687          \ Set U = A, scaled up by sub_C4687
+ STA U                  \ Call it A+
 
- JSR Multiply8x8        \ Set (A T) = A * U
+ TYA                    \ Set (A T) = A * U
+ JSR Multiply8x8        \           = Y * A+
 
- STA U
- LDA L0010
+ STA U                  \ Set (U T) = (A T)
+                        \           = Y * A+
 
- JSR Multiply8x8        \ Set (A T) = A * U
+ LDA L0010              \ Set (A T) = A * U
+ JSR Multiply8x8        \           = L0010 * U
+                        \           = L0010 * (Y * A+ / 256)
+                        \           = L0010 * A+ * (Y / 256)
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -16205,36 +16422,52 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\   When            Calculate               Range of result
+\
+\   A < 26          A = 3 * A               0 to 78
+\   26 <= A < 46    A = 4 * A + 52          156 to 232
+\   A >= 46         A = A + 190             236 and up
 \
 \ ******************************************************************************
 
 .sub_C4687
 
- CMP #&1A
+ CMP #26                \ If A < 26, jump to C4699
  BCC C4699
- CMP #&2E
+
+ CMP #46                \ If A < 46, jump to C4693
  BCC C4693
- CLC
- ADC #&BE
- RTS
+
+                        \ If we get here then A >= 46
+
+ CLC                    \ Set A = A + 190
+ ADC #190
+
+ RTS                    \ Return from the subroutine
 
 .C4693
 
- ASL A
- ASL A
+                        \ If we get here then 26 <= A < 46
+
+ ASL A                  \ Set A = A << 2 + 52
+ ASL A                  \       = 4 * A + 52
  CLC
- ADC #&34
- RTS
+ ADC #52
+
+ RTS                    \ Return from the subroutine
 
 .C4699
 
- STA T
+                        \ If we get here then A < 26
+
+ STA T                  \ Set T = A
+
+ ASL A                  \ Set A = A << 1 + T
+ CLC                    \       = A * 2 + A
+ ADC T                  \       = 3 * A
  ASL A
- CLC
- ADC T
- ASL A
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -16459,9 +16692,10 @@ NEXT
  JSR sub_C4AF7
  LDA soundBuffer+3
  BNE C47A4
+
  LDY #1
  LDA #3
- JSR sub_C0B4A
+ JSR MakeSound
 
 .C47A4
 
@@ -18100,7 +18334,7 @@ NEXT
  SEC
  ROR L62D2Lo
  LDA #4
- JSR sub_C0B47
+ JSR MakeSound-3
  RTS
 
 \ ******************************************************************************
@@ -18987,16 +19221,20 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C5011
+\       Name: ZeroLapTime
 \       Type: Subroutine
-\   Category: Utility routines
-\    Summary: 
+\   Category: Drivers
+\    Summary: Zero the current lap time
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   0 or 1
+\   X                   The lap time to zero:
+\
+\                         * 0 = (currentTenths currentSeconds currentMinutes)
+\
+\                         * 1 = (currentTenths currentSeconds currentMinutes)+1
 \
 \ Returns:
 \
@@ -19004,7 +19242,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C5011
+.ZeroLapTime
 
  LDA #0                 \ Zero currentTenths+X
  STA currentTenths,X
@@ -23855,39 +24093,62 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C66B6
+\       Name: Reset0554
 \       Type: Subroutine
 \   Category: 
-\    Summary: 
+\    Summary: Reset the blocks at L05A4, L0554, L0600, L0650 and L5F60
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine does the following:
+\
+\   * Set L001F+1 bytes at L0554 to &80
+\
+\   * Set L001F+1 bytes at L05A4 to &80
+\
+\   * Set L001F+1 bytes at L0600 to &80
+\
+\   * Set L001F+1 bytes at L0650 to &80
+\
+\   * Set 80 bytes at L5F60 to 0
 \
 \ ******************************************************************************
 
-.sub_C66B6
+.Reset0554
 
- LDX L001F
- LDA #&80
+ LDX L001F              \ We start by setting L001F+1 bytes at L05A4, L0554
+                        \ L0600 and L0650 to &80, so set a byte counter in X
+
+ LDA #&80               \ Set A = &80 to use as our reset value
 
 .P66BA
 
- STA L05A4,X
- STA L0650,X
- STA L0600,X
- STA L0554,X
- DEX
- BPL P66BA
- LDX #&4F
- LDA #0
+ STA L05A4,X            \ Set the X-th byte of L05A4 to &80
+
+ STA L0650,X            \ Set the X-th byte of L0650 to &80
+
+ STA L0600,X            \ Set the X-th byte of L0600 to &80
+
+ STA L0554,X            \ Set the X-th byte of L0554 to &80
+
+ DEX                    \ Decrement the byte counter
+
+ BPL P66BA              \ Loop back until we have zeroed all L001F+1 bytes
+
+ LDX #79                \ We now zero the 80 bytes at L5F60, so set a byte
+                        \ counter in X
+
+ LDA #0                 \ Set A = 0 to use as our zero value
 
 .P66CD
 
- STA L5F60,X
- DEX
- BPL P66CD
- RTS
+ STA L5F60,X            \ Zero the X-th byte of L5F60
+
+ DEX                    \ Decrement the byte counter
+
+ BPL P66CD              \ Loop back until we have zeroed all 80 bytes
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
