@@ -4497,101 +4497,134 @@ ORG &0B00
 
 .ProcessDrivingKeys
 
- LDA #0
- STA V
- STA T
- STA L0058
+ LDA #0                 \ Set V = 0 to indicate that the steering keys are not
+ STA V                  \ being pressed (we update this if they are being
+                        \ pressed)
+
+ STA T                  \ Set T = 0
+
+ STA L0058              \ Set L0058 = 0
 
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
 
  PHP                    \ Store the result of the scan on the stack
 
- BIT configJoystick
- BPL C15B3
+ BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
+ BPL keys2              \ is not configured, so jump to keys2 to process key
+                        \ presses for the steering
 
- LDX #1                 \ Read the joystick x-coordinate into A and X
- JSR GetADCChannel
+ LDX #1                 \ Read the joystick x-coordinate into A and X (A is set
+ JSR GetADCChannel      \ to the high byte of the channel, X is set to the sign
+                        \ of A where 1 = positive, 0 = negative)
 
- STA U
+ STA U                  \ Store the high byte in U
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = A * A
+                        \           = A^2
+                        \           = x^2
 
- PLP                    \ Retrieve the result of the keyboard scan above
+ PLP                    \ Retrieve the result of the keyboard scan above, when
+                        \ we scanned for SPACE
 
- BEQ C159F              \ If SPACE is being pressed, jump to C159F
+ BEQ keys1              \ If SPACE is being pressed, jump to keys1 so the value
+                        \ of (A T) will be four times higher
 
+ LSR A                  \ Set (A T) = (A T) / 4
+ ROR T                  \           = x^2 / 4
  LSR A
  ROR T
- LSR A
- ROR T
 
-.C159F
+.keys1
 
- STA U
- LDA T
- AND #&FE
+ STA U                  \ Set (U T) = (A T)
+
+ LDA T                  \ Clear bit 0 of T
+ AND #%11111110
  STA T
- TXA
- ORA T
+
+ TXA                    \ Set bit 0 of T to the sign bit in X (1 = positive,
+ ORA T                  \ 0 = negative
  STA T
- LDA U
- JMP C1EE9
 
- EQUB &EA, &EA
+ LDA U                  \ Set (A T) = (U T)
+                        \
+                        \ so (A T) contains the joystick x-coordinate, scaled
+                        \ down if SPACE is not being pressed, and converted into
+                        \ a sign-magnitude number with the sign in bit 0 and the
+                        \ opposite sign to that returned by GetADCChannel
 
-.C15B3
+ JMP AssistSteering     \ Jump to AssistSteering, which in turn jumps back to
+                        \ keys7 or keys11
+
+ NOP                    \ These instructions appear to be unused
+ NOP
+
+.keys2
 
  LDX #&A9               \ Scan the keyboard to see if "L" is being pressed
  JSR ScanKeyboard
 
- BNE C15BE              \ If "L" is not being pressed, jump to C15BE
+ BNE keys3              \ If "L" is not being pressed, jump to keys3
 
- LDA #2
+ LDA #2                 \ Set V = 2
  STA V
 
-.C15BE
+.keys3
 
  LDX #&A8               \ Scan the keyboard to see if ";" is being pressed
  JSR ScanKeyboard
 
- BNE C15C7              \ If ";" is not being pressed, jump to C15C7
+ BNE keys4              \ If ";" is not being pressed, jump to keys4
 
- INC V
+ INC V                  \ Set V = 1
 
-.C15C7
+.keys4
 
- LDA #3
+                        \ By this point, we have:
+                        \
+                        \   * V = 1 if "L" is being pressed (steer left)
+                        \
+                        \   * V = 2 if ";" is being pressed (steer right)
+                        \
+                        \   * V = 0 if neither is being pressed
+
+ LDA #3                 \ Set A = 3
  STA U
- PLP
- BEQ C15DF
+
+ PLP                    \ Retrieve the result of the keyboard scan above, when
+                        \ we scanned for SPACE
+
+ BEQ keys6              \ If SPACE is being pressed, jump to keys6
+
  LDA #0
  LDX #2
  CPX L62A5
- BCC C15D9
+ BCC keys5
  LDA #1
 
-.C15D9
+.keys5
 
  STA U
  LDA #&80
  STA T
 
-.C15DF
+.keys6
 
  LDA V
- BEQ C15F4
+ BEQ keys7
  CMP #3
- BEQ C163B
+ BEQ keys13
  EOR L62A2
  AND #1
- BEQ C160F
+ BEQ keys9
 
  JSR Negate16Bit+2      \ Set (A T) = -(U T)
 
- JMP C160D
+ JMP keys8
 
-.C15F4
+.keys7
 
  LDA L62DAHi
  AND #&F0
@@ -4607,15 +4640,16 @@ ORG &0B00
  CMP L62A5
  JSR sub_C1F9B
 
-.C160D
+.keys8
 
  STA U
 
-.C160F
+.keys9
 
- JMP C1EFA
+ JMP AssistSteeringKeys \ Jump to AssistSteeringKeys, which in turn jumps back
+                        \ to keys7 or keys11
 
-.C1612
+.keys10
 
  SEC
  SBC T
@@ -4623,7 +4657,7 @@ ORG &0B00
  LDA L62A5
  SBC U
  CMP #&C8
- BCC C162D
+ BCC keys11
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
 
@@ -4633,75 +4667,81 @@ ORG &0B00
  STA T
  LDA U
 
-.C162D
+.keys11
 
  CMP #&91
- BCC C1633
+ BCC keys12
  LDA #&91
 
-.C1633
+.keys12
 
  STA L62A5
  LDA T
  STA L62A2
 
-.C163B
+.keys13
 
  LDA L000F
- BNE C1678
+ BNE keys19
  BIT configJoystick
- BPL C165E
+ BPL keys15
 
  LDX #2                 \ Read the joystick y-coordinate into A and X, clearing
  JSR GetADCChannel      \ the C flag if A < 10
 
- BCC C1678              \ If A < 10, jump to C1678
+ BCC keys19             \ If A < 10, jump to keys19
 
- STA T
+ STA T                  \ Set T = A / 2
  LSR T
- ASL A
- ADC T
- BCS C1658
- CMP #&FA
- BCC C1681
 
-.C1658
+ ASL A                  \ Set A = A * 2
+
+ ADC T                  \ Set A = A + T
+                        \       = A * 2 + A / 2
+                        \       = 2.5 * A
+
+ BCS keys14             \ If the addition overflowed, jump to keys14
+
+ CMP #250               \ If A < 250, jump to keys20
+ BCC keys20
+
+.keys14
 
  CPX #0                 \ If X = 0 then the joystick y-coordinate is negative
- BEQ C1674              \ (down), so jump to C1674
+ BEQ keys18             \ (down), so jump to keys18
 
- BNE C1667              \ Otherwise the joystick y-coordinate is positive (up)
-                        \ so jump to C1667
+ BNE keys16             \ Otherwise the joystick y-coordinate is positive (up)
+                        \ so jump to keys16
 
-.C165E
+.keys15
 
  LDX #&AE               \ Scan the keyboard to see if "S" is being pressed
  JSR ScanKeyboard
 
- BNE C166B              \ If "S" is not being pressed, jump to C166B
+ BNE keys17             \ If "S" is not being pressed, jump to keys17
 
  LDX #1
 
-.C1667
+.keys16
 
  LDA #&FF
- BNE C1681
+ BNE keys20
 
-.C166B
+.keys17
 
  LDX #&BE               \ Scan the keyboard to see if "A" is being pressed
  JSR ScanKeyboard
 
- BNE C1678              \ If "A" is not being pressed, jump to C1678
+ BNE keys19             \ If "A" is not being pressed, jump to keys19
 
  LDX #0
 
-.C1674
+.keys18
 
  LDA #&FA
- BNE C1681
+ BNE keys20
 
-.C1678
+.keys19
 
  LDX #&80
  LDA L003C
@@ -4710,78 +4750,78 @@ ORG &0B00
  CLC
  ADC #5
 
-.C1681
+.keys20
 
  STX L003E
  STA L003F
  BIT configJoystick
- BPL C16A3
+ BPL keys21
  LDX #0
  LDA #128               \ osbyte_read_adc_or_get_buffer_status
  JSR OSBYTE
  TXA
  AND #1
- BEQ C16B1
+ BEQ keys22
  LDY L003E
  DEY
- BNE C16B7
+ BNE keys23
  LDA L003F
  CMP #&C8
- BCS C16BB
- BCC C16B7
+ BCS keys24
+ BCC keys23
 
-.C16A3
+.keys21
 
  LDX #&9F               \ Scan the keyboard to see if TAB is being pressed
  JSR ScanKeyboard
 
- BEQ C16B7              \ If TAB is being pressed, jump to C16B7
+ BEQ keys23             \ If TAB is being pressed, jump to keys23
 
  LDX #&EF               \ Scan the keyboard to see if "Q" is being pressed
  JSR ScanKeyboard
 
- BEQ C16BB              \ If "Q" is being pressed, jump to C16BB
+ BEQ keys24             \ If "Q" is being pressed, jump to keys24
 
-.C16B1
+.keys22
 
  LDA #0
  STA L0019
- BEQ C16DB
+ BEQ keys28
 
-.C16B7
+.keys23
 
  LDA #&FF
- BNE C16BD
+ BNE keys25
 
-.C16BB
+.keys24
 
  LDA #1
 
-.C16BD
+.keys25
 
  DEC L0058
  LDX L0019
- BNE C16DB
+ BNE keys28
  STA L0019
  CLC
  ADC gearNumber
  CMP #&FF
- BEQ C16D4
+ BEQ keys26
  CMP #7
- BNE C16D6
+ BNE keys27
  LDA #6
- BNE C16D6
+ BNE keys27
 
-.C16D4
+.keys26
 
  LDA #0
 
-.C16D6
+.keys27
 
  STA gearNumber
  JSR PrintGearNumber
 
-.C16DB
+.keys28
 
  RTS
 
@@ -6709,34 +6749,43 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: C1EE9
+\       Name: AssistSteering
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Jumps back to keys11 or keys7.
+\
+\ Arguments:
+\
+\   (A T)               Contains the scaled joystick x-coordinate as a
+\                       sign-magnitude number with the sign in bit 0
+\
+\ Other entry points:
+\
+\   AssistSteeringKeys
 \
 \ ******************************************************************************
 
-.C1EE9
+.AssistSteering
 
  JSR sub_C63C5
  BNE C1EF1
 
 .P1EEE
 
- JMP C162D
+ JMP keys11
 
 .C1EF1
 
  BCS P1EEE
  CMP #5
  BCS C1F08
- JMP C15F4
+ JMP keys7
 
-.C1EFA
+.AssistSteeringKeys
 
  JSR sub_C63C5
  BEQ C1F05
@@ -6856,7 +6905,7 @@ ORG &0B00
 .C1F95
 
  LDA L62A2
- JMP C1612
+ JMP keys10
 
 \ ******************************************************************************
 \
