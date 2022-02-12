@@ -2612,7 +2612,7 @@ ORG &0B00
 \
 \       Name: sub_C0E74
 \       Type: Subroutine
-\   Category: 
+\   Category: Sound
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -3565,7 +3565,7 @@ ORG &0B00
  STX L0045
  STX L0042
  LDY L0022
- JSR C2937
+ JSR sub_C2937
  LDX #2
 
 .P11DB
@@ -3587,7 +3587,7 @@ ORG &0B00
 
  TAY
  LDX L0045
- JSR C2937
+ JSR sub_C2937
  LDA L0380,X
  STA L000A
 
@@ -4484,7 +4484,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ProcessDrivingKeys
+\       Name: ProcessDrivingKeys (Part 1 of 5)
 \       Type: Subroutine
 \   Category: Keyboard
 \    Summary: 
@@ -4560,6 +4560,19 @@ ORG &0B00
 
  NOP                    \ These instructions appear to be unused
  NOP
+
+\ ******************************************************************************
+\
+\       Name: ProcessDrivingKeys (Part 2 of 5)
+\       Type: Subroutine
+\   Category: Keyboard
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .keys2
 
@@ -4679,6 +4692,19 @@ ORG &0B00
  LDA T
  STA L62A2
 
+\ ******************************************************************************
+\
+\       Name: ProcessDrivingKeys (Part 3 of 5)
+\       Type: Subroutine
+\   Category: Keyboard
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
 .keys13
 
  LDA L000F
@@ -4712,6 +4738,19 @@ ORG &0B00
 
  BNE keys16             \ Otherwise the joystick y-coordinate is positive (up)
                         \ so jump to keys16
+
+\ ******************************************************************************
+\
+\       Name: ProcessDrivingKeys (Part 4 of 5)
+\       Type: Subroutine
+\   Category: Keyboard
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .keys15
 
@@ -4770,6 +4809,19 @@ ORG &0B00
  BCS keys24
  BCC keys23
 
+\ ******************************************************************************
+\
+\       Name: ProcessDrivingKeys (Part 5 of 5)
+\       Type: Subroutine
+\   Category: Keyboard
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
 .keys21
 
  LDX #&9F               \ Scan the keyboard to see if TAB is being pressed
@@ -4827,10 +4879,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: MainDrivingLoop
+\       Name: MainDrivingLoop (Part 1 of 5)
 \       Type: Subroutine
 \   Category: Main loop
-\    Summary: 
+\    Summary: Main driving loop: Switch to the track and start the main loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4840,7 +4892,9 @@ ORG &0B00
 
 .MainDrivingLoop
 
- JSR SetCustomScreen    \ Switch to the custom screen mode
+ JSR SetCustomScreen    \ Switch to the custom screen mode, which also sets
+                        \ screenSection to -2, so the interrupt handler doesn't
+                        \ do any palette switching just yet
 
  LDA #0                 \ Set printMode = 0 so text printing pokes directly into
  STA printMode          \ screen memory
@@ -4850,36 +4904,59 @@ ORG &0B00
 
  JSR sub_C7BE2
 
- BIT configStop         \ If bit 6 of configStop is set, jump to main4
- BVS main4
+ BIT configStop         \ If bit 6 of configStop is set then we are returning to
+ BVS main4              \ the track after visiting the pits, so jump to main4
+                        \ to reset the pit stop flag and enter the driving loop
 
 .main1
+
+                        \ We loop back to here during practice laps ???
 
  LDX #0                 \ Zero (currentTenths currentSeconds currentMinutes)
  JSR ZeroLapTime
 
 .main2
 
- JSR sub_C1805
+                        \ We loop back to here during qualifying ???
+
+ JSR sub_C1805          \ ??? Set up the top two text lines
 
 .main3
+
+                        \ We loop back to here during a Novice race ???
 
  JSR sub_C11CE
 
 .main4
 
- LDA #0                 \ Set configStop = 0
+ LDA #0                 \ Set configStop = 0 to clear any pit stop key presses
  STA configStop
 
  JSR sub_C0B77
 
+\ ******************************************************************************
+\
+\       Name: MainDrivingLoop (Part 2 of 5)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: Main driving loop: The body of the main loop
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
 .main5
+
+                        \ We loop back to here during Amateur and Professional
+                        \ races
 
  JSR sub_C5052
 
  JSR sub_C7B4A
 
- JSR ProcessDrivingKeys
+ JSR ProcessDrivingKeys \ Check for and process the main driving keys
 
  JSR sub_C46A1
 
@@ -4913,7 +4990,7 @@ ORG &0B00
 
  JSR sub_C1E15
 
- JSR UpdateMirrors
+ JSR UpdateMirrors      \ Update the view in the wing mirrors
 
  JSR sub_C0E74
 
@@ -4925,17 +5002,42 @@ ORG &0B00
 
  JSR sub_C7BE2
 
+\ ******************************************************************************
+\
+\       Name: MainDrivingLoop (Part 3 of 5)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: Main driving loop: Deal with a crash
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
  LDA screenSection      \ If screenSection is positive, jump to main6 to skip
  BPL main6              \ the following instruction
 
- INC screenSection      \ screenSection is negative, so increment screenSection
+ INC screenSection      \ If screenSection is negative, then we increment it
+                        \
+                        \ This kickstarts the custom screen interrupt handler
+                        \ on the first time round the main driving loop, as the
+                        \ call to SetCustomScreen at the start of the routine
+                        \ sets screenSection to -2, and this increment bumps it
+                        \ up to -1, which makes the screen handler start
+                        \ applying the custom screen effect
+                        \
+                        \ In other words, this displays the driving screen for
+                        \ the first time, but it waits until after we have
+                        \ called all the drawing routines to we don't get to
+                        \ see the screen being drawn
 
 .main6
 
- LDA L62F6
- BEQ main10
+ LDA L62F6              \ If L62F6 = 0, jump to main10 to continue the main
+ BEQ main10             \ driving loop in part 5
 
- INC L62F6
+ INC L62F6              \ Increment L62F6 ???
 
  LDA #156               \ Set irqCounter = 156
  STA irqCounter
@@ -4946,25 +5048,55 @@ ORG &0B00
                         \ the IRQ routine reaches section 4 of the custom screen
 
  BMI main7              \ Loop back to main7 until irqCounter increments round
-                        \ to zero (so we wait for it to go from 156 to 0)
+                        \ to zero (so we wait for it to go from 156 to 0, which
+                        \ takes around three seconds at 50 ticks per second)
 
 .main8
 
- LDA qualifyingTime
- BMI main1
+ LDA qualifyingTime     \ If bit 7 of qualifyingTime is set then this is a
+ BMI main1              \ practice lap (i.e. qualifyingTime = 255), so jump back
+                        \ to main1
 
- LDA raceStarted
- BPL main2
+ LDA raceStarted        \ If bit 7 of raceStarted is clear then this is either
+ BPL main2              \ a practice or qualifying lap, but we didn't just jump
+                        \ to main1, so this must be qualifying, so jump back to
+                        \ main2
 
- LDA raceClass
- BEQ main3
+ LDA raceClass          \ If raceClass = 0 then this is a Novice race, so jump
+ BEQ main3              \ back to main3
+
+                        \ Otherwise this is an Amateur or a Professional race,
+                        \ and not a Novice race, practice or a qualifying lap
+
+\ ******************************************************************************
+\
+\       Name: MainDrivingLoop (Part 4 of 5)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: Main driving loop: Leave the track
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .main9
 
+                        \ If we get here then either:
+                        \
+                        \   * We have quit the race or lap by pressing SHIFT-f4
+                        \
+                        \   * We have crashed, and this is either an Amateur or
+                        \     a Professional race ???
+                        \
+                        \ In both cases, we leave the track
+
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
- LDA qualifyingTime
- BMI main8
+ LDA qualifyingTime     \ If bit 7 of qualifyingTime is set then this is a
+ BMI main8              \ practice lap (i.e. qualifyingTime = 255), so jump to
+                        \ main1 via main8, so we start a new practice lap
 
  LDX #48                \ Blank out the first text line at the top of the screen
  JSR PrintSecondLineGap \ and print token 48 on the second line, to give:
@@ -4972,55 +5104,83 @@ ORG &0B00
                         \    "                                      "
                         \    "             PLEASE  WAIT             "
 
- JSR sub_C1163
+ JSR sub_C1163          \ ???
 
- LDA configStop         \ If bit 7 of configStop is set, jump to main13
- BMI main13
+ LDA configStop         \ If bit 7 of configStop is set then we must be pressing
+ BMI main13             \ either SHIFT-f0 for a pit stop or SHIFT and right
+                        \ arrow to restart the game, so jump to main13 to leave
+                        \ the track
 
- LDA #%00100000         \ Set bit 5 of configStop
- STA configStop
+ LDA #%00100000         \ Set bit 5 of configStop to indicate that we have
+ STA configStop         \ retired from the race (so we leave the track
+                        \ permanently rather than just visiting the pits)
 
- BNE main13
+ BNE main13             \ Jump to main13 to leave the track (this BNE is
+                        \ effectively a JMP as A is never zero)
+
+\ ******************************************************************************
+\
+\       Name: MainDrivingLoop (Part 5 of 5)
+\       Type: Subroutine
+\   Category: Main loop
+\    Summary: Main driving loop: End of loop
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .main10
 
- LDY #11
- JSR ProcessShiftedKeys
+ LDY #11                \ Check for all the shifted keys (i.e. those that need
+ JSR ProcessShiftedKeys \ SHIFT holding down to trigger) and process them
+                        \ accordingly
 
- LDA configStop         \ If configStop = 0, jump to main11
- BEQ main11
+ LDA configStop         \ If configStop = 0, then we aren't pressing one of the
+ BEQ main11             \ keys that stops the race, so jump to main11 to keep
+                        \ iterating round the main driving loop
 
- BPL main9              \ If bit 7 of configStop is clear, jump to main9
+ BPL main9              \ If bit 7 of configStop is clear then we must be
+                        \ pressing SHIFT-f7 to retire from the race, so jump to
+                        \ main9 to quit the race
 
- AND #&40
+ AND #%01000000         \ If bit 6 of configStop is clear, jump to main13 to
+ BEQ main13             \ leave the track
+
+ LDA carMoving          \ If carMoving = 0, jump to main13 to leave the track
  BEQ main13
 
- LDA carMoving
- BEQ main13
-
- LDA #0                 \ Set configStop = 0
+ LDA #0                 \ Set configStop = 0 to clear any pit stop key presses
  STA configStop
 
 .main11
 
- LDX L000F
- BEQ main12
+ LDX L000F              \ Set X = L000F ???
 
- DEX
+ BEQ main12             \ If X = 0, i.e. L000F = 0, jump to main12 to continue
+                        \ the main driving loop
 
- BEQ main9
+ DEX                    \ Set X = L000F - 1
 
- STX L000F
+ BEQ main9              \ If X = 0, i.e. L000F = 1, jump to main9 to quit the
+                        \ race
+
+ STX L000F              \ Set L000F = X, i.e. decrement L000F
 
 .main12
 
- JSR sub_C0E74
+ JSR sub_C0E74          \ ??? Sound related
 
- JSR UpdateDashboard
+ JSR UpdateDashboard    \ Update the rev counter on the dashboard
 
- JMP main5
+ JMP main5              \ Loop back to main5 to repeat the main driving loop
 
 .main13
+
+                        \ If we get here then we leave the track and switch back
+                        \ to mode 7, either to visit the pits or because the
+                        \ driving is done
 
  LDA #%10000000         \ Copy the dash data from screen memory back to the main
  JSR CopyDashData       \ game code
@@ -9031,14 +9191,27 @@ ORG &0B00
  TAY
  LDA positionNumber,X
  AND #&10
- BNE C2937
+ BNE sub_C2937
  LDA L3850Hi,X
  CMP #&32
- BCC C2937
+ BCC sub_C2937
  LDA L0701,Y
  STA L0114,X
 
-.C2937
+\ ******************************************************************************
+\
+\       Name: sub_C2937
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C2937
 
  LDA L0700,Y
  STA L000C
@@ -18427,8 +18600,8 @@ NEXT
  BPL cust1              \ Loop back until we have set registers R0 to R13 to the
                         \ values in the screenRegisters table
 
- DEX                    \ Set screenSection = -1, as the above loop finishes
- STX screenSection      \ with X = 0
+ DEX                    \ Set screenSection = -2, as the above loop finishes
+ STX screenSection      \ with X = -1
 
  CLI                    \ Re-enable interrupts
 
