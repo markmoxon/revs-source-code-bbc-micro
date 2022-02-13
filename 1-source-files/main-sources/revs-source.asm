@@ -197,9 +197,15 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0019
+.gearChange
 
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the direction of the gear change
+                        \
+                        \   * 1 = change up
+                        \
+                        \   * 0 = no gear change
+                        \
+                        \   * -1 = change down
 
 .L001A
 
@@ -348,13 +354,21 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L003E
+.throttleBrakeState
 
- SKIP 1                 \ 
+ SKIP 1                 \ Denotes whether the throttle or brake are being
+                        \ applied
+                        \
+                        \   * Bit 7 is set if there is no brake or throttle key
+                        \     press
+                        \
+                        \   * 0 = brakes are being applied
+                        \
+                        \   * 1 = throttle is being applied
 
-.L003F
+.throttleBrake
 
- SKIP 1                 \ 
+ SKIP 1                 \ The amount of throttle or brake being applied
 
 .gearNumber
 
@@ -472,9 +486,12 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0058
+.gearChangeKey
 
- SKIP 1                 \ 
+ SKIP 1                 \ Determines whether or not a gear change key has been
+                        \ pressed
+                        \
+                        \   * Bit 7 set = a gear change key has been pressed
 
 .L0059
 
@@ -3163,7 +3180,9 @@ ORG &0B00
 
  LDA L000F
  BNE C109A
+
  JSR sub_C1B84
+
  RTS
 
 .C1032
@@ -3243,9 +3262,11 @@ ORG &0B00
 
  LDA L0065
  BMI C109A
+
  LDA #&C0
  STA L0065
- LDA #&3C
+
+ LDA #60
  STA L000F
 
  LDX #42                \ Print token 42 on the first text line at the top of
@@ -4484,10 +4505,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ProcessDrivingKeys (Part 1 of 5)
+\       Name: ProcessDrivingKeys (Part 1 of 6)
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Process joystick steering
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4497,16 +4518,18 @@ ORG &0B00
 
 .ProcessDrivingKeys
 
- LDA #0                 \ Set V = 0 to indicate that the steering keys are not
- STA V                  \ being pressed (we update this if they are being
-                        \ pressed)
+ LDA #0                 \ Set V = 0, which we will use to indicate whether any
+ STA V                  \ steering is being applied (0 indicates that none is
+                        \ being applied)
 
  STA T                  \ Set T = 0
 
- STA L0058              \ Set L0058 = 0
+ STA gearChangeKey      \ Set gearChangeKey = 0, which we will use to indicate
+                        \ whether any gear change are being applied (0 indicates
+                        \ that no gear changes are being applied)
 
- LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
- JSR ScanKeyboard
+ LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed, as
+ JSR ScanKeyboard       \ this will affect the speed of any steering changes
 
  PHP                    \ Store the result of the scan on the stack
 
@@ -4514,16 +4537,16 @@ ORG &0B00
  BPL keys2              \ is not configured, so jump to keys2 to process key
                         \ presses for the steering
 
- LDX #1                 \ Read the joystick x-coordinate into A and X (A is set
- JSR GetADCChannel      \ to the high byte of the channel, X is set to the sign
-                        \ of A where 1 = positive, 0 = negative)
+ LDX #1                 \ Read the joystick x-axis into A and X (A is set to the
+ JSR GetADCChannel      \ high byte of the channel, X is set to the sign of A
+                        \ where 1 = positive/up, 0 = negative/down)
 
- STA U                  \ Store the high byte in U
+ STA U                  \ Store the x-axis high byte in U
 
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = A * A
                         \           = A^2
-                        \           = x^2
+                        \           = x-axis^2
 
  PLP                    \ Retrieve the result of the keyboard scan above, when
                         \ we scanned for SPACE
@@ -4532,7 +4555,7 @@ ORG &0B00
                         \ of (A T) will be four times higher
 
  LSR A                  \ Set (A T) = (A T) / 4
- ROR T                  \           = x^2 / 4
+ ROR T                  \           = x-axis^2 / 4
  LSR A
  ROR T
 
@@ -4544,16 +4567,16 @@ ORG &0B00
  AND #%11111110
  STA T
 
- TXA                    \ Set bit 0 of T to the sign bit in X (1 = positive,
- ORA T                  \ 0 = negative
+ TXA                    \ Set bit 0 of T to the sign bit in X (1 = positive/up,
+ ORA T                  \ 0 = negative/down)
  STA T
 
  LDA U                  \ Set (A T) = (U T)
                         \
-                        \ so (A T) contains the joystick x-coordinate, scaled
-                        \ down if SPACE is not being pressed, and converted into
-                        \ a sign-magnitude number with the sign in bit 0 and the
-                        \ opposite sign to that returned by GetADCChannel
+                        \ so (A T) contains the joystick x-axis high byte,
+                        \ squared, divided by 4 if SPACE is not being pressed,
+                        \ and converted into a sign-magnitude number with the
+                        \ sign in bit 0 (1 = positive/up, 0 = negative/down)
 
  JMP AssistSteering     \ Jump to AssistSteering, which in turn jumps back to
                         \ keys7 or keys11
@@ -4563,10 +4586,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ProcessDrivingKeys (Part 2 of 5)
+\       Name: ProcessDrivingKeys (Part 2 of 6)
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Process keyboard steering
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4603,7 +4626,7 @@ ORG &0B00
                         \
                         \   * V = 0 if neither is being pressed
 
- LDA #3                 \ Set A = 3
+ LDA #3                 \ Set U = 3
  STA U
 
  PLP                    \ Retrieve the result of the keyboard scan above, when
@@ -4611,24 +4634,29 @@ ORG &0B00
 
  BEQ keys6              \ If SPACE is being pressed, jump to keys6
 
- LDA #0
- LDX #2
- CPX L62A5
+ LDA #0                 \ Set A = 0
+
+ LDX #2                 \ If L62A5 > 2, jump to keys5 to skip the following 
+ CPX L62A5              \ instruction
  BCC keys5
- LDA #1
+
+ LDA #1                 \ Set A = 1
 
 .keys5
 
- STA U
- LDA #&80
+ STA U                  \ Set U = A, which will be 1 if L62A5 > 2, 0 otherwise
+
+ LDA #128               \ Set T = 128
  STA T
 
 .keys6
 
- LDA V
- BEQ keys7
- CMP #3
- BEQ keys13
+ LDA V                  \ If V = 0 then no steering is being applied, so jump to
+ BEQ keys7              \ keys7
+
+ CMP #3                 \ If V = 3, jump to keys13 to move on to the throttle
+ BEQ keys13             \ and brake keys
+
  EOR L62A2
  AND #1
  BEQ keys9
@@ -4639,19 +4667,25 @@ ORG &0B00
 
 .keys7
 
- LDA L62DAHi
+ LDA L62DAHi            \ Set T = L62DAHi top nibble only
  AND #&F0
  STA T
- LDA L62EAHi
+
+ LDA L62EAHi            \ Set (A T) = (L62EAHi L62DAHi-top-nibble)
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
+ LSR A                  \ Set (A T) = (A T) >> 2
+ ROR T                  \           = |A T| / 4
  LSR A
  ROR T
- LSR A
- ROR T
- CMP L62A5
- JSR sub_C1F9B
+
+ CMP L62A5              \ If A < L62A5, clear the C flag
+                        \ If A >= L62A5, set the C flag
+
+ JSR sub_C1F9B          \ If the C flag is set (i.e. A >= L62A5), set:
+                        \
+                        \   (A T) = (L62A5 L62A2) with bit 0 cleared
 
 .keys8
 
@@ -4689,33 +4723,33 @@ ORG &0B00
 .keys12
 
  STA L62A5
- LDA T
+
+ LDA T                  \ Set L62A2 = T
  STA L62A2
 
 \ ******************************************************************************
 \
-\       Name: ProcessDrivingKeys (Part 3 of 5)
+\       Name: ProcessDrivingKeys (Part 3 of 6)
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Process joystick brake and throttle
 \
 \ ******************************************************************************
 
 .keys13
 
- LDA L000F
- BNE keys19
- BIT configJoystick
- BPL keys15
+ LDA L000F              \ If L000F is non-zero, jump to keys19 to skip the whole
+ BNE keys19             \ brake/throttle section
 
- LDX #2                 \ Read the joystick y-coordinate into A and X, clearing
- JSR GetADCChannel      \ the C flag if A < 10
+ BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
+ BPL keys15             \ is not configured, so jump to keys15 to process key
+                        \ presses for the throttle
 
- BCC keys19             \ If A < 10, jump to keys19
+ LDX #2                 \ Read the joystick y-axis into A and X, clearing the
+ JSR GetADCChannel      \ C flag if A < 10
+
+ BCC keys19             \ If A < 10, jump to keys19 so we don't register any
+                        \ throttle or brake activity
 
  STA T                  \ Set T = A / 2
  LSR T
@@ -4728,27 +4762,24 @@ ORG &0B00
 
  BCS keys14             \ If the addition overflowed, jump to keys14
 
- CMP #250               \ If A < 250, jump to keys20
- BCC keys20
+ CMP #250               \ If A < 250, jump to keys20 to store A in throttleBrake
+ BCC keys20             \ and X in throttleBrakeState
 
 .keys14
 
- CPX #0                 \ If X = 0 then the joystick y-coordinate is negative
- BEQ keys18             \ (down), so jump to keys18
+ CPX #0                 \ If X = 0 then the joystick y-axis is negative (down),
+ BEQ keys18             \ so jump to keys18 to apply the brakes
 
- BNE keys16             \ Otherwise the joystick y-coordinate is positive (up)
-                        \ so jump to keys16
+ BNE keys16             \ Otherwise the joystick y-axis is positive (up), so
+                        \ jump to keys16 to increase the throttle (this BNE is
+                        \ effectively a JMP as we already know X is non-zero)
 
 \ ******************************************************************************
 \
-\       Name: ProcessDrivingKeys (Part 4 of 5)
+\       Name: ProcessDrivingKeys (Part 4 of 6)
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Process keyboard brake and throttle
 \
 \ ******************************************************************************
 
@@ -4757,14 +4788,17 @@ ORG &0B00
  LDX #&AE               \ Scan the keyboard to see if "S" is being pressed
  JSR ScanKeyboard
 
- BNE keys17             \ If "S" is not being pressed, jump to keys17
+ BNE keys17             \ If "S" is not being pressed, jump to keys17 to check
+                        \ the next key
 
- LDX #1
+ LDX #1                 \ Set X = 1 to store in throttleBrakeState below
 
 .keys16
 
- LDA #&FF
- BNE keys20
+ LDA #255               \ Set A = 255 to store in throttleBrake below
+
+ BNE keys20             \ Jump to keys20 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .keys17
 
@@ -4773,52 +4807,104 @@ ORG &0B00
 
  BNE keys19             \ If "A" is not being pressed, jump to keys19
 
- LDX #0
+ LDX #0                 \ Set X = 0 to store in throttleBrakeState below
 
 .keys18
 
- LDA #&FA
- BNE keys20
+ LDA #250               \ Set A = 250 to store in throttleBrake below
+
+ BNE keys20             \ Jump to keys20 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .keys19
 
- LDX #&80
- LDA L003C
- LSR A
- LSR A
+                        \ If we get here then neither of the throttle keys are
+                        \ being pressed, or the joystick isn't being moved
+                        \ enough to register a change
+
+ LDX #%10000000         \ Set bit 7 of X to store in throttleBrakeState below
+
+ LDA L003C              \ Set A = 5 + L003C / 4
+ LSR A                  \
+ LSR A                  \ to store in throttleBrake below
  CLC
  ADC #5
 
 .keys20
 
- STX L003E
- STA L003F
- BIT configJoystick
- BPL keys21
- LDX #0
- LDA #128               \ osbyte_read_adc_or_get_buffer_status
- JSR OSBYTE
- TXA
- AND #1
- BEQ keys22
- LDY L003E
- DEY
- BNE keys23
- LDA L003F
- CMP #&C8
- BCS keys24
- BCC keys23
+                        \ We can get here in various ways:
+                        \
+                        \   * No brake or throttle action:
+                        \
+                        \       throttleBrakeState = X = bit 7 set
+                        \       throttleBrake = A = 5 + L003C / 4
+                        \
+                        \   * Joystick, 2.5 * y-axis < 250 (i.e. joystick is in
+                        \     the zone around the centre)
+                        \
+                        \       throttleBrakeState = X = y-axis sign
+                        \                               (0 = up, 1 = down)
+                        \       throttleBrake = A = 2.5 * y-axis
+                        \
+                        \   * "S" (throttle) is being pressed (or joystick
+                        \     equivalent has 2.5 * y-axis >= 250):
+                        \
+                        \       throttleBrakeState = X = 1
+                        \       throttleBrake = A = 255
+                        \
+                        \   * "A" (brake) is being pressed (or joystick
+                        \     equivalent has 2.5 * y-axis >= 250)
+                        \
+                        \       throttleBrakeState = X = 0
+                        \       throttleBrake = A = 250
+
+ STX throttleBrakeState \ Store X in throttleBrakeState
+
+ STA throttleBrake      \ Store A in throttleBrake
 
 \ ******************************************************************************
 \
-\       Name: ProcessDrivingKeys (Part 5 of 5)
+\       Name: ProcessDrivingKeys (Part 5 of 6)
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Process joystick gear change
 \
-\ ------------------------------------------------------------------------------
+\ ******************************************************************************
+
+ BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
+ BPL keys21             \ is not configured, so jump to keys21 to skip the
+                        \ following
+
+ LDX #0                 \ Call OSBYTE with A = 128 and X = 0 to fetch the ADC
+ LDA #128               \ channel that was last used for ADC conversion,
+ JSR OSBYTE             \ returning the channel number in Y, and the status of
+                        \ the two fire buttons in X
+
+ TXA                    \ If bit 0 of X is zero, then no fire buttons are being
+ AND #1                 \ pressed, so jump to keys22 to check the next key
+ BEQ keys22
+
+ LDY throttleBrakeState \ If throttleBrakeState <> 1, then the throttle is not
+ DEY                    \ being applied, so jump to keys23
+ BNE keys23
+
+                        \ If we get here then the fire button is being pressed
+                        \ and the throttle is being applied, which is the
+                        \ joystick method for changing gear, so now we jump to
+                        \ the correct part below to change up or down a gear
+
+ LDA throttleBrake      \ If the throttle amount is >= 200, jump to keys24 to
+ CMP #200               \ change up a gear
+ BCS keys24
+
+ BCC keys23             \ Otherwise jump to keys23 to change down a gear
+
+\ ******************************************************************************
 \
-\ 
+\       Name: ProcessDrivingKeys (Part 6 of 6)
+\       Type: Subroutine
+\   Category: Keyboard
+\    Summary: Process keyboard gear change
 \
 \ ******************************************************************************
 
@@ -4836,46 +4922,73 @@ ORG &0B00
 
 .keys22
 
- LDA #0
- STA L0019
- BEQ keys28
+                        \ If we get here then the gear is not being changed
+
+ LDA #0                 \ Set gearChange = 0 to indicate that we are not in the
+ STA gearChange         \ process of changing gear
+
+ BEQ keys28             \ Jump to keys28 to return from the subroutine (this BEQ
+                        \ is effectively a JMP as A is always zero)
 
 .keys23
 
- LDA #&FF
- BNE keys25
+                        \ If we get here then either TAB is being pressed, or
+                        \ the joystick fire button is being pressed while the
+                        \ stick is in the "change down" part of the joystick
+                        \ range, so we need to change down a gear
+
+ LDA #&FF               \ Set A = -1 so we change down a gear
+
+ BNE keys25             \ Jump to keys25 to change the gear 
 
 .keys24
 
- LDA #1
+                        \ If we get here then either "Q" is being pressed, or
+                        \ the joystick fire button is being pressed while the
+                        \ stick is in the "change up" part of the joystick
+                        \ range, so we need to change up a gear
+
+ LDA #1                 \ Set A = 1 so we change up a gear
 
 .keys25
 
- DEC L0058
- LDX L0019
- BNE keys28
- STA L0019
- CLC
- ADC gearNumber
- CMP #&FF
- BEQ keys26
- CMP #7
- BNE keys27
- LDA #6
- BNE keys27
+ DEC gearChangeKey      \ Set bit 7 of gearChangeKey (as we set gearChangeKey to
+                        \ zero above)
+
+ LDX gearChange         \ If gearChange is non-zero then we are already changing
+ BNE keys28             \ gear, so jump to keys28 to return from the subroutine
+
+ STA gearChange         \ Set gearChange to -1 or 1
+
+ CLC                    \ Add A to the current gearNumber to get the number of
+ ADC gearNumber         \ the new gear, after the change
+
+ CMP #&FF               \ If the gear change will result in a gear of -1, jump
+ BEQ keys26             \ to keys26 to set the gear number to 0 (the lowest gear
+                        \ number)
+
+ CMP #7                 \ If the new gear is not 7, jump to keys27 to change to
+ BNE keys27             \ this gear
+
+ LDA #6                 \ Otherwise set A to 6, which is the highest gear number
+ BNE keys27             \ allowed, and jump to keys27 to set this as the new
+                        \ gear number (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .keys26
 
- LDA #0
+ LDA #0                 \ If we get here then we just tried to change down too
+                        \ far, so set the number of the new gear to zero
 
 .keys27
 
- STA gearNumber
- JSR PrintGearNumber
+ STA gearNumber         \ Store the new gear number in gearNumber
+
+ JSR PrintGearNumber    \ Print the new gear number on the gear stick
 
 .keys28
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4886,7 +4999,18 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Returns:
+\
+\   configStop          Contains details of why we are exiting the driving loop:
+\
+\                         * Bit 5 set = retire from race/lap
+\                           (SHIFT-f7 pressed)
+\                       
+\                         * Bit 7 and bit 6 set = pit stop
+\                           (SHIFT-f0 pressed)
+\
+\                         * Bit 7 set and bit 6 clear = restart game
+\                           (SHIFT and right arrow pressed)
 \
 \ ******************************************************************************
 
@@ -4902,7 +5026,7 @@ ORG &0B00
  JSR CopyDashData       \ Copy the dash data from the main game code to screen
                         \ memory
 
- JSR sub_C7BE2
+ JSR sub_C7BE2          \ ??? Uses the BLOCK macro
 
  BIT configStop         \ If bit 6 of configStop is set then we are returning to
  BVS main4              \ the track after visiting the pits, so jump to main4
@@ -4910,29 +5034,29 @@ ORG &0B00
 
 .main1
 
-                        \ We loop back to here during practice laps ???
+                        \ We jump back here when restarting practice laps
 
  LDX #0                 \ Zero (currentTenths currentSeconds currentMinutes)
  JSR ZeroLapTime
 
 .main2
 
-                        \ We loop back to here during qualifying ???
+                        \ We jump back here when restarting qualifying laps
 
  JSR sub_C1805          \ ??? Set up the top two text lines
 
 .main3
 
-                        \ We loop back to here during a Novice race ???
+                        \ We jump back here when restarting a Novice race
 
- JSR sub_C11CE
+ JSR sub_C11CE          \ ??? Sets up the track
 
 .main4
 
- LDA #0                 \ Set configStop = 0 to clear any pit stop key presses
- STA configStop
+ LDA #0                 \ Set configStop = 0 so we clear out any existing
+ STA configStop         \ stop-related key presses
 
- JSR sub_C0B77
+ JSR sub_C0B77          \ ??? Something to do with wing settings
 
 \ ******************************************************************************
 \
@@ -4941,16 +5065,12 @@ ORG &0B00
 \   Category: Main loop
 \    Summary: Main driving loop: The body of the main loop
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
 .main5
 
-                        \ We loop back to here during Amateur and Professional
-                        \ races
+                        \ The main driving loop starts here, and we loop back to
+                        \ here from part 5
 
  JSR sub_C5052
 
@@ -5007,11 +5127,7 @@ ORG &0B00
 \       Name: MainDrivingLoop (Part 3 of 5)
 \       Type: Subroutine
 \   Category: Main loop
-\    Summary: Main driving loop: Deal with a crash
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Main driving loop: Process rejoining the race or lap after a crash
 \
 \ ******************************************************************************
 
@@ -5028,16 +5144,19 @@ ORG &0B00
                         \ applying the custom screen effect
                         \
                         \ In other words, this displays the driving screen for
-                        \ the first time, but it waits until after we have
-                        \ called all the drawing routines to we don't get to
-                        \ see the screen being drawn
+                        \ the first time, after waiting for all the drawing
+                        \ routines in part 2 to finish, so we don't get to see
+                        \ the screen being drawn
 
 .main6
 
  LDA L62F6              \ If L62F6 = 0, jump to main10 to continue the main
  BEQ main10             \ driving loop in part 5
 
- INC L62F6              \ Increment L62F6 ???
+ INC L62F6              \ Otherwise L62F6  is non-zero, so increment L62F6
+
+                        \ We now pause for a few seconds, before jumping back to
+                        \ the relevant starting point for the loop
 
  LDA #156               \ Set irqCounter = 156
  STA irqCounter
@@ -5075,10 +5194,6 @@ ORG &0B00
 \   Category: Main loop
 \    Summary: Main driving loop: Leave the track
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
 .main9
@@ -5086,11 +5201,17 @@ ORG &0B00
                         \ If we get here then either:
                         \
                         \   * We have quit the race or lap by pressing SHIFT-f4
+                        \     (in which case we jumped here from part 5)
                         \
-                        \   * We have crashed, and this is either an Amateur or
-                        \     a Professional race ???
+                        \   * This is either an Amateur or a Professional race
+                        \     and we crashed (in which case we fell through from
+                        \     part 3)
                         \
-                        \ In both cases, we leave the track
+                        \   * L000F = 1 (in which case we jumped here from part
+                        \     5)
+                        \
+                        \ In all cases, we are done racing and need to leave
+                        \ the track
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
@@ -5123,11 +5244,8 @@ ORG &0B00
 \       Name: MainDrivingLoop (Part 5 of 5)
 \       Type: Subroutine
 \   Category: Main loop
-\    Summary: Main driving loop: End of loop
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Main driving loop: Process driving keys, potentially leaving the
+\             track, and loop back to part 2
 \
 \ ******************************************************************************
 
@@ -5143,30 +5261,37 @@ ORG &0B00
 
  BPL main9              \ If bit 7 of configStop is clear then we must be
                         \ pressing SHIFT-f7 to retire from the race, so jump to
-                        \ main9 to quit the race
+                        \ main9 to leave the track
 
- AND #%01000000         \ If bit 6 of configStop is clear, jump to main13 to
- BEQ main13             \ leave the track
+ AND #%01000000         \ If bit 6 of configStop is clear (and we know bit 7 is
+ BEQ main13             \ set), then we must be pressing SHIFT and right arrow,
+                        \ so jump to main13 to leave the track and restart the
+                        \ game
 
- LDA carMoving          \ If carMoving = 0, jump to main13 to leave the track
- BEQ main13
+                        \ If we get here then we know both bit 6 and bit 7 must
+                        \ be set, so we must be pressing SHIFT-f0 to return to
+                        \ the pits
 
- LDA #0                 \ Set configStop = 0 to clear any pit stop key presses
- STA configStop
+ LDA carMoving          \ If carMoving = 0 then the car is stationary, so jump
+ BEQ main13             \ to main13 to leave the track and return to the pits
+
+ LDA #0                 \ We can't enter the pits if the car is moving, so set
+ STA configStop         \ configStop = 0 so we clear out the SHIFT-f4 key press
 
 .main11
 
- LDX L000F              \ Set X = L000F ???
+ LDX L000F              \ Set X = L000F
 
  BEQ main12             \ If X = 0, i.e. L000F = 0, jump to main12 to continue
                         \ the main driving loop
 
  DEX                    \ Set X = L000F - 1
 
- BEQ main9              \ If X = 0, i.e. L000F = 1, jump to main9 to quit the
-                        \ race
+ BEQ main9              \ If X = 0, i.e. L000F = 1, jump to main9 to leave the
+                        \ track
 
- STX L000F              \ Set L000F = X, i.e. decrement L000F
+ STX L000F              \ Set L000F = X, i.e. decrement L000F when it is neither
+                        \ 0 or 1
 
 .main12
 
@@ -6923,6 +7048,10 @@ ORG &0B00
 \   (A T)               Contains the scaled joystick x-coordinate as a
 \                       sign-magnitude number with the sign in bit 0
 \
+\ Returns:
+\
+\   V
+\
 \ Other entry points:
 \
 \   AssistSteeringKeys
@@ -7082,15 +7211,19 @@ ORG &0B00
 
 .sub_C1F9B
 
- BCC C1FA7
- LDA L62A2
- AND #&FE
+ BCC C1FA7              \ If the C flag is clear, jump to C1FA7 to return from
+                        \ the subroutine
+
+ LDA L62A2              \ Set T = L62A2 with bit 0 cleared
+ AND #%11111110
  STA T
- LDA L62A5
+
+ LDA L62A5              \ Set A = L62A5, so (A T) = (L62A5 L62A2) with bit 0
+                        \ cleared
 
 .C1FA7
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -16284,7 +16417,7 @@ NEXT
  LDY L62F0
  LDA gearNumber
  BEQ C4510
- LDA L003E
+ LDA throttleBrakeState
  BMI C4510
  BEQ C450C
  LDA L003D
@@ -17417,11 +17550,11 @@ NEXT
 .C499F
 
  LDA L003C
- LDX L003E
+ LDX throttleBrakeState
  DEX
  BNE C49B0
  ADC #7
- CMP L003F
+ CMP throttleBrake
  BCS C49B0
  CMP #&8C
  BCC C49C5
@@ -17475,8 +17608,10 @@ NEXT
  BEQ C4978
  LDA L002D
  BNE C499F
- LDA L0058
- BMI C499D
+
+ LDA gearChangeKey      \ If bit 7 of gearChangeKey is set then a gear change
+ BMI C499D              \ key is being pressed, so jump to C499D
+
  LDY gearNumber
  DEY
  BEQ C499F
@@ -17509,7 +17644,7 @@ NEXT
 
  BIT L0059
  BPL C4A37
- LDY L003E
+ LDY throttleBrakeState
  DEY
  BNE C4A26
  LDY speedHi
@@ -17754,7 +17889,7 @@ NEXT
  STA T
  LDA L62AC,X
  JSR sub_C4B42
- LDY L003E
+ LDY throttleBrakeState
  DEY
  BNE C4B41
  CPX #0
@@ -17787,7 +17922,7 @@ NEXT
 
 .sub_C4B42
 
- LDY L003E
+ LDY throttleBrakeState
  DEY
  BEQ C4B51
 
@@ -17891,7 +18026,7 @@ NEXT
  CLC
  ADC #2
  STA G
- LDY L003E
+ LDY throttleBrakeState
  DEY
  BEQ C4BAF
  LDY #9
@@ -17921,11 +18056,11 @@ NEXT
 .C4BBC
 
  STA U
- LDA L003F
+ LDA throttleBrake
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- LDY L003E
+ LDY throttleBrakeState
  DEY
  BNE C4BCB
  LSR A
@@ -17957,7 +18092,7 @@ NEXT
 .sub_C4BCF
 
  LDA #0
- LDY L003E
+ LDY throttleBrakeState
  BNE C4BE1
  LDA L62FF
  PHP
@@ -18566,6 +18701,13 @@ NEXT
 \   Category: Screen mode
 \    Summary: Switch to the custom screen mode
 \  Deep dive: Hidden secrets of the custom screen mode
+\
+\ ------------------------------------------------------------------------------
+\
+\ Returns:
+\
+\    screenSection      screenSection is set to -2, so the interrupt handler at
+\                       ScreenHandler does not do anything straight away
 \
 \ ******************************************************************************
 
@@ -19384,7 +19526,8 @@ NEXT
 
  CPX currentPlayer
  BNE C4FB7
- LDA #&50
+
+ LDA #80
  STA L000F
 
 .C4FB7
@@ -23161,8 +23304,8 @@ ORG &5E40
 
 .MainLoop
 
- LDX #0                 \ Set configStop = 0
- STX configStop
+ LDX #0                 \ Set configStop = 0 so we clear out any existing
+ STX configStop         \ stop-related key presses
 
  JSR InitialiseDrivers  \ Initialise all 20 drivers
 
@@ -23702,11 +23845,20 @@ ORG &5E40
                         \ mode, implement the driving part of the game, and
                         \ return here with the screen mode back to mode 7
 
- BIT configStop         \ If bit 6 of configStop is set, loop back to race1
- BVS race1
+ BIT configStop         \ If bit 6 of configStop is set then we are returning to
+ BVS race1              \ the track after visiting the pits, so loop back to
+                        \ race1 to get new wing settings before rejoining the
+                        \ driving loop
 
- BPL race2              \ If bit 7 of configStop is clear, jump to race2 to
-                        \ return from the subroutine
+ BPL race2              \ If bit 7 of configStop is clear then we did not use
+                        \ SHIFT and right arrow to exit the main driving loop,
+                        \ so jump to race2 to return from the subroutine
+
+                        \ If we get here then bit 6 of configStop is clear and
+                        \ bit 7 of configStop is set, which means we presses
+                        \ SHIFT and right arrow to exit the main driving loop,
+                        \ which is the key combination for resarting the whole
+                        \ game
 
  JSR RestartGame        \ Jump to RestartGame to restart the game, which removes
                         \ the return address from the stack and jumps to the
