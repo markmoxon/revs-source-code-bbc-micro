@@ -69,10 +69,10 @@ L7000 = &7000
 L713D = &713D
 L7205 = &7205
 
-L77DB = &77DB           \ Centre-bottom of dashboard for showing steering assist
-L77DC = &77DC           \ indicator
-L77E3 = &77E3
-L77E4 = &77E4
+assistLeft1 = &77DB     \ Centre-bottom of dashboard in screen memory for
+assistLeft2 = &77DC     \ showing steering assist the indicator
+assistRight1 = &77E3
+assistRight2 = &77E4
 
 row2_column1 = &7C79    \ Chequered flag mode 7 screen address
 row18_column5 = &7E85   \ The first entry's number in a mode 7 menu
@@ -4512,7 +4512,14 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine scans for key presses, or joystick (when configured), and updates
+\ the following variables accordingly:
+\
+\   * Steering: L62A2, L62A5
+\
+\   * Brake/throttle: throttleBrakeState, throttleBrake
+\
+\   * Gear changes: gearChangeKey, gearChange, gearNumber
 \
 \ ******************************************************************************
 
@@ -4520,13 +4527,16 @@ ORG &0B00
 
  LDA #0                 \ Set V = 0, which we will use to indicate whether any
  STA V                  \ steering is being applied (0 indicates that none is
-                        \ being applied)
+                        \ being applied, which we may change later)
 
- STA T                  \ Set T = 0
+ STA T                  \ Set T = 0, which we will use to record whether SPACE
+                        \ is being pressed, which makes the steering wheel turn
+                        \ more quickly
 
  STA gearChangeKey      \ Set gearChangeKey = 0, which we will use to indicate
                         \ whether any gear change are being applied (0 indicates
-                        \ that no gear changes are being applied)
+                        \ that no gear changes are being applied, which we may
+                        \ change later)
 
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed, as
  JSR ScanKeyboard       \ this will affect the speed of any steering changes
@@ -4534,12 +4544,12 @@ ORG &0B00
  PHP                    \ Store the result of the scan on the stack
 
  BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
- BPL keys2              \ is not configured, so jump to keys2 to process key
+ BPL keys2              \ is not configured, so jump to keys2 to check for key
                         \ presses for the steering
 
  LDX #1                 \ Read the joystick x-axis into A and X (A is set to the
  JSR GetADCChannel      \ high byte of the channel, X is set to the sign of A
-                        \ where 1 = positive/up, 0 = negative/down)
+                        \ where 0 = negative/left, 1 = positive/right)
 
  STA U                  \ Store the x-axis high byte in U
 
@@ -4567,8 +4577,8 @@ ORG &0B00
  AND #%11111110
  STA T
 
- TXA                    \ Set bit 0 of T to the sign bit in X (1 = positive/up,
- ORA T                  \ 0 = negative/down)
+ TXA                    \ Set bit 0 of T to the sign bit in X (1 = right,
+ ORA T                  \ 0 = left)
  STA T
 
  LDA U                  \ Set (A T) = (U T)
@@ -4576,13 +4586,14 @@ ORG &0B00
                         \ so (A T) contains the joystick x-axis high byte,
                         \ squared, divided by 4 if SPACE is not being pressed,
                         \ and converted into a sign-magnitude number with the
-                        \ sign in bit 0 (1 = positive/up, 0 = negative/down)
+                        \ sign in bit 0 (0 = left, 1 = right)
 
  JMP AssistSteering     \ Jump to AssistSteering, which in turn jumps back to
-                        \ keys7 or keys11
+                        \ keys7 or keys11 in part 2
 
- NOP                    \ These instructions appear to be unused
- NOP
+ NOP                    \ These instructions appear to be unused, and are
+ NOP                    \ perhaps left over from when the steering assist code
+                        \ was inserted into the original version
 
 \ ******************************************************************************
 \
@@ -4655,15 +4666,15 @@ ORG &0B00
  BEQ keys7              \ keys7
 
  CMP #3                 \ If V = 3, jump to keys13 to move on to the throttle
- BEQ keys13             \ and brake keys
+ BEQ keys13             \ and brake keys without applying any steering
 
- EOR L62A2
+ EOR L62A2              \ If bit 0 of L62A2 is clear, jump to keys9
  AND #1
  BEQ keys9
 
  JSR Negate16Bit+2      \ Set (A T) = -(U T)
 
- JMP keys8
+ JMP keys8              \ Jump to keys8
 
 .keys7
 
@@ -4689,12 +4700,12 @@ ORG &0B00
 
 .keys8
 
- STA U
+ STA U                  \ Set (U T) = (A T)
 
 .keys9
 
  JMP AssistSteeringKeys \ Jump to AssistSteeringKeys, which in turn jumps back
-                        \ to keys7 or keys11
+                        \ to keys10, so this is effectively a JSR call
 
 .keys10
 
@@ -4703,26 +4714,30 @@ ORG &0B00
  STA T
  LDA L62A5
  SBC U
- CMP #&C8
+
+ CMP #200
  BCC keys11
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
 
  STA U
+
  LDA T
  EOR #1
  STA T
+
  LDA U
 
 .keys11
 
- CMP #&91
+ CMP #145
  BCC keys12
- LDA #&91
+
+ LDA #145
 
 .keys12
 
- STA L62A5
+ STA L62A5              \ Set L62A5 = A
 
  LDA T                  \ Set L62A2 = T
  STA L62A2
@@ -4742,13 +4757,16 @@ ORG &0B00
  BNE keys19             \ brake/throttle section
 
  BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
- BPL keys15             \ is not configured, so jump to keys15 to process key
-                        \ presses for the throttle
+ BPL keys15             \ is not configured, so jump to keys15 to check for key
+                        \ presses for the brake/throttle
 
  LDX #2                 \ Read the joystick y-axis into A and X, clearing the
- JSR GetADCChannel      \ C flag if A < 10
+ JSR GetADCChannel      \ C flag if A < 10, setting A to the high byte, and
+                        \ setting X to 1 if the stick is up, or 0 if the stick
+                        \ is down
 
- BCC keys19             \ If A < 10, jump to keys19 so we don't register any
+ BCC keys19             \ If A < 10 then the joystick is pretty close to the
+                        \ centre, so jump to keys19 so we don't register any
                         \ throttle or brake activity
 
  STA T                  \ Set T = A / 2
@@ -4760,10 +4778,13 @@ ORG &0B00
                         \       = A * 2 + A / 2
                         \       = 2.5 * A
 
- BCS keys14             \ If the addition overflowed, jump to keys14
+ BCS keys14             \ If the addition overflowed, the the joystick has moved
+                        \ a long way from the centre, so jump to keys14 to apply
+                        \ the brakes or throttle at full power
 
  CMP #250               \ If A < 250, jump to keys20 to store A in throttleBrake
- BCC keys20             \ and X in throttleBrakeState
+ BCC keys20             \ and X in throttleBrakeState, so we store the amount of
+                        \ brakes or throttle to apply
 
 .keys14
 
@@ -4785,8 +4806,8 @@ ORG &0B00
 
 .keys15
 
- LDX #&AE               \ Scan the keyboard to see if "S" is being pressed
- JSR ScanKeyboard
+ LDX #&AE               \ Scan the keyboard to see if "S" is being pressed (the
+ JSR ScanKeyboard       \ throttle key)
 
  BNE keys17             \ If "S" is not being pressed, jump to keys17 to check
                         \ the next key
@@ -4802,8 +4823,8 @@ ORG &0B00
 
 .keys17
 
- LDX #&BE               \ Scan the keyboard to see if "A" is being pressed
- JSR ScanKeyboard
+ LDX #&BE               \ Scan the keyboard to see if "A" is being pressed (the
+ JSR ScanKeyboard       \ brake key)
 
  BNE keys19             \ If "A" is not being pressed, jump to keys19
 
@@ -4832,35 +4853,36 @@ ORG &0B00
 
 .keys20
 
-                        \ We can get here in various ways:
-                        \
-                        \   * No brake or throttle action:
-                        \
-                        \       throttleBrakeState = X = bit 7 set
-                        \       throttleBrake = A = 5 + L003C / 4
-                        \
-                        \   * Joystick, 2.5 * y-axis < 250 (i.e. joystick is in
-                        \     the zone around the centre)
-                        \
-                        \       throttleBrakeState = X = y-axis sign
-                        \                               (0 = up, 1 = down)
-                        \       throttleBrake = A = 2.5 * y-axis
-                        \
-                        \   * "S" (throttle) is being pressed (or joystick
-                        \     equivalent has 2.5 * y-axis >= 250):
-                        \
-                        \       throttleBrakeState = X = 1
-                        \       throttleBrake = A = 255
-                        \
-                        \   * "A" (brake) is being pressed (or joystick
-                        \     equivalent has 2.5 * y-axis >= 250)
-                        \
-                        \       throttleBrakeState = X = 0
-                        \       throttleBrake = A = 250
-
  STX throttleBrakeState \ Store X in throttleBrakeState
 
  STA throttleBrake      \ Store A in throttleBrake
+
+                        \ By the time we get here, one of the following is true:
+                        \
+                        \   * There is no brake or throttle action from keyboard
+                        \     or joystick:
+                        \
+                        \       throttleBrakeState = bit 7 set
+                        \       throttleBrake = 5 + L003C / 4
+                        \
+                        \   * Joystick is enabled and 2.5 * y-axis < 250 (so
+                        \     joystick is in the zone around the centre)
+                        \
+                        \       throttleBrakeState = 0 for joystick down, brake
+                        \                            1 for joystick up, throttle
+                        \       throttleBrake = 2.5 * y-axis
+                        \
+                        \   * "S" (throttle) is being pressed (or joystick has
+                        \     2.5 * y-axis >= 250):
+                        \
+                        \       throttleBrakeState = 1
+                        \       throttleBrake = 255
+                        \
+                        \   * "A" (brake) is being pressed (or joystick has
+                        \     2.5 * y-axis >= 250)
+                        \
+                        \       throttleBrakeState = 0
+                        \       throttleBrake = 250
 
 \ ******************************************************************************
 \
@@ -4873,7 +4895,7 @@ ORG &0B00
 
  BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
  BPL keys21             \ is not configured, so jump to keys21 to skip the
-                        \ following
+                        \ following joystick-specific gear checks
 
  LDX #0                 \ Call OSBYTE with A = 128 and X = 0 to fetch the ADC
  LDA #128               \ channel that was last used for ADC conversion,
@@ -7036,17 +7058,19 @@ ORG &0B00
 \
 \       Name: AssistSteering
 \       Type: Subroutine
-\   Category: 
+\   Category: Keyboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ Jumps back to keys11 or keys7.
+\ Jumps back to keys11 or keys7 (joystick) or keys10 (keyboard).
 \
 \ Arguments:
 \
 \   (A T)               Contains the scaled joystick x-coordinate as a
 \                       sign-magnitude number with the sign in bit 0
+\
+\   V                   
 \
 \ Returns:
 \
@@ -7054,64 +7078,86 @@ ORG &0B00
 \
 \ Other entry points:
 \
-\   AssistSteeringKeys
+\   AssistSteeringKeys  For keyboard-controlled steering
 \
 \ ******************************************************************************
 
 .AssistSteering
 
- JSR sub_C63C5
- BNE C1EF1
+ JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
+                        \ L0025, and update the steering assist indicator on the
+                        \ dashboard
+
+ BNE C1EF1              \ If steering assist is enabled, jump to C1EF1 to skip
+                        \ the following instruction, otherwise we jump to keys11
 
 .P1EEE
 
- JMP keys11
+ JMP keys11             \ Jump to keys11 in the ProcessDrivingKeys routine
 
 .C1EF1
 
- BCS P1EEE
- CMP #5
+ BCS P1EEE              \ If bit 7 of L0025 is set, jump to P1EEE to jump to
+                        \ keys11 in the ProcessDrivingKeys routine
+
+ CMP #5                 \ If A >= 5, jump to C1F08
  BCS C1F08
- JMP keys7
+
+ JMP keys7              \ Jump to keys7 in the ProcessDrivingKeys routine
 
 .AssistSteeringKeys
 
- JSR sub_C63C5
- BEQ C1F05
- BCS C1F05
- LDA V
+ JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
+                        \ L0025, and update the steering assist indicator on the
+                        \ dashboard
+
+ BEQ C1F05              \ If steering assist is not enabled, jump to C1F05 to
+                        \ set A and jump to keys10 in the ProcessDrivingKeys
+                        \ routine
+
+ BCS C1F05              \ If bit 7 of L0025 is set, jump to C1F05
+
+ LDA V                  \ If V is non-zero, jump to C1F11
  BNE C1F11
 
 .C1F05
 
- JMP C1F95
+ JMP C1F95              \ Jump to C1F95 to set A and jump to keys10 in the
+                        \ ProcessDrivingKeys routine
 
 .C1F08
 
  LDA T
  EOR #1
  LSR A
+
  LDA #3
  SBC #0
 
 .C1F11
 
- LDX #&32
+ LDX #50
+
  CMP #2
  BEQ C1F19
- LDX #&0A
+
+ LDX #10
 
 .C1F19
 
  LDA L62A2
  STA V
+
  LSR A
+
  LDA L62A5
  BCC C1F30
+
  LDA #0
  SEC
  SBC V
  STA V
+
  LDA #0
  SBC L62A5
 
@@ -7119,46 +7165,60 @@ ORG &0B00
 
  CLC
  ADC #1
- CPX #&32
+
+ CPX #50
  BNE C1F39
+
  SBC #2
 
 .C1F39
 
  STA W
+
  LDA L5E40,X
  SEC
  SBC V
  STA T
+
  LDA L5E90,X
  SBC W
+
  PHP
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  STA V
+
  LDY L0022
- LDA #&3C
+
+ LDA #60
  SEC
  SBC speedHi
+
  BPL C1F59
+
  LDA #0
 
 .C1F59
 
  ASL A
- ADC #&20
+ ADC #32
  STA U
+
  LDA L0701,Y
- AND #&7F
- CMP #&40
+
+ AND #%01111111
+
+ CMP #64
  BCC C1F69
+
  LDA #2
 
 .C1F69
 
  CMP #8
  BCC C1F6F
+
  LDA #7
 
 .C1F6F
@@ -7167,24 +7227,31 @@ ORG &0B00
  ASL A
  ASL A
  ASL A
+
  CMP U
  BCC C1F79
+
  STA U
 
 .C1F79
 
  JSR sub_C0DBF
+
  LDA U
+
  PLP
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  STA U
+
  LDA T
- AND #&FE
+ AND #%11111110
  STA T
+
  LDA L62A2
  LSR A
+
  BCS C1F95
 
  JSR Negate16Bit+2      \ Set (A T) = -(U T)
@@ -7194,6 +7261,7 @@ ORG &0B00
 .C1F95
 
  LDA L62A2
+
  JMP keys10
 
 \ ******************************************************************************
@@ -7249,7 +7317,7 @@ ORG &0B00
  ROR L62FB
  RTS
 
- EQUB &EA
+ NOP
 
 \ ******************************************************************************
 \
@@ -23261,33 +23329,76 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: sub_C63C5
+\       Name: GetSteeringAssist
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Dashboard
+\    Summary: Fetch the current steering assist status and show or hide the
+\             steering assist indicator
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The steering assist indicator is in the centre-bottom of the rev counter, and
+\ is made up of four pixels in colour 2 (white) as follows:
+\
+\   ...xx...
+\   ..x..x..
+\
+\ which would be encoded in mode 5 screen memory as follows:
+\
+\   %00010000   %10000000
+\   %00100000   %01000000
+\
+\ This routine shows or hides the indicator according to the current setting of
+\ configAssist, returning the value of configAssist in X.
+\
+\ Returns:
+\
+\   X                   The current value of configAssist:
+\
+\                         * %10000000 if steering assist is enabled
+\
+\                         * 0 if steering assist is not enabled
+\
+\   A                   A is unchanged
+\
+\   C flag              Set to bit 7 of L0025
 \
 \ ******************************************************************************
 
-.sub_C63C5
+.GetSteeringAssist
 
- PHA
- LDA configAssist
- STA L77E3
- LSR A
- STA L77E4
- LSR A
- STA L77DC
- LSR A
- STA L77DB
- LDA L0025
+ PHA                    \ Store A on the stack so we can retrieve it below
+
+ LDA configAssist       \ Set A to configAssist, which has the following value:
+                        \
+                        \   * %10000000 if steering assist is enabled
+                        \
+                        \   * 0 if steering assist is not enabled
+                        \
+                        \ The following updates screen memory to add a small
+                        \ "hat" marker to the centre-bottom of the rev counter
+                        \ when steering assist is enabled (or to to remove the
+                        \ marker when it isn't enabled)
+
+ STA assistRight1       \ Set assistRight1 = 0 or %10000000
+
+ LSR A                  \ Set assistRight2 = 0 or %01000000
+ STA assistRight2
+
+ LSR A                  \ Set assistLeft2 = 0 or %00100000
+ STA assistLeft2
+
+ LSR A                  \ Set assistLeft1 = 0 or %00010000
+ STA assistLeft1
+
+ LDA L0025              \ Set the C flag to bit 7 of L0025
  ROL A
- PLA
- LDX configAssist
- RTS
+
+ PLA                    \ Restore the value of A that we put on the stack above
+
+ LDX configAssist       \ Set X to configAssist
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
