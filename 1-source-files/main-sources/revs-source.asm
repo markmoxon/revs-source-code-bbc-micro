@@ -570,9 +570,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0069
+.lineBufferSize
 
- SKIP 1                 \ Zeroed in SetupGame
+ SKIP 1                 \ The size of the line buffer
+                        \
+                        \ Zeroed in SetupGame
 
 .L006A
 
@@ -1023,17 +1025,20 @@ ORG &0380
 
  SKIP 126               \ 
 
-.L0780
+.lineBufferPixel
 
- SKIP 40                \ 
+ SKIP 40                \ The original screen contents of this pixel in the line
+                        \ buffer
 
-.L07A8
+.lineBufferAddrLo
 
- SKIP 40                \ 
+ SKIP 40                \ The low byte of the screen address of this pixel in
+                        \ the line buffer
 
-.L07D0
+.lineBufferAddrHi
 
- SKIP 40                \ 
+ SKIP 40                \ The low byte of the screen address of this pixel in
+                        \ the line buffer
 
 ORG &0880
 
@@ -1787,9 +1792,9 @@ ORG &0B00
 
  JSR OSWORD             \ Call OSWORD with action A, as follows:
                         \
-                        \  * A = 7 to make the sound at location (Y X)
+                        \  * A = 7 to make the sound at (Y X)
                         \
-                        \  * A = 8 to set up the sound envelope at location (Y X)
+                        \  * A = 8 to set up the sound envelope at (Y X)
 
  LDX xTemp              \ Fetch the value of X we stored before calling the
                         \ routine, so it doesn't change
@@ -4515,7 +4520,7 @@ ORG &0B00
 \ This routine scans for key presses, or joystick (when configured), and updates
 \ the following variables accordingly:
 \
-\   * Steering: L62A2, L62A5
+\   * Steering: (steeringHi steeringLo)
 \
 \   * Brake/throttle: throttleBrakeState, throttleBrake
 \
@@ -4647,15 +4652,16 @@ ORG &0B00
 
  LDA #0                 \ Set A = 0
 
- LDX #2                 \ If L62A5 > 2, jump to keys5 to skip the following 
- CPX L62A5              \ instruction
+ LDX #2                 \ If steeringHi > 2, jump to keys5 to skip the following
+ CPX steeringHi         \ instruction
  BCC keys5
 
  LDA #1                 \ Set A = 1
 
 .keys5
 
- STA U                  \ Set U = A, which will be 1 if L62A5 > 2, 0 otherwise
+ STA U                  \ Set U = A, which will be 1 if steeringHi > 2, or
+                        \ 0 otherwise
 
  LDA #128               \ Set T = 128
  STA T
@@ -4668,7 +4674,7 @@ ORG &0B00
  CMP #3                 \ If V = 3, jump to keys13 to move on to the throttle
  BEQ keys13             \ and brake keys without applying any steering
 
- EOR L62A2              \ If bit 0 of L62A2 is clear, jump to keys9
+ EOR steeringLo         \ If bit 0 of steeringLo is clear, jump to keys9
  AND #1
  BEQ keys9
 
@@ -4691,12 +4697,12 @@ ORG &0B00
  LSR A
  ROR T
 
- CMP L62A5              \ If A < L62A5, clear the C flag
-                        \ If A >= L62A5, set the C flag
+ CMP steeringHi         \ If A < steeringHi, clear the C flag
+                        \ If A >= steeringHi, set the C flag
 
- JSR sub_C1F9B          \ If the C flag is set (i.e. A >= L62A5), set:
+ JSR sub_C1F9B          \ If the C flag is set (i.e. A >= steeringHi), set:
                         \
-                        \   (A T) = (L62A5 L62A2) with bit 0 cleared
+                        \   (A T) = (steeringHi steeringLo) with bit 0 cleared
 
 .keys8
 
@@ -4712,7 +4718,7 @@ ORG &0B00
  SEC
  SBC T
  STA T
- LDA L62A5
+ LDA steeringHi
  SBC U
 
  CMP #200
@@ -4737,10 +4743,9 @@ ORG &0B00
 
 .keys12
 
- STA L62A5              \ Set L62A5 = A
-
- LDA T                  \ Set L62A2 = T
- STA L62A2
+ STA steeringHi         \ Set (steeringHi steeringLo) = (A T)
+ LDA T
+ STA steeringLo
 
 \ ******************************************************************************
 \
@@ -7145,12 +7150,12 @@ ORG &0B00
 
 .C1F19
 
- LDA L62A2
+ LDA steeringLo
  STA V
 
  LSR A
 
- LDA L62A5
+ LDA steeringHi
  BCC C1F30
 
  LDA #0
@@ -7159,7 +7164,7 @@ ORG &0B00
  STA V
 
  LDA #0
- SBC L62A5
+ SBC steeringHi
 
 .C1F30
 
@@ -7249,7 +7254,7 @@ ORG &0B00
  AND #%11111110
  STA T
 
- LDA L62A2
+ LDA steeringLo
  LSR A
 
  BCS C1F95
@@ -7260,7 +7265,7 @@ ORG &0B00
 
 .C1F95
 
- LDA L62A2
+ LDA steeringLo
 
  JMP keys10
 
@@ -7282,12 +7287,12 @@ ORG &0B00
  BCC C1FA7              \ If the C flag is clear, jump to C1FA7 to return from
                         \ the subroutine
 
- LDA L62A2              \ Set T = L62A2 with bit 0 cleared
+ LDA steeringLo         \ Set T = steeringLo with bit 0 cleared
  AND #%11111110
  STA T
 
- LDA L62A5              \ Set A = L62A5, so (A T) = (L62A5 L62A2) with bit 0
-                        \ cleared
+ LDA steeringHi         \ Set A = steeringHi, so (A T) = (steeringHi steeringLo)
+                        \ with bit 0 cleared
 
 .C1FA7
 
@@ -12880,8 +12885,8 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
  LDX #9                 \ We now zero the ten bytes starting at configStop, so
                         \ set a loop counter in X
 
- LDA #0                 \ Set L0069 = 0
- STA L0069
+ LDA #0                 \ Set lineBufferSize = 0, to reset the line buffer
+ STA lineBufferSize
 
 .setp1
 
@@ -13860,8 +13865,8 @@ NEXT
 \
 \       Name: L3B86
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Code modifications for the DrawDashboardLine line-drawing routine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13871,14 +13876,21 @@ NEXT
 
 .L3B86
 
- EQUB &E8, &88, &C8, &E8, &CA, &C8, &88, &CA
+ INX                    \ V = 0, INX and DEY
+ DEY                    \ V = 1, DEY and INX
+ INY                    \ V = 2, INY and INX, bottom-left quadrant
+ INX                    \ V = 3, INX and INY, top-left quadrant
+ DEX                    \ V = 4, DEX and INY, top-right quadrant
+ INY                    \ V = 5, INY and DEX, bottom-right quadrant
+ DEY                    \ V = 6, DEY and DEX
+ DEX                    \ V = 7, DEX and DEY
 
 \ ******************************************************************************
 \
 \       Name: L3B8E
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Code modifications for the DrawDashboardLine line-drawing routine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13888,8 +13900,19 @@ NEXT
 
 .L3B8E
 
- EQUB &88, &E8, &E8, &C8, &C8, &CA, &CA, &88, &18, &EA, &EA, &18
- EQUB &18, &EA, &EA, &18
+ DEY                    \ V = 0, INX and DEY
+ INX                    \ V = 1, DEY and INX
+ INX                    \ V = 2, INY and INX, bottom-left quadrant
+ INY                    \ V = 3, INX and INY, top-left quadrant
+ INY                    \ V = 4, DEX and INY, top-right quadrant
+ DEX                    \ V = 5, INY and DEX, bottom-right quadrant
+ DEX                    \ V = 6, DEY and DEX
+ DEY                    \ V = 7, DEX and DEY
+
+ EQUB &18, &EA
+ EQUB &EA, &18
+ EQUB &18, &EA
+ EQUB &EA, &18
 
 \ ******************************************************************************
 \
@@ -20212,36 +20235,45 @@ NEXT
 \       Name: EraseRevCounter
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Erase a line by replacing each pixel in the line with its original
+\             contents
 \
 \ ******************************************************************************
 
 .EraseRevCounter
 
- LDX L0069
- BEQ C5139
- DEX
+ LDX lineBufferSize     \ Set X to the size of the line buffer
 
-.P5123
+ BEQ erev2              \ If the line buffer is empty, jump to erev2 to return
+                        \ from the subroutine, as there is no line to erase
 
- LDA L07A8,X
- STA P
- LDA L07D0,X
+ DEX                    \ Decrement X so that it can work as a buffer counter
+                        \ working through buffer entries X down to 0
+
+.erev1
+
+ LDA lineBufferAddrLo,X \ Set (Q P) to the screen address of the X-th pixel in
+ STA P                  \ the line buffer
+ LDA lineBufferAddrHi,X
  STA Q
- LDA L0780,X
- LDY #0
- STA (P),Y
- DEX
- BPL P5123
- STY L0069
 
-.C5139
+ LDA lineBufferPixel,X  \ Set A to the original screen contents of the X-th in
+                        \ the line buffer
 
- RTS
+ LDY #0                 \ Restore the pixel to its original screen content, i.e.
+ STA (P),Y              \ the pixel that was there before we drew a line over
+                        \ the top of it
+
+ DEX                    \ Decrement the buffer counter
+
+ BPL erev1              \ Loop back until we have restored all the pixels in the
+                        \ line buffer
+
+ STY lineBufferSize     \ Set lineBufferSize = 0, to reset the line buffer
+
+.erev2
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -20258,84 +20290,145 @@ NEXT
 
 .UpdateDashboard
 
- JSR EraseRevCounter
- JSR DrawRevCounter
- LDA L62A2
+ JSR EraseRevCounter    \ Erase the dial hand on the rev counter and the line on
+                        \ the steering wheel
+
+ JSR DrawRevCounter     \ Redraw the dial hand on the rev counter
+
+                        \ We now draw the line on the steering wheel
+
+ LDA steeringLo         \ Set T = steeringLo
  STA T
- LSR A
- PHP
- LDA #2
- BCS C514D
- LDA #5
 
-.C514D
+ LSR A                  \ Set the C flag to bit 0 of steeringLo (the sign bit)
 
- STA V
- LDA L62A5
- ASL T
- ROL A
- BCS C515F
- CMP #&26
- BCC C5170
- CMP #&3D
- BCC C5161
+ PHP                    \ Store the C flag on the stack
 
-.C515F
+ LDA #2                 \ Set A = 2, to use as the value of V to send to the
+                        \ DrawDashboardLine routine
 
- LDA #&3C
+ BCS upda1              \ If bit 0 of steeringLo is set, skip the following
+                        \ instruction
 
-.C5161
+ LDA #5                 \ Bit 0 of steeringLo is clear, so set A = 5, to use as
+                        \ the value of V to send to the DrawDashboardLine
+                        \ routine
 
- EOR #&FF
- ADC #&4C
- TAY
- STY T
- LDX L3980,Y
+.upda1
+
+ STA V                  \ Set V = A, which we will pass to the DrawDashboardLine
+                        \ routine
+
+ LDA steeringHi         \ Set A = steeringHi, so (A T) = (steeringHi steeringLo)
+
+ ASL T                  \ Set (A T) = (A T) << 1
+ ROL A                  \
+                        \ setting the C flag to the top bit of (A T)
+
+ BCS upda2              \ If the C flag is set, skip the following four
+                        \ instructions to set A = 60, as the wheel is turned so
+                        \ much that the indicator would be off the bottom of the
+                        \ screen
+
+ CMP #38                \ If A < 38, jump to upda4
+ BCC upda4
+
+ CMP #61                \ If A < 61, i.e. 38 <= A <= 60, jump to upda3 to
+ BCC upda3              \ skip the following instruction
+
+.upda2
+
+ LDA #60                \ Set A = 60, the maximum value of A, so when we fall
+                        \ through into the next calculation, with the C flag
+                        \ set, we set:
+                        \
+                        \   Y = ~A + 76 + C
+                        \     = ~A + 76 + 1
+                        \     = ~A + 1 + 76
+                        \     = -A + 76
+                        \     = -60 + 76
+                        \     = 16
+
+.upda3
+
+ EOR #&FF               \ Set Y = ~A + 76 + C
+ ADC #76                \       = ~A + 1 + 75 + C
+ TAY                    \       = 75 - A        when 38 <= A <= 60
+                        \         16            when A > 60
+                        \
+                        \ so Y is in the range 16 to 37, with higher values of A
+                        \ giving lower values of A
+
+ STY T                  \ Set T = Y (in the range 16 to 37)
+
+ LDX L3980,Y            \ Set L0083 = the Y-th value of L3980
  STX L0083
- JMP C517E
 
-.C5170
+ JMP upda5              \ Jump to upda5
 
- TAX
+.upda4
+
+                        \ If we get here then A < 38
+
+ TAX                    \ Set T = A (in the range 0 to 37)
  STX T
- LDA V
+
+ LDA V                  \ Flip bit 0 of V, to turn it into 3 or 4
  EOR #1
  STA V
- LDA L3980,X
+
+ LDA L3980,X            \ Set L0083 = the X-th value of L3980
  STA L0083
 
-.C517E
+.upda5
 
- ASL A
+ ASL A                  \ Set A = A * 2 + 4
  CLC
  ADC #4
- EOR #&FF
+
+ EOR #&FF               \ Set Y = ~A
  TAY
- TXA
- PLP
- BCC C518B
- EOR #&FF
 
-.C518B
+ TXA                    \ Set A = X
+                        \
+                        \ where X is either the original value of A (0 to 37)
+                        \ or the Y-th value of L3980 (where Y is 16 to 37)
 
- CLC
- ADC #&50
- STA W
- AND #&FC
+ PLP                    \ Set the C flag to bit 0 of steeringLo (the sign bit),
+                        \ which we stored on the stack above
+
+ BCC upda6              \ If bit 0 of steeringLo is clear, skip the following
+                        \ instruction
+
+ EOR #&FF               \ Set A = ~A
+                        \       = ~X
+
+.upda6
+
+ CLC                    \ Set A = A + 80
+ ADC #80
+
+ STA W                  \ Set W = A
+
+ AND #%11111100         \ Clear bits 0 and 1 of A, to set A = A div 4
 
  JSR GetScreenAddress   \ Set (Q P) to the screen address for pixel coordinate
                         \ (A, Y)
 
- LDA W
+ LDA W                  \ Set W = W * 2 mod 8
  ASL A
  AND #7
  STA W
- LDA #4
+
+ LDA #4                 \ Set H = 4
  STA H
- LDA #6
+
+ LDA #6                 \ Set U = 6, so the line contains up to seven pixels
  STA U
- JSR DrawDashboardLine
- RTS
+
+ JSR DrawDashboardLine  \ Draw the dashboard line
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -20428,34 +20521,61 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   V                   The line slope
+\
+\                         * 2 when sign bit of steeringLo is set and A >= 38
+\                           i.e. steering left a lot, bottom-left quadrant
+\
+\                         * 3 when sign bit of steeringLo is set and A < 38
+\                           i.e. steering left a little, top-left quadrant
+\
+\                         * 4 when sign bit of steeringLo is clear and A < 38
+\                           i.e. steering right a little, top-right quadrant
+\
+\                         * 5 when sign bit of steeringLo is clear and A >= 38
+\                           i.e. steering right a lot, bottom-right quadrant
+\
+\   (Q P)               The screen address for the start coordinate
+\
+\   Y                   The pixel y-coordinate of the start coordinate
+\
+\   U                   The number of pixels to draw (we draw U + 1 pixels)
+\
+\   H
+\
+\   W
 \
 \ ******************************************************************************
 
 .DrawDashboardLine
 
- LDX V
- LDA L3B86,X
- STA C5220
- LDA L3B8E,X
- STA C529B
- LDX W
+ LDX V                  \ Modify the instruction at dlin2 to the V-th L3B86
+ LDA L3B86,X            \ instruction
+ STA dlin2
+
+ LDA L3B8E,X            \ Modify the instruction at dlin8 to the V-th L3B8E
+ STA dlin8              \ instruction
+
+ LDX W                  \ Set X = W
+
  LDA #0
  SEC
  SBC L0083
  CLC
 
-.C521A
+.dlin1
 
  ADC T
- BCC C5221
+ BCC dlin3
  SBC L0083
 
-.C5220
+.dlin2
 
- INY
+ INY                    \ Modified
 
-.C5221
+.dlin3
 
  STA L008A
  TXA
@@ -20464,86 +20584,113 @@ NEXT
  ORA H
  STA V
  TXA
- BPL C523D
+ BPL dlin4
  LDX #7
  LDA P
  SEC
  SBC #8
  STA P
- BCS C524E
+ BCS dlin5
  DEC Q
- BCS C524E
+ BCS dlin5
 
-.C523D
+.dlin4
 
  CMP #8
- BCC C524E
+ BCC dlin5
  LDX #0
  LDA P
  CLC
  ADC #8
  STA P
- BCC C524E
+ BCC dlin5
  INC Q
 
-.C524E
+.dlin5
 
  STX W
- LDX L0069
+
+ LDX lineBufferSize
+
  TYA
- BPL C5267
- LDA P
- SEC
- SBC #&40
+
+ BPL dlin6              \ If A >=0, jump to dlin6
+
+                        \ Otherwise move to the character row above
+
+ LDA P                  \ Set (Q P) = (Q P) - &140
+ SEC                    \
+ SBC #&40               \ starting with the high bytes
  STA P
- LDA Q
- SBC #1
+
+ LDA Q                  \ And then the low bytes
+ SBC #&01
  STA Q
- LDY #7
+
+ LDY #7                 \ Set Y = A = 7
  TYA
- BNE C527B
 
-.C5267
+ BNE dlin7              \ Jump to dlin7 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
- CMP #8
- BCC C527B
- LDA P
- CLC
- ADC #&40
+.dlin6
+
+ CMP #8                 \ If A < 8, jump to dlin7
+ BCC dlin7
+
+                        \ Otherwise move to the character row below
+
+ LDA P                  \ Set (Q P) = (Q P) + &140
+ CLC                    \
+ ADC #&40               \ starting with the high bytes
  STA P
- LDA Q
- ADC #1
+
+ LDA Q                  \ And then the low bytes
+ ADC #&01
  STA Q
- LDY #0
+
+ LDY #0                 \ Set Y = A = 0
  TYA
 
-.C527B
+.dlin7
 
- ORA P
- STA L07A8,X
+ ORA P                  \ Store the address we are about to overwrite in the
+ STA lineBufferAddrLo,X \ pixel address buffer at (lineBufferAddrHi L07A8)
+
  LDA Q
- STA L07D0,X
- LDA (P),Y
- STA L0780,X
- INC L0069
+ STA lineBufferAddrHi,X
+
+ LDA (P),Y              \ Store the current pixel contents into the pixel
+ STA lineBufferPixel,X  \ contents buffer at lineBufferPixel
+
+ INC lineBufferSize    \ Increment the size of the pixel buffers, as we just
+                        \ added an entry
+
  LDX V
  AND yLookupLo+8,X
  ORA L34F8,X
  STA (P),Y
+
  LDX W
+
  LDA L008A
+
  CLC
 
-.C529B
+.dlin8
 
- INX
- DEC U
- BMI C52A3
- JMP C521A
+ INX                    \ Modified
 
-.C52A3
+ DEC U                  \ Decrement the pixel counter
 
- RTS
+ BMI dlin9              \ If we have drawn U + 1 pixels, jump to dlin9 to return
+                        \ from the subroutine
+
+ JMP dlin1              \ Loop back to draw the next pixel
+
+.dlin9
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -21878,18 +22025,19 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L62A2
+\       Name: steeringLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: The low byte of the steering wheel position
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The steering wheel position is stored as (steeringHi steeringLo), with the
+\ sign bit in bit 0 of steeringLo, so it's a sign-magnitude number.
 \
 \ ******************************************************************************
 
-.L62A2
+.steeringLo
 
  EQUB 0
 
@@ -21912,18 +22060,19 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L62A5
+\       Name: steeringHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: The high byte of the steering wheel position
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The steering wheel position is stored as (steeringHi steeringLo), with the
+\ sign bit in bit 0 of steeringLo, so it's a sign-magnitude number.
 \
 \ ******************************************************************************
 
-.L62A5
+.steeringHi
 
  EQUB 0
 
