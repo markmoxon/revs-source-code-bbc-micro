@@ -346,9 +346,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L003C
+.revs
 
- SKIP 1                 \ 
+ SKIP 1                 \ The current revs, as shown on the rev counter
 
 .L003D
 
@@ -4636,9 +4636,9 @@ ORG &0B00
 
                         \ By this point, we have:
                         \
-                        \   * V = 1 if "L" is being pressed (steer left)
+                        \   * V = 1 if ";" is being pressed (steer right)
                         \
-                        \   * V = 2 if ";" is being pressed (steer right)
+                        \   * V = 2 if "L" is being pressed (steer left)
                         \
                         \   * V = 0 if neither is being pressed
 
@@ -4850,7 +4850,7 @@ ORG &0B00
 
  LDX #%10000000         \ Set bit 7 of X to store in throttleBrakeState below
 
- LDA L003C              \ Set A = 5 + L003C / 4
+ LDA revs               \ Set A = 5 + revs / 4
  LSR A                  \
  LSR A                  \ to store in throttleBrake below
  CLC
@@ -4868,7 +4868,7 @@ ORG &0B00
                         \     or joystick:
                         \
                         \       throttleBrakeState = bit 7 set
-                        \       throttleBrake = 5 + L003C / 4
+                        \       throttleBrake = 5 + revs / 4
                         \
                         \   * Joystick is enabled and 2.5 * y-axis < 250 (so
                         \     joystick is in the zone around the centre)
@@ -11125,22 +11125,62 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L3100
+\       Name: handPixels
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: The number of pixels in the longest axis for the rev counter hand
+\             at various points in a half-quadrant
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This table contains values that are used to calculate the coordinates of the
+\ end of the hand in the rev counter.
+\
+\ The contents of the table are very close to the following (the values from
+\ the following calculation are shown in the comments below - they are close,
+\ but not quite a perfect match, so I haven't got this exactly right):
+\
+\ FOR I%, 0, 21
+\  EQUB INT(0.5 + 28 * COS((PI / 4) * I% / 21))
+\ NEXT
+\
+\ This gives the length of the adjacent side of a right-angled triangle, with a
+\ hypoteneuse of length 28, and an angle ranging from 0 to PI/4 (i.e. one
+\ eighth of a circle), split up into 21 points per eighth of a circle.
+\
+\ In other words, if we have a clock whose centre is at the origin, then this
+\ table contains the x-coordinate of the end of a clock hand of length 28 as it
+\ moves from 3 o'clock to half past 4.
 \
 \ ******************************************************************************
 
-.L3100
+.handPixels
 
- EQUB &1C, &1C, &1C, &1C, &1C, &1B, &1B, &1B, &1B, &1A, &1A, &1A
- EQUB &19, &19, &18, &18, &17, &16, &15, &14, &14, &14, &81, &81
- EQUB &81, &81, &81, &81
+ EQUB 28                \ INT(0.5 + 28.00) = 28
+ EQUB 28                \ INT(0.5 + 27.98) = 28
+ EQUB 28                \ INT(0.5 + 27.92) = 28
+ EQUB 28                \ INT(0.5 + 27.82) = 28
+ EQUB 28                \ INT(0.5 + 27.69) = 28
+ EQUB 27                \ INT(0.5 + 27.51) = 28
+ EQUB 27                \ INT(0.5 + 27.30) = 27
+ EQUB 27                \ INT(0.5 + 27.05) = 27
+ EQUB 27                \ INT(0.5 + 26.76) = 27
+ EQUB 26                \ INT(0.5 + 26.43) = 26
+ EQUB 26                \ INT(0.5 + 26.06) = 26
+ EQUB 26                \ INT(0.5 + 25.66) = 26
+ EQUB 25                \ INT(0.5 + 25.23) = 25
+ EQUB 25                \ INT(0.5 + 24.76) = 25
+ EQUB 24                \ INT(0.5 + 24.25) = 24
+ EQUB 24                \ INT(0.5 + 23.71) = 24
+ EQUB 23                \ INT(0.5 + 23.13) = 23
+ EQUB 22                \ INT(0.5 + 22.53) = 23
+ EQUB 21                \ INT(0.5 + 21.89) = 22
+ EQUB 20                \ INT(0.5 + 21.22) = 21
+ EQUB 20                \ INT(0.5 + 20.53) = 21
+ EQUB 20                \ INT(0.5 + 19.80) = 20
+
+ EQUB &81, &81, &81     \ These bytes appear to be unused
+ EQUB &81, &81, &81
 
 \ ******************************************************************************
 \
@@ -11523,20 +11563,20 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L32FC
+\       Name: startDialLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: The low byte of the screen address of the start of the dial hand
+\             on the rev counter
 \
 \ ******************************************************************************
 
-.L32FC
+.startDialLo
 
- EQUB &66, &67, &5F, &5E
+ EQUB &66               \ Quadrant 0 (12:00 to 3:00) = &7566
+ EQUB &67               \ Quadrant 1 (3:00 to 6:00)  = &7567
+ EQUB &5F               \ Quadrant 2 (6:00 to 9:00)  = &755F
+ EQUB &5E               \ Quadrant 3 (9:00 to 12:00) = &755E
 
 \ ******************************************************************************
 \
@@ -11985,20 +12025,21 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: L34F8
+\       Name: pixelByte
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: A table of pixel bytes with individual pixels set
 \
 \ ******************************************************************************
 
-.L34F8
+.pixelByte
 
- EQUB &80, &40, &20, &10, &00, &00, &00, &00
+ EQUB %10000000         \ Pixel byte with the first pixel set to colour 2
+ EQUB %01000000         \ Pixel byte with the second pixel set to colour 2
+ EQUB %00100000         \ Pixel byte with the third pixel set to colour 2
+ EQUB %00010000         \ Pixel byte with the fourth pixel set to colour 2
+
+ EQUB 0, 0, 0, 0        \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -13210,40 +13251,93 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
 
 \ ******************************************************************************
 \
-\       Name: L397C
+\       Name: startDialHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: The high byte of the screen address of the start of the dial hand
+\             on the rev counter
+\
+\ ******************************************************************************
+
+.startDialHi
+
+ EQUB &75               \ Quadrant 0 (12:00 to 3:00) = &7566
+ EQUB &75               \ Quadrant 1 (3:00 to 6:00)  = &7567
+ EQUB &75               \ Quadrant 2 (6:00 to 9:00)  = &755F
+ EQUB &75               \ Quadrant 3 (9:00 to 12:00) = &755E
+
+\ ******************************************************************************
+\
+\       Name: wheelPixels
+\       Type: Variable
+\   Category: Graphics
+\    Summary: The number of pixels in the longest axis for the steering wheel
+\             line at various points in a quadrant
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This table contains values that are used to calculate the coordinates of the
+\ end of the line on the steering wheel.
+\
+\ The contents of the table are very close to the following (the values from
+\ the following calculation are shown in the comments below - they are close,
+\ but not quite a perfect match, so I haven't got this exactly right):
+\
+\ FOR I%, 0, 37
+\  EQUB INT(0.5 + 53 * COS((PI / 8) * I% / 21))
+\ NEXT
+\
+\ This gives the length of the adjacent side of a right-angled triangle, with a
+\ hypoteneuse of length 53, and an angle ranging from 0 to PI/4 (i.e. one
+\ eighth of a circle), split up into 21 points per eighth of a circle (so the
+\ table's 38 points cover almost a quarter of a circle).
+\
+\ In other words, if we have a clock whose centre is at the origin, then this
+\ table contains the x-coordinate of the end of a clock hand of length 28 as it
+\ moves from 3 o'clock to half past 4.
 \
 \ ******************************************************************************
 
-.L397C
+.wheelPixels
 
- EQUB &75, &75, &75, &75
-
-\ ******************************************************************************
-\
-\       Name: L3980
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L3980
-
- EQUB &35, &35, &35, &35, &35, &35, &35, &35, &34, &34, &34, &34
- EQUB &34, &34, &33, &33, &33, &32, &32, &32, &31, &31, &30, &30
- EQUB &2F, &2F, &2E, &2E, &2D, &2D, &2C, &2C, &2B, &2A, &29, &28
- EQUB &27, &26
+ EQUB 53                \ INT(0.5 + 53.00) = 53
+ EQUB 53                \ INT(0.5 + 52.99) = 53
+ EQUB 53                \ INT(0.5 + 52.96) = 53
+ EQUB 53                \ INT(0.5 + 52.92) = 53
+ EQUB 53                \ INT(0.5 + 52.85) = 53
+ EQUB 53                \ INT(0.5 + 52.77) = 53
+ EQUB 53                \ INT(0.5 + 52.67) = 53
+ EQUB 53                \ INT(0.5 + 52.55) = 53
+ EQUB 52                \ INT(0.5 + 52.41) = 52
+ EQUB 52                \ INT(0.5 + 52.25) = 52
+ EQUB 52                \ INT(0.5 + 52.08) = 52
+ EQUB 52                \ INT(0.5 + 51.88) = 52
+ EQUB 52                \ INT(0.5 + 51.67) = 52
+ EQUB 52                \ INT(0.5 + 51.44) = 51
+ EQUB 51                \ INT(0.5 + 51.19) = 51
+ EQUB 51                \ INT(0.5 + 50.93) = 51
+ EQUB 51                \ INT(0.5 + 50.65) = 51
+ EQUB 50                \ INT(0.5 + 50.34) = 50
+ EQUB 50                \ INT(0.5 + 50.03) = 50
+ EQUB 50                \ INT(0.5 + 49.69) = 50
+ EQUB 49                \ INT(0.5 + 49.34) = 49
+ EQUB 49                \ INT(0.5 + 48.97) = 49
+ EQUB 48                \ INT(0.5 + 48.58) = 49
+ EQUB 48                \ INT(0.5 + 48.17) = 48
+ EQUB 47                \ INT(0.5 + 47.75) = 48
+ EQUB 47                \ INT(0.5 + 47.31) = 47
+ EQUB 46                \ INT(0.5 + 46.86) = 47
+ EQUB 46                \ INT(0.5 + 46.39) = 46
+ EQUB 45                \ INT(0.5 + 45.90) = 46
+ EQUB 45                \ INT(0.5 + 45.40) = 45
+ EQUB 44                \ INT(0.5 + 44.88) = 45
+ EQUB 44                \ INT(0.5 + 44.34) = 44
+ EQUB 43                \ INT(0.5 + 43.79) = 44
+ EQUB 42                \ INT(0.5 + 43.22) = 43
+ EQUB 41                \ INT(0.5 + 42.64) = 43
+ EQUB 40                \ INT(0.5 + 42.05) = 42
+ EQUB 39                \ INT(0.5 + 41.44) = 41
+ EQUB 38                \ INT(0.5 + 40.81) = 41
 
 \ ******************************************************************************
 \
@@ -13863,49 +13957,53 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3B86
+\       Name: shortAxis
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Code modifications for the DrawDashboardLine line-drawing routine
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ When drawing a line, the short axis is only stepped along when the slope error
+\ adds up to a whole pixel, so this steps along the shorter axis of the line's
+\ vector. See the DrawDashboardLine routine for details.
 \
 \ ******************************************************************************
 
-.L3B86
+.shortAxis
 
- INX                    \ V = 0, INX and DEY
- DEY                    \ V = 1, DEY and INX
- INY                    \ V = 2, INY and INX, bottom-left quadrant
- INX                    \ V = 3, INX and INY, top-left quadrant
- DEX                    \ V = 4, DEX and INY, top-right quadrant
- INY                    \ V = 5, INY and DEX, bottom-right quadrant
+ INX                    \ V = 0, INX and DEY = Steep slope, right and up
+ DEY                    \ V = 1, DEY and INX = Shallow slope, right and up
+ INY                    \ V = 2, INY and INX = Shallow slope, right and down
+ INX                    \ V = 3, INX and INY = Steep slope, right and down
+ DEX                    \ V = 4, DEX and INY = Steep slope, left and down
+ INY                    \ V = 5, INY and DEX
  DEY                    \ V = 6, DEY and DEX
  DEX                    \ V = 7, DEX and DEY
 
 \ ******************************************************************************
 \
-\       Name: L3B8E
+\       Name: stepAxis
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Code modifications for the DrawDashboardLine line-drawing routine
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ When drawing a line, we step along the longer axis of the line's vector by one
+\ pixel for loop around the line-drawing routine. See the DrawDashboardLine
+\ routine for details.
 \
 \ ******************************************************************************
 
-.L3B8E
+.stepAxis
 
- DEY                    \ V = 0, INX and DEY
- INX                    \ V = 1, DEY and INX
- INX                    \ V = 2, INY and INX, bottom-left quadrant
- INY                    \ V = 3, INX and INY, top-left quadrant
- INY                    \ V = 4, DEX and INY, top-right quadrant
- DEX                    \ V = 5, INY and DEX, bottom-right quadrant
+ DEY                    \ V = 0, INX and DEY = Steep slope, right and up
+ INX                    \ V = 1, DEY and INX = Shallow slope, right and up
+ INX                    \ V = 2, INY and INX = Shallow slope, right and down
+ INY                    \ V = 3, INX and INY = Steep slope, right and down
+ INY                    \ V = 4, DEX and INY = Steep slope, left and down
+ DEX                    \ V = 5, INY and DEX
  DEX                    \ V = 6, DEY and DEX
  DEY                    \ V = 7, DEX and DEY
 
@@ -15393,10 +15491,10 @@ NEXT
 \ For character rows 0 to 7 and 16 to 31, this table returns the low byte of
 \ the screen address of the start of the row, for the custom screen mode.
 \
-\ For character rows 8 to 15, it returns a different value, which I am still
-\ investigating. (These values are currently read as yLookupLo+8 and don't
-\ appear to be related to screen address lookups, so perhaps these bytes are
-\ being reused for a different purpose?)
+\ For character rows 8 to 15, the table is reused, as these locations would
+\ point to the blue sky, and we don't draw in the sky as it contains working
+\ game code. Instead, the lookup table at yLookupLo+8 contains bitmasks for use
+\ in the line-drawing routine at DrawDashboardLine.
 \
 \ ******************************************************************************
 
@@ -15408,15 +15506,15 @@ FOR I%, 0, 7
 
 NEXT
 
- EQUB LO(&5800 + ( 8 * &140) + &77)     \ &77
- EQUB LO(&5800 + ( 9 * &140) + &7B)     \ &BB
- EQUB LO(&5800 + (10 * &140) + &5D)     \ &DD
- EQUB LO(&5800 + (11 * &140) + &2E)     \ &EE
+ EQUB %01110111         \ Clear the first pixel of a mode 5 pixel byte
+ EQUB %10111011         \ Clear the second pixel of a mode 5 pixel byte
+ EQUB %11011101         \ Clear the third pixel of a mode 5 pixel byte
+ EQUB %11101110         \ Clear the fourth pixel of a mode 5 pixel byte
 
- EQUB LO(&5800 + (12 * &140) + &77)     \ &77
- EQUB LO(&5800 + (13 * &140) + &7B)     \ &BB
- EQUB LO(&5800 + (14 * &140) + &5D)     \ &DD
- EQUB LO(&5800 + (15 * &140) + &2E)     \ &EE
+ EQUB %01110111         \ Clear the first pixel of a mode 5 pixel byte
+ EQUB %10111011         \ Clear the second pixel of a mode 5 pixel byte
+ EQUB %11011101         \ Clear the third pixel of a mode 5 pixel byte
+ EQUB %11101110         \ Clear the fourth pixel of a mode 5 pixel byte
 
 FOR I%, 16, 31
 
@@ -17640,7 +17738,7 @@ NEXT
 
 .C499F
 
- LDA L003C
+ LDA revs
  LDX throttleBrakeState
  DEX
  BNE C49B0
@@ -17672,7 +17770,7 @@ NEXT
 
 .C49C5
 
- STA L003C
+ STA revs
  STA L005A
 
 .C49C9
@@ -17778,7 +17876,7 @@ NEXT
 
 .C4A37
 
- STA L003C
+ STA revs
  CMP #&AA
  BCC C4A3F
  LDA #&AA
@@ -17848,10 +17946,12 @@ NEXT
 .C4A87
 
  STA L003D
- LDA L003C
+
+ LDA revs
  CLC
  ADC #&19
  STA L005F
+
  RTS
 
 \ ******************************************************************************
@@ -20280,11 +20380,7 @@ NEXT
 \       Name: UpdateDashboard
 \       Type: Subroutine
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Update the rev counter and steering wheel lines on the dashboard
 \
 \ ******************************************************************************
 
@@ -20304,15 +20400,15 @@ NEXT
 
  PHP                    \ Store the C flag on the stack
 
- LDA #2                 \ Set A = 2, to use as the value of V to send to the
-                        \ DrawDashboardLine routine
+ LDA #%010              \ Set A = %010, to use as the value of V to send to the
+                        \ DrawDashboardLine routine (quadrant 1, first half)
 
  BCS upda1              \ If bit 0 of steeringLo is set, skip the following
                         \ instruction
 
- LDA #5                 \ Bit 0 of steeringLo is clear, so set A = 5, to use as
-                        \ the value of V to send to the DrawDashboardLine
-                        \ routine
+ LDA #%101              \ Bit 0 of steeringLo is clear, so set A = %101 to use
+                        \ as the value of V to send to the DrawDashboardLine
+                        \ routine (quadrant 2, second half)
 
 .upda1
 
@@ -20351,36 +20447,75 @@ NEXT
 
 .upda3
 
+                        \ If we get here then the indicator is a long way away
+                        \ from the centre of the wheel, as A >= 38
+
  EOR #&FF               \ Set Y = ~A + 76 + C
  ADC #76                \       = ~A + 1 + 75 + C
  TAY                    \       = 75 - A        when 38 <= A <= 60
                         \         16            when A > 60
                         \
-                        \ so Y is in the range 16 to 37, with higher values of A
+                        \ so Y is in the range 37 to 16, with higher values of A
                         \ giving lower values of A
+                        \
+                        \ This represents the distance between this value on the
+                        \ steering wheel and the nearest quadrant
 
- STY T                  \ Set T = Y (in the range 16 to 37)
+ STY T                  \ Set T = Y (in the range 37 to 16) to pass to the
+                        \ DrawDashboardLine routine as the amount of slope error
+                        \ for each step slong the main axis
 
- LDX L3980,Y            \ Set L0083 = the Y-th value of L3980
- STX L0083
+ LDX wheelPixels,Y      \ Set X to the number of pixels that would be along the
+                        \ long axis of the line if the line went all the way to
+                        \ the centre of the wheel, given the value of Y above
+
+ STX L0083              \ Set L0083 = X to pass to the DrawDashboardLine routine
+                        \ as the cumulative amount of slope error that equates
+                        \ to a pixel in the shorter axis
 
  JMP upda5              \ Jump to upda5
 
 .upda4
 
-                        \ If we get here then A < 38
+                        \ If we get here then the indicator is not far away from
+                        \ the centre of the wheel, as A < 38
 
- TAX                    \ Set T = A (in the range 0 to 37)
- STX T
+ TAX                    \ Set X = A (in the range 0 to 37)
+                        \
+                        \ This represents the distance between this value on the
+                        \ steering wheel and the nearest quadrant
 
- LDA V                  \ Flip bit 0 of V, to turn it into 3 or 4
- EOR #1
+ STX T                  \ Set T = X (in the range 0 to 37) to pass to the
+                        \ DrawDashboardLine routine as the amount of slope error
+                        \ for each step slong the main axis
+
+ LDA V                  \ Flip bit 0 of V, to flip it from first half of
+ EOR #1                 \ quadrant to second half
  STA V
 
- LDA L3980,X            \ Set L0083 = the X-th value of L3980
- STA L0083
+ LDA wheelPixels,X      \ Set A to the number of pixels that would be along the
+                        \ long axis of the line if the line went all the way to
+                        \ the centre of the wheel, given the value of Y above
+
+ STA L0083              \ Set L0083 = A to pass to the DrawDashboardLine routine
+                        \ as the cumulative amount of slope error that equates
+                        \ to a pixel in the shorter axis
 
 .upda5
+
+                        \ By this point, V has the following value:
+                        \
+                        \   * 2 when sign bit of steeringLo is set and A >= 38
+                        \     i.e. steering left a lot, bottom-left quadrant
+                        \
+                        \   * 3 when sign bit of steeringLo is set and A < 38
+                        \     i.e. steering left a little, top-left quadrant
+                        \
+                        \   * 4 when sign bit of steeringLo is clear and A < 38
+                        \     i.e. steering right a little, top-right quadrant
+                        \
+                        \   * 5 when sign bit of steeringLo is clear and A >= 38
+                        \     i.e. steering right a lot, bottom-right quadrant
 
  ASL A                  \ Set A = A * 2 + 4
  CLC
@@ -20392,7 +20527,8 @@ NEXT
  TXA                    \ Set A = X
                         \
                         \ where X is either the original value of A (0 to 37)
-                        \ or the Y-th value of L3980 (where Y is 16 to 37)
+                        \ or the Y-th value of wheelPixels (where Y is 16 to
+                        \ 37), which is in the range 38 to 51
 
  PLP                    \ Set the C flag to bit 0 of steeringLo (the sign bit),
                         \ which we stored on the stack above
@@ -20401,7 +20537,7 @@ NEXT
                         \ instruction
 
  EOR #&FF               \ Set A = ~A
-                        \       = ~X
+                        \       = -A - 1
 
 .upda6
 
@@ -20415,13 +20551,13 @@ NEXT
  JSR GetScreenAddress   \ Set (Q P) to the screen address for pixel coordinate
                         \ (A, Y)
 
- LDA W                  \ Set W = W * 2 mod 8
+ LDA W                  \ Set W = W * 2 mod 8 ???
  ASL A
- AND #7
+ AND #%00000111
  STA W
 
- LDA #4                 \ Set H = 4
- STA H
+ LDA #%100              \ Set H = %100, ??? convert quadrants 2 (left) and 1
+ STA H                  \ (right) to 4 and 0?
 
  LDA #6                 \ Set U = 6, so the line contains up to seven pixels
  STA U
@@ -20435,182 +20571,400 @@ NEXT
 \       Name: DrawRevCounter
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Draw the hand on the rev counter
 \
 \ ******************************************************************************
 
 .DrawRevCounter
 
- LDA #0
+ LDA #%00               \ Set H = %000 to pass into DrawDashboardLine below
  STA H
- LDA L003C
- CMP #&1E
- BCS C51B4
- LDA #&1E
 
-.C51B4
+ LDA revs               \ Set A = revs, which is the value we want to draw on
+                        \ the rev counter, in the range 0 to 170
 
- STA T
- LSR A
- CLC
- ADC T
- ROR A
- SEC
- SBC #&4C
- BCS C51C2
- ADC #&98
+ CMP #30                \ If A >= 30, skip the following instruction
+ BCS revs1
 
-.C51C2
+ LDA #30                \ Set A = 30, so A is always at least 30, and is now in
+                        \ the range 30 to 170 (we do this because the hand on
+                        \ the rev counter doesn't fall all the way back to zero)
 
- LDX #&FF
- SEC
+.revs1
 
-.P51C5
+ STA T                  \ Set T = A
 
- INX
- SBC #&26
- BCS P51C5
- ADC #&26
- CMP #&13
- BCC C51D8
- SBC #&13
- EOR #&FF
- CLC
- ADC #&14
- SEC
+ LSR A                  \ Set A = A / 2 + T
+ CLC                    \       = A / 2 + A
+ ADC T                  \       = 1.5 * A
+                        \       = 1.5 * revs
+                        \
+                        \ which is in the range 45 to 255
 
-.C51D8
+ ROR A                  \ Set A = A / 2
+                        \       = 0.75 * revs
+                        \
+                        \ which is in the range 22 to 127
 
- TAY
- STY T
- TXA
- AND #3
+                        \ We now convert the value in A to the corresponding
+                        \ position on the dial in terms of which quadrant it's
+                        \ in, and which half of that quadrant, so we can pass
+                        \ the details to the DrawDashboardLine routine
+
+ SEC                    \ Set A = A - 76
+ SBC #76
+
+ BCS revs2              \ If the subtraction went past zero, add 152, to get:
+ ADC #152               \
+                        \   A = A + 76
+
+                        \ So for A in the range 22 to 127, this converts:
+                        \
+                        \   A = 22-75  into A = 98-151
+                        \   A = 76-127 into A = 0-51
+                        \
+                        \ If we consider a clock with 0 at 12 o'clock, then 38
+                        \ at 3 o'clock, 76 at 6 o'clock and 114 at 9 o'clock,
+                        \ A is now the position of the hand on that clock, i.e.
+                        \ the position of the hand that we want to draw on the
+                        \ rev counter
+
+.revs2
+
+                        \ We now calculate the quadrant that contains the hand
+                        \ on the rev counter, numbered 0 to 3 counting clockwise
+                        \ from top-right
+                        \
+                        \ We do this by calculating X = A / 38, by repeatedly
+                        \ subtracting 38 from A until we go past zero
+
+ LDX #&FF               \ We start by setting X = -1
+
+ SEC                    \ Set the C flag for the subtraction
+
+.revs3
+
+ INX                    \ Increment X as we are doing a subtraction
+
+ SBC #38                \ Set A = A - 38
+
+ BCS revs3              \ If the subtraction didn't take us past zero, loop back
+                        \ to subtract another 38
+
+ ADC #38                \ Otherwise add the 38 back that pushed us over the
+                        \ limit, so X now contains the quadrant number, and A
+                        \ contains the remainder (i.e. the fraction that the
+                        \ hand is past the start of the quadrant)
+
+ CMP #19                \ If the remainder is < 19, skip the following, as A
+ BCC revs4              \ contains the distance from the start of quadrant X to
+                        \ the position of the hand (and the C flag is clear)
+
+ SBC #19                \ Set A = ~(A - 19) + 20
+ EOR #&FF               \       = ~(A - 19) + 1 + 19
+ CLC                    \       = -(A - 19) + 19
+ ADC #20                \       = 19 - (A - 19)
+                        \
+                        \ so A now contains the distance from the hand to the
+                        \ end of quadrant X
+
+ SEC                    \ Set the C flag to indicate that A is now the distance
+                        \ from the hand to the end of the quadrant
+
+.revs4
+
+                        \ By this point:
+                        \
+                        \   X = quadrant number (0 to 3)
+                        \
+                        \   A = distance from start of quadrant to hand (C = 0)
+                        \       distance from hand to end of quadrant   (C = 1)
+                        \
+                        \ where each quadrant is 38 in size, so A is <= 19
+                        \
+                        \ The C flag therefore represents which half of the
+                        \ quadrant the hand is in, 0 denoting the first half and
+                        \ 1 denoting the second half
+
+ TAY                    \ Set Y = the distance between the hand and quadrant
+
+ STY T                  \ Set T = the distance between the hand and quadrant
+
+ TXA                    \ Ensure X is in the range 0 to 3 (it should be, but
+ AND #3                 \ this makes absolutely sure)
  TAX
- TXA
- ROL A
- STA V
- AND #&FC
- BEQ C51E9
- LDA #7
 
-.C51E9
+ TXA                    \ This sets bits 1 and 2 of V to the quadrant number,
+ ROL A                  \ and bit 0 to the C flag, so the possible values are:
+ STA V                  \
+                        \   * 0 = %000 = Quadrant 0, first half, 12:00 to 1:30
+                        \   * 1 = %001 = Quadrant 0, second half, 1:30 to 3:00
+                        \   * 2 = %010 = Quadrant 1, first half, 3:00 to 4:30
+                        \   * 3 = %011 = Quadrant 1, second half, 4:30 to 6:00
+                        \   * 4 = %100 = Quadrant 2, first half, 6:00 to 7:30
+                        \   * 5 = %101 = Quadrant 2, second half, 7:30 to 9:00
+                        \   * 6 = %110 = Quadrant 3, first half, 9:00 to 10:30
+                        \   * 7 = %111 = Quadrant 3, second half, 10:30 to 12:00
+                        \
+                        \ These are the quadrant values we need to pass to the
+                        \ DrawDashboardLine routine below
 
- STA W
- LDA L3100,Y
- STA L0083
- STA U
- LDA L32FC,X
- AND #&F8
- STA P
- LDA L32FC,X
- AND #7
- TAY
- LDA L397C,X
- STA Q
+ AND #%11111100         \ If bit 2 of A is zero, then the hand is in the right
+ BEQ revs5              \ half of the dial, so jump to revs5 to set W = %000
+
+ LDA #%111              \ Otherwise the hand is in the left half of the dial,
+                        \ so set A so we set W = %111 below
+
+.revs5
+
+ STA W                  \ Set W = %000 if the hand is in the right half
+                        \         %111 if the hand is in the left half
+
+ LDA handPixels,Y       \ Set A to the number of pixels that are along the long
+                        \ axis of the hand, given the distance between the hand
+                        \ and quadrant that we set in Y above
+
+ STA L0083              \ Set L0083 to the number of pixels along the long axis
+
+ STA U                  \ Set U to the number of pixels along the long axis, to
+                        \ pass through to the DrawDashboardLine routine below
+
+ LDA startDialLo,X      \ Set the low byte of (Q P) to the low byte of the
+ AND #%11111000         \ screen address for the starting point of the hand for
+ STA P                  \ quadrant Y, which we get from the startDialLo table,
+                        \ and clear bits 0 to 2 so the address points to the
+                        \ top line of the relevant character block
+
+ LDA startDialLo,X      \ Set Y to the pixel row within the character block
+ AND #%00000111         \ for the starting point, which we get from bits 0 to 2
+ TAY                    \ of the starting point's screen address
+
+ LDA startDialHi,X      \ Set the high byte of (Q P) to the high byte of the
+ STA Q                  \ screen address for the starting point of the hand for
+                        \ quadrant Y, so (Q P) now contains the full address of
+                        \ the starting point's character block
+
+                        \ Fall through into DrawDashboardLine to draw a line
+                        \ from the starting point given in (Q P) and Y, in the
+                        \ direction given in V, with U pixels along the longest
+                        \ axis, and in the half of the dial given in W
 
 \ ******************************************************************************
 \
 \       Name: DrawDashboardLine
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw a line on the rev counter or steering wheel
+\    Summary: Draw a hand on the rev counter or a line on the steering wheel
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   V                   The line slope
+\   V                   The slope of the line to draw, which is expressed as a
+\                       quadrant number, where quadrant 0 is from 12 o'clock to
+\                       3 o'clock, with quadrants ordered 0 to 3 in a clockwise
+\                       order:
 \
-\                         * 2 when sign bit of steeringLo is set and A >= 38
-\                           i.e. steering left a lot, bottom-left quadrant
+\                         * 0 = %000 = Quadrant 0, first half (12:00 to 1:30)
+\                                      Steep slope, right and up
+\                                      Step up along y-axis (stepAxis = DEY)
+\                                      Move right along x-axis (shortAxis = INX)
 \
-\                         * 3 when sign bit of steeringLo is set and A < 38
-\                           i.e. steering left a little, top-left quadrant
+\                         * 1 = %001 = Quadrant 0, second half (1:30 to 3:00)
+\                                      Shallow slope, right and up
+\                                      Step right along x-axis (stepAxis = INX)
+\                                      Move up along y-axis (shortAxis = DEY)
 \
-\                         * 4 when sign bit of steeringLo is clear and A < 38
-\                           i.e. steering right a little, top-right quadrant
+\                         * 2 = %010 = Quadrant 1, first half (3:00 to 4:30)
+\                                      Shallow slope, right and down
+\                                      Step right along x-axis (stepAxis = INX)
+\                                      Move down along y-axis (shortAxis = INY)
 \
-\                         * 5 when sign bit of steeringLo is clear and A >= 38
-\                           i.e. steering right a lot, bottom-right quadrant
+\                         * 3 = %011 = Quadrant 1, second half (4:30 to 6:00)
+\                                      Steep slope, right and down
+\                                      Step down along y-axis (stepAxis = INY)
+\                                      Move right along x-axis (shortAxis = INX)
 \
-\   (Q P)               The screen address for the start coordinate
+\                         * 4 = %100 = Quadrant 2, first half (6:00 to 7:30)
+\                                      Steep slope, left and down
+\                                      Step down along y-axis (stepAxis = INY)
+\                                      Move left along x-axis (shortAxis = DEX)
 \
-\   Y                   The pixel y-coordinate of the start coordinate
+\                         * 5 = %101 = Quadrant 2, second half (7:30 to 9:00)
+\                                      Shallow slope, left and down
+\                                      Step left along x-axis (stepAxis = DEX)
+\                                      Move down along y-axis (shortAxis = INY)
 \
-\   U                   The number of pixels to draw (we draw U + 1 pixels)
+\                         * 6 = %110 = Quadrant 3, first half (9:00 to 10:30)
+\                                      Shallow slope, left and up
+\                                      Step left along x-axis (stepAxis = DEX)
+\                                      Move up along y-axis (shortAxis = DEY)
 \
-\   H
+\                         * 7 = %111 = Quadrant 3, second half (10:30 to 12:00)
+\                                      Steep slope, left and up
+\                                      Step up along y-axis (stepAxis = DEY)
+\                                      Move left along x-axis (shortAxis = DEX)
 \
-\   W
+\   (Q P)               The screen address for the character block containing
+\                       the line's starting point
+\
+\   Y                   The pixel row within the character block containing the
+\                       line's starting point
+\
+\   U                   The number of pixels to draw:
+\
+\                         * The number of pixels along the longer (step) axis
+\                           when drawing the rev counter
+\
+\                         * 6 when drawing the steering wheel line
+\
+\   T                   The slope error for each step along the step axis is
+\                       T/L0083, and T is set to:
+\
+\                         * The distance between the hand and quadrant when
+\                           drawing the rev counter hand
+\
+\                         * When drawing the steering wheel line:
+\
+\                           0-37 when the line is close to the centre (in the
+\                           top two quadrants either side of the centre)
+\
+\                           37-16 when line is further from the centre (in the
+\                           left and right quadrants)
+\
+\   L0083               The slope error for each step along the step axis is
+\                       T/L0083, and L0083 is set to:
+\
+\                         * The same as U when drawing the rev counter hand
+\
+\                         * A value from wheelPixels when drawing the steering
+\                           wheel line
+\
+\   H                   Contains:
+\
+\                         * %000 when drawing the rev counter hand
+\
+\                         * %100 when drawing the steering wheel line
+\
+\   W                   The half of the dial that contains the hand:
+\
+\                         * %000 if the hand is in the right half
+\
+\                         * %111 if the hand is in the left half
 \
 \ ******************************************************************************
 
 .DrawDashboardLine
 
- LDX V                  \ Modify the instruction at dlin2 to the V-th L3B86
- LDA L3B86,X            \ instruction
+ LDX V                  \ Modify the instruction at dlin2 to the V-th shortAxis
+ LDA shortAxis,X        \ instruction
  STA dlin2
 
- LDA L3B8E,X            \ Modify the instruction at dlin8 to the V-th L3B8E
+ LDA stepAxis,X         \ Modify the instruction at dlin8 to the V-th stepAxis
  STA dlin8              \ instruction
+
+                        \ The following code has the instructions for V = %010,
+                        \ which has INY at dlin2 for the short axis, and INX at
+                        \ dlin8 for the step axis, so that's this kind of line:
+                        \
+                        \   * Quadrant 1, first half (3:00 to 4:30)
+                        \   * Shallow slope, right and down
+                        \   * Step right along x-axis (stepAxis = INX)
+                        \   * Move down along y-axis (shortAxis = INY)
 
  LDX W                  \ Set X = W
 
- LDA #0
- SEC
- SBC L0083
- CLC
+ LDA #0                 \ Set A = -L0083
+ SEC                    \
+ SBC L0083              \ So this is the starting point for our slope error
+                        \ calculation
+
+ CLC                    \ Clear the C flag for the following addition
 
 .dlin1
 
- ADC T
- BCC dlin3
- SBC L0083
+                        \ We use A to keep track of the slope error, adding the
+                        \ step along the smaller axis (in T) until it reaches 0, at
+                        \ which point it is a multiple of L0083 and we need to
+                        \ move one pixel along the smaller axis
+
+ ADC T                  \ Set A = A + T
+                        \
+                        \ So A is updated with the slope error
+
+ BCC dlin3              \ If the addition didn't overflow, then the result in A
+                        \ is still negative, so skip the following instruction
+
+                        \ The slope error just overflowed (in other words, the
+                        \ cumulative slope error in A just reached a multiple of
+                        \ L0083), so we need to adjust the slope error to make
+                        \ it negative again, and we need to step along the
+                        \ shorter axis
+
+ SBC L0083              \ Subtract L0083 from the cumulative slope error to
+                        \ bring it back to being negative, so we can detect when
+                        \ it reaches next multiple of L0083
 
 .dlin2
 
- INY                    \ Modified
+ INY                    \ Increment Y to move down along the y-axis (i.e. along
+                        \ the shorter axis)
+                        \
+                        \ This instruction is modified at the start of this
+                        \ routine, depending on the slope of the line in V
 
 .dlin3
 
- STA L008A
- TXA
- LSR A
- AND #3
- ORA H
- STA V
- TXA
- BPL dlin4
- LDX #7
- LDA P
- SEC
- SBC #8
+ STA L008A              \ Store the current slope error in L008A
+
+ TXA                    \ X contains the position of the pixel within the pixel
+ LSR A                  \ line, so this sets:
+ AND #%00000011         \
+                        \   ???
+
+ ORA H                  \ Set bit 2 of A if this is the steering wheel
+
+ STA V                  \ Store the result in V
+
+ TXA                    \ We set X to W above, so this sets A = W
+
+ BPL dlin4              \ If bit 7 of W is clear, jump to dlin4
+
+ LDX #7                 \ Set X = 7 to set as the new value of W below
+
+ LDA P                  \ Set (Q P) = (Q P) - 8
+ SEC                    \
+ SBC #8                 \ starting with the low bytew
  STA P
- BCS dlin5
+
+ BCS dlin5              \ And then the high bytes
  DEC Q
- BCS dlin5
+
+ BCS dlin5              \ This instruction has no effect, as we already passed
+                        \ through the BCS above, which is presumably a bug (this
+                        \ should perhaps be a BCC?)
 
 .dlin4
 
- CMP #8
+ CMP #8                 \ If A < 8, jump to dlin5
  BCC dlin5
- LDX #0
- LDA P
- CLC
- ADC #8
+
+ LDX #0                 \ Set X = 0 to set as the new value of W below
+
+ LDA P                  \ Set (Q P) = (Q P) + 8
+ CLC                    \
+ ADC #8                 \ starting with the low bytew
  STA P
- BCC dlin5
+
+ BCC dlin5              \ And then the high bytes
  INC Q
 
 .dlin5
 
- STX W
+ STX W                  \ Store X in W, so W moves along one pixel to the right
 
- LDX lineBufferSize
+ LDX lineBufferSize     \ Set X to the size of the line buffer, which gives us
+                        \ the index of the next empty space in the buffer
 
  TYA
 
@@ -20654,39 +21008,66 @@ NEXT
 
 .dlin7
 
- ORA P                  \ Store the address we are about to overwrite in the
- STA lineBufferAddrLo,X \ pixel address buffer at (lineBufferAddrHi L07A8)
+                        \ We now store the details of the pixel we are about
+                        \ to overwrite in the line buffer, which stores a screen
+                        \ address plus the original contents of that address
+                        \
+                        \ We get the screen address by adding the address of the
+                        \ character block in P to the number of the pixel row
+                        \ within the character in A, which we can do with an ORA
+                        \ as P only occupies bits 3 to 7, while A only occupies
+                        \ bits 0 to 2
 
- LDA Q
+ ORA P                  \ Store the address we are about to overwrite in the
+ STA lineBufferAddrLo,X \ next empty space at the end of the line buffer, i.e.
+                        \ the X-th byte of (lineBufferAddrHi lineBufferAddrLo),
+                        \ starting with the low byte of the address
+
+ LDA Q                  \ And then the high byte of the address
  STA lineBufferAddrHi,X
 
  LDA (P),Y              \ Store the current pixel contents into the pixel
  STA lineBufferPixel,X  \ contents buffer at lineBufferPixel
 
- INC lineBufferSize    \ Increment the size of the pixel buffers, as we just
+ INC lineBufferSize     \ Increment the size of the pixel buffers, as we just
                         \ added an entry
 
- LDX V
- AND yLookupLo+8,X
- ORA L34F8,X
- STA (P),Y
+ LDX V                  \ Set X = V, so X is 0 if the hand is in the right half
+                        \ of the dial, or 3 if it is in the left half
 
- LDX W
+ AND yLookupLo+8,X      \ Apply the bit mask from yLookup+8, so this clears the
+                        \ X-th pixel in the pixel row
 
- LDA L008A
+ ORA pixelByte,X        \ OR with a pixel byte with pixel X set, so this sets
+                        \ the X-th pixel to colour 2 (white)
 
- CLC
+ STA (P),Y              \ Draw the pixel byte to the screen
+
+                        \ We now set up all the variables so we can loop back
+                        \ to dlin1 for the next pixel
+
+ LDX W                  \ Set X = W
+
+ LDA L008A              \ Set A to the current slope error
+
+ CLC                    \ Clear the C flag for the addition at the start of the
+                        \ loop
 
 .dlin8
 
- INX                    \ Modified
+ INX                    \ Increment X to step right along the x-axis (i.e. along
+                        \ the longer axis)
+                        \
+                        \ This instruction is modified at the start of this
+                        \ routine, depending on the slope of the line in V
 
  DEC U                  \ Decrement the pixel counter
 
- BMI dlin9              \ If we have drawn U + 1 pixels, jump to dlin9 to return
-                        \ from the subroutine
+ BMI dlin9              \ If we have drawn the correct number of pixels along
+                        \ the longer axis, jump to dlin9 to return from the
+                        \ subroutine as we have finished drawing the line
 
- JMP dlin1              \ Loop back to draw the next pixel
+ JMP dlin1              \ Otherwise loop back to draw the next pixel
 
 .dlin9
 
