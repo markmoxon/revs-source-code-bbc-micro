@@ -386,8 +386,18 @@ ORG &0000
 
 .colourScheme
 
- SKIP 0                 \ L0042 in SetRowColours
-
+ SKIP 0                 \ The number of the table colour scheme passed to the
+                        \ SetRowColours routine:
+                        \
+                        \ Scheme 0: Even rows: 132 on 134 (blue on cyan)
+                        \           Odd rows:  134 on 135 (cyan on white)
+                        \
+                        \ Scheme 4: Even rows: 129 on 132 (red on blue)
+                        \           Odd rows:  131 on 130 (yellow on green)
+                        \
+                        \ Scheme 8: Even rows: 131 on 132 (yellow on blue)
+                        \           Odd rows:  129 on 135 (red on white)
+ 
 .L0042
 
  SKIP 1                 \ 
@@ -402,7 +412,8 @@ ORG &0000
 
 .driverPrinted
 
- SKIP 0                 \ L0045 in PrintPositionName
+ SKIP 0                 \ The number of the driver we just printed in the
+                        \ PrintPositionName routine
 
 .L0045
 
@@ -673,65 +684,69 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0080
+.PP
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0081
+.QQ
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0082
+.RR
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0083
+.SS
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0084
+.TT
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0085
+.UU
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0086
+.VV
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0087
+.WW
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L0088
+.GG
 
- SKIP 2                 \ 
+ SKIP 1                 \ Temporary storage, used in a number of places
 
-.L008A
+.HH
+ 
+ SKIP 1                 \ This byte does not appear to benused
 
- SKIP 1                 \ 
+.II
 
-.L008B
+ SKIP 1                 \ Temporary storage, used in a number of places
 
- SKIP 1                 \ 
+.JJ
 
-.L008C
+ SKIP 1                 \ Temporary storage, used in a number of places
 
- SKIP 1                 \ 
+.KK
 
-.L008D
+ SKIP 1                 \ Temporary storage, used in a number of places
 
- SKIP 1                 \ 
+.LL
 
-.L008E
+ SKIP 1                 \ Temporary storage, used in a number of places
 
- SKIP 1                 \ 
+.MM
 
-.L008F
+ SKIP 1                 \ Temporary storage, used in a number of places
 
- SKIP 1                 \ 
+.NN
+
+ SKIP 1                 \ Temporary storage, used in a number of places
 
 \ ******************************************************************************
 \
@@ -1916,21 +1931,21 @@ ORG &0B00
  ADC T
  STA L0900,X
  LDA L0A00,Y
- ADC L0083
+ ADC SS
  STA L0A00,X
  LDA L0901,Y
  CLC
  ADC U
  STA L0901,X
  LDA L0A01,Y
- ADC L0084
+ ADC TT
  STA L0A01,X
  LDA L0902,Y
  CLC
  ADC V
  STA L0902,X
  LDA L0A02,Y
- ADC L0085
+ ADC UU
  STA L0A02,X
  RTS
 
@@ -2400,22 +2415,22 @@ ORG &0B00
 
 .sub_C0DD7
 
- LDA L0081
+ LDA QQ
  BPL C0DEE
  LDA #0
  SEC
- SBC L0080
- STA L0080
+ SBC PP
+ STA PP
  LDA #0
- SBC L0081
- STA L0081
+ SBC QQ
+ STA QQ
  LDA H
  EOR #&80
  STA H
 
 .C0DEE
 
- LDA L0082
+ LDA RR
  AND #1
  BEQ C0DFA
  LDA H
@@ -2424,9 +2439,9 @@ ORG &0B00
 
 .C0DFA
 
- LDA L0081
+ LDA QQ
  STA U
- LDA L0082
+ LDA RR
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -2440,7 +2455,7 @@ ORG &0B00
 
 .C0E10
 
- LDA L0083
+ LDA SS
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -2454,9 +2469,9 @@ ORG &0B00
 
 .C0E22
 
- LDA L0080
+ LDA PP
  STA U
- LDA L0083
+ LDA SS
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -4023,38 +4038,38 @@ ORG &0B00
  JSR sub_C124D
  LDY L0002
  LDA #0
- STA L0083
- STA L0085
+ STA SS
+ STA UU
  LDA trackData+1024,Y
  BPL C1398
- DEC L0083
+ DEC SS
 
 .C1398
 
  ASL A
- ROL L0083
+ ROL SS
  ASL A
- ROL L0083
+ ROL SS
  CLC
  ADC L0900,X
  STA L0978,X
- LDA L0083
+ LDA SS
  ADC L0A00,X
  STA L0A78,X
  LDA trackData+1280,Y
  BPL C13B4
- DEC L0085
+ DEC UU
 
 .C13B4
 
  ASL A
- ROL L0085
+ ROL UU
  ASL A
- ROL L0085
+ ROL UU
  CLC
  ADC L0902,X
  STA L097A,X
- LDA L0085
+ LDA UU
  ADC L0A02,X
  STA L0A7A,X
  JSR sub_C13DA
@@ -4250,27 +4265,27 @@ ORG &0B00
 .sub_C1442
 
  LDA #0
- STA L0083
- STA L0084
- STA L0085
+ STA SS
+ STA TT
+ STA UU
  LDA trackData+256,Y
  STA T
  BPL C1453
- DEC L0083
+ DEC SS
 
 .C1453
 
  LDA trackData+512,Y
  STA U
  BPL C145C
- DEC L0084
+ DEC TT
 
 .C145C
 
  LDA trackData+768,Y
  STA V
  BPL C1465
- DEC L0085
+ DEC UU
 
 .C1465
 
@@ -4285,8 +4300,8 @@ ORG &0B00
  SBC T,X
  STA T,X
  LDA #0
- SBC L0083,X
- STA L0083,X
+ SBC SS,X
+ STA SS,X
  DEX
  BPL P146B
 
@@ -5851,7 +5866,7 @@ ORG &0B00
 
 .C1969
 
- STA L0082
+ STA RR
  TXA
  JMP C1973
 
@@ -5862,7 +5877,7 @@ ORG &0B00
 
 .C1973
 
- CPY L0082
+ CPY RR
  BNE P196F
 
 .C1977
@@ -5972,7 +5987,7 @@ ORG &0B00
 
 .C19F8
 
- LDA L008C
+ LDA KK
  CLC
  BCC C1A15
 
@@ -6036,7 +6051,7 @@ ORG &0B00
  STA L0050
  LDA #0
  STA R
- STA L008E
+ STA MM
  LDY L0012
  JSR sub_C193E
  LDY #0
@@ -6046,7 +6061,7 @@ ORG &0B00
  LDA #8
  STA L0032
  LDY #0
- STY L008C
+ STY KK
  INY
  LDA L0051
  CLC
@@ -6070,7 +6085,7 @@ ORG &0B00
  LDY L0015
  JSR sub_C193E
  LDA #&1C
- STA L008C
+ STA KK
  LDA #&10
  STA L0032
  LDY #2
@@ -6102,7 +6117,7 @@ ORG &0B00
 
 .sub_C1A98
 
- STX L0088
+ STX GG
  STA U
  DEC L004B
  LDA L62F2
@@ -6117,7 +6132,7 @@ ORG &0B00
  BCS C1B03
  LDA L5EE0,X
  BMI C1B03
- LDA L0088
+ LDA GG
  CMP #&14
  BEQ C1AC4
  LDA L5EA0,X
@@ -6157,7 +6172,7 @@ ORG &0B00
  LDA L5F60,Y
  BEQ C1AF9
  AND #&1C
- CMP L0088
+ CMP GG
  BEQ C1AF9
  ROR A
  EOR T
@@ -6167,7 +6182,7 @@ ORG &0B00
 
  LDA L5EE0,X
  AND #3
- ORA L0088
+ ORA GG
  STA L5F60,Y
 
 .C1B03
@@ -6446,9 +6461,9 @@ ORG &0B00
  TAX
  LDA L628F,X
  STA H
- LDA L0085
+ LDA UU
  STA K
- LDA L0084
+ LDA TT
  AND #&0C
  LSR A
  LSR A
@@ -6477,21 +6492,21 @@ ORG &0B00
  STA M
  LSR A
  LSR A
- STA L0085
+ STA UU
  JMP C1C66
 
 .C1C5A
 
- LDA L008D
- STA L0085
- LDA L008F
+ LDA LL
+ STA UU
+ LDA NN
  STA M
  CPY #0
  BNE C1C7B
 
 .C1C66
 
- LDA L0083
+ LDA SS
  BPL C1C71
  SEC
  ROR A
@@ -6506,14 +6521,14 @@ ORG &0B00
 
  CLC
  ADC L0035
- STA L008F
+ STA NN
  LSR A
  LSR A
- STA L008D
+ STA LL
 
 .C1C7B
 
- LDA L0085
+ LDA UU
  CMP #&14
  ROL T
  LSR A
@@ -6521,7 +6536,7 @@ ORG &0B00
  CLC
  ADC #&30
  STA Q
- LDX L0085
+ LDX UU
  CPX #&28
  BCC C1C92
  JMP C1D94
@@ -6535,7 +6550,7 @@ ORG &0B00
 
 .C1C9C
 
- STA L0082
+ STA RR
  CMP N
  BCC C1CAA
  CPY #1
@@ -6548,7 +6563,7 @@ ORG &0B00
 
 .C1CAA
 
- LDA L0084
+ LDA TT
  AND #&10
  BEQ C1CC3
  TYA
@@ -6556,7 +6571,7 @@ ORG &0B00
  EOR T
  AND #1
  BEQ C1CC3
- LDA L0084
+ LDA TT
  AND #3
  TAX
  LDA L628F,X
@@ -6586,7 +6601,7 @@ ORG &0B00
  BEQ C1CFD
  LDA #0
  STA L0048
- LDA L008C
+ LDA KK
  STA L
  EOR #&FF
  AND I
@@ -6594,8 +6609,8 @@ ORG &0B00
 
 .C1CFD
 
- LDX L0085
- CPX L008D
+ LDX UU
+ CPX LL
  BNE C1D0A
  LDA I
  STA H
@@ -6624,18 +6639,18 @@ ORG &0B00
 
 .C1D25
 
- LDX L0085
- CPX L008D
+ LDX UU
+ CPX LL
  BNE C1D44
  STA H
  LDA L
- STA L008C
+ STA KK
  ROR L0048
  RTS
 
 .C1D34
 
- LDA L008C
+ LDA KK
  ORA L39D0,X
  STA L
  EOR #&FF
@@ -6647,7 +6662,7 @@ ORG &0B00
 
  STA I
  LDA #0
- STA L008C
+ STA KK
  LDY N
  JMP C1D6B
 
@@ -6682,14 +6697,14 @@ ORG &0B00
 
 .C1D6B
 
- CPY L0082
+ CPY RR
  BNE P1D4F
  LDX J
  CPX #1
  BEQ C1D93
- INC L0085
+ INC UU
  JSR sub_C1DAF
- DEC L0085
+ DEC UU
 
 .C1D7C
 
@@ -6701,7 +6716,7 @@ ORG &0B00
 
 .C1D86
 
- LDA L0085
+ LDA UU
  CLC
  SBC K
  BEQ C1D93
@@ -6722,7 +6737,7 @@ ORG &0B00
  CMP #&28
  BCS C1D93
  LDA #&28
- STA L0085
+ STA UU
  BNE C1D86
 
 \ ******************************************************************************
@@ -6759,7 +6774,7 @@ ORG &0B00
 
 .sub_C1DAF
 
- LDA L0085
+ LDA UU
  CMP #&28
  BCS C1DE4
  CLC
@@ -6799,7 +6814,7 @@ ORG &0B00
 
 .C1DE0
 
- CPY L0082
+ CPY RR
  BNE P1DD2
 
 .C1DE4
@@ -6813,7 +6828,7 @@ ORG &0B00
 
 .C1DE8
 
- CPY L0082
+ CPY RR
  BNE P1DE5
  JMP C1D7C
 
@@ -6836,10 +6851,10 @@ ORG &0B00
 
 .C1DF1
 
- STX L0085
+ STX UU
  STY N
  LDA dashDataOffset,X
- STA L0082
+ STA RR
  LDX #&72
  LDY #&EF
  LDA #0
@@ -6847,9 +6862,9 @@ ORG &0B00
  LDX #&70
  LDY #9
  LDA #&55
- INC L0085
+ INC UU
  JSR sub_C1DA6
- LDX L0085
+ LDX UU
  CPX L0042
  BNE C1DF1
  RTS
@@ -6914,8 +6929,8 @@ ORG &0B00
  SBC N
  STA T
  ADC L0047
- STA L0086
- LDA L0085
+ STA VV
+ LDA UU
  STA U
  CLC
  ADC #&5F
@@ -6959,7 +6974,7 @@ ORG &0B00
 
 .C1E84
 
- LDY L0086
+ LDY VV
 
 .C1E86
 
@@ -7011,7 +7026,7 @@ ORG &0B00
 
 .C1EA8
 
- LDA L0085
+ LDA UU
  CMP L0554,Y
  BCS C1EC7
  CMP L0600,Y
@@ -7396,11 +7411,11 @@ ORG &0B00
 
  STX L62F3
  LDA L3CDD,X
- STA L0081
+ STA QQ
  LDA L3CDE,X
- STA L008A
+ STA II
  LDA L3CD0,X
- STA L008E
+ STA MM
  JSR sub_C202A
  BCS C2029
  JSR sub_C209A
@@ -7442,7 +7457,7 @@ ORG &0B00
  STA L5FFE
  LSR A
  STA L5FFF
- LDY L0081
+ LDY QQ
  LDX #0
  STX W
 
@@ -7498,7 +7513,7 @@ ORG &0B00
  STA L5F00,X
  INC W
  INY
- CPY L008A
+ CPY II
  BNE C2049
  CLC
  RTS
@@ -7523,7 +7538,7 @@ ORG &0B00
 
 .sub_C209A
 
- LDY L008E
+ LDY MM
 
 .C209C
 
@@ -7531,7 +7546,7 @@ ORG &0B00
  STA H
  LDA #0
  STA L0048
- STA L008C
+ STA KK
  LDX L3550,Y
  LDA L5EF8,X
  CLC
@@ -7568,21 +7583,21 @@ ORG &0B00
  STA M
  LDX L36D0,Y
  LDA L5EF8,X
- STA L0083
+ STA SS
  LDA L3750,Y
- STA L0084
+ STA TT
  STY rowCounter
  LDY #1
  JSR sub_C1C1C
 
 .C20F1
 
- BIT L0084
+ BIT TT
  BMI C2117
  LDA #0
  LDY #2
  JSR sub_C1C1C
- BIT L0084
+ BIT TT
  BVS C2106
  LDY rowCounter
 
@@ -7616,17 +7631,17 @@ ORG &0B00
  STY rowCounter
  LDX L3650,Y
  LDA L5EF8,X
- STA L0083
+ STA SS
  LDA L36D0,Y
- STA L0084
+ STA TT
  LDY #0
  JSR sub_C1C1C
  LDY rowCounter
  LDX L3550,Y
  LDA L5EF8,X
- STA L0083
+ STA SS
  LDA L3750,Y
- STA L0084
+ STA TT
  LDY #0
  JSR sub_C1C1C
  JMP C20F1
@@ -7666,68 +7681,68 @@ ORG &0B00
  LDA L0900,X
  SEC
  SBC L6280,Y
- STA L0080
+ STA PP
  LDA L0A00,X
  SBC L6283,Y
- STA L0086
+ STA VV
  BPL C2165
  LDA #0
  SEC
- SBC L0080
- STA L0080
+ SBC PP
+ STA PP
  LDA #0
- SBC L0086
+ SBC VV
 
 .C2165
 
- STA L0083
+ STA SS
  LDA L0902,X
  SEC
  SBC L6282,Y
- STA L0082
+ STA RR
  LDA L0A02,X
  SBC L6285,Y
- STA L0088
+ STA GG
  BPL C2185
  LDA #0
  SEC
- SBC L0082
- STA L0082
+ SBC RR
+ STA RR
  LDA #0
- SBC L0088
+ SBC GG
 
 .C2185
 
- STA L0085
- CMP L0083
+ STA UU
+ CMP SS
  BCC C2193
  BNE C21A6
- LDA L0082
- CMP L0080
+ LDA RR
+ CMP PP
  BCS C21A6
 
 .C2193
 
- LDA L0085
+ LDA UU
  STA H
- LDA L0082
+ LDA RR
  STA G
- LDA L0080
+ LDA PP
  STA I
- LDA L0083
+ LDA SS
  STA J
  JMP C21C1
 
 .C21A6
 
  PHP
- LDA L0083
+ LDA SS
  STA H
- LDA L0080
+ LDA PP
  STA G
- LDA L0082
+ LDA RR
  STA I
- LDA L0085
+ LDA UU
  STA J
  PLP
  BEQ C220D
@@ -7735,59 +7750,59 @@ ORG &0B00
 
 .P21BD
 
- ASL L0082
- ROL L0085
+ ASL RR
+ ROL UU
 
 .C21C1
 
- ASL L0080
+ ASL PP
  ROL A
  BCC P21BD
  ROR A
  STA V
- LDA L0082
+ LDA RR
  STA T
- LDA L0085
+ LDA UU
  CMP V
  BEQ C220D
 
  JSR Divide8x8          \ Set T = A * 256 / V
 
  LDA #0
- STA L008A
+ STA II
  LDY T
  LDA L6100,Y
  STA M
  LSR A
- ROR L008A
+ ROR II
  LSR A
- ROR L008A
+ ROR II
  LSR A
- ROR L008A
- STA L008B
- LDA L0086
- EOR L0088
+ ROR II
+ STA JJ
+ LDA VV
+ EOR GG
  BMI C21FF
  LDA #0
  SEC
- SBC L008A
- STA L008A
+ SBC II
+ STA II
  LDA #0
- SBC L008B
- STA L008B
+ SBC JJ
+ STA JJ
 
 .C21FF
 
  LDA #&40
- BIT L0086
+ BIT VV
  BPL C2207
  LDA #&C0
 
 .C2207
 
  CLC
- ADC L008B
- STA L008B
+ ADC JJ
+ STA JJ
  RTS
 
 .C220D
@@ -7795,90 +7810,90 @@ ORG &0B00
  LDA #&FF
  STA M
  LDA #0
- STA L008A
- BIT L0086
+ STA II
+ BIT VV
  BPL C2227
- BIT L0088
+ BIT GG
  BPL C2222
  LDA #&A0
- STA L008B
+ STA JJ
  RTS
 
 .C2222
 
  LDA #&E0
- STA L008B
+ STA JJ
  RTS
 
 .C2227
 
- BIT L0088
+ BIT GG
  BPL C2230
  LDA #&60
- STA L008B
+ STA JJ
  RTS
 
 .C2230
 
  LDA #&20
- STA L008B
+ STA JJ
  RTS
 
 .P2235
 
- ASL L0080
- ROL L0083
+ ASL PP
+ ROL SS
 
 .C2239
 
- ASL L0082
+ ASL RR
  ROL A
  BCC P2235
  ROR A
  STA V
- LDA L0080
+ LDA PP
  STA T
- LDA L0083
+ LDA SS
  CMP V
  BEQ C220D
 
  JSR Divide8x8          \ Set T = A * 256 / V
 
  LDA #0
- STA L008A
+ STA II
  LDY T
  LDA L6100,Y
  STA M
  LSR A
- ROR L008A
+ ROR II
  LSR A
- ROR L008A
+ ROR II
  LSR A
- ROR L008A
- STA L008B
- LDA L0086
- EOR L0088
+ ROR II
+ STA JJ
+ LDA VV
+ EOR GG
  BPL C2277
  LDA #0
  SEC
- SBC L008A
- STA L008A
+ SBC II
+ STA II
  LDA #0
- SBC L008B
- STA L008B
+ SBC JJ
+ STA JJ
 
 .C2277
 
  LDA #0
- BIT L0088
+ BIT GG
  BPL C227F
  LDA #&80
 
 .C227F
 
  CLC
- ADC L008B
- STA L008B
+ ADC JJ
+ STA JJ
  RTS
 
 \ ******************************************************************************
@@ -7916,31 +7931,31 @@ ORG &0B00
  LDA L0901,X
  SEC
  SBC L6281,Y
- STA L0081
+ STA QQ
  LDA L0A01,X
  SBC L6284,Y
- STA L0087
+ STA WW
  BPL C22A5
  LDA #0
  SEC
- SBC L0081
- STA L0081
+ SBC QQ
+ STA QQ
  LDA #0
- SBC L0087
+ SBC WW
 
 .C22A5
 
  LSR A
- ROR L0081
+ ROR QQ
  LSR A
- ROR L0081
+ ROR QQ
  LSR A
- ROR L0081
- STA L0084
+ ROR QQ
+ STA TT
  CMP L
  BCC C22BE
  BNE C22BC
- LDA L0081
+ LDA QQ
  CMP K
  BCC C22BE
 
@@ -7957,8 +7972,8 @@ ORG &0B00
 
 .P22C5
 
- ASL L0081
- ROL L0084
+ ASL QQ
+ ROL TT
  INY
 
 .C22CA
@@ -7972,16 +7987,16 @@ ORG &0B00
  TAY
  LDA L6180,Y
  STA L002A
- LDA L0081
+ LDA QQ
  STA T
- LDA L0084
+ LDA TT
 
  JSR Divide8x8          \ Set T = A * 256 / V
 
  LDA T
  CMP #&80
  BCS C22FE
- BIT L0087
+ BIT WW
  BPL C22F5
  LDA #&3C
  SEC
@@ -7997,7 +8012,7 @@ ORG &0B00
 
  SEC
  SBC L000D
- STA L008D
+ STA LL
  CLC
 
 .C22FE
@@ -8109,7 +8124,7 @@ ORG &0B00
  LDX #&FD
  JSR sub_C2285
  LDX L0042
- LDA L008D
+ LDA LL
  STA L5F20,X
  STA L5F48,X
  CMP L001F
@@ -8184,11 +8199,11 @@ ORG &0B00
 
 .sub_C23C0
 
- LDA L008A
+ LDA II
  SEC
  SBC L000A
  STA L5E40,Y
- LDA L008B
+ LDA JJ
  SBC L000B
  STA L5E90,Y
  JMP sub_C0CA5
@@ -8672,7 +8687,7 @@ ORG &0B00
 
  LDY L0012
  STA L5EE0,Y
- LDA L008D
+ LDA LL
  STA L5F20,Y
  CMP #&50
  BCS C261E
@@ -8944,7 +8959,7 @@ ORG &0B00
 
 .C270B
 
- STA L0083
+ STA SS
  LDA T
  CMP #4
  LDA positionNumber,Y
@@ -9023,7 +9038,7 @@ ORG &0B00
 
  LDA T
  AND #&80
- ORA L0083
+ ORA SS
  STA L0114,X
 
 .C2786
@@ -9424,17 +9439,17 @@ ORG &0B00
  STY T
  TAY
  LDA L0164,X
- STA L0084
+ STA TT
  LDA L0178,X
- STA L0085
+ STA UU
  LDA trackData+256,Y
- STA L0086
+ STA VV
  LDA trackData+512,Y
- STA L0087
+ STA WW
  LDA trackData+768,Y
- STA L0088
+ STA GG
  LDX #0
- LDA L0084
+ LDA TT
  STA U
  LDY T
 
@@ -9442,7 +9457,7 @@ ORG &0B00
 
  LDA #0
  STA V
- LDA L0086,X
+ LDA VV,X
  BPL C297B
  EOR #&FF
  CLC
@@ -9483,18 +9498,18 @@ ORG &0B00
  BNE C2960
  LDY L000C
  LDA trackData+1024,Y
- STA L0086
+ STA VV
  LDA trackData+1280,Y
- STA L0088
+ STA GG
  LDX #0
- LDA L0085
+ LDA UU
  STA U
 
 .C29AD
 
  LDA #0
  STA V
- LDA L0086,X
+ LDA VV,X
  BPL C29C8
  EOR #&FF
  CLC
@@ -9629,9 +9644,9 @@ ORG &0B00
  STA L0037
  JSR sub_C2145
  LDY L0042
- LDA L008A
+ LDA II
  STA L0380,Y
- LDA L008B
+ LDA JJ
  STA L0398,Y
  JSR sub_C2AB1
  JSR sub_C2285
@@ -9839,14 +9854,14 @@ ORG &0B00
 
 .P2B10
 
- LDA L0083,X
+ LDA SS,X
  CLC
  BPL C2B16
  SEC
 
 .C2B16
 
- ROR L0083,X
+ ROR SS,X
  ROR T,X
  DEX
  BPL P2B10
@@ -9920,7 +9935,7 @@ ORG &0B00
 
 .C2B40
 
- ROR L0088
+ ROR GG
  LDA L5E90,X
  STA W
  LDA L5E40,X
@@ -9933,39 +9948,39 @@ ORG &0B00
  ADC #&80
  STA W
  LDA L5F20,Y
- STA L0082
+ STA RR
  STX L0045
  STY rowCounter
  PLP
  BCS C2BCA
- BIT L0088
+ BIT GG
  BVC C2B7B
  BMI C2BCA
  LDX M
  LDY N
  LDA W
  STA M
- LDA L0082
+ LDA RR
  STA N
  STX W
- STY L0082
+ STY RR
  DEC L001E
 
 .C2B7B
 
- LDA L0082
+ LDA RR
  SEC
  SBC N
- STA L0087
+ STA WW
  BPL C2B89
  LDA #0
  SEC
- SBC L0087
+ SBC WW
 
 .C2B89
 
- STA L0084
- LDA L0088
+ STA TT
+ LDA GG
  AND #&C0
  BEQ C2BCD
  LDY L0045
@@ -9976,7 +9991,7 @@ ORG &0B00
  STA T
  LDA L5E90,Y
  SBC L5E90,X
- STA L0086
+ STA VV
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
@@ -9992,19 +10007,19 @@ ORG &0B00
 
 .C2BB9
 
- LSR L0084
+ LSR TT
 
 .C2BBB
 
- LSR L0084
+ LSR TT
 
 .C2BBD
 
- STA L0083
- LDA L0086
+ STA SS
+ LDA VV
  EOR L001E
- STA L0086
- LDA L0083
+ STA VV
+ LDA SS
  JMP C2BDB
 
 .C2BCA
@@ -10016,7 +10031,7 @@ ORG &0B00
  LDA M
  SEC
  SBC W
- ROR L0086
+ ROR VV
  BMI C2BDB
  EOR #&FF
  CLC
@@ -10024,27 +10039,27 @@ ORG &0B00
 
 .C2BDB
 
- STA L0083
+ STA SS
  BNE C2BE3
- ORA L0084
+ ORA TT
  BEQ C2BCA
 
 .C2BE3
 
- LDA L0088
+ LDA GG
  AND #&C0
  BEQ C2BED
- LDA L0086
+ LDA VV
  AND #&80
 
 .C2BED
 
  STA L0053
- LDA L0087
+ LDA WW
  BNE C2BF9
  LDA L001E
  EOR #&FF
- STA L0087
+ STA WW
 
 .C2BF9
 
@@ -10096,7 +10111,7 @@ ORG &0B00
 
 .C2C44
 
- STA L008B
+ STA JJ
  LDA L6292
  LSR A
  AND #1
@@ -10114,27 +10129,27 @@ ORG &0B00
  ADC #1
  CMP L004B
  BEQ C2C68
- LDA L0082
+ LDA RR
  CMP #&50
  BCC C2C70
 
 .C2C68
 
  LDA #0
- BIT L0087
+ BIT WW
  BMI C2C70
  LDA #&4F
 
 .C2C70
 
- STA L0082
+ STA RR
  LDA M
  SEC
  SBC #&30
  STA U
  LSR A
  LSR A
- STA L0085
+ STA UU
  CMP #&28
  BCS C2CE6
  LSR A
@@ -10144,13 +10159,13 @@ ORG &0B00
  STA S
  CLC
  ADC #1
- STA L008F
+ STA NN
  LDA U
  AND #7
  TAX
  LDY N
- LDA L0083
- CMP L0084
+ LDA SS
+ CMP TT
  BCC C2CEF
  LDA L628F
  CMP #&FF
@@ -10172,7 +10187,7 @@ ORG &0B00
  LDA L0027
  CMP #2
  ROR A
- EOR L0086
+ EOR VV
  BPL C2CDF
  LDA C2F60
  STA C2F47
@@ -10180,7 +10195,7 @@ ORG &0B00
  LDA #&EA
  STA C2F60
  STA C2FA2
- LDA L0087
+ LDA WW
  BPL C2CDE
  INY
  JMP C2CDF
@@ -10191,7 +10206,7 @@ ORG &0B00
 
 .C2CDF
 
- LDA L0086
+ LDA VV
  BPL C2CE9
  JSR sub_C2D9A
 
@@ -10206,7 +10221,7 @@ ORG &0B00
 
 .C2CEF
 
- LDA L0086
+ LDA VV
  BPL C2CF9
  JSR sub_C2E99
  JMP C2CFC
@@ -10221,7 +10236,7 @@ ORG &0B00
  BMI C2D08
  LDA W
  STA M
- LDA L0082
+ LDA RR
  STA N
 
 .C2D08
@@ -10253,7 +10268,7 @@ ORG &0B00
  LDA L3E50,X
  STA mod_C2D27+1
  LDX #&80
- LDA L0083
+ LDA SS
  EOR #&FF
  CLC
  ADC #1
@@ -10266,67 +10281,67 @@ ORG &0B00
 .C2D29
 
  LDX #&80
- ADC L0084
+ ADC TT
  BCC C2D36
- SBC L0083
+ SBC SS
  LDX #0
  JSR sub_C2F45
 
 .C2D36
 
- ADC L0084
+ ADC TT
  BCC C2D41
- SBC L0083
+ SBC SS
  LDX #1
  JSR sub_C2F45
 
 .C2D41
 
- ADC L0084
+ ADC TT
  BCC C2D4C
- SBC L0083
+ SBC SS
  LDX #2
  JSR sub_C2F45
 
 .C2D4C
 
- ADC L0084
+ ADC TT
  BCC C2D57
- SBC L0083
+ SBC SS
  LDX #3
  JSR sub_C2F45
 
 .C2D57
 
  JSR C2FD7
- INC L0085
- ADC L0084
+ INC UU
+ ADC TT
  BCC C2D67
- SBC L0083
+ SBC SS
  LDX #0
  JSR sub_C2F87
 
 .C2D67
 
- ADC L0084
+ ADC TT
  BCC C2D72
- SBC L0083
+ SBC SS
  LDX #1
  JSR sub_C2F87
 
 .C2D72
 
- ADC L0084
+ ADC TT
  BCC C2D7D
- SBC L0083
+ SBC SS
  LDX #2
  JSR sub_C2F87
 
 .C2D7D
 
- ADC L0084
+ ADC TT
  BCC C2D88
- SBC L0083
+ SBC SS
  LDX #3
  JSR sub_C2F87
 
@@ -10335,8 +10350,8 @@ ORG &0B00
  JSR C2FC0
  INC S
  INC Q
- INC L008F
- INC L0085
+ INC NN
+ INC UU
  LDX S
  CPX #&44
  BNE C2D29
@@ -10360,7 +10375,7 @@ ORG &0B00
  LDA L40D0,X
  STA mod_C2DAA+1
  LDX #&80
- LDA L0083
+ LDA SS
  EOR #&FF
  CLC
  ADC #1
@@ -10373,67 +10388,67 @@ ORG &0B00
 .C2DAC
 
  LDX #&80
- ADC L0084
+ ADC TT
  BCC C2DB9
- SBC L0083
+ SBC SS
  LDX #3
  JSR sub_C2F87
 
 .C2DB9
 
- ADC L0084
+ ADC TT
  BCC C2DC4
- SBC L0083
+ SBC SS
  LDX #2
  JSR sub_C2F87
 
 .C2DC4
 
- ADC L0084
+ ADC TT
  BCC C2DCF
- SBC L0083
+ SBC SS
  LDX #1
  JSR sub_C2F87
 
 .C2DCF
 
- ADC L0084
+ ADC TT
  BCC C2DDA
- SBC L0083
+ SBC SS
  LDX #0
  JSR sub_C2F87
 
 .C2DDA
 
  JSR C2FC0
- DEC L0085
- ADC L0084
+ DEC UU
+ ADC TT
  BCC C2DEA
- SBC L0083
+ SBC SS
  LDX #3
  JSR sub_C2F45
 
 .C2DEA
 
- ADC L0084
+ ADC TT
  BCC C2DF5
- SBC L0083
+ SBC SS
  LDX #2
  JSR sub_C2F45
 
 .C2DF5
 
- ADC L0084
+ ADC TT
  BCC C2E00
- SBC L0083
+ SBC SS
  LDX #1
  JSR sub_C2F45
 
 .C2E00
 
- ADC L0084
+ ADC TT
  BCC C2E0B
- SBC L0083
+ SBC SS
  LDX #0
  JSR sub_C2F45
 
@@ -10442,8 +10457,8 @@ ORG &0B00
  JSR C2FD7
  DEC S
  DEC Q
- DEC L008F
- DEC L0085
+ DEC NN
+ DEC UU
  LDX S
  CPX #&2F
  CLC
@@ -10467,7 +10482,7 @@ ORG &0B00
 
  LDA L3ED0,X
  STA mod_C2E2E+1
- LDA L0084
+ LDA TT
  EOR #&FF
  CLC
  ADC #1
@@ -10481,70 +10496,70 @@ ORG &0B00
 
  LDX #0
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC C2E30
- SBC L0084
+ SBC TT
 
 .P2E3B
 
  LDX #1
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2E3B
- SBC L0084
+ SBC TT
 
 .P2E46
 
  LDX #2
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2E46
- SBC L0084
+ SBC TT
 
 .P2E51
 
  LDX #3
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2E51
- SBC L0084
- INC L0085
+ SBC TT
+ INC UU
 
 .P2E5E
 
  LDX #0
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2E5E
- SBC L0084
+ SBC TT
 
 .P2E69
 
  LDX #1
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2E69
- SBC L0084
+ SBC TT
 
 .P2E74
 
  LDX #2
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2E74
- SBC L0084
+ SBC TT
 
 .P2E7F
 
  LDX #3
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2E7F
- SBC L0084
+ SBC TT
  INC S
  INC Q
- INC L008F
- INC L0085
+ INC NN
+ INC UU
  LDX S
  CPX #&44
  BNE C2E30
@@ -10567,7 +10582,7 @@ ORG &0B00
 
  LDA L3ED8,X
  STA mod_C2EA7+1
- LDA L0084
+ LDA TT
  EOR #&FF
  CLC
  ADC #1
@@ -10581,70 +10596,70 @@ ORG &0B00
 
  LDX #3
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC C2EA9
- SBC L0084
+ SBC TT
 
 .P2EB4
 
  LDX #2
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2EB4
- SBC L0084
+ SBC TT
 
 .P2EBF
 
  LDX #1
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2EBF
- SBC L0084
+ SBC TT
 
 .P2ECA
 
  LDX #0
  JSR sub_C2F87
- ADC L0083
+ ADC SS
  BCC P2ECA
- SBC L0084
- DEC L0085
+ SBC TT
+ DEC UU
 
 .P2ED7
 
  LDX #3
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2ED7
- SBC L0084
+ SBC TT
 
 .P2EE2
 
  LDX #2
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2EE2
- SBC L0084
+ SBC TT
 
 .P2EED
 
  LDX #1
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2EED
- SBC L0084
+ SBC TT
 
 .P2EF8
 
  LDX #0
  JSR sub_C2F45
- ADC L0083
+ ADC SS
  BCC P2EF8
- SBC L0084
+ SBC TT
  DEC S
  DEC Q
- DEC L008F
- DEC L0085
+ DEC NN
+ DEC UU
  LDX S
  CPX #&2F
  CLC
@@ -10710,14 +10725,14 @@ ORG &0B00
 
 .sub_C2F45
 
- STA L008A
+ STA II
 
 .C2F47
 
  NOP
- CPY L0082
+ CPY RR
  BEQ C2F7E
- LDA L0085
+ LDA UU
 
 .mod_C2F4E
 
@@ -10729,12 +10744,12 @@ ORG &0B00
 .C2F58
 
  STA (R),Y
- LDA L008B
+ LDA JJ
  STA (P),Y
 
 .P2F5E
 
- LDA L008A
+ LDA II
 
 .C2F60
 
@@ -10788,14 +10803,14 @@ ORG &0B00
 
 .sub_C2F87
 
- STA L008A
+ STA II
 
 .C2F89
 
  NOP
- CPY L0082
+ CPY RR
  BEQ C2F7E
- LDA L0085
+ LDA UU
 
 .mod_C2F90
 
@@ -10807,12 +10822,12 @@ ORG &0B00
 .C2F9A
 
  STA (P),Y
- LDA L008B
- STA (L008E),Y
+ LDA JJ
+ STA (MM),Y
 
 .P2FA0
 
- LDA L008A
+ LDA II
 
 .C2FA2
 
@@ -10902,7 +10917,7 @@ ORG &0B00
 
  STA T
  STX U
- LDX L0085
+ LDX UU
  TYA
  CMP dashDataOffset,X
  BNE C2FFB
@@ -12039,7 +12054,10 @@ ORG &0B00
  EQUB %00100000         \ Pixel byte with the third pixel set to colour 2
  EQUB %00010000         \ Pixel byte with the fourth pixel set to colour 2
 
- EQUB 0, 0, 0, 0        \ These bytes appear to be unused
+ EQUB %00000000         \ Pixel byte with the first pixel set to colour 0
+ EQUB %00000000         \ Pixel byte with the second pixel set to colour 0
+ EQUB %00000000         \ Pixel byte with the third pixel set to colour 0
+ EQUB %00000000         \ Pixel byte with the fourth pixel set to colour 0
 
 \ ******************************************************************************
 \
@@ -17463,13 +17481,13 @@ NEXT
 .C4876
 
  LDA L62D0Lo,Y
- STA L0080
+ STA PP
  LDA L62E0Hi,Y
- STA L0081
+ STA QQ
  LDA L62A0,X
- STA L0082
+ STA RR
  LDA L62A3,X
- STA L0083
+ STA SS
  JSR sub_C0DD7
  STA U
  LDY K
@@ -17556,13 +17574,13 @@ NEXT
 
  STY N
  STA K
- STX L0088
+ STX GG
  LDX #1
  LDA #0
  JSR sub_C486D
  DEX
  INC N
- LDA L0088
+ LDA GG
  JSR sub_C486D
  INX
  INC K
@@ -17570,7 +17588,7 @@ NEXT
  JSR sub_C486D
  DEX
  DEC N
- LDA L0088
+ LDA GG
  EOR #&80
  JSR sub_C486D
  RTS
@@ -18132,11 +18150,11 @@ NEXT
 
 .sub_C4B47
 
- CMP L008F
+ CMP NN
  BCC C4B51
- LDA L008E
+ LDA MM
  STA T
- LDA L008F
+ LDA NN
 
 .C4B51
 
@@ -18166,13 +18184,13 @@ NEXT
 .sub_C4B61
 
  LDA L62D0Lo,Y
- STA L008E
+ STA MM
  LDA L62E0Hi,Y
  BPL C4B77
  LDA #0
  SEC
- SBC L008E
- STA L008E
+ SBC MM
+ STA MM
  LDA #0
  SBC L62E0Hi,Y
 
@@ -18182,7 +18200,7 @@ NEXT
 
 .P4B79
 
- ASL L008E
+ ASL MM
  ROL A
  BMI C4B84
  DEY
@@ -18190,7 +18208,7 @@ NEXT
 
 .P4B81
 
- STA L008F
+ STA NN
  RTS
 
 .C4B84
@@ -18526,9 +18544,9 @@ NEXT
  JSR sub_C1208
  LDY #6
  JSR sub_C2147
- LDA L008A
+ LDA II
  STA L0397
- LDA L008B
+ LDA JJ
  STA L03AF
  SEC
  SBC L000B
@@ -20397,18 +20415,21 @@ NEXT
  STA T
 
  LSR A                  \ Set the C flag to bit 0 of steeringLo (the sign bit)
+                        \ which is set if we are steering left, or clear if we
+                        \ are steering right
 
  PHP                    \ Store the C flag on the stack
 
- LDA #%010              \ Set A = %010, to use as the value of V to send to the
-                        \ DrawDashboardLine routine (quadrant 1, first half)
+ LDA #2                 \ Set A = 2, to use as the value of V to send to the
+                        \ DrawDashboardLine routine (shallow slope, right and
+                        \ down)
 
  BCS upda1              \ If bit 0 of steeringLo is set, skip the following
                         \ instruction
 
- LDA #%101              \ Bit 0 of steeringLo is clear, so set A = %101 to use
+ LDA #5                 \ Bit 0 of steeringLo is clear, so set A = 5 to use
                         \ as the value of V to send to the DrawDashboardLine
-                        \ routine (quadrant 2, second half)
+                        \ routine (shallow slope, left and down)
 
 .upda1
 
@@ -20469,7 +20490,7 @@ NEXT
                         \ long axis of the line if the line went all the way to
                         \ the centre of the wheel, given the value of Y above
 
- STX L0083              \ Set L0083 = X to pass to the DrawDashboardLine routine
+ STX SS                 \ Set SS = X to pass to the DrawDashboardLine routine
                         \ as the cumulative amount of slope error that equates
                         \ to a pixel in the shorter axis
 
@@ -20489,33 +20510,44 @@ NEXT
                         \ DrawDashboardLine routine as the amount of slope error
                         \ for each step slong the main axis
 
- LDA V                  \ Flip bit 0 of V, to flip it from first half of
- EOR #1                 \ quadrant to second half
+ LDA V                  \ Flip bit 0 of V, to flip it from the first half of the
+ EOR #1                 \ quadrant to the second half
  STA V
+
+                        \ By this point, V has the following value, which we
+                        \ pass to the DrawDashboardLine routine
+                        \
+                        \   * 2 when sign bit of steeringLo is set and A >= 38
+                        \     i.e. steering left a lot
+                        \     Shallow slope, right and down
+                        \
+                        \   * 3 when sign bit of steeringLo is set and A < 38
+                        \     i.e. steering left a little
+                        \     Steep slope, right and down
+                        \
+                        \   * 4 when sign bit of steeringLo is clear and A < 38
+                        \     i.e. steering right a little
+                        \     Steep slope, left and down
+                        \
+                        \   * 5 when sign bit of steeringLo is clear and A >= 38
+                        \     i.e. steering right a lot
+                        \     Shallow slope, left and down
+                        \
+                        \ These are the opposite way round to the rev counter
+                        \ hand, which is also drawn by the DrawDashboardLine
+                        \ routine - this is because the rev counter hand is
+                        \ drawn from the centre outwards, while the steering
+                        \ wheel line is drawn from the outside in
 
  LDA wheelPixels,X      \ Set A to the number of pixels that would be along the
                         \ long axis of the line if the line went all the way to
                         \ the centre of the wheel, given the value of Y above
 
- STA L0083              \ Set L0083 = A to pass to the DrawDashboardLine routine
+ STA SS                 \ Set SS = A to pass to the DrawDashboardLine routine
                         \ as the cumulative amount of slope error that equates
                         \ to a pixel in the shorter axis
 
 .upda5
-
-                        \ By this point, V has the following value:
-                        \
-                        \   * 2 when sign bit of steeringLo is set and A >= 38
-                        \     i.e. steering left a lot, bottom-left quadrant
-                        \
-                        \   * 3 when sign bit of steeringLo is set and A < 38
-                        \     i.e. steering left a little, top-left quadrant
-                        \
-                        \   * 4 when sign bit of steeringLo is clear and A < 38
-                        \     i.e. steering right a little, top-right quadrant
-                        \
-                        \   * 5 when sign bit of steeringLo is clear and A >= 38
-                        \     i.e. steering right a lot, bottom-right quadrant
 
  ASL A                  \ Set A = A * 2 + 4
  CLC
@@ -20529,35 +20561,55 @@ NEXT
                         \ where X is either the original value of A (0 to 37)
                         \ or the Y-th value of wheelPixels (where Y is 16 to
                         \ 37), which is in the range 38 to 51
+                        \
+                        \ In effect, this is the horizontal distance of the
+                        \ steering line from the centre point
 
  PLP                    \ Set the C flag to bit 0 of steeringLo (the sign bit),
                         \ which we stored on the stack above
 
- BCC upda6              \ If bit 0 of steeringLo is clear, skip the following
-                        \ instruction
+ BCC upda6              \ If bit 0 of steeringLo is clear, we are steering to
+                        \ the right, so skip the following instruction
 
  EOR #&FF               \ Set A = ~A
                         \       = -A - 1
+                        \
+                        \ so the following addition becomes:
+                        \
+                        \   A = A + 80
+                        \     = -A - 1 + 80
+                        \     = 79 - A
 
 .upda6
 
  CLC                    \ Set A = A + 80
- ADC #80
+ ADC #80                \
+                        \ which turns A into the position on the steering wheel
+                        \ where 80 is the centre point at the top middle of the
+                        \ wheel
 
- STA W                  \ Set W = A
+ STA W                  \ Set W = A, so W contains the position on the steering
+                        \ wheel
 
  AND #%11111100         \ Clear bits 0 and 1 of A, to set A = A div 4
 
  JSR GetScreenAddress   \ Set (Q P) to the screen address for pixel coordinate
-                        \ (A, Y)
+                        \ (A, Y), setting Y to the pixel row within the
+                        \ character block containing the pixel (both of which we
+                        \ pass to the DrawDashboardLine routine)
 
- LDA W                  \ Set W = W * 2 mod 8 ???
- ASL A
- AND #%00000111
- STA W
+ LDA W                  \ Set W = W * 2 mod 8
+ ASL A                  \
+ AND #%00000111         \ This takes the x-coordinate of the line on the
+ STA W                  \ steering wheel, doubled so we have 160 in the centre
+                        \ of the steering wheel (so it matches the coordinates
+                        \ in mode 5), and then we look at bits 0 to 2 only to
+                        \ get the starting pixel to pass to DrawDashboardLine
 
- LDA #%100              \ Set H = %100, ??? convert quadrants 2 (left) and 1
- STA H                  \ (right) to 4 and 0?
+ LDA #%100              \ Set H = %100, so the DrawDashboardLine looks up values
+ STA H                  \ from the second half of the pixelByte and yLookup+8
+                        \ tables (so the line is drawn on black rather than
+                        \ white)
 
  LDA #6                 \ Set U = 6, so the line contains up to seven pixels
  STA U
@@ -20577,7 +20629,7 @@ NEXT
 
 .DrawRevCounter
 
- LDA #%00               \ Set H = %000 to pass into DrawDashboardLine below
+ LDA #%000              \ Set H = %000 to pass into DrawDashboardLine below
  STA H
 
  LDA revs               \ Set A = revs, which is the value we want to draw on
@@ -20710,21 +20762,26 @@ NEXT
                         \ DrawDashboardLine routine below
 
  AND #%11111100         \ If bit 2 of A is zero, then the hand is in the right
- BEQ revs5              \ half of the dial, so jump to revs5 to set W = %000
+ BEQ revs5              \ half of the dial, so jump to revs5 to set W = 0
 
- LDA #%111              \ Otherwise the hand is in the left half of the dial,
-                        \ so set A so we set W = %111 below
+ LDA #7                 \ Otherwise the hand is in the left half of the dial,
+                        \ so set A so we set W = 7 below
 
 .revs5
 
- STA W                  \ Set W = %000 if the hand is in the right half
-                        \         %111 if the hand is in the left half
+ STA W                  \ Set W = 0 if the hand is in the right half
+                        \         7 if the hand is in the left half
+                        \
+                        \ so we start drawing from the leftmost pixel when
+                        \ drawing to the right, or the rightmost pixel when
+                        \ drawing to the left (which ensures that the hand joins
+                        \ the centre spoke of the rev counter without a gap)
 
  LDA handPixels,Y       \ Set A to the number of pixels that are along the long
                         \ axis of the hand, given the distance between the hand
                         \ and quadrant that we set in Y above
 
- STA L0083              \ Set L0083 to the number of pixels along the long axis
+ STA SS                 \ Set SS to the number of pixels along the long axis
 
  STA U                  \ Set U to the number of pixels along the long axis, to
                         \ pass through to the DrawDashboardLine routine below
@@ -20757,6 +20814,9 @@ NEXT
 \    Summary: Draw a hand on the rev counter or a line on the steering wheel
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine is a mode 5 Bresenham line-drawing routine, which modifies itself
+\ to cater for lines of different slopes.
 \
 \ Arguments:
 \
@@ -20805,13 +20865,13 @@ NEXT
 \                                      Step up along y-axis (stepAxis = DEY)
 \                                      Move left along x-axis (shortAxis = DEX)
 \
-\   (Q P)               The screen address for the character block containing
+\   (Q P)               The screen address of the character block containing
 \                       the line's starting point
 \
 \   Y                   The pixel row within the character block containing the
-\                       line's starting point
+\                       line's starting point (0 to 7)
 \
-\   U                   The number of pixels to draw:
+\   U                   The number of pixels to step along the step axis:
 \
 \                         * The number of pixels along the longer (step) axis
 \                           when drawing the rev counter
@@ -20819,7 +20879,7 @@ NEXT
 \                         * 6 when drawing the steering wheel line
 \
 \   T                   The slope error for each step along the step axis is
-\                       T/L0083, and T is set to:
+\                       T/SS, and T is set to:
 \
 \                         * The distance between the hand and quadrant when
 \                           drawing the rev counter hand
@@ -20832,25 +20892,27 @@ NEXT
 \                           37-16 when line is further from the centre (in the
 \                           left and right quadrants)
 \
-\   L0083               The slope error for each step along the step axis is
-\                       T/L0083, and L0083 is set to:
+\   SS                  The slope error for each step along the step axis is
+\                       T/SS, and SS is set to:
 \
 \                         * The same as U when drawing the rev counter hand
+\                           i.e. the number of pixels along the longer (step)
+\                           axis
 \
 \                         * A value from wheelPixels when drawing the steering
-\                           wheel line
+\                           wheel line (38 to 53)
 \
-\   H                   Contains:
+\   H                   The starting index to use in the pixelByte and yLookup+8
+\                       lookup tables:
 \
-\                         * %000 when drawing the rev counter hand
+\                         * %000 when drawing the rev counter hand, so the line
+\                           gets drawn in white
 \
-\                         * %100 when drawing the steering wheel line
+\                         * %100 when drawing the steering wheel line, so the
+\                           line gets drawn in black
 \
-\   W                   The half of the dial that contains the hand:
-\
-\                         * %000 if the hand is in the right half
-\
-\                         * %111 if the hand is in the left half
+\   W                   The pixel number (0-7) of the first pixel to draw
+\                       along the x-axis
 \
 \ ******************************************************************************
 
@@ -20872,11 +20934,13 @@ NEXT
                         \   * Step right along x-axis (stepAxis = INX)
                         \   * Move down along y-axis (shortAxis = INY)
 
- LDX W                  \ Set X = W
+ LDX W                  \ Set X = W, so X contains the position of the current
+                        \ pixel within the pixel row, if there were eight pixels
+                        \ per row
 
- LDA #0                 \ Set A = -L0083
+ LDA #0                 \ Set A = -SS
  SEC                    \
- SBC L0083              \ So this is the starting point for our slope error
+ SBC SS                 \ So this is the starting point for our slope error
                         \ calculation
 
  CLC                    \ Clear the C flag for the following addition
@@ -20884,9 +20948,9 @@ NEXT
 .dlin1
 
                         \ We use A to keep track of the slope error, adding the
-                        \ step along the smaller axis (in T) until it reaches 0, at
-                        \ which point it is a multiple of L0083 and we need to
-                        \ move one pixel along the smaller axis
+                        \ step along the smaller axis (in T) until it reaches 0,
+                        \ at which point it is a multiple of SS and we need
+                        \ to move one pixel along the smaller axis
 
  ADC T                  \ Set A = A + T
                         \
@@ -20897,13 +20961,13 @@ NEXT
 
                         \ The slope error just overflowed (in other words, the
                         \ cumulative slope error in A just reached a multiple of
-                        \ L0083), so we need to adjust the slope error to make
+                        \ SS), so we need to adjust the slope error to make
                         \ it negative again, and we need to step along the
                         \ shorter axis
 
- SBC L0083              \ Subtract L0083 from the cumulative slope error to
+ SBC SS                 \ Subtract SS from the cumulative slope error to
                         \ bring it back to being negative, so we can detect when
-                        \ it reaches next multiple of L0083
+                        \ it reaches next multiple of SS
 
 .dlin2
 
@@ -20915,26 +20979,36 @@ NEXT
 
 .dlin3
 
- STA L008A              \ Store the current slope error in L008A
+ STA II                 \ Store the updated slope error in II, so we can
+                        \ retrieve it below, ready for the next iteration of the
+                        \ drawing loop
 
- TXA                    \ X contains the position of the pixel within the pixel
- LSR A                  \ line, so this sets:
- AND #%00000011         \
-                        \   ???
+ TXA                    \ X contains the position of the current pixel within
+ LSR A                  \ the pixel row, in the range 0 to 7, so set A to half
+ AND #%00000011         \ this value to get the mode 5 pixel number (as there
+                        \ are only four pixels per pixel byte on mode 5)
 
- ORA H                  \ Set bit 2 of A if this is the steering wheel
+ ORA H                  \ Set bit 2 of A if this is the steering wheel, which
+                        \ is the same as adding 4
 
- STA V                  \ Store the result in V
+ STA V                  \ Store the result in V, so V contains the pixel number
+                        \ (0 to 3) of the pixel to draw, plus 4 if this is the
+                        \ steering wheel (4 to 7)
 
- TXA                    \ We set X to W above, so this sets A = W
+ TXA                    \ X contains the position of the current pixel within
+                        \ the pixel line, so put this in A
 
- BPL dlin4              \ If bit 7 of W is clear, jump to dlin4
+ BPL dlin4              \ If bit 7 of A is clear, jump to dlin4
+
+                        \ Otherwise we need to move (Q P) to the previous
+                        \ character block to the left, by subtracting 8 (as
+                        \ there are 8 bytes per character block)
 
  LDX #7                 \ Set X = 7 to set as the new value of W below
 
  LDA P                  \ Set (Q P) = (Q P) - 8
  SEC                    \
- SBC #8                 \ starting with the low bytew
+ SBC #8                 \ starting with the low bytes
  STA P
 
  BCS dlin5              \ And then the high bytes
@@ -20949,11 +21023,15 @@ NEXT
  CMP #8                 \ If A < 8, jump to dlin5
  BCC dlin5
 
+                        \ Otherwise we need to move (Q P) to the next character
+                        \ block to the right, by adding 8 (as there are 8 bytes
+                        \ per character block)
+
  LDX #0                 \ Set X = 0 to set as the new value of W below
 
  LDA P                  \ Set (Q P) = (Q P) + 8
  CLC                    \
- ADC #8                 \ starting with the low bytew
+ ADC #8                 \ starting with the low bytes
  STA P
 
  BCC dlin5              \ And then the high bytes
@@ -20966,11 +21044,14 @@ NEXT
  LDX lineBufferSize     \ Set X to the size of the line buffer, which gives us
                         \ the index of the next empty space in the buffer
 
- TYA
+ TYA                    \ Y contains the number of the pixel row within the
+                        \ current character block, so put this in A
 
  BPL dlin6              \ If A >=0, jump to dlin6
 
-                        \ Otherwise move to the character row above
+                        \ Otherwise we need to move (Q P) to the next character
+                        \ row above, by subtracting &140 (as there are &140
+                        \ bytes per character row)
 
  LDA P                  \ Set (Q P) = (Q P) - &140
  SEC                    \
@@ -20981,7 +21062,7 @@ NEXT
  SBC #&01
  STA Q
 
- LDY #7                 \ Set Y = A = 7
+ LDY #7                 \ Set Y = A = 7 as the new value of Y
  TYA
 
  BNE dlin7              \ Jump to dlin7 (this BNE is effectively a JMP as A is
@@ -20992,7 +21073,9 @@ NEXT
  CMP #8                 \ If A < 8, jump to dlin7
  BCC dlin7
 
-                        \ Otherwise move to the character row below
+                        \ Otherwise we need to move (Q P) to the next character
+                        \ row below, by adding &140 (as there are &140 bytes per
+                        \ character row)
 
  LDA P                  \ Set (Q P) = (Q P) + &140
  CLC                    \
@@ -21003,7 +21086,7 @@ NEXT
  ADC #&01
  STA Q
 
- LDY #0                 \ Set Y = A = 0
+ LDY #0                 \ Set Y = A = 0 as the new value of Y
  TYA
 
 .dlin7
@@ -21032,14 +21115,18 @@ NEXT
  INC lineBufferSize     \ Increment the size of the pixel buffers, as we just
                         \ added an entry
 
- LDX V                  \ Set X = V, so X is 0 if the hand is in the right half
-                        \ of the dial, or 3 if it is in the left half
+ LDX V                  \ Set X = V, so X now contains the pixel number
+                        \ (0 to 3) of the pixel to draw, plus 4 if this is the
+                        \ steering wheel (4 to 7)
 
  AND yLookupLo+8,X      \ Apply the bit mask from yLookup+8, so this clears the
-                        \ X-th pixel in the pixel row
+                        \ X-th pixel in the pixel row (the table contains the
+                        \ same bytes in 0 to 3 as in 0 to 7)
 
  ORA pixelByte,X        \ OR with a pixel byte with pixel X set, so this sets
-                        \ the X-th pixel to colour 2 (white)
+                        \ the X-th pixel to colour 2 (white) if X is 0 to 3, or
+                        \ colour 0 (black) if X is 4 to 7 - so the rev counter
+                        \ hand is white, while the steering wheel line is black
 
  STA (P),Y              \ Draw the pixel byte to the screen
 
@@ -21048,7 +21135,8 @@ NEXT
 
  LDX W                  \ Set X = W
 
- LDA L008A              \ Set A to the current slope error
+ LDA II                 \ Set A to the current slope error, which we stored in
+                        \ II above
 
  CLC                    \ Clear the C flag for the addition at the start of the
                         \ loop
@@ -24734,7 +24822,7 @@ ORG &5E40
 \ If the table is being shown after practice or qualifying, the drivers are
 \ shown in driver order, from 1 to 20, but if it is shown after a race, the
 \ first column shows the numbers from the positionNumber table, the second
-\ colimn shows the drivers in the order that they appear in the ???
+\ column shows the drivers in the order that they appear in the driversInOrder
 \ list, and the race class is printed above the table.
 \
 \ The routine also waits for SPACE or RETURN to be pressed before returning.
@@ -25271,7 +25359,7 @@ ORG &6C00
  STA T
  CLC
  ADC #&B6
- STA L0084
+ STA TT
  LDA #&B6
  SEC
  SBC T
@@ -25302,7 +25390,7 @@ ORG &6C00
 
 .L7B3E
 
- LDA L0084
+ LDA TT
 
 .L7B40
 
@@ -25922,7 +26010,7 @@ ENDMACRO
 
 .DrawCarInMirror
 
- STA L0082
+ STA RR
  STY G
  LDA mirrorAddressHi,Y
  STA Q
@@ -25937,7 +26025,7 @@ ENDMACRO
 .L7FCD
 
  LDA #&F0
- CPY L0082
+ CPY RR
  BCS L7FDF
  CPY N
  BCC L7FDF
