@@ -6314,7 +6314,7 @@ ENDIF
  AND #&20
  BEQ C1B29
  LDA #&0F
- STA L38FE
+ STA colourByte+2
 
 .C1B29
 
@@ -6369,7 +6369,7 @@ ENDIF
 .C1B74
 
  LDA #&F0
- STA L38FE
+ STA colourByte+2
  LDY L0056
  INY
  JMP C1B14
@@ -7318,7 +7318,7 @@ IF _ACORNSOFT
 
 ENDIF
 
- LDA L38FD
+ LDA colourByte+1
  RTS
 
 .C1EA8
@@ -7390,7 +7390,7 @@ IF _ACORNSOFT
  LDA L5F60,Y
  AND #3
  TAX
- LDA L38FC,X
+ LDA colourByte,X
  RTS
 
 ELIF _SUPERIOR
@@ -7401,12 +7401,12 @@ ENDIF
 
 .C1EC3
 
- LDA L38FC
+ LDA colourByte
  RTS
 
 .C1EC7
 
- LDA L38FF
+ LDA colourByte+3
  RTS
 
 .C1ECB
@@ -7487,7 +7487,7 @@ ENDIF
 
  AND #3
  TAX
- LDA L38FC,X
+ LDA colourByte,X
  RTS
 
 \ ******************************************************************************
@@ -7836,12 +7836,12 @@ ENDIF
 
 .P1FB8
 
- LDA L38FC,X
+ LDA colourByte,X
  STA L628F,X
  DEX
  BPL P1FB8
  LDA #&F0
- STA L38FE
+ STA colourByte+2
  LDA T
  CMP #&17
  BEQ C1FDE
@@ -7854,7 +7854,7 @@ ENDIF
 
  AND #3
  TAX
- LDA L38FC,X
+ LDA colourByte,X
  STA L6290
 
 .C1FDE
@@ -8019,7 +8019,7 @@ ENDIF
 
 .C209C
 
- LDA L38FC
+ LDA colourByte
  STA H
  LDA #0
  STA L0048
@@ -13557,71 +13557,19 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L38FC
+\       Name: colourByte
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Mode 5 bytes containing four pixels of each colour
 \
 \ ******************************************************************************
 
-.L38FC
+.colourByte
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L38FD
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L38FD
-
- EQUB &0F
-
-\ ******************************************************************************
-\
-\       Name: L38FE
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L38FE
-
- EQUB &F0
-
-\ ******************************************************************************
-\
-\       Name: L38FF
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L38FF
-
- EQUB &FF
+ EQUB &00               \ Four pixels of colour 0
+ EQUB &0F               \ Four pixels of colour 1
+ EQUB &F0               \ Four pixels of colour 2
+ EQUB &FF               \ Four pixels of colour 3
 
 \ ******************************************************************************
 \
@@ -26335,7 +26283,7 @@ ORG &6C00
  LDA L5F60,X
  AND #&03
  TAY
- LDA L38FC,Y
+ LDA colourByte,Y
 
 \ ******************************************************************************
 \
