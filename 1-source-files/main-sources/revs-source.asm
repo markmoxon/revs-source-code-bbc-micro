@@ -23,6 +23,11 @@
 \
 \ ******************************************************************************
 
+INCLUDE "1-source-files/main-sources/revs-header.h.asm"
+
+_ACORNSOFT              = (_VARIANT = 1)
+_SUPERIOR               = (_VARIANT = 2)
+
 GUARD &8000             \ Guard against assembling over sideways ROMs
 
 \ ******************************************************************************
@@ -1433,9 +1438,19 @@ ORG &790E
 
 .move5
 
+IF _ACORNSOFT
+
+ JMP SetupGame          \ If we get here we have processed all the blocks in the
+                        \ block tables, so jump to SetupGame to continue setting
+                        \ up the game
+
+ELIF _SUPERIOR
+
  JMP Protect            \ If we get here we have processed all the blocks in the
                         \ block tables, so jump to Protect to continue setting
                         \ up the game
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -4558,6 +4573,19 @@ ORG &0B00
                         \ that no gear changes are being applied, which we may
                         \ change later)
 
+IF _ACORNSOFT
+
+ BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
+ BPL keys2              \ is not configured, so jump to keys2 to check for key
+                        \ presses for the steering
+
+ LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed, as
+ JSR ScanKeyboard       \ this will affect the speed of any steering changes
+
+ PHP                    \ Store the result of the scan on the stack
+
+ELIF _SUPERIOR
+
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed, as
  JSR ScanKeyboard       \ this will affect the speed of any steering changes
 
@@ -4566,6 +4594,8 @@ ORG &0B00
  BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
  BPL keys2              \ is not configured, so jump to keys2 to check for key
                         \ presses for the steering
+
+ENDIF
 
  LDX #1                 \ Read the joystick x-axis into A and X (A is set to the
  JSR GetADCChannel      \ high byte of the channel, X is set to the sign of A
@@ -4591,7 +4621,15 @@ ORG &0B00
 
 .keys1
 
+IF _ACORNSOFT
+
+ PHA
+
+ELIF _SUPERIOR
+
  STA U                  \ Set (U T) = (A T)
+
+ENDIF
 
  LDA T                  \ Clear bit 0 of T
  AND #%11111110
@@ -4600,6 +4638,14 @@ ORG &0B00
  TXA                    \ Set bit 0 of T to the sign bit in X (1 = right,
  ORA T                  \ 0 = left)
  STA T
+
+IF _ACORNSOFT
+
+ PLA
+
+ JMP keys11
+
+ELIF _SUPERIOR
 
  LDA U                  \ Set (A T) = (U T)
                         \
@@ -4611,9 +4657,11 @@ ORG &0B00
  JMP AssistSteering     \ Jump to AssistSteering, which in turn jumps back to
                         \ keys7 or keys11 in part 2
 
- NOP                    \ These instructions appear to be unused, and are
- NOP                    \ perhaps left over from when the steering assist code
+ NOP                    \ These instructions are unused, and are included to
+ NOP                    \ pad out the code from when the steering assist code
                         \ was inserted into the original version
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -4660,8 +4708,17 @@ ORG &0B00
  LDA #3                 \ Set U = 3
  STA U
 
+IF _ACORNSOFT
+
+ LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
+ JSR ScanKeyboard
+
+ELIF _SUPERIOR
+
  PLP                    \ Retrieve the result of the keyboard scan above, when
                         \ we scanned for SPACE
+
+ENDIF
 
  BEQ keys6              \ If SPACE is being pressed, jump to keys6
 
@@ -4712,6 +4769,14 @@ ORG &0B00
  LSR A
  ROR T
 
+IF _ACORNSOFT
+
+ CMP #12
+ BCC keys8
+ LDA #12
+
+ELIF _SUPERIOR
+
  CMP steeringHi         \ If A < steeringHi, clear the C flag
                         \ If A >= steeringHi, set the C flag
 
@@ -4719,14 +4784,24 @@ ORG &0B00
                         \
                         \   (A T) = (steeringHi steeringLo) with bit 0 cleared
 
+ENDIF
+
 .keys8
 
  STA U                  \ Set (U T) = (A T)
 
 .keys9
 
+IF _ACORNSOFT
+
+ LDA steeringLo
+
+ELIF _SUPERIOR
+
  JMP AssistSteeringKeys \ Jump to AssistSteeringKeys, which in turn jumps back
                         \ to keys10, so this is effectively a JSR call
+
+ENDIF
 
 .keys10
 
@@ -5293,9 +5368,19 @@ ORG &0B00
 
 .main10
 
+IF _ACORNSOFT
+
+ LDY #9                 \ Check for all the shifted keys (i.e. those that need
+ JSR ProcessShiftedKeys \ SHIFT holding down to trigger) and process them
+                        \ accordingly
+
+ELIF _SUPERIOR
+
  LDY #11                \ Check for all the shifted keys (i.e. those that need
  JSR ProcessShiftedKeys \ SHIFT holding down to trigger) and process them
                         \ accordingly
+
+ENDIF
 
  LDA configStop         \ If configStop = 0, then we aren't pressing one of the
  BEQ main11             \ keys that stops the race, so jump to main11 to keep
@@ -6536,6 +6621,15 @@ ORG &0B00
  CLC
  ADC #&30
  STA Q
+
+IF _ACORNSOFT
+
+ STA &1D8C
+ LDA P
+ STA &1D8B
+
+ENDIF
+
  LDX UU
  CPX #&28
  BCC C1C92
@@ -6661,17 +6755,52 @@ ORG &0B00
 .C1D44
 
  STA I
+
+IF _ACORNSOFT
+
+ BNE L1D52
+ LDA #&55
+
+.L1D52
+
+ STA &87
+
+ENDIF
+
  LDA #0
  STA KK
+
+IF _ACORNSOFT
+
+ LDY RR
+ LDA (P),Y
+ STA W
+ LDA #&AA
+ STA (P),Y
+
+ENDIF
+
  LDY N
  JMP C1D6B
 
 .P1D4F
 
+IF _SUPERIOR
+
  LDA (P),Y
  BEQ C1D5D
+
+ENDIF
+
  CMP #&55
  BNE C1D60
+
+IF _ACORNSOFT
+
+ LDA #0
+
+ELIF _SUPERIOR
+
  LDA I
  BNE C1D68
  BEQ C1D66
@@ -6679,6 +6808,8 @@ ORG &0B00
 .C1D5D
 
  JSR sub_C1E9E
+
+ENDIF
 
 .C1D60
 
@@ -6697,8 +6828,46 @@ ORG &0B00
 
 .C1D6B
 
+IF _ACORNSOFT
+
+ LDA (P),Y
+ BNE L1D90
+
+.L1D7C
+
+ JSR sub_C1E9E
+ AND &7D
+ ORA &7A
+ BNE L1D87
+ LDA #&55
+
+.L1D87
+
+ STA (P),Y
+ DEY
+ LDX token26,Y
+ BEQ L1D87
+ TXA
+
+.L1D90
+
+ CMP #&AA
+ BNE P1D4F
+
+ LDA #0
+ STA (P),Y
+ CPY RR
+ BNE L1D7C
+ LDA W
+ STA (P),Y
+
+ELIF _SUPERIOR
+
  CPY RR
  BNE P1D4F
+
+ENDIF
+
  LDX J
  CPX #1
  BEQ C1D93
@@ -6756,7 +6925,17 @@ ORG &0B00
 .sub_C1DA6
 
  STX C1DDD+1
+
+IF _ACORNSOFT
+
+ STY mod_1E25+1
+
+ELIF _SUPERIOR
+
  STY mod_1DD4+1
+
+ENDIF
+
  STA mod_1DDB+1
 
 \ ******************************************************************************
@@ -6781,14 +6960,58 @@ ORG &0B00
  ADC #&60
  LSR A
  STA Q
+
+IF _ACORNSOFT
+
+ STA mod_1E1D+2
  LDA #0
  ROR A
  STA P
+ STA mod_1E1D+1
+ LDY RR
+ LDA (P),Y
+ STA W
+ LDA #&AA
+ STA (P),Y
+
+ELIF _SUPERIOR
+
+ LDA #0
+ ROR A
+ STA P
+
+ENDIF
+
  LDY N
+
+IF _ACORNSOFT
+
+ JMP P1DD2
+
+ELIF _SUPERIOR
+
  JMP C1DE0
 
- EQUB &C9, &55, &D0, &02, &A9, &00, &91, &72, &88, &C4, &82, &F0
- EQUB &12
+ENDIF
+
+ CMP #&55
+ BNE L160D
+ LDA #0
+
+.L160D
+
+ STA (R),Y
+
+.C1E0E
+
+ DEY
+
+IF _SUPERIOR
+
+ CPY &82
+ BEQ C1DE4
+
+ENDIF
 
 .P1DD2
 
@@ -6796,7 +7019,18 @@ ORG &0B00
 
 .mod_1DD4
 
+IF _ACORNSOFT
+
+ BNE L1E23
+
+.C1E13
+
+ELIF _SUPERIOR
+
  BNE C1DDF
+
+ENDIF
+
  JSR sub_C1E9E
  BNE C1DDD
 
@@ -6814,8 +7048,39 @@ ORG &0B00
 
 .C1DE0
 
+IF _ACORNSOFT
+
+.mod_1E1D
+
+ LDX token26,Y
+ BEQ C1DDD
+ TXA
+
+.L1E23
+
+ CMP #&AA
+
+.mod_1E25
+
+ BNE C1E0E
+ LDA #0
+ STA (P),Y
+
+ENDIF
+
  CPY RR
+
+IF _ACORNSOFT
+
+ BNE C1E13
+ LDA W
+ STA (P),Y
+
+ELIF _SUPERIOR
+
  BNE P1DD2
+
+ENDIF
 
 .C1DE4
 
@@ -6856,11 +7121,31 @@ ORG &0B00
  LDA dashDataOffset,X
  STA RR
  LDX #&72
+
+IF _ACORNSOFT
+
+ LDY #&DF
+
+ELIF _SUPERIOR
+
  LDY #&EF
+
+ENDIF
+
  LDA #0
  JSR sub_C1DA6
  LDX #&70
+
+IF _ACORNSOFT
+
+ LDY #&E7
+
+ELIF _SUPERIOR
+
  LDY #9
+
+ENDIF
+
  LDA #&55
  INC UU
  JSR sub_C1DA6
@@ -6891,6 +7176,9 @@ ORG &0B00
  LDY #&1B
  LDX #3
  LDA #6
+
+.C1E23
+
  JSR sub_C1DEF
  LDA #&44
  STA S
@@ -7019,14 +7307,46 @@ ORG &0B00
 .sub_C1E9E
 
  CPY L001F
+
  BCC C1EA8
  BEQ C1EA8
+
+IF _ACORNSOFT
+
+ LDA L001F
+ JSR C1F9E
+
+ENDIF
+
  LDA L38FD
  RTS
 
 .C1EA8
 
+IF _ACORNSOFT
+
+ LDA #0
+ STA T
+
+ENDIF
+
  LDA UU
+
+IF _ACORNSOFT
+
+ CMP L05A4,Y
+ ROL T
+ CMP L0650,Y
+ ROL T
+ CMP L0600,Y
+ ROL T
+ CMP L0554,Y
+ LDA T
+ ROL A
+ BNE C1ECB
+
+ELIF _SUPERIOR
+
  CMP L0554,Y
  BCS C1EC7
  CMP L0600,Y
@@ -7035,8 +7355,49 @@ ORG &0B00
  BCS C1EC3
  CMP L05A4,Y
  BCS C1ECB
+
+ENDIF
+
  LDA L5F60,Y
+
+IF _ACORNSOFT
+
+ AND #&EC
+ CMP #&40
+ BEQ C1F31
+ CMP #&88
+ BEQ C1F31
+ CMP #&04
+ BEQ C1F31
+ LDA L0554,Y
+ BPL C1F3E
+ BMI C1F41
+
+.C1F31
+
+ LDA L5F60,Y
+ AND #&10
+ BNE C1F3E
+ JSR C1F5C
+ JMP C1F41
+
+.C1F3E 
+
+ JSR C1F7F
+
+.C1F41
+
+ LDA L5F60,Y
+ AND #3
+ TAX
+ LDA L38FC,X
+ RTS
+
+ELIF _SUPERIOR
+
  BCC C1EE2
+
+ENDIF
 
 .C1EC3
 
@@ -7050,8 +7411,60 @@ ORG &0B00
 
 .C1ECB
 
+IF _ACORNSOFT
+
+ LSR A
+ BCS C1EC7
+ LSR A
+ BCS C1F7F
+ LSR A
+ BCS C1EC3
+
+.C1F5C
+
+ENDIF
+
  CPY L002C
  BCS C1EC7
+
+IF _ACORNSOFT
+
+ LDX L0400,Y
+ BMI sub_C1F95
+ JSR C1F9B
+
+.L1F68
+
+ LDA (P),Y
+ BNE L1F7A
+ LDA L0650,Y
+ BMI L1F77
+ CMP UU
+ DEY
+ BCS L1F68
+ INY
+
+.L1F77
+
+ JSR C1FA1
+
+.L1F7A
+
+ LDY V
+ JMP C1F8B
+
+.C1F7F
+
+ CPY L0029
+ BCS C1EC7
+ LDX L0450,Y
+ BMI sub_C1F95
+ JSR C1F9B
+
+.C1F8B
+
+ELIF _SUPERIOR
+
  LDA L0400,Y
  JMP C1EDC
 
@@ -7065,6 +7478,9 @@ ORG &0B00
 
  AND #&7F
  TAX
+
+ENDIF
+
  LDA L5EDF,X
 
 .C1EE2
@@ -7073,6 +7489,55 @@ ORG &0B00
  TAX
  LDA L38FC,X
  RTS
+
+\ ******************************************************************************
+\
+\       Name: sub_C1F95
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+IF _ACORNSOFT
+
+.sub_C1F95
+
+ TXA
+ AND #&7F
+ TAX
+ BPL C1F8B
+
+.C1F9B
+
+ LDA L5F20,X
+
+.C1F9E
+
+ STY V
+ TAY
+
+.C1FA1
+
+ CPY V
+ BCS L1FB1
+ CPY RR
+ BCC L1FB1
+ LDA (P),Y
+ BNE L1FB1
+ LDA #&AA
+ STA (P),Y
+
+.L1FB1
+
+ LDY V
+ RTS
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -7101,6 +7566,8 @@ ORG &0B00
 \   AssistSteeringKeys  For keyboard-controlled steering
 \
 \ ******************************************************************************
+
+IF _SUPERIOR
 
 .AssistSteering
 
@@ -7284,6 +7751,8 @@ ORG &0B00
 
  JMP keys10
 
+ENDIF
+
 \ ******************************************************************************
 \
 \       Name: sub_C1F9B
@@ -7296,6 +7765,8 @@ ORG &0B00
 \ 
 \
 \ ******************************************************************************
+
+IF _SUPERIOR
 
 .sub_C1F9B
 
@@ -7313,6 +7784,8 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
+ENDIF
+
 \ ******************************************************************************
 \
 \       Name: sub_C1FA8
@@ -7326,6 +7799,8 @@ ORG &0B00
 \
 \ ******************************************************************************
 
+IF _SUPERIOR
+
 .sub_C1FA8
 
  BCC C1FAF
@@ -7338,6 +7813,8 @@ ORG &0B00
  RTS
 
  NOP
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -11115,7 +11592,17 @@ ORG &0B00
 
 .L30D0
 
- EQUB &28, &8D, &7C, &7C, &7C, &7C
+IF _ACORNSOFT
+
+ EQUB &1C
+
+ELIF _SUPERIOR
+
+ EQUB &28
+
+ENDIF
+
+ EQUB &8D, &7C, &7C, &7C, &7C
  EQUB &7C, &6B, &6B, &6B, &6B, &6B, &5A, &5A, &5A, &5A, &49, &49
  EQUB &49, &49, &38, &38, &38, &38, &27, &27, &27, &27, &16, &16
  EQUB &16, &16, &16, &16, &16, &16, &16, &16, &16, &05, &05, &05
@@ -12871,7 +13358,24 @@ ORG &0B00
 
 .L3850Lo
 
+IF _ACORNSOFT
+
+ EQUB &FF, &88
+ EQUB &88, &CC
+ EQUB &CC, &CC
+ EQUB &CC, &CC
+ EQUB &CC, &EE
+ EQUB &EE, &EE
+ EQUB &EE, &FF
+ EQUB &FF, &FF
+ EQUB &88, &88
+ EQUB &88, &CC
+
+ELIF _SUPERIOR
+
  SKIP 20
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -12884,6 +13388,21 @@ ORG &0B00
 
 .totalPointsLo
 
+IF _ACORNSOFT
+
+ EQUB &CC, &CC
+ EQUB &EE, &FF
+ EQUB &FF, &88
+ EQUB &CC, &EE
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+
+ELIF _SUPERIOR
+
  SKIP 20                \ Low byte of total accumulated points for each driver
                         \
                         \ Indexed by driver number (0 to 19)
@@ -12892,6 +13411,8 @@ ORG &0B00
                         \
                         \ Stored as a 24-bit value (totalPointsTop totalPointsHi
                         \ totalPointsLo)
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -12905,75 +13426,18 @@ ORG &0B00
 
 .racePointsLo
 
- SKIP 20
+IF _ACORNSOFT
 
-\ ******************************************************************************
-\
-\       Name: SetupGame
-\       Type: Subroutine
-\   Category: Setup
-\    Summary: Set the screen mode, clear various variables and start the game
-\
-\ ------------------------------------------------------------------------------
-\
-\ The memory taken up by the SetupGame routine is reused after the routine has
-\ run, as we no longer need it.
-\
-\ ******************************************************************************
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+ EQUB &FF, &FF
+ EQUB &FF, &FF
 
-CLEAR &3850, P%         \ The memory taken up by the SetupGame routine is reused
-ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
-                        \ variables after the routine has finished running, as
-                        \ we no longer to set up the game
-                        \
-                        \ These lines rewind BeebAsm's assembly back to L3850Lo
-                        \ (which is at address &3850), and clear the block, so
-                        \ we can assemble SetupGame in the right place while
-                        \ retaining the correct addressed for the L3850Lo,
-                        \ totalPointsLo and totalPointsLo variables
+ELIF _SUPERIOR
 
-.SetupGame
+ SKIP 8
 
- LDA #4                 \ Call OSBYTE with A = 4, X = 1 and Y = 0 to disable
- LDY #0                 \ cursor editing
- LDX #1
- JSR OSBYTE
-
- JSR SetScreenMode7     \ Change to screen mode 7 and hide the cursor
-
- LDX #9                 \ We now zero the ten bytes starting at configStop, so
-                        \ set a loop counter in X
-
- LDA #0                 \ Set lineBufferSize = 0, to reset the line buffer
- STA lineBufferSize
-
-.setp1
-
- STA configStop,X       \ Zero the X-th byte at configStop
-                        \
-                        \ The address in this instruction gets modified
-
- DEX                    \ Decrement the loop counter
-
- BPL setp1              \ Loop back until we have zeroed all ten bytes
-
- LDA #246               \ Set volumeLevel = -10, which sets the sound level to
- STA volumeLevel        \ medium (-15 is full volume, 0 is silent)
-
- TSX                    \ Store the stack pointer in startingStack so we can
- STX startingStack      \ restore it when restarting the game
-
- JSR CallTrackHook      \ Call the hook code in the track file (for Silverstone
-                        \ the hook routine is just an RTS, so this does nothing)
-
- LDA #190               \ Call OSBYTE with A = 190, X = 32 and Y = 0 to set the
- LDY #0                 \ ADC conversion type to 32-bit conversion (though only
- LDX #32                \ values of 8 and 12 are supported, so this is odd)
- JSR OSBYTE
-
- JMP MainLoop           \ Jump to the main game loop to start the game
-
- EQUB &FF               \ This byte appears to be unused
+ENDIF
 
 \ ******************************************************************************
 \
@@ -13443,24 +13907,43 @@ ORG &3850               \ by the L3850Lo, totalPointsLo and totalPointsLo
  EQUB &83               \ COPY          Set bit 7         configPause        &80
  EQUB &43               \ DELETE        Set bit 6         configPause        &40
  EQUB &20               \ f7            Set bit 5         configStop         &20
+
+IF _ACORNSOFT
+
+ EQUB &77, &BB          \ These values are workspace noise and have no meaning
+
+ELIF _SUPERIOR
+
  EQUB &04               \ f3            Clear all bits    configAssist       &00
  EQUB &84               \ f6            Set bit 7         configAssist       &80
 
+ENDIF
+
 \ ******************************************************************************
 \
-\       Name: menuKeys
+\       Name: menuKeysSuperior
 \       Type: Variable
 \   Category: Keyboard
 \    Summary: Negative inkey values for the menu keys (SPACE, "1", "2" and "3")
+\             for the Superior Software release
 \
 \ ******************************************************************************
 
-.menuKeys
+IF _ACORNSOFT
+
+ EQUB &DD, &EE          \ These values are workspace noise and have no meaning
+ EQUB &77, &BB
+
+ELIF _SUPERIOR
+
+.menuKeysSuperior
 
  EQUB &9D               \ Negative inkey value for SPACE
  EQUB &CF               \ Negative inkey value for "1"
  EQUB &CE               \ Negative inkey value for "2"
  EQUB &EE               \ Negative inkey value for "3"
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -14945,10 +15428,38 @@ NEXT
  EQUB &96               \ COPY
  EQUB &A6               \ DELETE
  EQUB &E9               \ f7
+
+IF _SUPERIOR
+
  EQUB &8C               \ f3
  EQUB &8A               \ f6
 
+ENDIF
+
+\ ******************************************************************************
+\
+\       Name: menuKeys
+\       Type: Variable
+\   Category: Keyboard
+\    Summary: Negative inkey values for the menu keys (SPACE, "1", "2" and "3")
+\             for the Acornsoft release
+\
+\ ******************************************************************************
+
+IF _ACORNSOFT
+
+.menuKeys
+
+ EQUB &9D               \ Negative inkey value for SPACE
+ EQUB &CF               \ Negative inkey value for "1"
+ EQUB &CE               \ Negative inkey value for "2"
+ EQUB &EE               \ Negative inkey value for "3"
+
+ELIF _SUPERIOR
+
  EQUB &CE, &EE          \ These bytes appear to be unused
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -16918,7 +17429,17 @@ NEXT
 .C4656
 
  CMP #&16
+
+IF _ACORNSOFT
+
+ ROR L62FB
+
+ELIF _SUPERIOR
+
  JSR sub_C1FA8
+
+ENDIF
+
  PLA
  STA L0178,X
  PLA
@@ -22043,7 +22564,15 @@ ORG &5E40
 
 .L5FFA
 
+IF _ACORNSOFT
+
+ EQUB &6F
+
+ELIF _SUPERIOR
+
  EQUB &30
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -22060,7 +22589,15 @@ ORG &5E40
 
 .L5FFB
 
+IF _ACORNSOFT
+
+ EQUB &6E
+
+ELIF _SUPERIOR
+
  EQUB &18
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -22077,7 +22614,15 @@ ORG &5E40
 
 .L5FFC
 
+IF _ACORNSOFT
+
+ EQUB &32
+
+ELIF _SUPERIOR
+
  EQUB &0C
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -22094,7 +22639,15 @@ ORG &5E40
 
 .L5FFD
 
+IF _ACORNSOFT
+
+ EQUB 0
+
+ELIF _SUPERIOR
+
  EQUB 6
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -22111,7 +22664,15 @@ ORG &5E40
 
 .L5FFE
 
+IF _ACORNSOFT
+
+ EQUB &8D
+
+ELIF _SUPERIOR
+
  EQUB 3
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -22128,7 +22689,15 @@ ORG &5E40
 
 .L5FFF
 
+IF _ACORNSOFT
+
+ EQUB &2B
+
+ELIF _SUPERIOR
+
  EQUB &01
+
+ENDIF
 
 .L6000
 
@@ -23935,6 +24504,8 @@ ORG &5E40
 \
 \ ******************************************************************************
 
+IF _SUPERIOR
+
 .Protect
 
  JMP SetupGame          \ Jump to SetupGame to continue setting up the game
@@ -23944,6 +24515,8 @@ ORG &5E40
  NOP                    \ this unprotected version of the game
  NOP
  NOP
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -23983,6 +24556,8 @@ ORG &5E40
 \
 \ ******************************************************************************
 
+IF _SUPERIOR
+
 .GetSteeringAssist
 
  PHA                    \ Store A on the stack so we can retrieve it below
@@ -24017,6 +24592,122 @@ ORG &5E40
  LDX configAssist       \ Set X to configAssist
 
  RTS                    \ Return from the subroutine
+
+ENDIF
+
+\ ******************************************************************************
+\
+\       Name: SetupGame
+\       Type: Subroutine
+\   Category: Setup
+\    Summary: Decrypt or unprotect the game code (disabled)
+\
+\ ******************************************************************************
+
+IF _SUPERIOR
+
+.SuperiorSetupGame
+
+CLEAR &3850, &3880      \ In the Superior Software release of Revs, the steering
+ORG &3850               \ assist routines take up extra memory, so we need to
+                        \ claw back some memory from somewhere
+                        \
+                        \ The clever solution is to move the SetupGame routine,
+                        \ which is run when the game loads, but is never needed
+                        \ again, so in the Superior version, SetupGame is put
+                        \ into the same block of memory as the L3850Lo,
+                        \ totalPointsLo and totalPointsLo variables, which are
+                        \ only used after the game has started
+                        \
+                        \ These lines rewind BeebAsm's assembly back to L3850Lo
+                        \ (which is at address &3850), and clear the block that
+                        \ is occupied by these three variables, so we can
+                        \ assemble SetupGame in the right place while retaining
+                        \ the correct addresses for the three variables
+                        \
+                        \ We also make a note of the current address, so we can
+                        \ ORG back to it after assembling SetupGame
+
+ENDIF
+
+.SetupGame
+
+ LDA #4                 \ Call OSBYTE with A = 4, X = 1 and Y = 0 to disable
+ LDY #0                 \ cursor editing
+ LDX #1
+ JSR OSBYTE
+
+ JSR SetScreenMode7     \ Change to screen mode 7 and hide the cursor
+
+ LDX #9                 \ We now zero the ten bytes starting at configStop, so
+                        \ set a loop counter in X
+
+ LDA #0                 \ Set lineBufferSize = 0, to reset the line buffer
+ STA lineBufferSize
+
+.setp1
+
+ STA configStop,X       \ Zero the X-th byte at configStop
+                        \
+                        \ The address in this instruction gets modified
+
+ DEX                    \ Decrement the loop counter
+
+ BPL setp1              \ Loop back until we have zeroed all ten bytes
+
+ LDA #246               \ Set volumeLevel = -10, which sets the sound level to
+ STA volumeLevel        \ medium (-15 is full volume, 0 is silent)
+
+ TSX                    \ Store the stack pointer in startingStack so we can
+ STX startingStack      \ restore it when restarting the game
+
+ JSR CallTrackHook      \ Call the hook code in the track file (for Silverstone
+                        \ the hook routine is just an RTS, so this does nothing)
+
+IF _ACORNSOFT
+
+                        \ Fall through into the main game loop to start the game
+
+ELIF _SUPERIOR
+
+ LDA #190               \ Call OSBYTE with A = 190, X = %00100000 and Y = 0 to
+ LDY #0                 \ configure the digital joystick port on the BBC Master
+ LDX #%00100000         \ Compact conversion type to 32-bit conversion (as the
+ JSR OSBYTE             \ Superior Software version was released for this
+                        \ machine)
+                        \
+                        \ The configuration does the following:
+                        \
+                        \   * Bit 7 clear = update channel values from cursor
+                        \     keys and/or digital joystick
+                        \
+                        \   * Bit 6 clear = do not simulate key presses from the
+                        \     digital joystick
+                        \
+                        \   * Bit 5 set = return fixed values to channels 1 and
+                        \     2 as follows:
+                        \
+                        \     Left = &FFFF to channel 1
+                        \     Centre (horizontal) = &7FFF to channel 1
+                        \     Right = 0 to channel 1
+                        \     Down = &FFFF to channel 2
+                        \     Centre (vertical) = &7FFF to channel 2
+                        \     Up = 0 to channel 2
+                        \
+                        \   * Bit 4 is unused
+                        \
+                        \   * Bits 0-3 clear = emulate the analogue speed of
+                        \     joystick movement by returning slowly changing
+                        \     values related to the joystick movement
+
+ JMP MainLoop           \ Jump to the main game loop to start the game
+
+ EQUB &FF               \ This byte appears to be unused
+
+ORG SuperiorSetupGame   \ Switch back to the original address, so we can
+                        \ continue with the assembly
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -24641,7 +25332,15 @@ ORG &5E40
  STY V                  \ Store the loop counter in V so we can retrieve it
                         \ below
 
+IF _ACORNSOFT
+
  LDX menuKeys,Y         \ Fetch the key number for menu option Y
+
+ELIF _SUPERIOR
+
+ LDX menuKeysSuperior,Y \ Fetch the key number for menu option Y
+
+ENDIF
 
  JSR ScanKeyboard       \ Scan the keyboard to see if this key is being pressed
 

@@ -2,6 +2,20 @@
 
 This repository contains source code for Revs on the BBC Micro. The project to add commentary is ongoing. See the [accompanying website](https://revs.bbcelite.com) for more details about this project.
 
+You can build the fully functioning game from this source. Two variants are currently supported: the original 1985 Acornsoft release, and the 1986 Superior Software release (which includes steering assist). The Acornsoft variant is the default, and it can be built with this command:
+
+```
+make build verify
+```
+
+The Superior Software variant can be built with this command:
+
+```
+make build verify variant=superior
+```
+
+For Windows, use `make.bat` instead of `make`.
+
 ## Acknowledgements
 
 Revs was written by Geoffrey J Crammond and is copyright &copy; Acornsoft 1985.

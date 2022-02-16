@@ -17,16 +17,17 @@
 \
 \ ------------------------------------------------------------------------------
 \
-\ This source file produces the following SSD disc image:
+\ This source file produces one of the following SSD disc images, depending on
+\ which release is being built:
 \
-\   * revs-bbcmicro-co-uk.ssd
+\   * revs-acornsoft.ssd
+\   * revs-superior.ssd
 \
 \ This can be loaded into an emulator or a real BBC Micro.
 \
 \ ******************************************************************************
 
 PUTFILE "1-source-files/boot-files/$.!BOOT.bin", "!BOOT", &FFFFFF, &FFFFFF
-PUTFILE "1-source-files/basic-programs/$.Car.bin", "Car", &FF1900, &FF8023
 PUTFILE "1-source-files/basic-programs/$.REVS.bin", "REVS", &FF1900, &FF8023
 PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
 PUTFILE "3-assembled-output/Silvers.bin", "Silvers", &0070DB, &0070DB
