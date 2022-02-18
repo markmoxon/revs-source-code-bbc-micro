@@ -19,7 +19,14 @@ checksum_end = 0x5A25
 checksum_offset = checksum_end - checksum_start
 
 # Process all assembled track files
-track_names = ["Silvers"]
+track_names = [
+    "Silverstone",
+    "BrandsHatch",
+    "DoningtonPark",
+    "OultonPark",
+    "Snetterton",
+    "Nurburgring"
+]
 
 for track_name in track_names:
     print("Adding checksum to", track_name)

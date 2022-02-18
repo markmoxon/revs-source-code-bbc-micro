@@ -39,7 +39,7 @@ CODE% = &5300           \ The assembly address of the track data
 \
 \ REVS SILVERSTONE TRACK
 \
-\ Produces the binary file Silvers.bin that contains the Silverstone track.
+\ Produces the binary file Silverstone.bin that contains the Silverstone track.
 \
 \ ******************************************************************************
 
@@ -401,15 +401,15 @@ ORG CODE%
                         \   * trackChecksum+3 counts the number of data bytes
                         \     ending in %11
 
- EQUS "REVS"         \ Game name
+ EQUS "REVS"            \ Game name
 
- EQUS "Silverstone"  \ Track name
+ EQUS "Silverstone"     \ Track name
  EQUB 13
 
 \ ******************************************************************************
 \
-\ Save Silvers.bin
+\ Save Silverstone.bin
 \
 \ ******************************************************************************
 
-SAVE "3-assembled-output/Silvers.bin", CODE%, P%
+SAVE "3-assembled-output/Silverstone.bin", CODE%, P%
