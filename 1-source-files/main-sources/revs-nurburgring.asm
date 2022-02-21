@@ -116,7 +116,7 @@ ORG CODE%
 \ EQUB &4C, &51, &B4
 
  LDA &44
- JSR Absolute8Bit       \ Stays the same
+ JSR Absolute8Bit       \ Same address in C64 and BBC
  CMP #&19
 
 .L53E7
@@ -125,6 +125,19 @@ ORG CODE%
  LDA &0D
  BPL L53F0
  JMP L5655
+
+\ ******************************************************************************
+\
+\       Name: L53F0
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .L53F0
 
@@ -230,64 +243,113 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ C64 addr -> BBC addr = value poked in subroutine
+\ (Plus any related pokes)
+\ Instruction before modification               -> After modification
+\
+\ Modifications applied by L5700 routine, poking value from L5400 into addresses
+\ in L5500:
+\
+\ &11FD -> &1249, !&1249 = L5672 in sub_C122D
+\ Also needs &11FC -> &1248, ?&1248 = &20
+\ 1248   B9 05 59   LDA trackData+&605,Y        -> JSR L5672
+\
+\ &123E -> &128A, !&128A = L5A1B in sub_C1267
+\ 1289   20 E0 13   JSR sub_C13E0               -> JSR L5A1B
+\
+\ &138B -> &13CA, !&13CA = L5572 in sub_C12F7
+\ 13C9   20 DA 13   JSR sub_C13DA               -> JSR L5572
+\
+\ &13E8 -> &1427, !&1427 = L5572 in sub_C1420
+\ 1426   20 DA 13   JSR sub_C13DA               -> JSR L5572
+\
+\ &12B0 -> &12FC, !&12FC = L54EB in sub_C12F7
+\ Also needs &12AF -> &12FB, !&12FB = &20
+\ 12FB   18         CLC                         -> JSR L54EB
+\ 12FC   69 03      ADC #&03
+\
+\ &227C -> &2539, !&2539 = L5772 in sub_C24F6
+\ Also needs &227B -> &2538, ?&2538 = &20
+\ 2538   99 48 5F   STA &5F48,Y                 -> JSR L5772
+\
+\ &1578 -> &1594, !&1594 = L59D9 in ProcessDrivingKeys
+\ 1593   20 00 0C   JSR Multiply8x8             -> JSR L59D9
+\
+\ &4D28 -> &4CD1, !&4CD1 = L5562 in sub_C4CA4
+\ 4CD0   BD D0 53   LDA trackData+&0D0,X        -> LDA L5562,X
+\
+\ &4D20 -> &4CC9, !&4CC9 = L5662 in sub_C4CA4
+\ 4CC8   BD F0 53   LDA trackData+&0F0,X        -> LDA L5662,X
+\
+\ &4D18 -> &4CC1, !&4CC1 = L5762 in sub_C4CA4
+\ 4CC0   BD E0 53   LDA trackData+&0E0,X        -> LDA L5762,X
+\
+\ &4526 -> &44D6, !&44D6 = L58A0 in Set5FB0
+\ 44D5   B9 D0 59   LDA L59D0,Y                 -> LDA L58A0,Y
+\
+\ &4D2E -> &4CD7, !&4CD7 = L5462 in sub_C4CA4
+\ 4CD6   BD EA 59   LDA trackData+&6EA,X        -> LDA L5462,X
+\
+\ &4D38 -> &4CE1, !&4CE1 = L5462 in sub_C4CA4
+\ 4CE0   BD EA 59   LDA trackData+&6EA,X        -> LDA L5462,X
+\
+\ &B468 -> &1947, !&1947 = L56C4 in sub_C193E
+\ 1946   20 33 19   JSR sub_C1933               -> JSR L56C4
+\
+\ &2286 -> &2543, !&2543 = L5555 in sub_C24F6
+\ 2542   20 50 34   JSR Absolute8Bit            -> JSR L5555
+\
+\ Modifications applied by L5600 routine:
+\
+\ &3574 -> &3574, ?&3574 = 4 in L3550
+\ Not sure what this does, it's an entry in a table variable
+\
+\ &35F4 -> &35F4, ?&35F4 = &0B in L35D0
+\ Not sure what this does, it's an entry in a table variable
+\
+\ &461C -> &45CC, !&45CC = L57AD in sub_C44EA
+\ Also needs &461B -> &45CB, ?&45CB = &20
+\ 45CB   0A         ASL A                       -> JSR L57AD
+\ 45CC   26 77      ROL &77
+\
+\ &2546 -> &2772, ?&2772 = &4B in sub_C2692
+\ 2771   C9 3C      CMP #&3C                    -> CMP #&4B
+\
+\ &282B -> &298E, ?&298E = &FF in sub_C2937
+\ 298D   29 1F      AND #&1F                    -> AND #&FF
+\
+\ Modifications applied by L5672 routine:
+\
+\ &20C0 -> &23B3, ?&23B3 = A in sub_C22FF
+\ 23B2   A9 07      LDA #&07                    -> LDA #A
+\
+\ Modifications applied by L56C4 routine:
+\
+\ &1B0C -> &1FEA, ?&1FEA = A in sub_C1FB4
+\ Also needs &1B0B -> &1FE9, ?&1FE9 = &A2
+\ 1FE9   A6 1F      LDX &1F                     -> LDX #A
+\
+\ Modifications applied by L5772 routine:
+\
+\ &1B0C -> &1FEA, ?&1FEA = A in sub_C1FB4
+\ Also needs &1B0B -> &1FE9, ?&1FE9 = &A2
+\ 1FE9   A6 1F      LDX &1F                     -> LDX #A
+\
+\ Modifications applied by L5800 routine:
+\
+\ &11FC -> &1248, ?&1248 = &20 (see JSR L5672 above)
+\ &12AF -> &12FB, ?&12FB = &20 (see JSR L54EB above)
+\ &227B -> &2538, ?&2538 = &20 (see JSR L5772 above)
+\ &461B -> &45CB, ?&45CB = &20 (see JSR L57AD above)
+\
+\ &2288 -> &2545, ?&2545 = &EA in sub_C24F6
+\ 2545   4A         LSR A                       -> NOP
+\
+\ &1B0B -> &1FE9, ?&1FE9 = &A2 (see LDX #A above)
 \
 \ ******************************************************************************
 
 .L5400
-
-\ C64 addr -> BBC addr = value poked in subroutine
-\ (Plus any related pokes)
-\ Instruction before modification               -> After modification
-
-\ &11FD -> &1249 = L5672 in sub_C122D
-\ Also needs &11FC -> &1248 = &20
-\ 1248   B9 05 59   LDA trackData+1541,Y        -> JSR L5672
-
-\ &123E -> &128A = L5A1B in sub_C1267
-\ 1289   20 E0 13   JSR sub_C13E0               -> JSR L5A1B
-
-\ &138B -> &13CA = L5572 in sub_C12F7
-\ 13C9   20 DA 13   JSR sub_C13DA               -> JSR L5572
-
-\ &13E8 -> &1427 = L5572 in sub_C1420
-\ 1426   20 DA 13   JSR sub_C13DA               -> JSR L5572
-
-\ &12B0 -> &12FC = L54EB in sub_C12F7
-\ Also needs &12AF -> &12FB = &20
-\ 12FB   18         CLC                         -> JSR L54EB
-\ 12FC   69 03      ADC #&03
-     
-\ &227C -> &2539 = L5772 in sub_C24F6
-\ Also needs &227B -> &2538 = &20
-\ 2538   99 48 5F   STA &5F48,Y                 -> JSR L5772
-
-\ &1578 -> &1594 = L59D9 in ProcessDrivingKeys
-\ 1593   20 00 0C   JSR Multiply8x8             -> JSR L59D9
-
-\ &4D28 -> &4CD1 = L5562 in sub_C4CA4
-\ 4CD0   BD D0 53   LDA trackData+208,X         -> LDA L5562,X
-
-\ &4D20 -> &4CC9 = L5662 in sub_C4CA4
-\ 4CC8   BD F0 53   LDA trackData+240,X         -> LDA L5662,X
-
-\ &4D18 -> &4CC1 = L5762 in sub_C4CA4
-\ 4CC0   BD E0 53   LDA trackData+224,X         -> LDA L5762,X
-
-\ &4526 -> &44D6 = L58A0 in Set5FB0
-\ 44D5   B9 D0 59   LDA L59D0,Y                 -> LDA L58A0,Y
-
-\ &4D2E -> &4CD7 = L5462 in sub_C4CA4
-\ 4CD6   BD EA 59   LDA trackData+1770,X        -> LDA L5462, X
-
-\ &4D38 -> &4CE1 = L5462 in sub_C4CA4
-\ 4CE0   BD EA 59   LDA trackData+1770,X        -> LDA L5462, X
-
-\ &B468 -> &1947 = L56C4 in sub_C193E
-\ 1946   20 33 19   JSR sub_C1933               -> JSR L56C4
-
-\ &2286 -> &2543 = L5555 in sub_C24F6
-\ 2542   20 50 34   JSR Absolute8Bit            -> JSR L5555
 
 \ modAddrLo
 \ EQUB &FD, &3E, &8B, &E8, &B0, &7C, &78, &28
@@ -589,7 +651,7 @@ ORG CODE%
 
  STA &75
  LDA #&CD
- JMP Multiply8x8        \ Stays the same
+ JMP Multiply8x8        \ Same address in C64 and BBC
 
 \ ******************************************************************************
 \
@@ -773,7 +835,7 @@ ORG CODE%
  STA &74
  LDA L5428,Y
  BIT &25
- JSR Absolute16Bit      \ Stays the same
+ JSR Absolute16Bit      \ Same address in C64 and BBC
  STA &75
  LDA &74
  CLC
@@ -784,7 +846,7 @@ ORG CODE%
  STA L53FC+1
  LDA L5628,Y
  BIT &25
- JSR Absolute8Bit       \ Stays the same
+ JSR Absolute8Bit       \ Same address in C64 and BBC
  CLC
  ADC L53FE
  STA L53FE
@@ -823,7 +885,7 @@ ORG CODE%
  LDA #&0B
  STA &35F4      \ Same, changes 3 to &B
 
-\ &461C/D -> &45CC/D = L57AD (also needs &461B -> &45CB = &20)
+\ &461C/D -> &45CC, !&45CC/D = L57AD (also needs &461B -> &45CB, !&45CB = &20)
 
 \ LDA #&AD
 \ STA &461C
@@ -835,7 +897,7 @@ ORG CODE%
  LDA #&57
  STA &45CD
 
-\ &2546 -> &2772 = &4B
+\ &2546 -> &2772, ?&2772 = &4B
 
 \ LDA #&4B
 \ STA &2546
@@ -843,7 +905,7 @@ ORG CODE%
  LDA #&4B
  STA &2772
 
-\ &282B -> &298E = &FF
+\ &282B -> &298E, ?&298E = &FF
 
 \ LDA #&FF
 \ STA &282B
@@ -1001,10 +1063,7 @@ ORG CODE%
  LDA #&0E
  ROR A
 
-\ &20C0 -> &23B3
-\ STA &23B3 -> STA &23B3
-\ 23B2   A9 07      LDA #&07                -> LDA #A
-
+\ STA &20C0
  STA &23B3
 
  LDA #&00
@@ -1036,11 +1095,11 @@ ORG CODE%
 
  STA &75
  PLA
- JSR Multiply8x8        \ Stays the same
+ JSR Multiply8x8        \ Same address in C64 and BBC
  PLP
  BEQ L56C1
  STA &75
- JSR Multiply8x8        \ Stays the same
+ JSR Multiply8x8        \ Same address in C64 and BBC
  ASL &74
  ROL A
  RTS
@@ -1060,7 +1119,7 @@ ORG CODE%
 
 .L56C1
 
- JMP Multiply8x8        \ Stays the same
+ JMP Multiply8x8        \ Same address in C64 and BBC
 
 \ ******************************************************************************
 \
@@ -1107,19 +1166,13 @@ ORG CODE%
  BNE L56CD
  LDA &7F
 
-\ &1B0C -> &1FEA
-\ 1FE9   A6 1F      LDX &1F             -> LDX &7F
-\ In C64, this instruction is A2 1F, LDX #&1F
-\ Do we need to change this instruction in the main game for Nurburgring?
-\ STA &1B0C -> STA &1FEA
-
+\ STA &1B0C
  STA &1FEA
 
  INY
 
-\ &227E -> &253B in sub_C24F6
-\ JMP &227E -> JMP &253B
-
+\ &227E -> &253B = sub_C24F6
+\ JSR &227E
  JSR &253B
 
  DEY
@@ -1259,12 +1312,7 @@ ORG CODE%
 
 .L5772
 
-\ &1B0C -> &1FEA
-\ 1FE9   A6 1F      LDX &1F             -> LDX &7F
-\ In C64, this instruction is A2 1F, LDX #&1F
-\ Do we need to change this instruction in the main game for Nurburgring?
-\ STA &1B0C -> STA &1FEA
-
+\ STA &1B0C
  STA &1FEA
 
 \ STA &8508,Y
@@ -1348,10 +1396,7 @@ ORG CODE%
  BNE L57B8
  LDA &63
 
-\ &4660 -> &4610
-
 \ JSR &4660
-
  JSR &4610
 
  BPL L57B8
@@ -1425,10 +1470,10 @@ ORG CODE%
 \ EQUB &8D, &88, &22, &A9, &A2, &8D, &0B, &1B
 \ EQUB &4C, &00, &56
 
-\ &11FC -> &1248 = &20
-\ &12AF -> &12FB = &20
-\ &227B -> &2538 = &20
-\ &461B -> &45CB = &20
+\ &11FC -> &1248, ?&1248 = &20
+\ &12AF -> &12FB, ?&12FB = &20
+\ &227B -> &2538, ?&2538 = &20
+\ &461B -> &45CB, ?&45CB = &20
 
 \ LDA #&20
 \ STA &11FC
@@ -1442,7 +1487,7 @@ ORG CODE%
  STA &2538
  STA &45CB
 
-\ &2288 -> &2545 = &EA
+\ &2288 -> &2545, ?&2545 = &EA
 
 \ LDA #&EA
 \ STA &2288
@@ -1450,7 +1495,7 @@ ORG CODE%
  LDA #&EA
  STA &2545
 
-\ &1B0B -> &1FE9 = &A2
+\ &1B0B -> &1FE9, ?&1FE9 = &A2
 
 \ LDA #&A2
 \ STA &1B0B
@@ -1579,6 +1624,19 @@ ORG CODE%
  EQUB &47, &18, &18, &3B, &19, &3C, &00, &3D
  EQUB &19, &52, &50, &53, &18, &3D, &21, &6A
  EQUB &71, &18, &43, &18, &A9, &AA, &AA
+
+\ ******************************************************************************
+\
+\       Name: L58BF
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .L58BF
 
@@ -1817,25 +1875,26 @@ ORG CODE%
  EQUS "Nurburgring"     \ Track name
  EQUB 13
 
-\ EQUB &00, &00, &00, &00, &00, &00, &00
-\ EQUB &4C, &00, &57, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &00, &00, &00, &00, &00, &00, &00, &00
-\ EQUB &92, &5D, &28, &00, &03, &33, &00, &8B
-\ EQUB &3B, &80, &00, &00, &8B, &3B, &80, &00
-\ EQUB &00, &8B, &3B, &80, &00, &00, &8B, &47
-\ EQUB &A0, &00, &00, &8B, &55, &E4, &00, &00
-\ EQUB &8B, &2F, &EC, &00, &00, &8B, &1D, &5C
-\ EQUB &00, &00, &8A, &6D, &58, &00, &00, &8A
-\ EQUB &34, &D8, &00, &00, &8A, &14, &28, &00
-\ EQUB &00, &8A, &28, &F0, &00, &00, &8A, &22
+ EQUB &00, &00, &00, &00, &00, &00, &00
+ EQUB &4C, &00, &57, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &00, &00, &00, &00, &00, &00, &00, &00
+ EQUB &92, &5D, &28, &00, &03, &33, &00, &8B
+ EQUB &3B, &80, &00, &00, &8B, &3B, &80, &00
+ EQUB &00, &8B, &3B, &80, &00, &00, &8B, &47
+ EQUB &A0, &00, &00, &8B, &55, &E4, &00, &00
+ EQUB &8B, &2F, &EC, &00, &00, &8B, &1D, &5C
+ EQUB &00, &00, &8A, &6D, &58, &00, &00, &8A
+ EQUB &34, &D8, &00, &00, &8A, &14, &28, &00
+ EQUB &00, &8A, &28, &F0, &00, &00, &8A, &22
+
 \ EQUB &E8, &00, &00, &8A, &59, &20, &00, &00
 \ EQUB &8A, &57, &38, &00, &00, &8B, &03, &60
 \ EQUS "NURBURGRING"
@@ -1899,7 +1958,7 @@ ORG &9C00
  LDA #$9D
  STA $15F0
 
-\ &46AA -> &4658
+\ &46AA -> &4658, !&4658
 \ 4658   20 A8 1F   JSR sub_C1FA8               -> JSR L9DA7
 
 \ LDA #$20
