@@ -3669,17 +3669,17 @@ ORG &0B00
 
 .sub_C1208
 
- LDA trackData+1537,Y
+ LDA trackData+&601,Y
  STA L0900,X
- LDA trackData+1538,Y
+ LDA trackData+&602,Y
  STA L0901,X
- LDA trackData+1539,Y
+ LDA trackData+&603,Y
  STA L0902,X
- LDA trackData+1,Y
+ LDA trackData+&001,Y
  STA L0A00,X
- LDA trackData+2,Y
+ LDA trackData+&002,Y
  STA L0A01,X
- LDA trackData+3,Y
+ LDA trackData+&003,Y
  STA L0A02,X
  RTS
 
@@ -3699,15 +3699,15 @@ ORG &0B00
 .sub_C122D
 
  JSR sub_C1208
- LDA trackData+1540,Y
+ LDA trackData+&604,Y
  STA L0978,X
- LDA trackData+1542,Y
+ LDA trackData+&606,Y
  STA L097A,X
- LDA trackData+4,Y
+ LDA trackData+&004,Y
  STA L0A78,X
- LDA trackData+6,Y
+ LDA trackData+&006,Y
  STA L0A7A,X
- LDA trackData+1541,Y
+ LDA trackData+&605,Y
  STA L0002
 
 \ ******************************************************************************
@@ -3801,7 +3801,7 @@ ORG &0B00
  AND #7
  STA L0007
  LDY L06FF
- LDA trackData+1536,Y
+ LDA trackData+&600,Y
  STA L0001
  LDA #0
  STA L0702,X
@@ -3966,7 +3966,7 @@ ORG &0B00
  LDX #&17
  LDA L0025
  BMI C1326
- LDA trackData+1786
+ LDA trackData+&6FA
  LSR A
  AND #&F8
  CMP L06E8,X
@@ -4013,7 +4013,7 @@ ORG &0B00
 
  STA W
  LDY L06FF
- LDA trackData+1543,Y
+ LDA trackData+&607,Y
  PLP
  BCC C1365
  LSR A
@@ -4055,7 +4055,7 @@ ORG &0B00
  LDA #0
  STA SS
  STA UU
- LDA trackData+1024,Y
+ LDA trackData+&400,Y
  BPL C1398
  DEC SS
 
@@ -4071,7 +4071,7 @@ ORG &0B00
  LDA SS
  ADC L0A00,X
  STA L0A78,X
- LDA trackData+1280,Y
+ LDA trackData+&500,Y
  BPL C13B4
  DEC UU
 
@@ -4136,7 +4136,7 @@ ORG &0B00
  BMI C13F0
  LDY L0002
  INY
- CPY trackData+1787
+ CPY trackData+&6FB
  BNE C13F8
  LDY #0
  BEQ C13F8
@@ -4145,7 +4145,7 @@ ORG &0B00
 
  LDY L0002
  BNE C13F7
- LDY trackData+1787
+ LDY trackData+&6FB
 
 .C13F7
 
@@ -4283,21 +4283,21 @@ ORG &0B00
  STA SS
  STA TT
  STA UU
- LDA trackData+256,Y
+ LDA trackData+&100,Y
  STA T
  BPL C1453
  DEC SS
 
 .C1453
 
- LDA trackData+512,Y
+ LDA trackData+&200,Y
  STA U
  BPL C145C
  DEC TT
 
 .C145C
 
- LDA trackData+768,Y
+ LDA trackData+&300,Y
  STA V
  BPL C1465
  DEC UU
@@ -4343,13 +4343,13 @@ ORG &0B00
  LDA L0880,X
  CLC
  ADC #1
- CMP trackData+1543,Y
+ CMP trackData+&607,Y
  PHP
  BCC C149B
  TYA
  CLC
  ADC #8
- CMP trackData+1786
+ CMP trackData+&6FA
  BCC C1496
  LDA #0
 
@@ -4368,10 +4368,10 @@ ORG &0B00
 .C14A6
 
  LDA L08D0,X
- CMP trackData+1788
+ CMP trackData+&6FC
  BNE C14C1
  LDA L08E8,X
- CMP trackData+1789
+ CMP trackData+&6FD
  BNE C14C1
  LDA #0
  STA L08D0,X
@@ -4404,7 +4404,7 @@ ORG &0B00
  BNE C14DD
  TYA
  BNE C14D2
- LDA trackData+1786
+ LDA trackData+&6FA
 
 .C14D2
 
@@ -4412,7 +4412,7 @@ ORG &0B00
  SBC #8
  STA L06E8,X
  TAY
- LDA trackData+1543,Y
+ LDA trackData+&607,Y
  SEC
 
 .C14DD
@@ -4428,9 +4428,9 @@ ORG &0B00
  BNE C1509
  DEC L08E8,X
  BPL C1509
- LDA trackData+1788
+ LDA trackData+&6FC
  STA L08D0,X
- LDA trackData+1789
+ LDA trackData+&6FD
  STA L08E8,X
  CPX currentPlayer
  BNE C14E4
@@ -4472,7 +4472,7 @@ ORG &0B00
  LSR A
  BCS C152E
  LDA L0897
- CMP trackData+5,Y
+ CMP trackData+&005,Y
  BCS C1532
 
 .C1527
@@ -4496,13 +4496,13 @@ ORG &0B00
 
 .C1538
 
- LDA trackData+1536,Y
+ LDA trackData+&600,Y
  AND #1
  BEQ C1527
- LDA trackData+5,Y
+ LDA trackData+&005,Y
  STA L0017
  BEQ C1527
- LDA trackData+7,Y
+ LDA trackData+&007,Y
  STA L0020
  AND #&7F
  STA L0018
@@ -5463,7 +5463,7 @@ ENDIF
 
  LDA #9
  LDY L0046
- CPY trackData+1817
+ CPY trackData+&719
  BNE C17CF
  LDA #&18
 
@@ -5566,9 +5566,9 @@ ENDIF
 
 .P181E
 
- LDA trackData+1791
+ LDA trackData+&6FF
  STA L08E8,X
- LDA trackData+1790
+ LDA trackData+&6FE
  STA L08D0,X
  LDA #0
  STA L06E8,X
@@ -5582,14 +5582,14 @@ ENDIF
  LDA #1
  BIT raceStarted
  BMI C184C
- LDX trackData+1815
+ LDX trackData+&717
  LDY currentPosition
  JSR SwapDriverPosition
 
  JSR SetPlayerPositions \ Set the player's current position, plus the position
                         \ ahead and the position behind
 
- LDA trackData+1816
+ LDA trackData+&718
 
 .C184C
 
@@ -8562,16 +8562,16 @@ ENDIF
  SEC
  SBC T
  BCS C235B
- ADC trackData+1786
+ ADC trackData+&6FA
  JMP C235B
 
 .C234F
 
  CLC
  ADC L06FF
- CMP trackData+1786
+ CMP trackData+&6FA
  BCC C235B
- SBC trackData+1786
+ SBC trackData+&6FA
 
 .C235B
 
@@ -9602,11 +9602,11 @@ ENDIF
  PLA
  EOR #&80
  PHP
- LDA trackData+1788
+ LDA trackData+&6FC
  SEC
  SBC T
  STA T
- LDA trackData+1789
+ LDA trackData+&6FD
  SBC U
  BNE C27EA
  CLC
@@ -9661,7 +9661,7 @@ ENDIF
  LDA positionNumber,X
  BMI C285B
  LDY L06E8,X
- LDA trackData+1536,Y
+ LDA trackData+&600,Y
  BPL C280D
  LDA L3850Hi,X
  CMP L01A4,X
@@ -9672,7 +9672,7 @@ ENDIF
 
  LSR A
  BCS C282F
- LDA trackData+7,Y
+ LDA trackData+&007,Y
  STA L01A4,X
  CLC
  SBC L3850Hi,X
@@ -9683,7 +9683,7 @@ ENDIF
  STA T
  LDA L0880,X
  SEC
- SBC trackData+5,Y
+ SBC trackData+&005,Y
  BCS C287F
  CMP T
  BCS C285B
@@ -9709,7 +9709,7 @@ ENDIF
  ADC driverSpeed,X
  BIT raceStarted
  BPL C284E
- SBC trackData+1818
+ SBC trackData+&71A
 
 .C284E
 
@@ -9919,11 +9919,11 @@ ENDIF
  STA TT
  LDA L0178,X
  STA UU
- LDA trackData+256,Y
+ LDA trackData+&100,Y
  STA VV
- LDA trackData+512,Y
+ LDA trackData+&200,Y
  STA WW
- LDA trackData+768,Y
+ LDA trackData+&300,Y
  STA GG
  LDX #0
  LDA TT
@@ -9974,9 +9974,9 @@ ENDIF
  CPX #3
  BNE C2960
  LDY L000C
- LDA trackData+1024,Y
+ LDA trackData+&400,Y
  STA VV
- LDA trackData+1280,Y
+ LDA trackData+&500,Y
  STA GG
  LDX #0
  LDA UU
@@ -16993,7 +16993,7 @@ NEXT
 
 .Set5FB0
 
- LDA trackData+1812,X   \ Set baseSpeed = the X-th byte of trackData+1812
+ LDA trackData+&714,X   \ Set baseSpeed = the X-th byte of trackData+&714
  STA baseSpeed          \
                         \ so baseSpeed contains the base speed for cars at the
                         \ chosen class or race, on this track
@@ -17006,14 +17006,14 @@ NEXT
 
  STA U                  \ Set U = baseSpeed
 
- LDA trackData+1786     \ Set Y = trackData+1786 >> 3
+ LDA trackData+&6FA     \ Set Y = trackData+&6FA >> 3
  LSR A                  \       = &C0 >> 3
  LSR A                  \       = &18
  LSR A                  \       = 24
  TAY
 
-                        \ Now we copy the 24 bytes between trackData+1744 and
-                        \ trackData+1788 to L5FB0, processing each byte as we go
+                        \ Now we copy the 24 bytes between trackData+&6D0 and
+                        \ trackData+&6FC to L5FB0, processing each byte as we go
                         \ (i.e. taking the input and storing the result):
                         \
                         \   * Bit 7 of the result = bit 0 of the input
@@ -17027,7 +17027,7 @@ NEXT
 
 .P44D5
 
- LDA trackData+1744,Y   \ Fetch the Y-th byte from trackData+1744 as the input
+ LDA trackData+&6D0,Y   \ Fetch the Y-th byte from trackData+&6D0 as the input
 
  LSR A                  \ Shift bit 0 of the input into the C flag and store it
  PHP                    \ on the stack so we can put it into bit 7 of the result
@@ -17129,10 +17129,10 @@ NEXT
  LDY L0700,X
  LDA L000D
  STA V
- LDA trackData+256,Y
- EOR trackData+768,Y
+ LDA trackData+&100,Y
+ EOR trackData+&300,Y
  PHP
- LDA trackData+768,Y
+ LDA trackData+&300,Y
  PHP
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -17140,7 +17140,7 @@ NEXT
  CMP #&3C
  PHP
  BCC C454F
- LDA trackData+256,Y
+ LDA trackData+&100,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -17307,10 +17307,10 @@ NEXT
 .sub_C4610
 
  STA U
- LDA trackData+512,Y
+ LDA trackData+&200,Y
  EOR L0025
  PHP
- LDA trackData+512,Y
+ LDA trackData+&200,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -18305,7 +18305,7 @@ ENDIF
 
  STA U
  LDX gearNumber
- LDA trackData+1798,X
+ LDA trackData+&706,X
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -18426,7 +18426,7 @@ ENDIF
 .C4A7F
 
  STA U
- LDA trackData+1805,X
+ LDA trackData+&70D,X
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -18993,20 +18993,20 @@ ENDIF
  TAX
  LDY #2
  STY W
- LDA trackData+224,X
+ LDA trackData+&0E0,X
  JSR sub_C4D21
  LDY #4
- LDA trackData+240,X
+ LDA trackData+&0F0,X
  JSR sub_C4D21
  LDY #2
- LDA trackData+208,X
+ LDA trackData+&0D0,X
  JSR sub_C4D21
- LDA trackData+1770,X
+ LDA trackData+&6EA,X
  AND #7
  CLC
  ADC #7
  STA L0037
- LDA trackData+1770,X
+ LDA trackData+&6EA,X
  AND #&F8
  TAY
  LDX #&FD
@@ -20463,7 +20463,7 @@ ENDIF
 
  LDX L0046
  BNE C505C
- LDX trackData+1817
+ LDX trackData+&719
  INX
  BEQ C505F
 
@@ -22399,7 +22399,7 @@ ORG &5E40
 
  SKIP 1                 \ The base speed for each car, which is faster with a
                         \ higher class of race (this value is taken from the
-                        \ track data at trackData+1812):
+                        \ track data at trackData+&714):
                         \
                         \   * 134 = Novice
                         \
@@ -24921,10 +24921,10 @@ ENDIF
 
  LDA driverSeconds,Y    \ Calculate the slowest lap time minus the time for
  SEC                    \ class X from the track data, starting with the seconds
- SBC trackData+1792,X
+ SBC trackData+&700,X
 
  LDA driverMinutes,Y    \ And then the minutes
- SBC trackData+1795,X
+ SBC trackData+&703,X
 
                         \ Note that for X = 2 (professional), the track data
                         \ figure is 0, so the C flag will always be set

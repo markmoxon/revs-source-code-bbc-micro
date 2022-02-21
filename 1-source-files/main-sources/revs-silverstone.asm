@@ -51,31 +51,31 @@ ORG CODE%
 
  EQUB &03
 
-\ trackData+1 = L5301
+\ trackData+&001 = L5301
 
  EQUB &D1
 
-\ trackData+2 = L5302
+\ trackData+&002 = L5302
 
  EQUB &0C
 
-\ trackData+3 = L5303
+\ trackData+&003 = L5303
 
  EQUB &0F
 
-\ trackData+4 = L5304
+\ trackData+&004 = L5304
 
  EQUB &CF
 
-\ trackData+5 = L5305
+\ trackData+&005 = L5305
 
  EQUB &60
 
-\ trackData+6 = L5306
+\ trackData+&006 = L5306
 
  EQUB &0F
 
-\ trackData+7 = L5307
+\ trackData+&007 = L5307
 
  EQUB &88, &13, &CF, &0C, &3E
  EQUB &CE, &12, &3D, &00, &12, &D3, &0C, &46, &D2, &14, &47, &8A
@@ -96,22 +96,22 @@ ORG CODE%
  EQUB &03, &D1, &0C, &0F, &CF, &60, &0F, &88, &00, &8E, &41, &40
  EQUB &00, &00, &C9, &54, &F6
 
-\ trackData+208 = L53D0
+\ trackData+&0D0 = L53D0
 
  EQUB &F8, &52, &B2, &07, &FC, &D9, &28
  EQUB &FB, &CD, &27, &17, &30, &FA, &D2, &00
 
-\ trackData+224 = L53E0
+\ trackData+&0E0 = L53E0
 
  EQUB &6C, &04, &1B, &03
  EQUB &08, &4B, &3F, &0E, &FF, &B1, &35, &F0, &C5, &F0, &C7, &24
 
-\ trackData+240 = L53F0
+\ trackData+&0F0 = L53F0
 
  EQUB &08, &08, &08, &08, &00, &12, &11, &08, &08, &F0, &EC, &0C
  EQUB &16, &04, &F0, &08
 
-\ trackData+256 = L5400
+\ trackData+&100 = L5400
 
  EQUB &FC, &FE, &02, &06, &0A, &0E, &12, &15
  EQUB &19, &1D, &21, &25, &28, &2C, &30, &33, &3C, &4A, &57, &61
@@ -136,7 +136,7 @@ ORG CODE%
  EQUB &4A, &46, &42, &3E, &3A, &36, &31, &2D, &28, &24, &1F, &1A
  EQUB &16, &11, &0C, &08, &03, &FE, &FB, &00
 
-\ trackData+512 = L5500
+\ trackData+&200 = L5500
 
  EQUB &00, &00, &00, &00
  EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
@@ -161,7 +161,7 @@ ORG CODE%
  EQUB &09, &0A, &0A, &0A, &0B, &0C, &0D, &0E, &0E, &0F, &10, &11
  EQUB &12, &12, &13, &14, &11, &0D, &0A, &07, &03, &00, &00, &00
 
-\ trackData+768 = L5600
+\ trackData+&300 = L5600
 
  EQUB &78, &78, &78, &78, &78, &77, &77, &76, &75, &74, &73, &72
  EQUB &71, &70, &6E, &6D, &68, &5E, &53, &46, &38, &29, &26, &31
@@ -186,7 +186,7 @@ ORG CODE%
  EQUB &69, &6B, &6D, &6F, &71, &73, &74, &75, &76, &77, &77, &78
  EQUB &78, &78, &78, &53
 
-\ trackData+1024 = L5700
+\ trackData+&400 = L5700
 
  EQUB &A9, &A9, &A9, &A9, &A9, &A9, &AA, &AA
  EQUB &AB, &AB, &AC, &AD, &AE, &AF, &B0, &B2, &B8, &BF, &C8, &D2
@@ -211,7 +211,7 @@ ORG CODE%
  EQUB &BA, &B8, &B6, &B4, &B3, &B1, &B0, &AE, &AD, &AC, &AB, &AA
  EQUB &AA, &A9, &A9, &A9, &A9, &A9, &A9, &76
 
-\ trackData+1280 = 5800
+\ trackData+&500 = &5800
 
  EQUB &FE, &00, &02, &05
  EQUB &08, &0B, &0E, &11, &13, &16, &19, &1C, &1E, &21, &24, &26
@@ -236,35 +236,35 @@ ORG CODE%
  EQUB &31, &34, &37, &37, &34, &31, &2F, &2C, &28, &25, &22, &1F
  EQUB &1B, &18, &15, &11, &0E, &0A, &07, &03, &00, &FD, &FD, &32
 
-\ trackData+1536 = 5900
+\ trackData+&600 = &5900
 
  EQUB &30
 
-\ trackData+1537 = 5901
+\ trackData+&601 = &5901
 
  EQUB &20
 
-\ trackData+1538 = 5902
+\ trackData+&602 = &5902
 
  EQUB &80
 
-\ trackData+1539 = 5903
+\ trackData+&603 = &5903
 
  EQUB &A0
 
-\ trackData+1540 = 5904
+\ trackData+&604 = &5904
 
  EQUB &C0
 
-\ trackData+1541 = 5905
+\ trackData+&605 = &5905
 
  EQUB &00
 
-\ trackData+1542 = 5906
+\ trackData+&606 = &5906
 
  EQUB &94
 
-\ trackData+1543 = 5907
+\ trackData+&607 = &5907
 
  EQUB &63
 
@@ -287,7 +287,7 @@ ORG CODE%
  EQUB &30, &20, &80, &A0, &C0, &00, &94, &63, &64, &F0, &00, &00
  EQUB &48, &00, &50, &52
 
-\ trackData+1744 = 59D0
+\ trackData+&6D0 = &59D0
 \
 \ Next 24 bytes are copied to L5FB0
 \ Bit 0 -> bit 7 of result
@@ -298,36 +298,36 @@ ORG CODE%
  EQUB &15, &3C, &18, &30, &33, &39, &38, &14, &14, &14, &37, &20
  EQUB &59, &2B, &54, &14, &14, &67
 
-\ trackData+1770 = 59EA
+\ trackData+&6EA = &59EA
 
  EQUB &03, &10, &19, &2C, &38, &4D
  EQUB &64, &75, &70, &70, &94, &98, &A4, &A8, &B5, &B8
 
-\ trackData+1786 = 59FA
+\ trackData+&6FA = &59FA
 
  EQUB &C0
 
-\ trackData+1787 = 59FB
+\ trackData+&6FB = &59FB
 
  EQUB &FF
 
-\ trackData+1788 = 59FC
+\ trackData+&6FC = &59FC
 
  EQUB &00
 
-\ trackData+1789 = 59FD
+\ trackData+&6FD = &59FD
 
  EQUB &04
 
-\ trackData+1790 = 59FE
+\ trackData+&6FE = &59FE
 
  EQUB &4B
 
-\ trackData+1791 = 59FF
+\ trackData+&6FF = &59FF
 
  EQUB &03
 
-\ trackData+1792 = 5A00
+\ trackData+&700 = &5A00
 \ Race class adjuster: seconds
 \ See MainLoop (Part 4 of 6)
 \ If the slowest lap time is a human player, and it's slower than one of these
@@ -337,7 +337,7 @@ ORG CODE%
  EQUB 41                \ Set class to Amateur if slowest lap time > 1:41
  EQUB 0                 \ Otherwise set class to Professional
 
-\ trackData+1795 = 5A03
+\ trackData+&703 = &5A03
 \ See MainLoop (Part 4 of 6)
 \ Race class adjuster: minutes
 
@@ -345,35 +345,35 @@ ORG CODE%
  EQUB 1                 \ Set class to Amateur if slowest lap time > 1:41
  EQUB 0                 \ Otherwise set class to Professional
 
-\ trackData+1798 = 5A06
+\ trackData+&706 = &5A06
 \ Called "ratios" in car performance hack
 
  EQUB &67, &00, &67, &42, &35, &2E, &2A
 
-\ trackData+1805 = 5A0D
+\ trackData+&70D = &5A0D
 \ Called "powers" in car performance hack
 
  EQUB &A1, &00, &A1, &68, &52, &48, &41
 
-\ trackData+1812 = 5A14
+\ trackData+&714 = &5A14
 
  EQUB 134               \ Base speed for Novice
  EQUB 146               \ Base speed for Amateur
  EQUB 152               \ Base speed for Professional
 
-\ trackData+1815 = 5A17
+\ trackData+&717 = &5A17
 
  EQUB &04
 
-\ trackData+1816 = 5A18
+\ trackData+&718 = &5A18
 
  EQUB &28
 
-\ trackData+1817 = 5A19
+\ trackData+&719 = &5A19
 
  EQUB &18
 
-\ trackData+1818 = 5A1A
+\ trackData+&71A = &5A1A
 
  EQUB &00, &73, &6F, &31, &00, &8C, &00, &00
 
