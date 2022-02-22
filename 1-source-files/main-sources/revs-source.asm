@@ -5135,7 +5135,8 @@ ENDIF
 
  JSR SetCustomScreen    \ Switch to the custom screen mode, which also sets
                         \ screenSection to -2, so the interrupt handler doesn't
-                        \ do any palette switching just yet
+                        \ do any palette switching just yet, but leaves the
+                        \ palette mapped to black, so the screen is blank
 
  LDA #0                 \ Set printMode = 0 so text printing pokes directly into
  STA printMode          \ screen memory
@@ -5143,7 +5144,11 @@ ENDIF
  JSR CopyDashData       \ Copy the dash data from the main game code to screen
                         \ memory
 
- JSR sub_C7BE2          \ ??? Uses the BLOCK macro
+ JSR DrawTrackView      \ Copy the data from the dash data blocks to the screen
+                        \ to draw the track view, though as the screen is
+                        \ currently mapped to black, this doesn't show anything,
+                        \ but it does zero all the dash data blocks, so they are
+                        \ ready to be filled with the track view
 
  BIT configStop         \ If bit 6 of configStop is set then we are returning to
  BVS main4              \ the track after visiting the pits, so jump to main4
@@ -5237,7 +5242,8 @@ ENDIF
 
  JSR sub_C111E
 
- JSR sub_C7BE2
+ JSR DrawTrackView      \ Copy the data from the dash data blocks to the screen
+                        \ to draw the track view
 
 \ ******************************************************************************
 \
@@ -11594,7 +11600,7 @@ ENDIF
 
 IF _ACORNSOFT
 
- EQUB &1C
+ EQUB &1C               \ Index 0
 
 ELIF _SUPERIOR
 
@@ -11602,11 +11608,49 @@ ELIF _SUPERIOR
 
 ENDIF
 
- EQUB &8D, &7C, &7C, &7C, &7C
- EQUB &7C, &6B, &6B, &6B, &6B, &6B, &5A, &5A, &5A, &5A, &49, &49
- EQUB &49, &49, &38, &38, &38, &38, &27, &27, &27, &27, &16, &16
- EQUB &16, &16, &16, &16, &16, &16, &16, &16, &16, &05, &05, &05
- EQUB &05, &05
+ EQUB &8D
+ EQUB &7C
+ EQUB &7C
+ EQUB &7C
+ EQUB &7C
+ EQUB &7C
+ EQUB &6B
+ EQUB &6B
+ EQUB &6B
+ EQUB &6B
+ EQUB &6B
+ EQUB &5A
+ EQUB &5A
+ EQUB &5A
+ EQUB &5A
+ EQUB &49
+ EQUB &49
+ EQUB &49
+ EQUB &49
+ EQUB &38
+ EQUB &38
+ EQUB &38
+ EQUB &38
+ EQUB &27
+ EQUB &27
+ EQUB &27
+ EQUB &27
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &16
+ EQUB &05
+ EQUB &05
+ EQUB &05
+ EQUB &05
+ EQUB &05               \ Index &2B
 
 \ ******************************************************************************
 \
@@ -11702,7 +11746,7 @@ ENDIF
 \
 \       Name: L3150
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11713,11 +11757,55 @@ ENDIF
 
 .L3150
 
- EQUB &42, &64, &75, &75
- EQUB &75, &75, &75, &86, &86, &86, &86, &86, &97, &97, &97, &97
- EQUB &A8, &A8, &A8, &A8, &B9, &B9, &B9, &B9, &CA, &CA, &CA, &CA
- EQUB &DB, &DB, &DB, &DB, &DB, &DB, &DB, &DB, &DB, &DB, &DB, &EC
- EQUB &EC, &EC, &EC, &EC, &28, &28, &00, &00
+ EQUB &42               \ Index 0
+ EQUB &64
+ EQUB &75
+ EQUB &75
+ EQUB &75
+ EQUB &75
+ EQUB &75
+ EQUB &86
+ EQUB &86
+ EQUB &86
+ EQUB &86
+ EQUB &86
+ EQUB &97
+ EQUB &97
+ EQUB &97
+ EQUB &97
+ EQUB &A8
+ EQUB &A8
+ EQUB &A8
+ EQUB &A8
+ EQUB &B9
+ EQUB &B9
+ EQUB &B9
+ EQUB &B9
+ EQUB &CA
+ EQUB &CA
+ EQUB &CA
+ EQUB &CA
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &DB
+ EQUB &EC
+ EQUB &EC
+ EQUB &EC
+ EQUB &EC
+ EQUB &EC               \ Index &2B
+
+ EQUB &28
+ EQUB &28
+ EQUB &00
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -19385,7 +19473,9 @@ ENDIF
 \ Returns:
 \
 \    screenSection      screenSection is set to -2, so the interrupt handler at
-\                       ScreenHandler does not do anything straight away
+\                       ScreenHandler does not do anything straight away, but
+\                       leaves the palette mapped to black, so the screen is
+\                       blank
 \
 \ ******************************************************************************
 
@@ -22647,30 +22737,24 @@ ELIF _SUPERIOR
 
 ENDIF
 
-.L6000
+\ ******************************************************************************
+\
+\       Name: zeroIfYIs55
+\       Type: Variable
+\   Category: Graphics
+\    Summary: A lookup table for zeroing Y if and only if it is &55
+\
+\ ******************************************************************************
 
- EQUB &00, &01, &02, &03, &04, &05, &06, &07, &08, &09, &0A
- EQUB &0B, &0C, &0D, &0E, &0F, &10, &11, &12, &13, &14, &15, &16
- EQUB &17, &18, &19, &1A, &1B, &1C, &1D, &1E, &1F, &20, &21, &22
- EQUB &23, &24, &25, &26, &27, &28, &29, &2A, &2B, &2C, &2D, &2E
- EQUB &2F, &30, &31, &32, &33, &34, &35, &36, &37, &38, &39, &3A
- EQUB &3B, &3C, &3D, &3E, &3F, &40, &41, &42, &43, &44, &45, &46
- EQUB &47, &48, &49, &4A, &4B, &4C, &4D, &4E, &4F, &50, &51, &52
- EQUB &53, &54, &00, &56, &57, &58, &59, &5A, &5B, &5C, &5D, &5E
- EQUB &5F, &60, &61, &62, &63, &64, &65, &66, &67, &68, &69, &6A
- EQUB &6B, &6C, &6D, &6E, &6F, &70, &71, &72, &73, &74, &75, &76
- EQUB &77, &78, &79, &7A, &7B, &7C, &7D, &7E, &7F, &80, &81, &82
- EQUB &83, &84, &85, &86, &87, &88, &89, &8A, &8B, &8C, &8D, &8E
- EQUB &8F, &90, &91, &92, &93, &94, &95, &96, &97, &98, &99, &9A
- EQUB &9B, &9C, &9D, &9E, &9F, &A0, &A1, &A2, &A3, &A4, &A5, &A6
- EQUB &A7, &A8, &A9, &AA, &AB, &AC, &AD, &AE, &AF, &B0, &B1, &B2
- EQUB &B3, &B4, &B5, &B6, &B7, &B8, &B9, &BA, &BB, &BC, &BD, &BE
- EQUB &BF, &C0, &C1, &C2, &C3, &C4, &C5, &C6, &C7, &C8, &C9, &CA
- EQUB &CB, &CC, &CD, &CE, &CF, &D0, &D1, &D2, &D3, &D4, &D5, &D6
- EQUB &D7, &D8, &D9, &DA, &DB, &DC, &DD, &DE, &DF, &E0, &E1, &E2
- EQUB &E3, &E4, &E5, &E6, &E7, &E8, &E9, &EA, &EB, &EC, &ED, &EE
- EQUB &EF, &F0, &F1, &F2, &F3, &F4, &F5, &F6, &F7, &F8, &F9, &FA
- EQUB &FB, &FC, &FD, &FE, &FF
+.zeroIfYIs55
+
+ FOR I%, 0, 255
+  IF I% = &55
+   EQUB 0
+  ELSE
+   EQUB I%
+  ENDIF
+ NEXT
 
 \ ******************************************************************************
 \
@@ -26203,7 +26287,7 @@ ORG &6C00
 
 \ ******************************************************************************
 \
-\       Name: sub_C7BBF
+\       Name: DrawTrackView (Part 4 of 4)
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -26214,357 +26298,507 @@ ORG &6C00
 \
 \ ******************************************************************************
 
-.sub_C7BBF
+.view20
 
- LDA mod_C7D23+1
- STA mod_C7BD3+1
- LDA mod_C7F23+1
- STA mod_C7BD6+1
- LDA mod_C7F7C+1
- STA mod_C7BD9+1
+ LDA view3+1
+ STA view21+1
+ LDA view9+1
+ STA view22+1
+ LDA view15+1
+ STA view23+1
+
  LDA #&91
 
-.mod_C7BD3
+.view21
 
- STA mod_C7C0F
+ STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
 
-.mod_C7BD6
+.view22
 
- STA mod_C7C0F
+ STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
 
-.mod_C7BD9
+.view23
 
- STA mod_C7E0F
- LDA #&E0
- STA mod_C7EEE
- RTS
+ STA DrawStrips26+15    \ Modify STA (P),Y instruction in strip 26
+
+ LDA #&E0               \ Modify CMP instruction in strp2
+ STA strp2
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C7BE2
+\       Name: DrawTrackView (Part 1 of 4)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C7BE2
-
- LDA #0
- STA P
- STA R
- LDX #&67
- STX Q
- INX
- STX S
- LDX #&4F
- JSR sub_C7EF3
- JMP sub_C7D13
-
-\ ******************************************************************************
-\
-\       Name: sub_C7BF7
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C7BF7
-
- LDA L5F60,X
- AND #&03
- TAY
- LDA colourByte,Y
-
-\ ******************************************************************************
-\
-\       Name: BLOCK
-\       Type: Macro
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Arguments:
-\
-\   I%                  The block number (0 to 39)
-\
-\   A                   The number to store in (Q P) or (S R) if the X-th byte
-\                       of code block I% in main memory is zero
-\
-\   (Q P)               Address of ???
-\
-\   (S R)               Address of ???
-\
-\ ******************************************************************************
-
-MACRO BLOCK I%
-
- LDY dashData+&80*I%,X  \ Set Y to the X-th byte of code block I% in main memory
-
- BEQ P%+10              \ If Y = 0, skip the next three instructions (i.e. jump
-                        \ to the LDY #LO(8*I%) instruction
-
- LDA #0                 \ Zero the X-th byte of code block I% in main memory
- STA dashData+&80*I%,X
-
- LDA L6000,Y            \ Set A to the Y-th byte from L6000
-
- LDY #LO(8*I%)          \ Store A in the 8*I%-th byte of (Q P) or (S R)
- IF I% < 32
-  STA (P),Y
- ELSE
-  STA (R),Y
- ENDIF
-
-ENDMACRO
-
-\ ******************************************************************************
-\
-\       Name: sub_C7C00 (Part 1 of 2)
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C7C00
-
- BLOCK 0
- mod_C7C0F = P% - 2     \ Points to the STA (P),Y instruction in BLOCK 0
- BLOCK 1
- BLOCK 2
- BLOCK 3
- BLOCK 4
- BLOCK 5
- BLOCK 6
- BLOCK 7
- BLOCK 8
- BLOCK 9
- BLOCK 10
- BLOCK 11
- BLOCK 12
- BLOCK 13
- BLOCK 14
- BLOCK 15
-
- JMP C7D56
-
-\ ******************************************************************************
-\
-\       Name: sub_C7D13
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C7D13
-
- LDA #&60
- STA mod_C7EEE
-
-.L7D18
-
- DEX
- LDY L3150,X
- CPY mod_C7D23+1
- BEQ L7D37
- LDA #&91
-
-.mod_C7D23
-
- STA mod_C7C0F
- STY mod_C7D2E+1
- STY mod_C7D23+1
- LDA #&60
-
-.mod_C7D2E
-
- STA sub_C7C00
- LDY L30D0,X
- STY mod_C7D4C+1
-
-.L7D37
-
- JSR sub_C7EF3
- AND L38D0,X
- ORA L3350,X
- STA (P),Y
- LDA L4400,X
- AND L3950,X
- ORA L33D0,X
- TAY
-
-.mod_C7D4C
-
- JSR sub_C7E00
- CPX #&1C
- BNE L7D18
- JMP sub_C7F18
-
-\ ******************************************************************************
-\
-\       Name: sub_C7C00 (Part 2 of 2)
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.C7D56
-
- BLOCK 16
- BLOCK 17
- BLOCK 18
- BLOCK 19
- BLOCK 20
- BLOCK 21
- BLOCK 22
- BLOCK 23
- BLOCK 24
- BLOCK 25
-
-\ ******************************************************************************
-\
-\       Name: sub_C7E00
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C7E00
-
- BLOCK 26
- mod_C7E0F = P% - 2     \ Points to the STA (P),Y instruction in BLOCK 26
- BLOCK 27
- BLOCK 28
- BLOCK 29
- BLOCK 30
- BLOCK 31
- BLOCK 32
- BLOCK 33
- BLOCK 34
- BLOCK 35
- BLOCK 36
- BLOCK 37
- BLOCK 38
- BLOCK 39
-
-.mod_C7EEE
-
- CPX #44                \ If X = 44, return from the subroutine (as sub_C7F18-1
- BEQ sub_C7F18-1        \ contains an RTS)
-
- DEX
-
-\ ******************************************************************************
-\
-\       Name: sub_C7EF3
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C7EF3
-
- LDY P
- INY
- TYA
- AND #&07
- BEQ L7F02
- STY P
- STY R
- JMP sub_C7BF7
-
-.L7F02
-
- TYA
- CLC
- ADC #&38
- STA P
- STA R
- LDA Q
- ADC #&01
- STA Q
- ADC #&01
- STA S
- JMP sub_C7BF7
-
- RTS
-
-\ ******************************************************************************
-\
-\       Name: sub_C7F18
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Draw the top part of the track view using the data in the dash
+\             data blocks
 \
 \ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
-\   sub_C7F18-1         Contains an RTS
+\   view7               Contains an RTS
 \
 \ ******************************************************************************
 
-.sub_C7F18
+.DrawTrackView
+
+ LDA #0                 \ Set (Q P) = &6700 and (S R) = &6800, ready to pass to
+ STA P                  \ the DrawTrackPixelLine routine (so the track view gets
+ STA R                  \ drawn at the correct place on screen, from &6701
+ LDX #&67               \ onwards, as the first line is drawn at (Q P) + 1)
+ STX Q
+ INX
+ STX S
+
+ LDX #&4F               \ Set X = &4F, to point to the first byte to draw from
+                        \ each dash data block (i.e. the byte at the end of the
+                        \ data block, at offset &4F)
+
+ JSR DrawTrackPixelLine \ Draw pixel rows that correspond to dash data blocks
+                        \ &4F to &2C, returning from the subroutine when we
+                        \ reach that point with X = &2C (so we draw all the
+                        \ lines from the top of the track view, down to the line
+                        \ just above the top of the dashboard)
+
+ JMP view1              \ Jump to part 2 to draw the rest of the track view, but
+                        \ after modifying the code so it draws the rest of the
+                        \ lines around the shape of the dashboard
+
+\ ******************************************************************************
+\
+\       Name: DrawTrackPixelLine (Part 2 of 2)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Draw a pixel line across the screen in the track view
+\
+\ ******************************************************************************
+
+.prow2
+
+                        \ At this point, X contains the offset within the dash
+                        \ data of the pixel line to be drawn across the screen
+
+ LDA L5F60,X            \ Fetch the colour of the first byte on the line from
+ AND #%00000011         \ the X-th entry in L5F60 (bits 0 to 2)
+ TAY
+
+ LDA colourByte,Y       \ Set A to the pixel byte for four pixels in colour Y
+                        \ to use as the first byte on the line
+
+                        \ Fall through into DrawStrips to draw the strips that
+                        \ make up the line we want to draw
+                        \
+                        \ If we are drawing the lines above the top of the
+                        \ dashboard, then the following then loops back to the
+                        \ start of the DrawTrackPixelLine routine to keep
+                        \ drawing lines until we do reach the top of the
+                        \ dashboard, at which point we return from the
+                        \ DrawTrackPixelLine routine to part 2 of DrawTrackView,
+                        \ which modifies the code to draw subsequent lines
+                        \ around the shape of the dashboard
+
+\ ******************************************************************************
+\
+\       Name: DRAW_STRIP
+\       Type: Macro
+\   Category: Graphics
+\    Summary: Draw a vertical strip as part of the track
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine draws a pixel row in a vertical strip, as part of the track view.
+\
+\ The track view is made up of 40 vertical strips, each one four pixels (one
+\ character block) wide, with strip 0 on the left, then strip 1, and so on up
+\ to strip 39 on the far right of the screen.
+\
+\ Each macro instance copies one pixel byte in one strip - i.e. a four-pixel row
+\ within the strip, so each sequence of DRAW_STRIP 0 through DRAW_STRIP 39
+\ macros draws a one-pixel high line across the width of the screen.
+\
+\ Each macro instance moves one pixel byte, from offset X within dash data block
+\ I%, into screen memory. The offset X is decremented for each run through the
+\ sequence of macros, as data is stored at the end of each dash data block. So
+\ as each pixel line is drawn, moving down the screen, X decrements from &4F
+\ (the start of each dash data block) so we work our way down through the data.
+\
+\ The destination address in screen memory for the data is governed by (Q P),
+\ which points to the address of the pixel byte to update in strip 0 (i.e. the
+\ address of the first pixel in the line across the screen).
+\
+\ If the dash data byte is zero, then the current value of A is stored in screen
+\ memory (i.e. the same value that was stored in the previous strip).
+\
+\ If the dash data byte is non-zero, then this is stored in A and screen memory,
+\ unless it is &55, in which a zero is stored in A and screen memory.
+\
+\ As it is copied, the source dash data byte is zeroed, so the macro effectively
+\ moves a byte into screen memory, clearing it in the process.
+\
+\ Arguments:
+\
+\   I%                  The vertical strip number (0 to 39)
+\
+\   X                   The offset within the dash data of the data to be drawn
+\                       on the screen (from &7F down, as the dash data lives at
+\                       the end of each dash data block)
+\
+\   A                   The value stored in screen memory in the previous strip
+\                       (or the starting value if this is strip 0)
+\
+\   (Q P)               The screen address of the leftmost character block to
+\                       update (i.e. the screen address of the pixel byte to
+\                       draw in strip 0, so this is the address of the start of
+\                       the horizontal line that seqential macros draw)
+\
+\   (S R)               Contains (Q P) + &100, to be used instead of (Q P) for
+\                       strips 32 to 39
+\
+\ ******************************************************************************
+
+MACRO DRAW_STRIP I%
+
+ LDY dashData+&80*I%,X  \ Set Y to the X-th byte of dash data block I%
+
+ BEQ P%+10              \ If Y = 0, skip the next three instructions (i.e. jump
+                        \ to the LDY #LO(8*I%) instruction to leave the value of
+                        \ A alone)
+
+                        \ Otherwise Y is non-zero, and we do the following in
+                        \ the next three instructions:
+                        \
+                        \   * Zero the location in code block I% from which we
+                        \     just read a byte
+                        \
+                        \   * Set A to the byte we just read from code block I%,
+                        \     unless the value is &55, in which case set A = 0
+
+ LDA #0                 \ Zero the X-th byte of dash data block I%
+ STA dashData+&80*I%,X
+
+ LDA zeroIfYIs55,Y      \ Set A to the Y-th byte from zeroIfYIs55
+                        \
+                        \ This sets A = Y, unless Y = &55, in which case it sets
+                        \ Y = 0, so that's:
+                        \
+                        \   If Y = &55, set A = 0, otherwise set A = Y
+                        \
+                        \ The zeroIfYIs55 table exists just to enable us to do
+                        \ this logic in one instruction
+
+                        \ If Y = 0 above, this is where we jump to
+
+ LDY #LO(8*I%)          \ Store A in character block I% in screen memory, as an
+ IF I% < 32             \ offset from (Q P)
+  STA (P),Y             \
+ ELSE                   \ (S R) is used instead of (Q P) for strips 32 to 39,
+  STA (R),Y             \ which saves us from having to increment Q to cross the
+ ENDIF                  \ page boundary, as (S R) = (Q P) + &100
+
+                        \ Fall through into the next DRAW_STRIP macro to draw
+                        \ the next pixel byte along to the right, continuing the
+                        \ horizontal line of pixels
+
+ENDMACRO
+
+\ ******************************************************************************
+\
+\       Name: DrawStrips (Part 1 of 3)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Draw the vertical strips that make up the track view (0 to 15)
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine draws vertical strips 0 to 39, to show the track view.
+\
+\ Other entry points:
+\
+\   DrawStrips26        Draw strips 26 to 39
+\
+\ ******************************************************************************
+
+.DrawStrips
+
+ DRAW_STRIP 0           \ Draw strips 0 to 15
+ DRAW_STRIP 1
+ DRAW_STRIP 2
+ DRAW_STRIP 3
+ DRAW_STRIP 4
+ DRAW_STRIP 5
+ DRAW_STRIP 6
+ DRAW_STRIP 7
+ DRAW_STRIP 8
+ DRAW_STRIP 9
+ DRAW_STRIP 10
+ DRAW_STRIP 11
+ DRAW_STRIP 12
+ DRAW_STRIP 13
+ DRAW_STRIP 14
+ DRAW_STRIP 15
+
+ JMP strp1              \ Jump to part 2 to continue with strip 16
+
+\ ******************************************************************************
+\
+\       Name: DrawTrackView (Part 2 of 4)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Draw the part of the track view that fits around the dashboard
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine modifes the DrawStrips routine so that it draws all the remaining
+\ lines in the track view so they fit around the shape of the dashboard.
+\
+\ ******************************************************************************
+
+.view1
+
+                        \ We get here with X = &2C
+
+ LDA #&60               \ Set A to the opcode for the RTS instruction
+
+ STA strp2              \ Modify the following instruction in DrawStrips
+                        \ (part 3):
+                        \
+                        \   CPX #&2C -> RTS
+                        \
+                        \ so that calls to DrawTrackPixelLine and DrawStrips
+                        \ from now on will draw individual lines rather than
+                        \ looping back to DrawTrackPixelLine as they did for
+                        \ the lines above the dashboard
+
+.view2
+
+ DEX                    \ Decrement the dash data block pointer to point to
+                        \ the data for the next line
+
+ LDY L3150,X            \ Set Y to the X-th entry in L3150
+
+ CPY view3+1            \ If the instruction at view3 has already been modified
+ BEQ view5              \ to this address, jump to view5 to skip the following
+                        \ modifications
+
+ LDA #&91               \ Set A to the opcode for the STA (P),Y instruction
+
+.view3
+
+ STA DrawStrips+15      \ Modify the instruction pointed to by the address at view3
+                        \
+                        \    STA (P),Y -> STA (P),Y
+
+ STY view4+1            \ Modify the instruction at view4 to change the low byte
+                        \ of the address to the X-th entry in L3150, so the
+                        \ instruction at view4 inserts an RTS into the address
+                        \ with low byte L3150
+
+ STY view3+1            \ Modify the instruction at view4 to change the low byte
+                        \ of the address to the X-th entry in L3150
+
+ LDA #&60               \ Set A to the opcode for the RTS instruction
+
+.view4
+
+ STA DrawStrips         \ Modify the first instruction in DrawStrips to an RTS,
+                        \ so that calls to DrawTrackPixelLine from now on only
+                        \ run parts 1 and 2, and then return before drawing any
+                        \ strips
+                        \
+                        \ In other words, the call to DrawTrackPixelLine below
+                        \ increments the addresses in (Q P) and (S R) and sets
+                        \ the colour byte in A, and then returns
+
+ LDY L30D0,X            \ Modify the instruction at view6 to change the low byte
+ STY view6+1            \ of the address to the X-th byte of L30D0
+
+.view5
+
+ JSR DrawTrackPixelLine \ Increment the addresses in (Q P) and (S R) and set the
+                        \ colour byte in A
+
+ AND L38D0,X
+ ORA L3350,X
+ STA (P),Y
+
+ LDA L4400,X
+ AND L3950,X
+ ORA L33D0,X
+ TAY
+
+.view6
+
+ JSR DrawStrips26       \ Draw the right portion of this pixel line
+
+ CPX #&1C
+ BNE view2
+
+ JMP view8              \ Jump to part 3
+
+\ ******************************************************************************
+\
+\       Name: DrawStrips (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Draw the vertical strips that make up the track view (16 to 25)
+\
+\ ******************************************************************************
+
+.strp1
+
+ DRAW_STRIP 16          \ Draw strips 16 to 25
+ DRAW_STRIP 17
+ DRAW_STRIP 18
+ DRAW_STRIP 19
+ DRAW_STRIP 20
+ DRAW_STRIP 21
+ DRAW_STRIP 22
+ DRAW_STRIP 23
+ DRAW_STRIP 24
+ DRAW_STRIP 25
+
+\ ******************************************************************************
+\
+\       Name: DrawStrips (Part 3 of 3)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Draw the vertical strips that make up the track view (26 to 39)
+\
+\ ******************************************************************************
+
+.DrawStrips26
+
+ DRAW_STRIP 26          \ Draw strips 26 to 39
+ DRAW_STRIP 27
+ DRAW_STRIP 28
+ DRAW_STRIP 29
+ DRAW_STRIP 30
+ DRAW_STRIP 31
+ DRAW_STRIP 32
+ DRAW_STRIP 33
+ DRAW_STRIP 34
+ DRAW_STRIP 35
+ DRAW_STRIP 36
+ DRAW_STRIP 37
+ DRAW_STRIP 38
+ DRAW_STRIP 39
+
+.strp2
+
+ CPX #&2C               \ If X = &2C, then we have just drawn the last pixel
+ BEQ view7              \ line above the top of the dashboard, so return from
+                        \ the subroutine so we can modify the routine to draw
+                        \ subsequent lines in two parts, to fit around the
+                        \ dashboard (as view7 contains an RTS)
+
+ DEX                    \ Decrement the dash data pointer in X to move on to the
+                        \ next pixel line
+
+\ ******************************************************************************
+\
+\       Name: DrawTrackPixelLine (Part 1 of 2)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Draw a pixel line across the screen in the track view, broken up
+\             into strips
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   X                   The offset within the dash data of the data to be drawn
+\                       on the screen (from &7F down, as the dash data lives at
+\                       the end of each dash data block)
+\
+\   (Q P)               The screen address of the leftmost pixel of the line
+\                       above where we want to draw the horizontal pixel line
+\
+\   (S R)               Contains (Q P) + &100
+\
+\ ******************************************************************************
+
+.DrawTrackPixelLine
+
+                        \ We start by incrementing (Q P) and (S R) to point to
+                        \ the next pixel row down the screen
+
+ LDY P                  \ Set Y = P + 1, which is the low byte of (Q P) + 1
+ INY
+
+ TYA                    \ If Y mod 8 = 0 then incrementing (Q P) will take us
+ AND #&07               \ into the next character block (i.e. from pixel row 7
+ BEQ prow1              \ to pixel row 8), so jump to prow1 to update the screen
+                        \ addresses accordingly
+
+ STY P                  \ Otherwise set the low bytes of (Q P) and (S R) to Y,
+ STY R                  \ so this does:
+                        \
+                        \   (Q P) = (Q P) + 1
+                        \
+                        \   (S R) = (S R) + 1
+                        \
+                        \ so they point to the next pixel row down the screen
+
+ JMP prow2              \ Jump to part 2 to draw this pixel row
+
+.prow1
+
+ TYA                    \ Set (Q P) = Y + &138
+ CLC                    \
+ ADC #&38               \ starting with the low bytes
+ STA P
+ STA R
+
+ LDA Q                  \ And then the high bytes, so (Q P) points to start of
+ ADC #&01               \ the character block on the next character row (i.e.
+ STA Q                  \ the next pixel row down)
+
+ ADC #&01               \ Set (S R) = (Q P) + &100
+ STA S
+
+ JMP prow2              \ Jump to part 2 to draw this pixel row
+
+\ ******************************************************************************
+\
+\       Name: DrawTrackView (Part 3 of 4)
+\       Type: Subroutine
+\   Category: 
+\    Summary: 
+\
+\ ******************************************************************************
+
+.view7
+
+ RTS                    \ Return from the subroutine
+
+.view8
 
  DEX
  LDY L3150,X
- CPY mod_C7F23+1
- BEQ L7F31
+ CPY view9+1
+ BEQ view11
  LDA #&91
 
-.mod_C7F23
+.view9
 
- STA mod_C7C0F
- STY mod_C7F2E+1
- STY mod_C7F23+1
+ STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
+ STY view10+1
+ STY view9+1
  LDA #&60
 
-.mod_C7F2E
+.view10
 
- STA sub_C7C00
+ STA DrawStrips
 
-.L7F31
+.view11
 
  LDY P
  INY
  TYA
  AND #&07
- BNE L7F4D
+ BNE view12
  TYA
  CLC
  ADC #&38
@@ -26575,59 +26809,59 @@ ENDMACRO
  STA Q
  ADC #&01
  STA S
- BCC L7F51
+ BCC view13
 
-.L7F4D
+.view12
 
  STY P
  STY R
 
-.L7F51
+.view13
 
  LDA #&F1
  SEC
  SBC L3080,X
- STA mod_C7F67+1
+ STA view14+1
  LDY L3050,X
  LDA L0504,X
  AND L3679,Y
  ORA L3579,Y
  TAY
 
-.mod_C7F67
+.view14
 
- JSR sub_C7C00
+ JSR DrawStrips
  AND L38D0,X
  ORA L3350,X
  STA (P),Y
  LDY L3080,X
- CPY mod_C7F7C+1
- BEQ L7F8A
+ CPY view15+1
+ BEQ view17
  LDA #&91
 
-.mod_C7F7C
+.view15
 
- STA mod_C7E0F
- STY mod_C7F87+1
- STY mod_C7F7C+1
+ STA DrawStrips26+15    \ Modify STA (P),Y instruction in strip 26
+ STY view16+1
+ STY view15+1
  LDA #&60
 
-.mod_C7F87
+.view16
 
- STA sub_C7E00
+ STA DrawStrips26       \ Modify first instruction in DrawStrips26
 
-.L7F8A
+.view17
 
  LDY L30D0,X
- STY mod_C7F9A+1
+ STY view18+1
  LDA L4400,X
  AND L3950,X
  ORA L33D0,X
  TAY
 
-.mod_C7F9A
+.view18
 
- JSR sub_C7E00
+ JSR DrawStrips26
  STY U
  LDY L3050,X
  AND L36F9,Y
@@ -26635,12 +26869,12 @@ ENDMACRO
  LDY U
  STA (R),Y
  CPX #&03
- BEQ L7FB3
- JMP sub_C7F18
+ BEQ view19
+ JMP view8
 
-.L7FB3
+.view19
 
- JMP sub_C7BBF
+ JMP view20
 
 \ ******************************************************************************
 \

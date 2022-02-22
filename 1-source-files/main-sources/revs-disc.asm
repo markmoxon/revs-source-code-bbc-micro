@@ -31,6 +31,9 @@ PUTFILE "1-source-files/boot-files/$.!BOOT.bin", "!BOOT", &FFFFFF, &FFFFFF
 PUTFILE "1-source-files/basic-programs/$.REVS.bin", "REVS", &FF1900, &FF8023
 PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
 \PUTFILE "3-assembled-output/Nurburgring.bin", "Silvers", &0070DB, &0070DB
+\PUTFILE "3-assembled-output/BrandsHatch.bin", "Silvers", &0070DB, &0070DB
+\PUTFILE "3-assembled-output/DoningtonPark.bin", "Silvers", &0070DB, &0070DB
+\PUTFILE "3-assembled-output/OultonPark.bin", "Silvers", &0070DB, &0070DB
 \PUTFILE "3-assembled-output/Snetterton.bin", "Silvers", &0070DB, &0070DB
 PUTFILE "3-assembled-output/Silverstone.bin", "Silvers", &0070DB, &0070DB
 PUTFILE "3-assembled-output/Revs.bin", "Revs?", &001200, &001200
