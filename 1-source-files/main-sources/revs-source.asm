@@ -3822,7 +3822,7 @@ ORG &0B00
 
 .sub_C12A0
 
- LDX #&2C
+ LDX #44
 
 .P12A2
 
@@ -5708,7 +5708,7 @@ ENDIF
 
  STA L5F60,Y
  LDA #&21
- LDY #&4F
+ LDY #79
 
 .P18DD
 
@@ -5776,21 +5776,21 @@ ENDIF
                         \ the other, with the direction determined by the value
                         \ of bit 7 in T (which we set above)
                         \
-                        \ We work through each block by starting at offset &4F
+                        \ We work through each block by starting at offset 79
                         \ from the start of (Q P) and (S R), and decrementing
                         \ the offset until it matches the dashDataOffset value
                         \ for this block
                         \
                         \ We store the block number (which goes from 0 to 40)
-                        \ in X, and the offset (which goes from &4F down to
+                        \ in X, and the offset (which goes from 79 down to
                         \ dashDataOffset,X + 1) in Y
 
  LDX #0                 \ Set a block counter in X to count through 41 blocks
 
 .dash2
 
- LDY #&4F               \ Each block we want to copy ends at the start address
-                        \ plus &4F, so set an index counter in Y, which we can
+ LDY #79                \ Each block we want to copy ends at the start address
+                        \ plus 79, so set an index counter in Y, which we can
                         \ use to work our way backwards through each byte in
                         \ the block
 
@@ -5847,7 +5847,7 @@ ENDIF
                         \ memory, as follows:
                         \
                         \   Block starts at: (Q P) + dashDataOffset,X + 1
-                        \   Block ends at:   (Q P) + &4F
+                        \   Block ends at:   (Q P) + 79
                         \
                         \ It's the value of (Q P) that is spaced out by &80 for
                         \ each block, rather than the actual data in the block
@@ -5887,7 +5887,7 @@ ENDIF
 
  EQUW dashData          \ The location of the first block in the game code
 
- EQUW &8000 - &50       \ The location of the first block in screen memory
+ EQUW &8000 - 80        \ The location of the first block in screen memory
 
 \ ******************************************************************************
 \
@@ -8037,7 +8037,7 @@ ENDIF
  BMI C210C
  CMP #&50
  BCC C20B8
- LDA #&4F
+ LDA #79
 
 .C20B8
 
@@ -8981,7 +8981,7 @@ ENDIF
  TAY
  STY L0052
  LDA L001F
- CMP #&4F
+ CMP #79
  BCC C2535
  LDA #&4E
  STA L001F
@@ -10621,7 +10621,7 @@ ENDIF
  LDA #0
  BIT WW
  BMI C2C70
- LDA #&4F
+ LDA #79
 
 .C2C70
 
@@ -11242,7 +11242,7 @@ ENDIF
 
 .C2F63
 
- CPY #&2C
+ CPY #44
  BCS C2F6C
  JSR sub_C2FEE
  BCC P2F5E
@@ -11320,7 +11320,7 @@ ENDIF
 
 .C2FA5
 
- CPY #&2C
+ CPY #44
  BCS C2FAE
  JSR sub_C2FEE
  BCC P2FA0
@@ -11343,7 +11343,7 @@ ENDIF
 
  CPX #&80
  BNE C2FD3
- CPY #&2C
+ CPY #44
  BCS C2FCD
  JSR sub_C2FEE
  BCC C2FD3
@@ -11365,7 +11365,7 @@ ENDIF
 
  CPX #&80
  BNE C2FEA
- CPY #&2C
+ CPY #44
  BCS C2FE4
  JSR sub_C2FEE
  BCC C2FEA
@@ -11585,72 +11585,69 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L30D0
+\       Name: ldaStripX
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Low address bytes of the LDA #0 instructions in the DRAW_STRIP
+\             macros, for use when drawing around the dashboard
 \
 \ ******************************************************************************
 
-.L30D0
+.ldaStripX
 
 IF _ACORNSOFT
 
- EQUB &1C               \ Index 0
+ EQUB &1C               \ Index 0 is unused and contains workspace noise
 
 ELIF _SUPERIOR
 
- EQUB &28
+ EQUB &28               \ Index 0 is unused and contains workspace noise
 
 ENDIF
 
- EQUB &8D
- EQUB &7C
- EQUB &7C
- EQUB &7C
- EQUB &7C
- EQUB &7C
- EQUB &6B
- EQUB &6B
- EQUB &6B
- EQUB &6B
- EQUB &6B
- EQUB &5A
- EQUB &5A
- EQUB &5A
- EQUB &5A
- EQUB &49
- EQUB &49
- EQUB &49
- EQUB &49
- EQUB &38
- EQUB &38
- EQUB &38
- EQUB &38
- EQUB &27
- EQUB &27
- EQUB &27
- EQUB &27
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &16
- EQUB &05
- EQUB &05
- EQUB &05
- EQUB &05
- EQUB &05               \ Index &2B
+ EQUB 8 * 17 + 5        \ Index  1 = LO(address) of LDA #0 in DRAW_STRIP 34
+ EQUB 7 * 17 + 5        \ Index  2 = LO(address) of LDA #0 in DRAW_STRIP 33
+ EQUB 7 * 17 + 5        \ Index  3 = LO(address) of LDA #0 in DRAW_STRIP 33
+ EQUB 7 * 17 + 5        \ Index  4 = LO(address) of LDA #0 in DRAW_STRIP 33
+ EQUB 7 * 17 + 5        \ Index  5 = LO(address) of LDA #0 in DRAW_STRIP 33
+ EQUB 7 * 17 + 5        \ Index  6 = LO(address) of LDA #0 in DRAW_STRIP 33
+ EQUB 6 * 17 + 5        \ Index  7 = LO(address) of LDA #0 in DRAW_STRIP 32
+ EQUB 6 * 17 + 5        \ Index  8 = LO(address) of LDA #0 in DRAW_STRIP 32
+ EQUB 6 * 17 + 5        \ Index  9 = LO(address) of LDA #0 in DRAW_STRIP 32
+ EQUB 6 * 17 + 5        \ Index 10 = LO(address) of LDA #0 in DRAW_STRIP 32
+ EQUB 6 * 17 + 5        \ Index 11 = LO(address) of LDA #0 in DRAW_STRIP 32
+ EQUB 5 * 17 + 5        \ Index 12 = LO(address) of LDA #0 in DRAW_STRIP 31
+ EQUB 5 * 17 + 5        \ Index 13 = LO(address) of LDA #0 in DRAW_STRIP 31
+ EQUB 5 * 17 + 5        \ Index 14 = LO(address) of LDA #0 in DRAW_STRIP 31
+ EQUB 5 * 17 + 5        \ Index 15 = LO(address) of LDA #0 in DRAW_STRIP 31
+ EQUB 4 * 17 + 5        \ Index 16 = LO(address) of LDA #0 in DRAW_STRIP 30
+ EQUB 4 * 17 + 5        \ Index 17 = LO(address) of LDA #0 in DRAW_STRIP 30
+ EQUB 4 * 17 + 5        \ Index 18 = LO(address) of LDA #0 in DRAW_STRIP 30
+ EQUB 4 * 17 + 5        \ Index 19 = LO(address) of LDA #0 in DRAW_STRIP 30
+ EQUB 3 * 17 + 5        \ Index 20 = LO(address) of LDA #0 in DRAW_STRIP 29
+ EQUB 3 * 17 + 5        \ Index 21 = LO(address) of LDA #0 in DRAW_STRIP 29
+ EQUB 3 * 17 + 5        \ Index 22 = LO(address) of LDA #0 in DRAW_STRIP 29
+ EQUB 3 * 17 + 5        \ Index 23 = LO(address) of LDA #0 in DRAW_STRIP 29
+ EQUB 2 * 17 + 5        \ Index 24 = LO(address) of LDA #0 in DRAW_STRIP 28
+ EQUB 2 * 17 + 5        \ Index 25 = LO(address) of LDA #0 in DRAW_STRIP 28
+ EQUB 2 * 17 + 5        \ Index 26 = LO(address) of LDA #0 in DRAW_STRIP 28
+ EQUB 2 * 17 + 5        \ Index 27 = LO(address) of LDA #0 in DRAW_STRIP 28
+ EQUB 1 * 17 + 5        \ Index 28 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 29 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 30 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 31 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 32 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 33 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 34 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 35 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 36 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 37 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 1 * 17 + 5        \ Index 38 = LO(address) of LDA #0 in DRAW_STRIP 27
+ EQUB 0 * 17 + 5        \ Index 39 = LO(address) of LDA #0 in DRAW_STRIP 26
+ EQUB 0 * 17 + 5        \ Index 40 = LO(address) of LDA #0 in DRAW_STRIP 26
+ EQUB 0 * 17 + 5        \ Index 41 = LO(address) of LDA #0 in DRAW_STRIP 26
+ EQUB 0 * 17 + 5        \ Index 42 = LO(address) of LDA #0 in DRAW_STRIP 26
+ EQUB 0 * 17 + 5        \ Index 43 = LO(address) of LDA #0 in DRAW_STRIP 26
 
 \ ******************************************************************************
 \
@@ -11707,7 +11704,7 @@ ENDIF
  EQUB 28                \ INT(0.5 + 27.92) = 28
  EQUB 28                \ INT(0.5 + 27.82) = 28
  EQUB 28                \ INT(0.5 + 27.69) = 28
- EQUB 27                \ INT(0.5 + 27.51) = 28
+ EQUB 27                \ INT(0.5 + 27.51) = 28 (doesn't match)
  EQUB 27                \ INT(0.5 + 27.30) = 27
  EQUB 27                \ INT(0.5 + 27.05) = 27
  EQUB 27                \ INT(0.5 + 26.76) = 27
@@ -11719,10 +11716,10 @@ ENDIF
  EQUB 24                \ INT(0.5 + 24.25) = 24
  EQUB 24                \ INT(0.5 + 23.71) = 24
  EQUB 23                \ INT(0.5 + 23.13) = 23
- EQUB 22                \ INT(0.5 + 22.53) = 23
- EQUB 21                \ INT(0.5 + 21.89) = 22
- EQUB 20                \ INT(0.5 + 21.22) = 21
- EQUB 20                \ INT(0.5 + 20.53) = 21
+ EQUB 22                \ INT(0.5 + 22.53) = 23 (doesn't match)
+ EQUB 21                \ INT(0.5 + 21.89) = 22 (doesn't match)
+ EQUB 20                \ INT(0.5 + 21.22) = 21 (doesn't match)
+ EQUB 20                \ INT(0.5 + 20.53) = 21 (doesn't match)
  EQUB 20                \ INT(0.5 + 19.80) = 20
 
  EQUB &81, &81, &81     \ These bytes appear to be unused
@@ -11744,9 +11741,66 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3150
+\       Name: staStripX
 \       Type: Variable
 \   Category: Graphics
+\    Summary: Low address bytes of the STA instructions in the DRAW_STRIP
+\             macros, for use when drawing around the dashboard
+\
+\ ******************************************************************************
+
+.staStripX
+
+ EQUB  3 * 17 + 15      \ Index  0 = LO(address) of STA (P),Y in DRAW_STRIP  3
+ EQUB  5 * 17 + 15      \ Index  1 = LO(address) of STA (P),Y in DRAW_STRIP  5
+ EQUB  6 * 17 + 15      \ Index  2 = LO(address) of STA (P),Y in DRAW_STRIP  6
+ EQUB  6 * 17 + 15      \ Index  3 = LO(address) of STA (P),Y in DRAW_STRIP  6
+ EQUB  6 * 17 + 15      \ Index  4 = LO(address) of STA (P),Y in DRAW_STRIP  6
+ EQUB  6 * 17 + 15      \ Index  5 = LO(address) of STA (P),Y in DRAW_STRIP  6
+ EQUB  6 * 17 + 15      \ Index  6 = LO(address) of STA (P),Y in DRAW_STRIP  6
+ EQUB  7 * 17 + 15      \ Index  7 = LO(address) of STA (P),Y in DRAW_STRIP  7
+ EQUB  7 * 17 + 15      \ Index  8 = LO(address) of STA (P),Y in DRAW_STRIP  7
+ EQUB  7 * 17 + 15      \ Index  9 = LO(address) of STA (P),Y in DRAW_STRIP  7
+ EQUB  7 * 17 + 15      \ Index 10 = LO(address) of STA (P),Y in DRAW_STRIP  7
+ EQUB  7 * 17 + 15      \ Index 11 = LO(address) of STA (P),Y in DRAW_STRIP  7
+ EQUB  8 * 17 + 15      \ Index 12 = LO(address) of STA (P),Y in DRAW_STRIP  8
+ EQUB  8 * 17 + 15      \ Index 13 = LO(address) of STA (P),Y in DRAW_STRIP  8
+ EQUB  8 * 17 + 15      \ Index 14 = LO(address) of STA (P),Y in DRAW_STRIP  8
+ EQUB  8 * 17 + 15      \ Index 15 = LO(address) of STA (P),Y in DRAW_STRIP  8
+ EQUB  9 * 17 + 15      \ Index 16 = LO(address) of STA (P),Y in DRAW_STRIP  9
+ EQUB  9 * 17 + 15      \ Index 17 = LO(address) of STA (P),Y in DRAW_STRIP  9
+ EQUB  9 * 17 + 15      \ Index 18 = LO(address) of STA (P),Y in DRAW_STRIP  9
+ EQUB  9 * 17 + 15      \ Index 19 = LO(address) of STA (P),Y in DRAW_STRIP  9
+ EQUB 10 * 17 + 15      \ Index 20 = LO(address) of STA (P),Y in DRAW_STRIP 10
+ EQUB 10 * 17 + 15      \ Index 21 = LO(address) of STA (P),Y in DRAW_STRIP 10
+ EQUB 10 * 17 + 15      \ Index 22 = LO(address) of STA (P),Y in DRAW_STRIP 10
+ EQUB 10 * 17 + 15      \ Index 23 = LO(address) of STA (P),Y in DRAW_STRIP 10
+ EQUB 11 * 17 + 15      \ Index 24 = LO(address) of STA (P),Y in DRAW_STRIP 11
+ EQUB 11 * 17 + 15      \ Index 25 = LO(address) of STA (P),Y in DRAW_STRIP 11
+ EQUB 11 * 17 + 15      \ Index 26 = LO(address) of STA (P),Y in DRAW_STRIP 11
+ EQUB 11 * 17 + 15      \ Index 27 = LO(address) of STA (P),Y in DRAW_STRIP 11
+ EQUB 12 * 17 + 15      \ Index 28 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 29 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 30 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 31 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 32 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 33 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 34 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 35 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 36 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 37 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 12 * 17 + 15      \ Index 38 = LO(address) of STA (P),Y in DRAW_STRIP 12
+ EQUB 13 * 17 + 15      \ Index 39 = LO(address) of STA (P),Y in DRAW_STRIP 13
+ EQUB 13 * 17 + 15      \ Index 40 = LO(address) of STA (P),Y in DRAW_STRIP 13
+ EQUB 13 * 17 + 15      \ Index 41 = LO(address) of STA (P),Y in DRAW_STRIP 13
+ EQUB 13 * 17 + 15      \ Index 42 = LO(address) of STA (P),Y in DRAW_STRIP 13
+ EQUB 13 * 17 + 15      \ Index 43 = LO(address) of STA (P),Y in DRAW_STRIP 13
+
+\ ******************************************************************************
+\
+\       Name: L317C
+\       Type: Variable
+\   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11755,52 +11809,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L3150
-
- EQUB &42               \ Index 0
- EQUB &64
- EQUB &75
- EQUB &75
- EQUB &75
- EQUB &75
- EQUB &75
- EQUB &86
- EQUB &86
- EQUB &86
- EQUB &86
- EQUB &86
- EQUB &97
- EQUB &97
- EQUB &97
- EQUB &97
- EQUB &A8
- EQUB &A8
- EQUB &A8
- EQUB &A8
- EQUB &B9
- EQUB &B9
- EQUB &B9
- EQUB &B9
- EQUB &CA
- EQUB &CA
- EQUB &CA
- EQUB &CA
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &DB
- EQUB &EC
- EQUB &EC
- EQUB &EC
- EQUB &EC
- EQUB &EC               \ Index &2B
+.L317C
 
  EQUB &28
  EQUB &28
@@ -13831,7 +13840,7 @@ ENDIF
  EQUB 52                \ INT(0.5 + 52.08) = 52
  EQUB 52                \ INT(0.5 + 51.88) = 52
  EQUB 52                \ INT(0.5 + 51.67) = 52
- EQUB 52                \ INT(0.5 + 51.44) = 51
+ EQUB 52                \ INT(0.5 + 51.44) = 51 (doesn't match)
  EQUB 51                \ INT(0.5 + 51.19) = 51
  EQUB 51                \ INT(0.5 + 50.93) = 51
  EQUB 51                \ INT(0.5 + 50.65) = 51
@@ -13840,22 +13849,22 @@ ENDIF
  EQUB 50                \ INT(0.5 + 49.69) = 50
  EQUB 49                \ INT(0.5 + 49.34) = 49
  EQUB 49                \ INT(0.5 + 48.97) = 49
- EQUB 48                \ INT(0.5 + 48.58) = 49
+ EQUB 48                \ INT(0.5 + 48.58) = 49 (doesn't match)
  EQUB 48                \ INT(0.5 + 48.17) = 48
- EQUB 47                \ INT(0.5 + 47.75) = 48
+ EQUB 47                \ INT(0.5 + 47.75) = 48 (doesn't match)
  EQUB 47                \ INT(0.5 + 47.31) = 47
- EQUB 46                \ INT(0.5 + 46.86) = 47
+ EQUB 46                \ INT(0.5 + 46.86) = 47 (doesn't match)
  EQUB 46                \ INT(0.5 + 46.39) = 46
- EQUB 45                \ INT(0.5 + 45.90) = 46
+ EQUB 45                \ INT(0.5 + 45.90) = 46 (doesn't match)
  EQUB 45                \ INT(0.5 + 45.40) = 45
- EQUB 44                \ INT(0.5 + 44.88) = 45
+ EQUB 44                \ INT(0.5 + 44.88) = 45 (doesn't match)
  EQUB 44                \ INT(0.5 + 44.34) = 44
- EQUB 43                \ INT(0.5 + 43.79) = 44
- EQUB 42                \ INT(0.5 + 43.22) = 43
- EQUB 41                \ INT(0.5 + 42.64) = 43
- EQUB 40                \ INT(0.5 + 42.05) = 42
- EQUB 39                \ INT(0.5 + 41.44) = 41
- EQUB 38                \ INT(0.5 + 40.81) = 41
+ EQUB 43                \ INT(0.5 + 43.79) = 44 (doesn't match)
+ EQUB 42                \ INT(0.5 + 43.22) = 43 (doesn't match)
+ EQUB 41                \ INT(0.5 + 42.64) = 43 (doesn't match)
+ EQUB 40                \ INT(0.5 + 42.05) = 42 (doesn't match)
+ EQUB 39                \ INT(0.5 + 41.44) = 41 (doesn't match)
+ EQUB 38                \ INT(0.5 + 40.81) = 41 (doesn't match)
 
 \ ******************************************************************************
 \
@@ -26298,16 +26307,20 @@ ORG &6C00
 \
 \ ******************************************************************************
 
-.view20
+.view19
 
  LDA view3+1
+ STA view20+1
+ LDA view8+1
  STA view21+1
- LDA view9+1
+ LDA view14+1
  STA view22+1
- LDA view15+1
- STA view23+1
 
  LDA #&91
+
+.view20
+
+ STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
 
 .view21
 
@@ -26315,14 +26328,10 @@ ORG &6C00
 
 .view22
 
- STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
+ STA strp2+15           \ Modify STA (P),Y instruction in strip 26
 
-.view23
-
- STA DrawStrips26+15    \ Modify STA (P),Y instruction in strip 26
-
- LDA #&E0               \ Modify CMP instruction in strp2
- STA strp2
+ LDA #&E0               \ Modify CMP instruction in strp3
+ STA strp3
 
  RTS                    \ Return from the subroutine
 
@@ -26333,12 +26342,6 @@ ORG &6C00
 \   Category: Graphics
 \    Summary: Draw the top part of the track view using the data in the dash
 \             data blocks
-\
-\ ------------------------------------------------------------------------------
-\
-\ Other entry points:
-\
-\   view7               Contains an RTS
 \
 \ ******************************************************************************
 
@@ -26352,19 +26355,19 @@ ORG &6C00
  INX
  STX S
 
- LDX #&4F               \ Set X = &4F, to point to the first byte to draw from
+ LDX #79                \ Set X = 79, to point to the first byte to draw from
                         \ each dash data block (i.e. the byte at the end of the
-                        \ data block, at offset &4F)
+                        \ data block, at offset 79)
 
- JSR DrawTrackPixelLine \ Draw pixel rows that correspond to dash data blocks
-                        \ &4F to &2C, returning from the subroutine when we
-                        \ reach that point with X = &2C (so we draw all the
-                        \ lines from the top of the track view, down to the line
-                        \ just above the top of the dashboard)
+ JSR DrawTrackPixelLine \ Draw pixel rows that correspond to dash data offsets
+                        \ 79 to 44, returning from the subroutine after drawing
+                        \ the line specified by offset X = 44 (so this draws all
+                        \ the lines from the top of the track view, down to the
+                        \ line just above the top of the dashboard)
 
- JMP view1              \ Jump to part 2 to draw the rest of the track view, but
-                        \ after modifying the code so it draws the rest of the
-                        \ lines around the shape of the dashboard
+ JMP view1              \ Jump to part 2 to draw the rest of the track view from
+                        \ offsets 43 to 3, modifying the code so it draws the
+                        \ rest of the lines around the shape of the dashboard
 
 \ ******************************************************************************
 \
@@ -26421,8 +26424,8 @@ ORG &6C00
 \ Each macro instance moves one pixel byte, from offset X within dash data block
 \ I%, into screen memory. The offset X is decremented for each run through the
 \ sequence of macros, as data is stored at the end of each dash data block. So
-\ as each pixel line is drawn, moving down the screen, X decrements from &4F
-\ (the start of each dash data block) so we work our way down through the data.
+\ as each pixel line is drawn, moving down the screen, X decrements down from 79
+\ (the start of each dash data block) as we work our way through the data.
 \
 \ The destination address in screen memory for the data is governed by (Q P),
 \ which points to the address of the pixel byte to update in strip 0 (i.e. the
@@ -26505,7 +26508,7 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: DrawStrips (Part 1 of 3)
+\       Name: DrawStrips (Part 1 of 4)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the vertical strips that make up the track view (0 to 15)
@@ -26513,10 +26516,6 @@ ENDMACRO
 \ ------------------------------------------------------------------------------
 \
 \ This routine draws vertical strips 0 to 39, to show the track view.
-\
-\ Other entry points:
-\
-\   DrawStrips26        Draw strips 26 to 39
 \
 \ ******************************************************************************
 
@@ -26557,14 +26556,18 @@ ENDMACRO
 
 .view1
 
-                        \ We get here with X = &2C
+                        \ We get here with X = 44, as in part 1 we drew the
+                        \ lines specified by dash data offsets 79 to 44
+                        \
+                        \ In the following loop, we draw the lines specified by
+                        \ dash data offsets 43 to 28
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
- STA strp2              \ Modify the following instruction in DrawStrips
+ STA strp3              \ Modify the following instruction in DrawStrips
                         \ (part 3):
                         \
-                        \   CPX #&2C -> RTS
+                        \   CPX #44 -> RTS
                         \
                         \ so that calls to DrawTrackPixelLine and DrawStrips
                         \ from now on will draw individual lines rather than
@@ -26576,48 +26579,61 @@ ENDMACRO
  DEX                    \ Decrement the dash data block pointer to point to
                         \ the data for the next line
 
- LDY L3150,X            \ Set Y to the X-th entry in L3150
+ LDY staStripX,X        \ Set Y to the X-th entry in staStripX, which contains
+                        \ the low byte of the address of the STA (P),Y
+                        \ instruction in the DRAW_STRIPE macro given in the
+                        \ table
 
  CPY view3+1            \ If the instruction at view3 has already been modified
  BEQ view5              \ to this address, jump to view5 to skip the following
-                        \ modifications
+                        \ modifications, as they have already been done on the
+                        \ previous iteration of the loop
 
  LDA #&91               \ Set A to the opcode for the STA (P),Y instruction
 
 .view3
 
- STA DrawStrips+15      \ Modify the instruction pointed to by the address at view3
-                        \
-                        \    STA (P),Y -> STA (P),Y
+ STA DrawStrips+15      \ Modify the specified instruction back to STA (P),Y
+                        \ (the address of the modified instruction is set by the
+                        \ following, so the first time we run this line it has
+                        \ no effect)
 
  STY view4+1            \ Modify the instruction at view4 to change the low byte
-                        \ of the address to the X-th entry in L3150, so the
-                        \ instruction at view4 inserts an RTS into the address
-                        \ with low byte L3150
+                        \ of the address to the X-th entry in staStripX, so the
+                        \ instruction at view4 changes the STA (P),Y instruction
+                        \ to an RTS in the DRAW_STRIPE macro given in staStripX
 
- STY view3+1            \ Modify the instruction at view4 to change the low byte
-                        \ of the address to the X-th entry in L3150
+ STY view3+1            \ Modify the instruction at view3 to change the low byte
+                        \ of the address to the X-th entry in staStripX, so the
+                        \ instruction at view3 changes the RTS instruction back
+                        \ to STA (P),Y when we loop back around
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
 .view4
 
- STA DrawStrips         \ Modify the first instruction in DrawStrips to an RTS,
-                        \ so that calls to DrawTrackPixelLine from now on only
-                        \ run parts 1 and 2, and then return before drawing any
-                        \ strips
-                        \
-                        \ In other words, the call to DrawTrackPixelLine below
-                        \ increments the addresses in (Q P) and (S R) and sets
-                        \ the colour byte in A, and then returns
+ STA DrawStrips         \ Modify the specified instruction to an RTS so the next
+                        \ call to DrawTrackPixelLine will return at that point 
+                        \ (the address of the modified instruction is set above)
 
- LDY L30D0,X            \ Modify the instruction at view6 to change the low byte
- STY view6+1            \ of the address to the X-th byte of L30D0
+ LDY ldaStripX,X        \ Set Y to the X-th entry in ldaStripX, which contains
+                        \ the low byte of the LDA #0 instruction in the specific
+                        \ DRAW_STRIPE macro, as given in the table
+
+ STY view6+1            \ Modify the instruction at view6 to change the low byte
+                        \ of the address to the X-th entry in ldaStripX, so the
+                        \ instruction at view6 changes so it jumps to the LDA #0
+                        \ instruction in the DRAW_MACRO specified in the table
 
 .view5
 
- JSR DrawTrackPixelLine \ Increment the addresses in (Q P) and (S R) and set the
-                        \ colour byte in A
+ JSR DrawTrackPixelLine \ Draw the left portion of this pixel line
+                        \
+                        \ This routine was modified above to return from the
+                        \ subroutine at the STA instruction in the DRAW_MACRO
+                        \ specified in the staStripX table, so this returns with
+                        \ A set to the last pixel byte of this portion of the
+                        \ line
 
  AND L38D0,X
  ORA L3350,X
@@ -26630,16 +26646,23 @@ ENDMACRO
 
 .view6
 
- JSR DrawStrips26       \ Draw the right portion of this pixel line
+ JSR strp2              \ Draw the right portion of this pixel line
+                        \
+                        \ This JSR was modified above to jump to the LDA #0
+                        \ instruction in the DRAW_MACRO specified in the
+                        \ ldaStripX table
 
- CPX #&1C
- BNE view2
+ CPX #28                \ Loop back to keep drawing lines, working our way down
+ BNE view2              \ through the dash data from entry 44 down to entry 28
 
- JMP view8              \ Jump to part 3
+ JMP view7              \ Jump to part 3 to draw the rest of the track view from
+                        \ offsets 27 to 3, modifying the code so it draws the
+                        \ rest of the lines around the shape of the dashboard
+                        \ and the shape of the tyres
 
 \ ******************************************************************************
 \
-\       Name: DrawStrips (Part 2 of 3)
+\       Name: DrawStrips (Part 2 of 4)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the vertical strips that make up the track view (16 to 25)
@@ -26661,14 +26684,14 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: DrawStrips (Part 3 of 3)
+\       Name: DrawStrips (Part 3 of 4)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the vertical strips that make up the track view (26 to 39)
 \
 \ ******************************************************************************
 
-.DrawStrips26
+.strp2
 
  DRAW_STRIP 26          \ Draw strips 26 to 39
  DRAW_STRIP 27
@@ -26685,13 +26708,13 @@ ENDMACRO
  DRAW_STRIP 38
  DRAW_STRIP 39
 
-.strp2
+.strp3
 
- CPX #&2C               \ If X = &2C, then we have just drawn the last pixel
- BEQ view7              \ line above the top of the dashboard, so return from
+ CPX #44                \ If X = 44, then we have just drawn the last pixel
+ BEQ strp4              \ line above the top of the dashboard, so return from
                         \ the subroutine so we can modify the routine to draw
                         \ subsequent lines in two parts, to fit around the
-                        \ dashboard (as view7 contains an RTS)
+                        \ dashboard (as strp3 contains an RTS)
 
  DEX                    \ Decrement the dash data pointer in X to move on to the
                         \ next pixel line
@@ -26762,43 +26785,60 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: DrawTrackView (Part 3 of 4)
+\       Name: DrawStrips (Part 4 of 4)
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ******************************************************************************
 
-.view7
+.strp4
 
  RTS                    \ Return from the subroutine
 
-.view8
+\ ******************************************************************************
+\
+\       Name: DrawTrackView (Part 3 of 4)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ******************************************************************************
+
+                        \ We get here with X = 28, as in part 1 we drew the
+                        \ lines specified by dash data offsets 79 to 44, and in
+                        \ part 2 we drew the lines specified by dash data
+                        \ offsets 43 to 28
+                        \
+                        \ In the following loop, we draw the lines specified by
+                        \ dash data offsets 27 to 3
+
+.view7
 
  DEX
- LDY L3150,X
- CPY view9+1
- BEQ view11
+ LDY staStripX,X
+ CPY view8+1
+ BEQ view10
  LDA #&91
+
+.view8
+
+ STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
+ STY view9+1
+ STY view8+1
+ LDA #&60
 
 .view9
 
- STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
- STY view10+1
- STY view9+1
- LDA #&60
-
-.view10
-
  STA DrawStrips
 
-.view11
+.view10
 
  LDY P
  INY
  TYA
  AND #&07
- BNE view12
+ BNE view11
  TYA
  CLC
  ADC #&38
@@ -26809,59 +26849,59 @@ ENDMACRO
  STA Q
  ADC #&01
  STA S
- BCC view13
+ BCC view12
 
-.view12
+.view11
 
  STY P
  STY R
 
-.view13
+.view12
 
  LDA #&F1
  SEC
  SBC L3080,X
- STA view14+1
+ STA view13+1
  LDY L3050,X
  LDA L0504,X
  AND L3679,Y
  ORA L3579,Y
  TAY
 
-.view14
+.view13
 
  JSR DrawStrips
  AND L38D0,X
  ORA L3350,X
  STA (P),Y
  LDY L3080,X
- CPY view15+1
- BEQ view17
+ CPY view14+1
+ BEQ view16
  LDA #&91
+
+.view14
+
+ STA strp2+15           \ Modify STA (P),Y instruction in strip 26
+ STY view15+1
+ STY view14+1
+ LDA #&60
 
 .view15
 
- STA DrawStrips26+15    \ Modify STA (P),Y instruction in strip 26
- STY view16+1
- STY view15+1
- LDA #&60
+ STA strp2              \ Modify first instruction in strp2
 
 .view16
 
- STA DrawStrips26       \ Modify first instruction in DrawStrips26
-
-.view17
-
- LDY L30D0,X
- STY view18+1
+ LDY ldaStripX,X
+ STY view17+1
  LDA L4400,X
  AND L3950,X
  ORA L33D0,X
  TAY
 
-.view18
+.view17
 
- JSR DrawStrips26
+ JSR strp2
  STY U
  LDY L3050,X
  AND L36F9,Y
@@ -26869,12 +26909,12 @@ ENDMACRO
  LDY U
  STA (R),Y
  CPX #&03
- BEQ view19
- JMP view8
+ BEQ view18
+ JMP view7
 
-.view19
+.view18
 
- JMP view20
+ JMP view19
 
 \ ******************************************************************************
 \
