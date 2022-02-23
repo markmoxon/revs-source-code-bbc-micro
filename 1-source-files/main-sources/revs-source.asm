@@ -901,9 +901,25 @@ ORG &0380
                         \ Stored as a 24-bit value (totalPointsTop totalPointsHi
                         \ totalPointsLo)
 
-.L0504
+.firstPixelTyre
 
- SKIP 80                \ 
+ SKIP 80                \ Storage for the first track pixel byte along the edge
+                        \ of the left tyre
+                        \
+                        \ This table is used to store the track pixel byte that
+                        \ would be shown along the edge of the left tyre, but
+                        \ which is partially obscured by the edge
+                        \
+                        \ This is stored so we can retrieve it when masking the
+                        \ pixel byte with the tyre edge when we draw the track
+                        \ line that starts at the edge of the left tyre
+                        \
+                        \ There is a byte for each track line from 43 (the track
+                        \ line at the top of the dashboard) down to 3 (the lowest
+                        \ track line, just above where the wing mirror joins the
+                        \ car body)
+                        \
+                        \ Lines 0 to 2 are not used
 
 .L0554
 
@@ -11480,23 +11496,54 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3050
+\       Name: tyreEdgeIndex
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Index of the mask and pixel bytes for the tyre edges on a specific
+\             track line
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This table points to the index of the mask or pixel byte to use from the
+\ leftTyreMask/rightTyreMask and leftTyrePixels/rightTyrePixels tables for a
+\ specific track line. This is used when clipping track lines to the tyre edges.
 \
+\ There is a byte for each track line from 27 (the track line at the top of the
+\ tyres) down to 3 (the lowest track line, just above where the wing mirror
+\ joins the car body). Lines 0 to 2 are not used.
+
 \ ******************************************************************************
 
-.L3050
+.tyreEdgeIndex
 
- EQUB &00, &00, &00, &00, &06, &06, &06, &06
- EQUB &06, &06, &06, &03, &03, &03, &03, &03, &01, &01, &01, &00
- EQUB &00, &00, &05, &04, &03, &02, &01
- EQUB 0
+ EQUB 0                 \ Line  0
+ EQUB 0                 \ Line  1
+ EQUB 0                 \ Line  2
+ EQUB 0                 \ Line  3
+ EQUB 6                 \ Line  4
+ EQUB 6                 \ Line  5
+ EQUB 6                 \ Line  6
+ EQUB 6                 \ Line  7
+ EQUB 6                 \ Line  8
+ EQUB 6                 \ Line  9
+ EQUB 6                 \ Line 10
+ EQUB 3                 \ Line 11
+ EQUB 3                 \ Line 12
+ EQUB 3                 \ Line 13
+ EQUB 3                 \ Line 14
+ EQUB 3                 \ Line 15
+ EQUB 1                 \ Line 16
+ EQUB 1                 \ Line 17
+ EQUB 1                 \ Line 18
+ EQUB 0                 \ Line 19
+ EQUB 0                 \ Line 20
+ EQUB 0                 \ Line 21
+ EQUB 5                 \ Line 22
+ EQUB 4                 \ Line 23
+ EQUB 3                 \ Line 24
+ EQUB 2                 \ Line 25
+ EQUB 1                 \ Line 26
+ EQUB 0                 \ Line 27
 
 \ ******************************************************************************
 \
@@ -11551,23 +11598,53 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3080
+\       Name: staDrawByteTyre
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Low address bytes of the STA instructions in the DRAW_BYTE macros,
+\             for use when drawing track lines around the tyres
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This table contains the low byte offset of the address of the STA (P),Y
+\ instruction for the track line, which we convert into an RTS when drawing the
+\ track line up against the right tyre, so we stop in time. As the tyres are
+\ reflections of each other, we can also use this to calculate the starting
+\ point for the line that starts at the left tyre: see part 3 of DrawTrackView
+\ for details.
 \
 \ ******************************************************************************
 
-.L3080
+.staDrawByteTyre
 
- EQUB &97, &97
- EQUB &97, &97, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8
- EQUB &A8, &A8, &A8, &A8, &A8, &A8, &A8, &A8, &B9, &B9, &B9, &B9
- EQUB &B9, &B9
+ EQUB  8 * 17 + 15      \ Line  0 = LO(address) of STA (P),Y in DRAW_BYTE 34
+ EQUB  8 * 17 + 15      \ Line  1 = LO(address) of STA (P),Y in DRAW_BYTE 34
+ EQUB  8 * 17 + 15      \ Line  2 = LO(address) of STA (P),Y in DRAW_BYTE 34
+ EQUB  8 * 17 + 15      \ Line  3 = LO(address) of STA (P),Y in DRAW_BYTE 34
+ EQUB  9 * 17 + 15      \ Line  4 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line  5 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line  6 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line  7 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line  8 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line  9 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 10 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 11 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 12 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 13 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 14 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 15 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 16 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 17 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 18 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 19 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 20 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB  9 * 17 + 15      \ Line 21 = LO(address) of STA (P),Y in DRAW_BYTE 35
+ EQUB 10 * 17 + 15      \ Line 22 = LO(address) of STA (P),Y in DRAW_BYTE 36
+ EQUB 10 * 17 + 15      \ Line 23 = LO(address) of STA (P),Y in DRAW_BYTE 36
+ EQUB 10 * 17 + 15      \ Line 24 = LO(address) of STA (P),Y in DRAW_BYTE 36
+ EQUB 10 * 17 + 15      \ Line 25 = LO(address) of STA (P),Y in DRAW_BYTE 36
+ EQUB 10 * 17 + 15      \ Line 26 = LO(address) of STA (P),Y in DRAW_BYTE 36
+ EQUB 10 * 17 + 15      \ Line 27 = LO(address) of STA (P),Y in DRAW_BYTE 36
 
 \ ******************************************************************************
 \
@@ -11585,69 +11662,69 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ldaStripX
+\       Name: ldaDrawByte
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Low address bytes of the LDA #0 instructions in the DRAW_STRIP
-\             macros, for use when drawing around the dashboard
+\    Summary: Low address bytes of the LDA #0 instructions in the DRAW_BYTE
+\             macros, for use when drawing track lines around the dashboard
 \
 \ ******************************************************************************
 
-.ldaStripX
+.ldaDrawByte
 
 IF _ACORNSOFT
 
- EQUB &1C               \ Index 0 is unused and contains workspace noise
+ EQUB &1C               \ Line 0 is unused and contains workspace noise
 
 ELIF _SUPERIOR
 
- EQUB &28               \ Index 0 is unused and contains workspace noise
+ EQUB &28               \ Line 0 is unused and contains workspace noise
 
 ENDIF
 
- EQUB 8 * 17 + 5        \ Index  1 = LO(address) of LDA #0 in DRAW_STRIP 34
- EQUB 7 * 17 + 5        \ Index  2 = LO(address) of LDA #0 in DRAW_STRIP 33
- EQUB 7 * 17 + 5        \ Index  3 = LO(address) of LDA #0 in DRAW_STRIP 33
- EQUB 7 * 17 + 5        \ Index  4 = LO(address) of LDA #0 in DRAW_STRIP 33
- EQUB 7 * 17 + 5        \ Index  5 = LO(address) of LDA #0 in DRAW_STRIP 33
- EQUB 7 * 17 + 5        \ Index  6 = LO(address) of LDA #0 in DRAW_STRIP 33
- EQUB 6 * 17 + 5        \ Index  7 = LO(address) of LDA #0 in DRAW_STRIP 32
- EQUB 6 * 17 + 5        \ Index  8 = LO(address) of LDA #0 in DRAW_STRIP 32
- EQUB 6 * 17 + 5        \ Index  9 = LO(address) of LDA #0 in DRAW_STRIP 32
- EQUB 6 * 17 + 5        \ Index 10 = LO(address) of LDA #0 in DRAW_STRIP 32
- EQUB 6 * 17 + 5        \ Index 11 = LO(address) of LDA #0 in DRAW_STRIP 32
- EQUB 5 * 17 + 5        \ Index 12 = LO(address) of LDA #0 in DRAW_STRIP 31
- EQUB 5 * 17 + 5        \ Index 13 = LO(address) of LDA #0 in DRAW_STRIP 31
- EQUB 5 * 17 + 5        \ Index 14 = LO(address) of LDA #0 in DRAW_STRIP 31
- EQUB 5 * 17 + 5        \ Index 15 = LO(address) of LDA #0 in DRAW_STRIP 31
- EQUB 4 * 17 + 5        \ Index 16 = LO(address) of LDA #0 in DRAW_STRIP 30
- EQUB 4 * 17 + 5        \ Index 17 = LO(address) of LDA #0 in DRAW_STRIP 30
- EQUB 4 * 17 + 5        \ Index 18 = LO(address) of LDA #0 in DRAW_STRIP 30
- EQUB 4 * 17 + 5        \ Index 19 = LO(address) of LDA #0 in DRAW_STRIP 30
- EQUB 3 * 17 + 5        \ Index 20 = LO(address) of LDA #0 in DRAW_STRIP 29
- EQUB 3 * 17 + 5        \ Index 21 = LO(address) of LDA #0 in DRAW_STRIP 29
- EQUB 3 * 17 + 5        \ Index 22 = LO(address) of LDA #0 in DRAW_STRIP 29
- EQUB 3 * 17 + 5        \ Index 23 = LO(address) of LDA #0 in DRAW_STRIP 29
- EQUB 2 * 17 + 5        \ Index 24 = LO(address) of LDA #0 in DRAW_STRIP 28
- EQUB 2 * 17 + 5        \ Index 25 = LO(address) of LDA #0 in DRAW_STRIP 28
- EQUB 2 * 17 + 5        \ Index 26 = LO(address) of LDA #0 in DRAW_STRIP 28
- EQUB 2 * 17 + 5        \ Index 27 = LO(address) of LDA #0 in DRAW_STRIP 28
- EQUB 1 * 17 + 5        \ Index 28 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 29 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 30 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 31 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 32 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 33 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 34 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 35 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 36 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 37 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 1 * 17 + 5        \ Index 38 = LO(address) of LDA #0 in DRAW_STRIP 27
- EQUB 0 * 17 + 5        \ Index 39 = LO(address) of LDA #0 in DRAW_STRIP 26
- EQUB 0 * 17 + 5        \ Index 40 = LO(address) of LDA #0 in DRAW_STRIP 26
- EQUB 0 * 17 + 5        \ Index 41 = LO(address) of LDA #0 in DRAW_STRIP 26
- EQUB 0 * 17 + 5        \ Index 42 = LO(address) of LDA #0 in DRAW_STRIP 26
- EQUB 0 * 17 + 5        \ Index 43 = LO(address) of LDA #0 in DRAW_STRIP 26
+ EQUB 8 * 17 + 5        \ Line  1 = LO(address) of LDA #0 in DRAW_BYTE 34
+ EQUB 7 * 17 + 5        \ Line  2 = LO(address) of LDA #0 in DRAW_BYTE 33
+ EQUB 7 * 17 + 5        \ Line  3 = LO(address) of LDA #0 in DRAW_BYTE 33
+ EQUB 7 * 17 + 5        \ Line  4 = LO(address) of LDA #0 in DRAW_BYTE 33
+ EQUB 7 * 17 + 5        \ Line  5 = LO(address) of LDA #0 in DRAW_BYTE 33
+ EQUB 7 * 17 + 5        \ Line  6 = LO(address) of LDA #0 in DRAW_BYTE 33
+ EQUB 6 * 17 + 5        \ Line  7 = LO(address) of LDA #0 in DRAW_BYTE 32
+ EQUB 6 * 17 + 5        \ Line  8 = LO(address) of LDA #0 in DRAW_BYTE 32
+ EQUB 6 * 17 + 5        \ Line  9 = LO(address) of LDA #0 in DRAW_BYTE 32
+ EQUB 6 * 17 + 5        \ Line 10 = LO(address) of LDA #0 in DRAW_BYTE 32
+ EQUB 6 * 17 + 5        \ Line 11 = LO(address) of LDA #0 in DRAW_BYTE 32
+ EQUB 5 * 17 + 5        \ Line 12 = LO(address) of LDA #0 in DRAW_BYTE 31
+ EQUB 5 * 17 + 5        \ Line 13 = LO(address) of LDA #0 in DRAW_BYTE 31
+ EQUB 5 * 17 + 5        \ Line 14 = LO(address) of LDA #0 in DRAW_BYTE 31
+ EQUB 5 * 17 + 5        \ Line 15 = LO(address) of LDA #0 in DRAW_BYTE 31
+ EQUB 4 * 17 + 5        \ Line 16 = LO(address) of LDA #0 in DRAW_BYTE 30
+ EQUB 4 * 17 + 5        \ Line 17 = LO(address) of LDA #0 in DRAW_BYTE 30
+ EQUB 4 * 17 + 5        \ Line 18 = LO(address) of LDA #0 in DRAW_BYTE 30
+ EQUB 4 * 17 + 5        \ Line 19 = LO(address) of LDA #0 in DRAW_BYTE 30
+ EQUB 3 * 17 + 5        \ Line 20 = LO(address) of LDA #0 in DRAW_BYTE 29
+ EQUB 3 * 17 + 5        \ Line 21 = LO(address) of LDA #0 in DRAW_BYTE 29
+ EQUB 3 * 17 + 5        \ Line 22 = LO(address) of LDA #0 in DRAW_BYTE 29
+ EQUB 3 * 17 + 5        \ Line 23 = LO(address) of LDA #0 in DRAW_BYTE 29
+ EQUB 2 * 17 + 5        \ Line 24 = LO(address) of LDA #0 in DRAW_BYTE 28
+ EQUB 2 * 17 + 5        \ Line 25 = LO(address) of LDA #0 in DRAW_BYTE 28
+ EQUB 2 * 17 + 5        \ Line 26 = LO(address) of LDA #0 in DRAW_BYTE 28
+ EQUB 2 * 17 + 5        \ Line 27 = LO(address) of LDA #0 in DRAW_BYTE 28
+ EQUB 1 * 17 + 5        \ Line 28 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 29 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 30 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 31 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 32 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 33 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 34 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 35 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 36 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 37 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 1 * 17 + 5        \ Line 38 = LO(address) of LDA #0 in DRAW_BYTE 27
+ EQUB 0 * 17 + 5        \ Line 39 = LO(address) of LDA #0 in DRAW_BYTE 26
+ EQUB 0 * 17 + 5        \ Line 40 = LO(address) of LDA #0 in DRAW_BYTE 26
+ EQUB 0 * 17 + 5        \ Line 41 = LO(address) of LDA #0 in DRAW_BYTE 26
+ EQUB 0 * 17 + 5        \ Line 42 = LO(address) of LDA #0 in DRAW_BYTE 26
+ EQUB 0 * 17 + 5        \ Line 43 = LO(address) of LDA #0 in DRAW_BYTE 26
 
 \ ******************************************************************************
 \
@@ -11741,60 +11818,60 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: staStripX
+\       Name: staDrawByte
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Low address bytes of the STA instructions in the DRAW_STRIP
-\             macros, for use when drawing around the dashboard
+\    Summary: Low address bytes of the STA instructions in the DRAW_BYTE macros,
+\             for use when drawing track lines around the dashboard
 \
 \ ******************************************************************************
 
-.staStripX
+.staDrawByte
 
- EQUB  3 * 17 + 15      \ Index  0 = LO(address) of STA (P),Y in DRAW_STRIP  3
- EQUB  5 * 17 + 15      \ Index  1 = LO(address) of STA (P),Y in DRAW_STRIP  5
- EQUB  6 * 17 + 15      \ Index  2 = LO(address) of STA (P),Y in DRAW_STRIP  6
- EQUB  6 * 17 + 15      \ Index  3 = LO(address) of STA (P),Y in DRAW_STRIP  6
- EQUB  6 * 17 + 15      \ Index  4 = LO(address) of STA (P),Y in DRAW_STRIP  6
- EQUB  6 * 17 + 15      \ Index  5 = LO(address) of STA (P),Y in DRAW_STRIP  6
- EQUB  6 * 17 + 15      \ Index  6 = LO(address) of STA (P),Y in DRAW_STRIP  6
- EQUB  7 * 17 + 15      \ Index  7 = LO(address) of STA (P),Y in DRAW_STRIP  7
- EQUB  7 * 17 + 15      \ Index  8 = LO(address) of STA (P),Y in DRAW_STRIP  7
- EQUB  7 * 17 + 15      \ Index  9 = LO(address) of STA (P),Y in DRAW_STRIP  7
- EQUB  7 * 17 + 15      \ Index 10 = LO(address) of STA (P),Y in DRAW_STRIP  7
- EQUB  7 * 17 + 15      \ Index 11 = LO(address) of STA (P),Y in DRAW_STRIP  7
- EQUB  8 * 17 + 15      \ Index 12 = LO(address) of STA (P),Y in DRAW_STRIP  8
- EQUB  8 * 17 + 15      \ Index 13 = LO(address) of STA (P),Y in DRAW_STRIP  8
- EQUB  8 * 17 + 15      \ Index 14 = LO(address) of STA (P),Y in DRAW_STRIP  8
- EQUB  8 * 17 + 15      \ Index 15 = LO(address) of STA (P),Y in DRAW_STRIP  8
- EQUB  9 * 17 + 15      \ Index 16 = LO(address) of STA (P),Y in DRAW_STRIP  9
- EQUB  9 * 17 + 15      \ Index 17 = LO(address) of STA (P),Y in DRAW_STRIP  9
- EQUB  9 * 17 + 15      \ Index 18 = LO(address) of STA (P),Y in DRAW_STRIP  9
- EQUB  9 * 17 + 15      \ Index 19 = LO(address) of STA (P),Y in DRAW_STRIP  9
- EQUB 10 * 17 + 15      \ Index 20 = LO(address) of STA (P),Y in DRAW_STRIP 10
- EQUB 10 * 17 + 15      \ Index 21 = LO(address) of STA (P),Y in DRAW_STRIP 10
- EQUB 10 * 17 + 15      \ Index 22 = LO(address) of STA (P),Y in DRAW_STRIP 10
- EQUB 10 * 17 + 15      \ Index 23 = LO(address) of STA (P),Y in DRAW_STRIP 10
- EQUB 11 * 17 + 15      \ Index 24 = LO(address) of STA (P),Y in DRAW_STRIP 11
- EQUB 11 * 17 + 15      \ Index 25 = LO(address) of STA (P),Y in DRAW_STRIP 11
- EQUB 11 * 17 + 15      \ Index 26 = LO(address) of STA (P),Y in DRAW_STRIP 11
- EQUB 11 * 17 + 15      \ Index 27 = LO(address) of STA (P),Y in DRAW_STRIP 11
- EQUB 12 * 17 + 15      \ Index 28 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 29 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 30 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 31 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 32 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 33 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 34 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 35 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 36 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 37 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 12 * 17 + 15      \ Index 38 = LO(address) of STA (P),Y in DRAW_STRIP 12
- EQUB 13 * 17 + 15      \ Index 39 = LO(address) of STA (P),Y in DRAW_STRIP 13
- EQUB 13 * 17 + 15      \ Index 40 = LO(address) of STA (P),Y in DRAW_STRIP 13
- EQUB 13 * 17 + 15      \ Index 41 = LO(address) of STA (P),Y in DRAW_STRIP 13
- EQUB 13 * 17 + 15      \ Index 42 = LO(address) of STA (P),Y in DRAW_STRIP 13
- EQUB 13 * 17 + 15      \ Index 43 = LO(address) of STA (P),Y in DRAW_STRIP 13
+ EQUB  3 * 17 + 15      \ Line  0 = LO(address) of STA (P),Y in DRAW_BYTE  3
+ EQUB  5 * 17 + 15      \ Line  1 = LO(address) of STA (P),Y in DRAW_BYTE  5
+ EQUB  6 * 17 + 15      \ Line  2 = LO(address) of STA (P),Y in DRAW_BYTE  6
+ EQUB  6 * 17 + 15      \ Line  3 = LO(address) of STA (P),Y in DRAW_BYTE  6
+ EQUB  6 * 17 + 15      \ Line  4 = LO(address) of STA (P),Y in DRAW_BYTE  6
+ EQUB  6 * 17 + 15      \ Line  5 = LO(address) of STA (P),Y in DRAW_BYTE  6
+ EQUB  6 * 17 + 15      \ Line  6 = LO(address) of STA (P),Y in DRAW_BYTE  6
+ EQUB  7 * 17 + 15      \ Line  7 = LO(address) of STA (P),Y in DRAW_BYTE  7
+ EQUB  7 * 17 + 15      \ Line  8 = LO(address) of STA (P),Y in DRAW_BYTE  7
+ EQUB  7 * 17 + 15      \ Line  9 = LO(address) of STA (P),Y in DRAW_BYTE  7
+ EQUB  7 * 17 + 15      \ Line 10 = LO(address) of STA (P),Y in DRAW_BYTE  7
+ EQUB  7 * 17 + 15      \ Line 11 = LO(address) of STA (P),Y in DRAW_BYTE  7
+ EQUB  8 * 17 + 15      \ Line 12 = LO(address) of STA (P),Y in DRAW_BYTE  8
+ EQUB  8 * 17 + 15      \ Line 13 = LO(address) of STA (P),Y in DRAW_BYTE  8
+ EQUB  8 * 17 + 15      \ Line 14 = LO(address) of STA (P),Y in DRAW_BYTE  8
+ EQUB  8 * 17 + 15      \ Line 15 = LO(address) of STA (P),Y in DRAW_BYTE  8
+ EQUB  9 * 17 + 15      \ Line 16 = LO(address) of STA (P),Y in DRAW_BYTE  9
+ EQUB  9 * 17 + 15      \ Line 17 = LO(address) of STA (P),Y in DRAW_BYTE  9
+ EQUB  9 * 17 + 15      \ Line 18 = LO(address) of STA (P),Y in DRAW_BYTE  9
+ EQUB  9 * 17 + 15      \ Line 19 = LO(address) of STA (P),Y in DRAW_BYTE  9
+ EQUB 10 * 17 + 15      \ Line 20 = LO(address) of STA (P),Y in DRAW_BYTE 10
+ EQUB 10 * 17 + 15      \ Line 21 = LO(address) of STA (P),Y in DRAW_BYTE 10
+ EQUB 10 * 17 + 15      \ Line 22 = LO(address) of STA (P),Y in DRAW_BYTE 10
+ EQUB 10 * 17 + 15      \ Line 23 = LO(address) of STA (P),Y in DRAW_BYTE 10
+ EQUB 11 * 17 + 15      \ Line 24 = LO(address) of STA (P),Y in DRAW_BYTE 11
+ EQUB 11 * 17 + 15      \ Line 25 = LO(address) of STA (P),Y in DRAW_BYTE 11
+ EQUB 11 * 17 + 15      \ Line 26 = LO(address) of STA (P),Y in DRAW_BYTE 11
+ EQUB 11 * 17 + 15      \ Line 27 = LO(address) of STA (P),Y in DRAW_BYTE 11
+ EQUB 12 * 17 + 15      \ Line 28 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 29 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 30 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 31 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 32 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 33 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 34 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 35 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 36 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 37 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 12 * 17 + 15      \ Line 38 = LO(address) of STA (P),Y in DRAW_BYTE 12
+ EQUB 13 * 17 + 15      \ Line 39 = LO(address) of STA (P),Y in DRAW_BYTE 13
+ EQUB 13 * 17 + 15      \ Line 40 = LO(address) of STA (P),Y in DRAW_BYTE 13
+ EQUB 13 * 17 + 15      \ Line 41 = LO(address) of STA (P),Y in DRAW_BYTE 13
+ EQUB 13 * 17 + 15      \ Line 42 = LO(address) of STA (P),Y in DRAW_BYTE 13
+ EQUB 13 * 17 + 15      \ Line 43 = LO(address) of STA (P),Y in DRAW_BYTE 13
 
 \ ******************************************************************************
 \
@@ -11880,8 +11957,8 @@ ENDIF
 .C31DE
 
  STA (P),Y
- STA L0504,Y
- STA L4400,Y
+ STA firstPixelTyre,Y
+ STA firstPixelTrack,Y
  DEX
  BPL C31EB
  LDX #3
@@ -12209,23 +12286,72 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3350
+\       Name: leftDashPixels
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixels along the left edge of the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a pixel byte for the white border (colour 2) along the left edge of
+\ the dashboard.
+
+\ There is a byte for each track line from 43 (the track line at the top of the
+\ dashboard) down to 3 (the lowest track line, just above where the wing mirror
+\ joins the car body). Lines 0 to 2 are not used.
+\
+\ Each pixel is a colour 2 pixel, so the high nibble contains a 1 and the low
+\ nibble contains a 0, to give colour %10. Colour 2 is mapped to white at this
+\ point of the custom screen.
 \
 \ ******************************************************************************
 
-.L3350
+.leftDashPixels
 
- EQUB &00, &00, &F0, &70, &30, &10, &00, &70, &70, &30, &10, &00
- EQUB &70, &30, &10, &00, &70, &30, &10, &00, &70, &30, &10, &00
- EQUB &70, &30, &10, &00, &70, &40, &30, &20, &30, &10, &10, &10
- EQUB &00, &00, &00, &40, &70, &40, &30, &30
+ EQUB %00000000         \ Line  0
+ EQUB %00000000         \ Line  1
+ EQUB %11110000         \ Line  2
+ EQUB %01110000         \ Line  3
+ EQUB %00110000         \ Line  4
+ EQUB %00010000         \ Line  5
+ EQUB %00000000         \ Line  6
+ EQUB %01110000         \ Line  7
+ EQUB %01110000         \ Line  8
+ EQUB %00110000         \ Line  9
+ EQUB %00010000         \ Line 10
+ EQUB %00000000         \ Line 11
+ EQUB %01110000         \ Line 12
+ EQUB %00110000         \ Line 13
+ EQUB %00010000         \ Line 14
+ EQUB %00000000         \ Line 15
+ EQUB %01110000         \ Line 16
+ EQUB %00110000         \ Line 17
+ EQUB %00010000         \ Line 18
+ EQUB %00000000         \ Line 19
+ EQUB %01110000         \ Line 20
+ EQUB %00110000         \ Line 21
+ EQUB %00010000         \ Line 22
+ EQUB %00000000         \ Line 23
+ EQUB %01110000         \ Line 24
+ EQUB %00110000         \ Line 25
+ EQUB %00010000         \ Line 26
+ EQUB %00000000         \ Line 27
+ EQUB %01110000         \ Line 28
+ EQUB %01000000         \ Line 29
+ EQUB %00110000         \ Line 30
+ EQUB %00100000         \ Line 31
+ EQUB %00110000         \ Line 32
+ EQUB %00010000         \ Line 33
+ EQUB %00010000         \ Line 34
+ EQUB %00010000         \ Line 35
+ EQUB %00000000         \ Line 36
+ EQUB %00000000         \ Line 37
+ EQUB %00000000         \ Line 38
+ EQUB %01000000         \ Line 39
+ EQUB %01110000         \ Line 40
+ EQUB %01000000         \ Line 41
+ EQUB %00110000         \ Line 42
+ EQUB %00110000         \ Line 43
 
 \ ******************************************************************************
 \
@@ -12277,24 +12403,72 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L33D0
+\       Name: rightDashPixels
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixels along the right edge of the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a pixel byte for the white border (colour 2) along the right edge of
+\ the dashboard.
+\
+\ There is a byte for each track line from 43 (the track line at the top of the
+\ dashboard) down to 3 (the lowest track line, just above where the wing mirror
+\ joins the car body). Lines 0 to 2 are not used.
+\
+\ Each pixel is a colour 2 pixel, so the high nibble contains a 1 and the low
+\ nibble contains a 0, to give colour %10. Colour 2 is mapped to white at this
+\ point of the custom screen.
 \
 \ ******************************************************************************
 
-.L33D0
+.rightDashPixels
 
- EQUB &00, &00, &F0, &E0, &C0, &80, &00, &E0, &E0, &C0, &80, &00
- EQUB &E0, &C0, &80, &00, &E0, &C0, &80, &00, &E0, &C0, &80, &00
- EQUB &E0, &C0, &80, &00, &E0, &20, &C0, &40, &C0, &80, &80, &80
- EQUB &00, &00, &00, &20, &E0, &20, &C0, &C0
-
+ EQUB %00000000         \ Line  0
+ EQUB %00000000         \ Line  1
+ EQUB %11110000         \ Line  2
+ EQUB %11100000         \ Line  3
+ EQUB %11000000         \ Line  4
+ EQUB %10000000         \ Line  5
+ EQUB %00000000         \ Line  6
+ EQUB %11100000         \ Line  7
+ EQUB %11100000         \ Line  8
+ EQUB %11000000         \ Line  9
+ EQUB %10000000         \ Line 10
+ EQUB %00000000         \ Line 11
+ EQUB %11100000         \ Line 12
+ EQUB %11000000         \ Line 13
+ EQUB %10000000         \ Line 14
+ EQUB %00000000         \ Line 15
+ EQUB %11100000         \ Line 16
+ EQUB %11000000         \ Line 17
+ EQUB %10000000         \ Line 18
+ EQUB %00000000         \ Line 19
+ EQUB %11100000         \ Line 20
+ EQUB %11000000         \ Line 21
+ EQUB %10000000         \ Line 22
+ EQUB %00000000         \ Line 23
+ EQUB %11100000         \ Line 24
+ EQUB %11000000         \ Line 25
+ EQUB %10000000         \ Line 26
+ EQUB %00000000         \ Line 27
+ EQUB %11100000         \ Line 28
+ EQUB %00100000         \ Line 29
+ EQUB %11000000         \ Line 30
+ EQUB %01000000         \ Line 31
+ EQUB %11000000         \ Line 32
+ EQUB %10000000         \ Line 33
+ EQUB %10000000         \ Line 34
+ EQUB %10000000         \ Line 35
+ EQUB %00000000         \ Line 36
+ EQUB %00000000         \ Line 37
+ EQUB %00000000         \ Line 38
+ EQUB %00100000         \ Line 39
+ EQUB %11100000         \ Line 40
+ EQUB %00100000         \ Line 41
+ EQUB %11000000         \ Line 42
+ EQUB %11000000         \ Line 43
 \ ******************************************************************************
 \
 \       Name: L33FC
@@ -12728,20 +12902,33 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3579
+\       Name: leftTyrePixels
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixels along the edge of the left tyre
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a pixel byte for the white border (colour 2) along the edge of the
+\ left tyre.
+
+\ The tyreEdgeIndex table maps track line numbers to entries in this table.
+\
+\ Each pixel is a colour 2 pixel, so the high nibble contains a 1 and the low
+\ nibble contains a 0, to give colour %10. Colour 2 is mapped to white at this
+\ point of the custom screen.
 \
 \ ******************************************************************************
 
-.L3579
+.leftTyrePixels
 
- EQUB &00, &80, &C0, &40, &60, &E0, &20
+ EQUB %00000000
+ EQUB %10000000
+ EQUB %11000000
+ EQUB %01000000
+ EQUB %01100000
+ EQUB %11100000
+ EQUB %00100000
 
 \ ******************************************************************************
 \
@@ -12837,20 +13024,33 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L35F9
+\       Name: rightTyrePixels
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixels along the edge of the right tyre
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a pixel byte for the white border (colour 2) along the edge of the
+\ right tyre.
+
+\ The tyreEdgeIndex table maps track line numbers to entries in this table.
+\
+\ Each pixel is a colour 2 pixel, so the high nibble contains a 1 and the low
+\ nibble contains a 0, to give colour %10. Colour 2 is mapped to white at this
+\ point of the custom screen.
 \
 \ ******************************************************************************
 
-.L35F9
+.rightTyrePixels
 
- EQUB &00, &10, &30, &20, &60, &70, &40
+ EQUB %00000000
+ EQUB %00010000
+ EQUB %00110000
+ EQUB %00100000
+ EQUB %01100000
+ EQUB %01110000
+ EQUB %01000000
 
 \ ******************************************************************************
 \
@@ -12923,20 +13123,31 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3679
+\       Name: leftTyreMask
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixel mask for the edge of the left tyre
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a mask byte for the track pixels along the edge of the left tyre.
+\
+\ The tyreEdgeIndex table maps track line numbers to entries in this table.
+\
+\ Set bits correspond to the track pixels, while clear bits correspond to the
+\ tyre pixels.
 \
 \ ******************************************************************************
 
-.L3679
+.leftTyreMask
 
- EQUB &FF, &77, &33, &33, &11, &11, &11
+ EQUB %11111111
+ EQUB %01110111
+ EQUB %00110011
+ EQUB %00110011
+ EQUB %00010001
+ EQUB %00010001
+ EQUB %00010001
 
 \ ******************************************************************************
 \
@@ -13030,20 +13241,31 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L36F9
+\       Name: rightTyreMask
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixel mask for the edge of the right tyre
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a mask byte for the track pixels along the edge of the right tyre.
+\
+\ The tyreEdgeIndex table maps track line numbers to entries in this table.
+\
+\ Set bits correspond to the track pixels, while clear bits correspond to the
+\ tyre pixels.
 \
 \ ******************************************************************************
 
-.L36F9
+.rightTyreMask
 
- EQUB &FF, &EE, &CC, &CC, &88, &88, &88
+ EQUB %11111111
+ EQUB %11101110
+ EQUB %11001100
+ EQUB %11001100
+ EQUB %10001000
+ EQUB %10001000
+ EQUB %10001000
 
 \ ******************************************************************************
 \
@@ -13633,24 +13855,71 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L38D0
+\       Name: leftDashMask
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Pixel mask for the left edge of the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a mask byte for the track pixels along the left edge of the central
+\ part of the dashboard.
+\
+\ There is a byte for each track line from 43 (the track line at the top of the
+\ dashboard) down to 3 (the lowest track line, just above where the wing mirror
+\ joins the car body). Lines 0 to 2 are not used.
+\
+\ Set bits correspond to the track pixels, while clear bits correspond to the
+\ dashboard pixels.
 \
 \ ******************************************************************************
 
-.L38D0
+.leftDashMask
 
- EQUB &FF, &FF, &88
- EQUB &88, &CC, &EE, &FF, &88, &88, &CC, &EE, &FF, &88, &CC, &EE
- EQUB &FF, &88, &CC, &EE, &FF, &88, &CC, &EE, &FF, &88, &CC, &EE
- EQUB &FF, &88, &88, &CC, &CC, &CC, &EE, &EE, &EE, &FF, &FF, &FF
- EQUB &88, &88, &88, &CC, &CC
+ EQUB %11111111         \ Line  0
+ EQUB %11111111         \ Line  1
+ EQUB %10001000         \ Line  2
+ EQUB %10001000         \ Line  3
+ EQUB %11001100         \ Line  4
+ EQUB %11101110         \ Line  5
+ EQUB %11111111         \ Line  6
+ EQUB %10001000         \ Line  7
+ EQUB %10001000         \ Line  8
+ EQUB %11001100         \ Line  9
+ EQUB %11101110         \ Line 10
+ EQUB %11111111         \ Line 11
+ EQUB %10001000         \ Line 12
+ EQUB %11001100         \ Line 13
+ EQUB %11101110         \ Line 14
+ EQUB %11111111         \ Line 15
+ EQUB %10001000         \ Line 16
+ EQUB %11001100         \ Line 17
+ EQUB %11101110         \ Line 18
+ EQUB %11111111         \ Line 19
+ EQUB %10001000         \ Line 20
+ EQUB %11001100         \ Line 21
+ EQUB %11101110         \ Line 22
+ EQUB %11111111         \ Line 23
+ EQUB %10001000         \ Line 24
+ EQUB %11001100         \ Line 25
+ EQUB %11101110         \ Line 26
+ EQUB %11111111         \ Line 27
+ EQUB %10001000         \ Line 28
+ EQUB %10001000         \ Line 29
+ EQUB %11001100         \ Line 30
+ EQUB %11001100         \ Line 31
+ EQUB %11001100         \ Line 32
+ EQUB %11101110         \ Line 33
+ EQUB %11101110         \ Line 34
+ EQUB %11101110         \ Line 35
+ EQUB %11111111         \ Line 36
+ EQUB %11111111         \ Line 37
+ EQUB %11111111         \ Line 38
+ EQUB %10001000         \ Line 39
+ EQUB %10001000         \ Line 40
+ EQUB %10001000         \ Line 41
+ EQUB %11001100         \ Line 42
+ EQUB %11001100         \ Line 43
 
 \ ******************************************************************************
 \
@@ -13757,24 +14026,71 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3950
+\       Name: rightDashMask
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
+\    Summary: Pixel mask for the right edge of the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains a mask byte for the track pixels along the right edge of the central
+\ part of the dashboard.
+\
+\ There is a byte for each track line from 43 (the track line at the top of the
+\ dashboard) down to 3 (the lowest track line, just above where the wing mirror
+\ joins the car body). Lines 0 to 2 are not used.
+\
+\ Set bits correspond to the track pixels, while clear bits correspond to the
+\ dashboard pixels.
 \
 \ ******************************************************************************
 
-.L3950
+.rightDashMask
 
- EQUB &FF, &FF, &11, &11, &33, &77, &FF
- EQUB &11, &11, &33, &77, &FF, &11, &33, &77, &FF, &11, &33, &77
- EQUB &FF, &11, &33, &77, &FF, &11, &33, &77, &FF, &11, &11, &33
- EQUB &33, &33, &77, &77, &77, &FF, &FF, &FF, &11, &11, &11, &33
- EQUB &33
+ EQUB %11111111         \ Line  0
+ EQUB %11111111         \ Line  1
+ EQUB %00010001         \ Line  2
+ EQUB %00010001         \ Line  3
+ EQUB %00110011         \ Line  4
+ EQUB %01110111         \ Line  5
+ EQUB %11111111         \ Line  6
+ EQUB %00010001         \ Line  7
+ EQUB %00010001         \ Line  8
+ EQUB %00110011         \ Line  9
+ EQUB %01110111         \ Line 10
+ EQUB %11111111         \ Line 11
+ EQUB %00010001         \ Line 12
+ EQUB %00110011         \ Line 13
+ EQUB %01110111         \ Line 14
+ EQUB %11111111         \ Line 15
+ EQUB %00010001         \ Line 16
+ EQUB %00110011         \ Line 17
+ EQUB %01110111         \ Line 18
+ EQUB %11111111         \ Line 19
+ EQUB %00010001         \ Line 20
+ EQUB %00110011         \ Line 21
+ EQUB %01110111         \ Line 22
+ EQUB %11111111         \ Line 23
+ EQUB %00010001         \ Line 24
+ EQUB %00110011         \ Line 25
+ EQUB %01110111         \ Line 26
+ EQUB %11111111         \ Line 27
+ EQUB %00010001         \ Line 28
+ EQUB %00010001         \ Line 29
+ EQUB %00110011         \ Line 30
+ EQUB %00110011         \ Line 31
+ EQUB %00110011         \ Line 32
+ EQUB %01110111         \ Line 33
+ EQUB %01110111         \ Line 34
+ EQUB %01110111         \ Line 35
+ EQUB %11111111         \ Line 36
+ EQUB %11111111         \ Line 37
+ EQUB %11111111         \ Line 38
+ EQUB %00010001         \ Line 39
+ EQUB %00010001         \ Line 40
+ EQUB %00010001         \ Line 41
+ EQUB %00110011         \ Line 42
+ EQUB %00110011         \ Line 43
 
 \ ******************************************************************************
 \
@@ -16989,22 +17305,42 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L4400
+\       Name: firstPixelTrack
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Storage for the first track pixel byte along the right edge of the
+\             dashboard
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This table is used to store the track pixel byte that would be shown along
+\ the right edge of the dashboard, but which is partially obscured by the edge.
+\ This is stored so we can retrieve it when masking the pixel byte with the
+\ dashboard edge when we draw the track line that starts at the right edge of
+\ the dashboard.
+\
+\ There is a byte for each track line from 43 (the track line at the top of the
+\ dashboard) down to 3 (the lowest track line, just above where the wing mirror
+\ joins the car body). Lines 0 to 2 are not used.
 \
 \ ******************************************************************************
 
-.L4400
+.firstPixelTrack
 
- EQUB &81, &81, &81, &81, &81, &81, &81, &81, &81, &81, &81, &81
- EQUB &81, &81, &81, &81, &81, &81, &81, &81, &81, &81, &81, &81
- EQUB &81, &81, &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
+ EQUB &81, &81
 
 \ ******************************************************************************
 \
@@ -26298,7 +26634,7 @@ ORG &6C00
 \
 \       Name: DrawTrackView (Part 4 of 4)
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -26311,27 +26647,29 @@ ORG &6C00
 
  LDA view3+1
  STA view20+1
+
  LDA view8+1
  STA view21+1
+
  LDA view14+1
  STA view22+1
 
- LDA #&91
+ LDA #&91               \ Set A to the opcode for the STA (P),Y instruction
 
 .view20
 
- STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
+ STA DrawTrackBytes+15
 
 .view21
 
- STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
+ STA DrawTrackBytes+15
 
 .view22
 
- STA strp2+15           \ Modify STA (P),Y instruction in strip 26
+ STA byte2+15
 
- LDA #&E0               \ Modify CMP instruction in strp3
- STA strp3
+ LDA #&E0               \ Modify CMP instruction in byte3
+ STA byte3
 
  RTS                    \ Return from the subroutine
 
@@ -26348,7 +26686,7 @@ ORG &6C00
 .DrawTrackView
 
  LDA #0                 \ Set (Q P) = &6700 and (S R) = &6800, ready to pass to
- STA P                  \ the DrawTrackPixelLine routine (so the track view gets
+ STA P                  \ the DrawTrackLine routine (so the track view gets
  STA R                  \ drawn at the correct place on screen, from &6701
  LDX #&67               \ onwards, as the first line is drawn at (Q P) + 1)
  STX Q
@@ -26359,11 +26697,11 @@ ORG &6C00
                         \ each dash data block (i.e. the byte at the end of the
                         \ data block, at offset 79)
 
- JSR DrawTrackPixelLine \ Draw pixel rows that correspond to dash data offsets
-                        \ 79 to 44, returning from the subroutine after drawing
-                        \ the line specified by offset X = 44 (so this draws all
-                        \ the lines from the top of the track view, down to the
-                        \ line just above the top of the dashboard)
+ JSR DrawTrackLine      \ Draw one-pixel high lines that correspond to dash data
+                        \ offsets 79 to 44, returning from the subroutine after
+                        \ drawing the line specified by offset X = 44 (so this
+                        \ draws all the lines from the top of the track view,
+                        \ down to the line just above the top of the dashboard)
 
  JMP view1              \ Jump to part 2 to draw the rest of the track view from
                         \ offsets 43 to 3, modifying the code so it draws the
@@ -26371,7 +26709,7 @@ ORG &6C00
 
 \ ******************************************************************************
 \
-\       Name: DrawTrackPixelLine (Part 2 of 2)
+\       Name: DrawTrackLine (Part 2 of 2)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw a pixel line across the screen in the track view
@@ -26390,36 +26728,40 @@ ORG &6C00
  LDA colourByte,Y       \ Set A to the pixel byte for four pixels in colour Y
                         \ to use as the first byte on the line
 
-                        \ Fall through into DrawStrips to draw the strips that
-                        \ make up the line we want to draw
+                        \ Fall through into DrawTrackBytes to draw the pixel
+                        \ bytes that make up the line we want to draw
                         \
                         \ If we are drawing the lines above the top of the
                         \ dashboard, then the following then loops back to the
-                        \ start of the DrawTrackPixelLine routine to keep
-                        \ drawing lines until we do reach the top of the
-                        \ dashboard, at which point we return from the
-                        \ DrawTrackPixelLine routine to part 2 of DrawTrackView,
-                        \ which modifies the code to draw subsequent lines
-                        \ around the shape of the dashboard
+                        \ start of the DrawTrackLine routine to keep drawing
+                        \ lines until we do reach the top of the dashboard, at
+                        \ which point we return from the DrawTrackLine routine
+                        \ to part 2 of DrawTrackView, which modifies the code to
+                        \ draw subsequent lines around the shape of the
+                        \ dashboard
 
 \ ******************************************************************************
 \
-\       Name: DRAW_STRIP
+\       Name: DRAW_BYTE
 \       Type: Macro
 \   Category: Graphics
-\    Summary: Draw a vertical strip as part of the track
+\    Summary: Draw a pixel byte as part of a horizontal line when drawing the
+\             track view
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine draws a pixel row in a vertical strip, as part of the track view.
+\ This routine draws a row of four pixels (i.e. one byte) as part of the track
+\ view.
 \
-\ The track view is made up of 40 vertical strips, each one four pixels (one
-\ character block) wide, with strip 0 on the left, then strip 1, and so on up
-\ to strip 39 on the far right of the screen.
+\ The track view is drawn one line at a time, with each line being one pixel
+\ high. Each of these lines is drawn as a sequence of bytes, with each byte
+\ containing four pixels.
 \
-\ Each macro instance copies one pixel byte in one strip - i.e. a four-pixel row
-\ within the strip, so each sequence of DRAW_STRIP 0 through DRAW_STRIP 39
-\ macros draws a one-pixel high line across the width of the screen.
+\ Each macro instance copies one pixel byte into screen memory, so that's one
+\ four-pixel block within the horizontal line. So the full sequence of macros,
+\ from DRAW_BYTE 0 through DRAW_BYTE 39, draws a one-pixel high line across
+\ the full width of the screen. In other words, each DRAW_BYTE macro draws a
+\ character block's worth of line, as the screen is 40 character blocks wide.
 \
 \ Each macro instance moves one pixel byte, from offset X within dash data block
 \ I%, into screen memory. The offset X is decremented for each run through the
@@ -26428,11 +26770,11 @@ ORG &6C00
 \ (the start of each dash data block) as we work our way through the data.
 \
 \ The destination address in screen memory for the data is governed by (Q P),
-\ which points to the address of the pixel byte to update in strip 0 (i.e. the
-\ address of the first pixel in the line across the screen).
+\ which points to the address of the pixel byte to update in the first byte
+\ (i.e. the address of the first pixel in the line across the screen).
 \
 \ If the dash data byte is zero, then the current value of A is stored in screen
-\ memory (i.e. the same value that was stored in the previous strip).
+\ memory (i.e. the same value that was stored in the previous byte).
 \
 \ If the dash data byte is non-zero, then this is stored in A and screen memory,
 \ unless it is &55, in which a zero is stored in A and screen memory.
@@ -26442,26 +26784,27 @@ ORG &6C00
 \
 \ Arguments:
 \
-\   I%                  The vertical strip number (0 to 39)
+\   I%                  The pixel byte number (0 to 39)
 \
 \   X                   The offset within the dash data of the data to be drawn
 \                       on the screen (from &7F down, as the dash data lives at
 \                       the end of each dash data block)
 \
-\   A                   The value stored in screen memory in the previous strip
-\                       (or the starting value if this is strip 0)
+\   A                   The value stored in screen memory in the previous pixel
+\                       byte (or the starting value if this is pixel byte 0)
 \
 \   (Q P)               The screen address of the leftmost character block to
 \                       update (i.e. the screen address of the pixel byte to
-\                       draw in strip 0, so this is the address of the start of
-\                       the horizontal line that seqential macros draw)
+\                       draw in the first character block on the line, so this
+\                       is the address of the start of the horizontal line that
+\                       the seqential macros draw)
 \
 \   (S R)               Contains (Q P) + &100, to be used instead of (Q P) for
-\                       strips 32 to 39
+\                       pixel bytes 32 to 39
 \
 \ ******************************************************************************
 
-MACRO DRAW_STRIP I%
+MACRO DRAW_BYTE I%
 
  LDY dashData+&80*I%,X  \ Set Y to the X-th byte of dash data block I%
 
@@ -26496,11 +26839,11 @@ MACRO DRAW_STRIP I%
  LDY #LO(8*I%)          \ Store A in character block I% in screen memory, as an
  IF I% < 32             \ offset from (Q P)
   STA (P),Y             \
- ELSE                   \ (S R) is used instead of (Q P) for strips 32 to 39,
-  STA (R),Y             \ which saves us from having to increment Q to cross the
- ENDIF                  \ page boundary, as (S R) = (Q P) + &100
+ ELSE                   \ (S R) is used instead of (Q P) for pixel bytes 32 to
+  STA (R),Y             \ 39, which saves us from having to increment Q to cross
+ ENDIF                  \ the page boundary, as (S R) = (Q P) + &100
 
-                        \ Fall through into the next DRAW_STRIP macro to draw
+                        \ Fall through into the next DRAW_BYTE macro to draw
                         \ the next pixel byte along to the right, continuing the
                         \ horizontal line of pixels
 
@@ -26508,37 +26851,45 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: DrawStrips (Part 1 of 4)
+\       Name: DrawTrackBytes (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw the vertical strips that make up the track view (0 to 15)
+\    Summary: Draw the pixel bytes that make up the track view (0 to 15)
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine draws vertical strips 0 to 39, to show the track view.
+\ This routine draws pixel bytes 0 to 39, which draws a one-pixel high line in
+\ the track view.
+\
+\ Note that this routine starts on a page boundary (DrawTrackBytes = &7C00).
+\ This is important as it means the code can be modified at a specific address
+\ using only the low byte of that address, as we know that high byte is the same
+\ throughout the routine. This is why the staDrawByte and ldaDrawByte lookup
+\ tables only need to store the low bytes of the addresses for instructions that
+\ we need to modify.
 \
 \ ******************************************************************************
 
-.DrawStrips
+.DrawTrackBytes
 
- DRAW_STRIP 0           \ Draw strips 0 to 15
- DRAW_STRIP 1
- DRAW_STRIP 2
- DRAW_STRIP 3
- DRAW_STRIP 4
- DRAW_STRIP 5
- DRAW_STRIP 6
- DRAW_STRIP 7
- DRAW_STRIP 8
- DRAW_STRIP 9
- DRAW_STRIP 10
- DRAW_STRIP 11
- DRAW_STRIP 12
- DRAW_STRIP 13
- DRAW_STRIP 14
- DRAW_STRIP 15
+ DRAW_BYTE 0            \ Draw pixel bytes 0 to 15
+ DRAW_BYTE 1
+ DRAW_BYTE 2
+ DRAW_BYTE 3
+ DRAW_BYTE 4
+ DRAW_BYTE 5
+ DRAW_BYTE 6
+ DRAW_BYTE 7
+ DRAW_BYTE 8
+ DRAW_BYTE 9
+ DRAW_BYTE 10
+ DRAW_BYTE 11
+ DRAW_BYTE 12
+ DRAW_BYTE 13
+ DRAW_BYTE 14
+ DRAW_BYTE 15
 
- JMP strp1              \ Jump to part 2 to continue with strip 16
+ JMP byte1              \ Jump to part 2 to continue with pixel byte 16
 
 \ ******************************************************************************
 \
@@ -26549,8 +26900,9 @@ ENDMACRO
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine modifes the DrawStrips routine so that it draws all the remaining
-\ lines in the track view so they fit around the shape of the dashboard.
+\ This routine modifes the DrawTrackBytes routine so that it draws all the
+\ remaining lines in the track view so they fit around the shape of the
+\ dashboard.
 \
 \ ******************************************************************************
 
@@ -26564,22 +26916,22 @@ ENDMACRO
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
- STA strp3              \ Modify the following instruction in DrawStrips
+ STA byte3              \ Modify the following instruction in DrawTrackBytes
                         \ (part 3):
                         \
                         \   CPX #44 -> RTS
                         \
-                        \ so that calls to DrawTrackPixelLine and DrawStrips
-                        \ from now on will draw individual lines rather than
-                        \ looping back to DrawTrackPixelLine as they did for
-                        \ the lines above the dashboard
+                        \ so that calls to DrawTrackLine and DrawTrackBytes from
+                        \ now on will draw individual lines rather than looping
+                        \ back to DrawTrackLine as they did for the lines above
+                        \ the dashboard
 
 .view2
 
  DEX                    \ Decrement the dash data block pointer to point to
                         \ the data for the next line
 
- LDY staStripX,X        \ Set Y to the X-th entry in staStripX, which contains
+ LDY staDrawByte,X      \ Set Y to the X-th entry in staDrawByte, which contains
                         \ the low byte of the address of the STA (P),Y
                         \ instruction in the DRAW_STRIPE macro given in the
                         \ table
@@ -26593,64 +26945,82 @@ ENDMACRO
 
 .view3
 
- STA DrawStrips+15      \ Modify the specified instruction back to STA (P),Y
+ STA DrawTrackBytes+15  \ Modify the specified instruction back to STA (P),Y
                         \ (the address of the modified instruction is set by the
                         \ following, so the first time we run this line it has
                         \ no effect)
 
  STY view4+1            \ Modify the instruction at view4 to change the low byte
-                        \ of the address to the X-th entry in staStripX, so the
-                        \ instruction at view4 changes the STA (P),Y instruction
-                        \ to an RTS in the DRAW_STRIPE macro given in staStripX
+                        \ of the address to the X-th entry in staDrawByte, so
+                        \ the instruction at view4 changes the STA (P),Y
+                        \ instruction to an RTS in the DRAW_STRIPE macro given
+                        \ in staDrawByte
 
  STY view3+1            \ Modify the instruction at view3 to change the low byte
-                        \ of the address to the X-th entry in staStripX, so the
-                        \ instruction at view3 changes the RTS instruction back
-                        \ to STA (P),Y when we loop back around
+                        \ of the address to the X-th entry in staDrawByte, so
+                        \ the instruction at view3 changes the RTS instruction
+                        \ back to STA (P),Y when we loop back around
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
 .view4
 
- STA DrawStrips         \ Modify the specified instruction to an RTS so the next
-                        \ call to DrawTrackPixelLine will return at that point 
-                        \ (the address of the modified instruction is set above)
+ STA DrawTrackBytes     \ Modify the specified instruction to an RTS so the next
+                        \ call to DrawTrackLine will return at that point (the
+                        \ address of the modified instruction is set above)
 
- LDY ldaStripX,X        \ Set Y to the X-th entry in ldaStripX, which contains
+ LDY ldaDrawByte,X      \ Set Y to the X-th entry in ldaDrawByte, which contains
                         \ the low byte of the LDA #0 instruction in the specific
                         \ DRAW_STRIPE macro, as given in the table
 
  STY view6+1            \ Modify the instruction at view6 to change the low byte
-                        \ of the address to the X-th entry in ldaStripX, so the
-                        \ instruction at view6 changes so it jumps to the LDA #0
-                        \ instruction in the DRAW_MACRO specified in the table
+                        \ of the address to the X-th entry in ldaDrawByte, so
+                        \ the instruction at view6 changes so it jumps to the
+                        \ LDA #0 instruction in the DRAW_BYTE macro specified in
+                        \ the table
 
 .view5
 
- JSR DrawTrackPixelLine \ Draw the left portion of this pixel line
+ JSR DrawTrackLine      \ Draw the left portion of this track line
                         \
                         \ This routine was modified above to return from the
-                        \ subroutine at the STA instruction in the DRAW_MACRO
-                        \ specified in the staStripX table, so this returns with
-                        \ A set to the last pixel byte of this portion of the
-                        \ line
+                        \ subroutine at the STA instruction in the DRAW_BYTE
+                        \ macro specified in the staDrawByte table, so this
+                        \ returns the last pixel byte of this portion of the
+                        \ line in A, i.e. the rightmost byte of the left portion
+                        \ of the track line, where the line meets the left
+                        \ border of the central part of the dashboard
 
- AND L38D0,X
- ORA L3350,X
- STA (P),Y
+ AND leftDashMask,X     \ We now merge the track byte in A with the left edge
+ ORA leftDashPixels,X   \ of the dashboard, by masking out the pixels in A that
+ STA (P),Y              \ are hidden by the dashboard (with AND leftDashMask),
+                        \ and replacing them with the pixels from the left edge
+                        \ of the dashboard (with ORA leftDashPixels)
 
- LDA L4400,X
- AND L3950,X
- ORA L33D0,X
- TAY
+ LDA firstPixelTrack,X  \ Fetch the the track pixel byte that would be shown
+                        \ along the right edge of the dashboard, i.e. the
+                        \ leftmost byte of the right portion of the track line,
+                        \ where the line meets the right border of the central
+                        \ part of the dashboard
+
+ AND rightDashMask,X    \ We now merge the track byte in A with the right edge
+ ORA rightDashPixels,X  \ of the dashboard, by masking out the pixels in A that
+                        \ are hidden by the dashboard (with AND rightDashMask),
+                        \ and replacing them with the pixels from the left edge
+                        \ of the dashboard (with ORA rightDashPixels)
+
+ TAY                    \ Copy the pixel byte into Y, because the following JSR
+                        \ jumps straight to the LDA #0 instruction within the
+                        \ DRAW_BYTE macro, and at that point the macro expects
+                        \ the pixel byte to be in Y rather than A
 
 .view6
 
- JSR strp2              \ Draw the right portion of this pixel line
+ JSR byte2              \ Draw the right portion of this track line
                         \
                         \ This JSR was modified above to jump to the LDA #0
-                        \ instruction in the DRAW_MACRO specified in the
-                        \ ldaStripX table
+                        \ instruction in the DRAW_BYTE macro specified in the
+                        \ ldaDrawByte table
 
  CPX #28                \ Loop back to keep drawing lines, working our way down
  BNE view2              \ through the dash data from entry 44 down to entry 28
@@ -26662,70 +27032,70 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: DrawStrips (Part 2 of 4)
+\       Name: DrawTrackBytes (Part 2 of 3)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw the vertical strips that make up the track view (16 to 25)
+\    Summary: Draw the pixel bytes that make up the track view (16 to 39)
 \
+\ ------------------------------------------------------------------------------
+\
+\ Note that the latter half of this routine, from .byte2 onwards, starts on a
+\ page boundary (byte2 = &7E00). This is important as it means the code can be
+\ modified at a specific address using only the low byte of that address, as we
+\ know that high byte is the same throughout the routine. This is why the lookup
+\ tables at staDrawByte and ldaDrawByte only need to store the low bytes of
+\ the addresses for instructions that we need to modify.
+
 \ ******************************************************************************
 
-.strp1
+.byte1
 
- DRAW_STRIP 16          \ Draw strips 16 to 25
- DRAW_STRIP 17
- DRAW_STRIP 18
- DRAW_STRIP 19
- DRAW_STRIP 20
- DRAW_STRIP 21
- DRAW_STRIP 22
- DRAW_STRIP 23
- DRAW_STRIP 24
- DRAW_STRIP 25
+ DRAW_BYTE 16           \ Draw pixel bytes 16 to 25
+ DRAW_BYTE 17
+ DRAW_BYTE 18
+ DRAW_BYTE 19
+ DRAW_BYTE 20
+ DRAW_BYTE 21
+ DRAW_BYTE 22
+ DRAW_BYTE 23
+ DRAW_BYTE 24
+ DRAW_BYTE 25
 
-\ ******************************************************************************
-\
-\       Name: DrawStrips (Part 3 of 4)
-\       Type: Subroutine
-\   Category: Graphics
-\    Summary: Draw the vertical strips that make up the track view (26 to 39)
-\
-\ ******************************************************************************
+.byte2
 
-.strp2
+ DRAW_BYTE 26           \ Draw pixel bytes 26 to 39
+ DRAW_BYTE 27
+ DRAW_BYTE 28
+ DRAW_BYTE 29
+ DRAW_BYTE 30
+ DRAW_BYTE 31
+ DRAW_BYTE 32
+ DRAW_BYTE 33
+ DRAW_BYTE 34
+ DRAW_BYTE 35
+ DRAW_BYTE 36
+ DRAW_BYTE 37
+ DRAW_BYTE 38
+ DRAW_BYTE 39
 
- DRAW_STRIP 26          \ Draw strips 26 to 39
- DRAW_STRIP 27
- DRAW_STRIP 28
- DRAW_STRIP 29
- DRAW_STRIP 30
- DRAW_STRIP 31
- DRAW_STRIP 32
- DRAW_STRIP 33
- DRAW_STRIP 34
- DRAW_STRIP 35
- DRAW_STRIP 36
- DRAW_STRIP 37
- DRAW_STRIP 38
- DRAW_STRIP 39
-
-.strp3
+.byte3
 
  CPX #44                \ If X = 44, then we have just drawn the last pixel
- BEQ strp4              \ line above the top of the dashboard, so return from
+ BEQ byte4              \ line above the top of the dashboard, so return from
                         \ the subroutine so we can modify the routine to draw
                         \ subsequent lines in two parts, to fit around the
-                        \ dashboard (as strp3 contains an RTS)
+                        \ dashboard (as byte3 contains an RTS)
 
  DEX                    \ Decrement the dash data pointer in X to move on to the
                         \ next pixel line
 
 \ ******************************************************************************
 \
-\       Name: DrawTrackPixelLine (Part 1 of 2)
+\       Name: DrawTrackLine (Part 1 of 2)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw a pixel line across the screen in the track view, broken up
-\             into strips
+\             into bytes
 \
 \ ------------------------------------------------------------------------------
 \
@@ -26742,7 +27112,7 @@ ENDMACRO
 \
 \ ******************************************************************************
 
-.DrawTrackPixelLine
+.DrawTrackLine
 
                         \ We start by incrementing (Q P) and (S R) to point to
                         \ the next pixel row down the screen
@@ -26785,14 +27155,14 @@ ENDMACRO
 
 \ ******************************************************************************
 \
-\       Name: DrawStrips (Part 4 of 4)
+\       Name: DrawTrackBytes (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
 \
 \ ******************************************************************************
 
-.strp4
+.byte4
 
  RTS                    \ Return from the subroutine
 
@@ -26801,7 +27171,14 @@ ENDMACRO
 \       Name: DrawTrackView (Part 3 of 4)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw the part of the track view that fits around the dashboard and
+\             tyres
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine modifes the DrawTrackBytes routine so that it draws all the
+\ remaining lines in the track view so they fit around the shape of the
+\ dashboard and the tyres.
 \
 \ ******************************************************************************
 
@@ -26815,106 +27192,287 @@ ENDMACRO
 
 .view7
 
- DEX
- LDY staStripX,X
- CPY view8+1
- BEQ view10
- LDA #&91
+ DEX                    \ Decrement the dash data block pointer to point to
+                        \ the data for the next line
+
+ LDY staDrawByte,X      \ Set Y to the X-th entry in staDrawByte, which contains
+                        \ the low byte of the address of the STA (P),Y
+                        \ instruction in the DRAW_STRIPE macro given in the
+                        \ table
+
+ CPY view8+1            \ If the instruction at view8 has already been modified
+ BEQ view10             \ to this address, jump to view10 to skip the following
+                        \ modifications, as they have already been done on the
+                        \ previous iteration of the loop
+
+ LDA #&91               \ Set A to the opcode for the STA (P),Y instruction
 
 .view8
 
- STA DrawStrips+15      \ Modify STA (P),Y instruction in strip 0
- STY view9+1
- STY view8+1
- LDA #&60
+ STA DrawTrackBytes+15  \ Modify the specified instruction back to STA (P),Y
+                        \ (the address of the modified instruction is set by the
+                        \ following, so the first time we run this line it has
+                        \ no effect)
+
+ STY view9+1            \ Modify the instruction at view9 to change the low byte
+                        \ of the address to the X-th entry in staDrawByte, so
+                        \ the instruction at view9 changes the STA (P),Y
+                        \ instruction to an RTS in the DRAW_STRIPE macro given
+                        \ in staDrawByte
+
+ STY view8+1            \ Modify the instruction at view8 to change the low byte
+                        \ of the address to the X-th entry in staDrawByte, so
+                        \ the instruction at view8 changes the RTS instruction
+                        \ back to STA (P),Y when we loop back around
+
+ LDA #&60               \ Set A to the opcode for the RTS instruction
 
 .view9
 
- STA DrawStrips
+ STA DrawTrackBytes     \ Modify the specified instruction to an RTS so the next
+                        \ call to DrawTrackLine will return at that point (the
+                        \ address of the modified instruction is set above)
 
 .view10
 
- LDY P
+                        \ The following code is normally run at the start of the
+                        \ DrawTrackLine routine, but we are going to call the
+                        \ DrawTrackBytes routine to draw our line instead, so
+                        \ we can skip the bytes that are hidden behind the left
+                        \ tyre
+                        \
+                        \ So we repeat the code here, which increments the
+                        \ screen addresses in (Q P) and (S R) to point to the
+                        \ next pixel row down the screen
+
+ LDY P                  \ Set Y = P + 1, which is the low byte of (Q P) + 1
  INY
- TYA
- AND #&07
- BNE view11
- TYA
- CLC
- ADC #&38
+
+ TYA                    \ If Y mod 8 <> 0 then incrementing (Q P) will keep us
+ AND #&07               \ within the current character block (i.e. the new pixel
+ BNE view11             \ row will be 7 or less), so jump to view11 to store the
+                        \ incremented values
+
+                        \ Otherwise incrementing (Q P) will take us into the
+                        \ next character block (i.e. from pixel row 7 to pixel
+                        \ row 8), so we need to update the screen addresses to
+                        \ jump to the next character row
+
+ TYA                    \ Set (Q P) = Y + &138
+ CLC                    \
+ ADC #&38               \ starting with the low bytes
  STA P
  STA R
- LDA Q
- ADC #&01
- STA Q
- ADC #&01
+
+ LDA Q                  \ And then the high bytes, so (Q P) points to start of
+ ADC #&01               \ the character block on the next character row (i.e.
+ STA Q                  \ the next pixel row down)
+
+ ADC #&01               \ Set (S R) = (Q P) + &100
  STA S
- BCC view12
+
+ BCC view12             \ Jump to view12 to skip the following
 
 .view11
 
- STY P
- STY R
+                        \ If we get here then incrementing the screen addresses
+                        \ keeps us within the current character block, so we can
+                        \ store the incremented addresses in (Q P) and (S R)
+
+ STY P                  \ Set the low bytes of (Q P) and (S R) to Y, so this
+ STY R                  \ does:
+                        \
+                        \   (Q P) = (Q P) + 1
+                        \
+                        \   (S R) = (S R) + 1
+                        \
+                        \ so they point to the next pixel row down the screen
 
 .view12
 
- LDA #&F1
- SEC
- SBC L3080,X
- STA view13+1
- LDY L3050,X
- LDA L0504,X
- AND L3679,Y
- ORA L3579,Y
- TAY
+                        \ The staDrawByteTyre table contains the low byte offset
+                        \ of the address of the STA (P),Y instruction for the
+                        \ track line, which we convert into an RTS when drawing
+                        \ the track line up against the right tyre, so we stop
+                        \ in time (see the code that modifies view14 and view15
+                        \ below)
+                        \
+                        \ As the tyres are reflections of each other, we can
+                        \ also use this value to calculate the starting point
+                        \ for the line that starts at the left tyre, which is
+                        \ what we do now
+
+ LDA #LO(byte3)+3       \ Set A = LO(byte3) + 3 - staDrawByteTyre
+ SEC                    \
+ SBC staDrawByteTyre,X  \ There are 14 instances of the DRAW_BYTE macro between
+                        \ byte2 and byte3, ranging from DRAW_BYTE 26 up to
+                        \ DRAW_BYTE 39
+                        \
+                        \ This calculation converts the low address byte from
+                        \ the staDrawByteTyre table so that instead of pointing
+                        \ to the LDA #0 instruction in the n-th DRAW_BYTE macro,
+                        \ it points to the LDA #0 instruction in the 14-n-th
+                        \ macro, as an offset from byte2
+                        \
+                        \ This effectively takes the end point given in the
+                        \ staDrawByteTyre table and returns the start point if
+                        \ the range DRAW_BYTE 26 to DRAW_BYTE 39 were
+                        \ "reflected" into DRAW_BYTE 39 to DRAW_BYTE 26
+                        \
+                        \ This enables us to calculate the offset of the start
+                        \ point's macro for the left tyre, as an offset from
+                        \ DrawTrackBytes, which is what we want
+
+ STA view13+1           \ Modify the instruction at view13 to change the low byte
+                        \ of the address to A, so the instruction at view13
+                        \ changes so it jumps to the LDA #0 instruction in the
+                        \ DRAW_BYTE macro specified in the table
+
+ LDY tyreEdgeIndex,X    \ Set Y to the index of the mask and pixel bytes for the
+                        \ tyre edge for this track line, so we can use it below
+                        \ to fetch the correct entries from leftTyreMask and
+                        \ leftTyrePixels
+
+ LDA firstPixelTyre,X   \ Fetch the the track pixel byte that would be shown
+                        \ along the edge of the left tyre, i.e. the leftmost
+                        \ byte of the track line, where the line meets the left
+                        \ tyre
+
+ AND leftTyreMask,Y     \ We now merge the track byte in A with the edge of the
+ ORA leftTyrePixels,Y   \ left tyre, by masking out the pixels in A that are
+                        \ hidden by the tyre (with AND leftTyreMask), and
+                        \ replacing them with the pixels from the edge of the
+                        \ left tyre (with ORA leftTyrePixels)
+
+ TAY                    \ Copy the pixel byte into Y, because the following JSR
+                        \ jumps straight to the LDA #0 instruction within the
+                        \ DRAW_BYTE macro, and at that point the macro expects
+                        \ the pixel byte to be in Y rather than A
 
 .view13
 
- JSR DrawStrips
- AND L38D0,X
- ORA L3350,X
- STA (P),Y
- LDY L3080,X
- CPY view14+1
- BEQ view16
- LDA #&91
+ JSR DrawTrackBytes     \ Draw the left portion of this track line
+                        \
+                        \ This routine was modified above to return from the
+                        \ subroutine at the STA instruction in the DRAW_BYTE
+                        \ macro specified in the staDrawByte table, so this
+                        \ returns the last pixel byte of this portion of the
+                        \ line in A, i.e. the rightmost byte of the left portion
+                        \ of the track line, where the line meets the left
+                        \ border of the central part of the dashboard
+
+ AND leftDashMask,X     \ We now merge the track byte in A with the left edge
+ ORA leftDashPixels,X   \ of the dashboard, by masking out the pixels in A that
+                        \ are hidden by the dashboard (with AND leftDashMask),
+                        \ and replacing them with the pixels from the left edge
+                        \ of the dashboard (with ORA leftDashPixels)
+
+ STA (P),Y              \ Write the merged pixel byte into screen memory
+
+ LDY staDrawByteTyre,X  \ Set Y to the X-th entry in staDrawByteTyre, which
+                        \ contains the low byte of the address of the STA (P),Y
+                        \ instruction in the DRAW_STRIPE macro given in the
+                        \ table
+
+ CPY view14+1           \ If the instruction at view14 has already been modified
+ BEQ view16             \ to this address, jump to view16 to skip the following
+                        \ modifications, as they have already been done on the
+                        \ previous iteration of the loop
+
+ LDA #&91               \ Set A to the opcode for the STA (P),Y instruction
 
 .view14
 
- STA strp2+15           \ Modify STA (P),Y instruction in strip 26
- STY view15+1
- STY view14+1
- LDA #&60
+ STA byte2+15           \ Modify the specified instruction back to STA (P),Y
+                        \ (the address of the modified instruction is set by the
+                        \ following, so the first time we run this line it has
+                        \ no effect)
+
+ STY view15+1           \ Modify the instruction at view15 to change the low byte
+                        \ of the address to the X-th entry in staDrawByteTyre, so
+                        \ the instruction at view15 changes the STA (P),Y
+                        \ instruction to an RTS in the DRAW_STRIPE macro given
+                        \ in staDrawByteTyre
+
+ STY view14+1           \ Modify the instruction at view14 to change the low byte
+                        \ of the address to the X-th entry in staDrawByteTyre, so
+                        \ the instruction at view14 changes the STA (P),Y
+                        \ instruction to an RTS in the DRAW_STRIPE macro given
+                        \ in staDrawByteTyre
+
+ LDA #&60               \ Set A to the opcode for the RTS instruction
 
 .view15
 
- STA strp2              \ Modify first instruction in strp2
+ STA byte2              \ Modify the specified instruction to an RTS so the next
+                        \ call to byte2 will return at that point (the address
+                        \ of the modified instruction is set above)
 
 .view16
 
- LDY ldaStripX,X
- STY view17+1
- LDA L4400,X
- AND L3950,X
- ORA L33D0,X
- TAY
+ LDY ldaDrawByte,X      \ Set Y to the X-th entry in ldaDrawByte, which contains
+                        \ the low byte of the LDA #0 instruction in the specific
+                        \ DRAW_STRIPE macro, as given in the table
+
+ STY view17+1           \ Modify the instruction at view17 to change the low byte
+                        \ of the address to the X-th entry in ldaDrawByte, so
+                        \ the instruction at view17 changes so it jumps to the
+                        \ LDA #0 instruction in the DRAW_BYTE macro specified in
+                        \ the table
+
+ LDA firstPixelTrack,X  \ Fetch the the track pixel byte that would be shown
+                        \ along the right edge of the dashboard, i.e. the
+                        \ leftmost byte of the right portion of the track line,
+                        \ where the line meets the right border of the central
+                        \ part of the dashboard
+
+ AND rightDashMask,X    \ We now merge the track byte in A with the right edge
+ ORA rightDashPixels,X  \ of the dashboard, by masking out the pixels in A that
+                        \ are hidden by the dashboard (with AND rightDashMask),
+                        \ and replacing them with the pixels from the left edge
+                        \ of the dashboard (with ORA rightDashPixels)
+
+ TAY                    \ Copy the pixel byte into Y, because the following JSR
+                        \ jumps straight to the LDA #0 instruction within the
+                        \ DRAW_BYTE macro, and at that point the macro expects
+                        \ the pixel byte to be in Y rather than A
 
 .view17
 
- JSR strp2
- STY U
- LDY L3050,X
- AND L36F9,Y
- ORA L35F9,Y
- LDY U
- STA (R),Y
- CPX #&03
- BEQ view18
- JMP view7
+ JSR byte2              \ Draw the right portion of this track line
+                        \
+                        \ This JSR was modified above to jump to the LDA #0
+                        \ instruction in the DRAW_BYTE macro specified in the
+                        \ ldaDrawByte table
+
+ STY U                  \ Store Y in U so we can retrieve it below
+
+ LDY tyreEdgeIndex,X    \ Set Y to the index of the mask and pixel bytes for the
+                        \ tyre edge for this track line, so we can use it to
+                        \ fetch the correct entries from rightTyreMask and
+                        \ rightTyrePixels
+
+ AND rightTyreMask,Y    \ We now merge the track byte in A with the edge of the
+ ORA rightTyrePixels,Y  \ right tyre, by masking out the pixels in A that are
+                        \ hidden by the tyre (with AND rightTyreMask), and
+                        \ replacing them with the pixels from the edge of the
+                        \ right tyre (with ORA rightTyrePixels)
+
+ LDY U                  \ Retrieve the value of Y that we stored above
+
+ STA (R),Y              \ Write the merged pixel byte into screen memory, using
+                        \ (S R) as the screen address as this is at the right
+                        \ end of the track line
+
+ CPX #3                 \ If we just drew the line at dash data entry 3, jump
+ BEQ view18             \ to view18 to stop drawing track lines
+
+ JMP view7              \ Loop back to keep drawing lines, working our way down
+                        \ through the dash data from entry 27 down to entry 3
 
 .view18
 
- JMP view19
+ JMP view19             \ Jump to part 4 to reverse our code modifications
 
 \ ******************************************************************************
 \
