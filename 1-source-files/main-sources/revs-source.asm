@@ -5161,10 +5161,12 @@ ENDIF
                         \ memory
 
  JSR DrawTrackView      \ Copy the data from the dash data blocks to the screen
-                        \ to draw the track view, though as the screen is
-                        \ currently mapped to black, this doesn't show anything,
-                        \ but it does zero all the dash data blocks, so they are
-                        \ ready to be filled with the track view
+                        \ to draw the track view
+                        \
+                        \ As the screen is currently mapped to black, this
+                        \ doesn't show anything, but it does zero all the dash
+                        \ data blocks, so they are ready to be filled with the
+                        \ track view
 
  BIT configStop         \ If bit 6 of configStop is set then we are returning to
  BVS main4              \ the track after visiting the pits, so jump to main4
@@ -26635,41 +26637,54 @@ ORG &6C00
 \       Name: DrawTrackView (Part 4 of 4)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Revert all the code modifications made by the DrawTrackView
+\             routine
 \
 \ ******************************************************************************
 
 .view19
 
- LDA view3+1
- STA view20+1
+ LDA view3+1            \ Modify the instruction at view20 to use the low byte
+ STA view20+1           \ of the address from view3
+                        \
+                        \ In part 2 we modified the instruction at view3 to
+                        \ revert the specified instruction back to STA (P),Y,
+                        \ ready for a loop-back that never happened, so view20
+                        \ will now revert this change instead
 
- LDA view8+1
- STA view21+1
+ LDA view8+1            \ Modify the instruction at view21 to use the low byte       
+ STA view21+1           \ of the address from view8
+                        \
+                        \ In part 3 we modified the instruction at view8 to
+                        \ revert the specified instruction back to STA (P),Y,
+                        \ ready for a loop-back that never happened, so view21
+                        \ will now revert this change instead
 
- LDA view14+1
- STA view22+1
+ LDA view14+1           \ Modify the instruction at view22 to use the low byte     
+ STA view22+1           \ of the address from view14
+                        \
+                        \ In part 3 we modified the instruction at view14 to
+                        \ revert the specified instruction back to STA (P),Y,
+                        \ ready for a loop-back that never happened, so view22
+                        \ will now revert this change instead
 
  LDA #&91               \ Set A to the opcode for the STA (P),Y instruction
 
 .view20
 
- STA DrawTrackBytes+15
+ STA DrawTrackBytes+15  \ Revert the instruction that view3 would have reverted
 
 .view21
 
- STA DrawTrackBytes+15
+ STA DrawTrackBytes+15  \ Revert the instruction that view8 would have reverted
 
 .view22
 
- STA byte2+15
+ STA byte2+15           \ Revert the instruction that view14 would have reverted
 
- LDA #&E0               \ Modify CMP instruction in byte3
- STA byte3
+ LDA #&E0               \ Set A to the opcode for the CPX #44 instruction
+
+ STA byte3              \ Revert the instruction at byte3 to CPX #44
 
  RTS                    \ Return from the subroutine
 
@@ -27084,7 +27099,7 @@ ENDMACRO
  BEQ byte4              \ line above the top of the dashboard, so return from
                         \ the subroutine so we can modify the routine to draw
                         \ subsequent lines in two parts, to fit around the
-                        \ dashboard (as byte3 contains an RTS)
+                        \ dashboard (as byte4 contains an RTS)
 
  DEX                    \ Decrement the dash data pointer in X to move on to the
                         \ next pixel line
