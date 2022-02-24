@@ -75,8 +75,8 @@ L713D = &713D
 L7205 = &7205
 
 assistLeft1 = &77DB     \ Centre-bottom of dashboard in screen memory for
-assistLeft2 = &77DC     \ showing steering assist the indicator
-assistRight1 = &77E3
+assistLeft2 = &77DC     \ showing the Computer Assisted Steering (CAS)
+assistRight1 = &77E3    \ indicator
 assistRight2 = &77E4
 
 row2_column1 = &7C79    \ Chequered flag mode 7 screen address
@@ -982,12 +982,13 @@ ORG &0380
 
 .configAssist
 
- SKIP 1                 \ A key has been pressed to toggle steering assist
+ SKIP 1                 \ A key has been pressed to toggle Computer Assisted
+                        \ Steering (CAS)
                         \
-                        \   * No bits set = disable steering assist
+                        \   * No bits set = disable Computer Assisted Steering
                         \     (SHIFT-f3 pressed)
                         \
-                        \   * Bit 7 set = enable steering assist
+                        \   * Bit 7 set = enable Computer Assisted Steering
                         \     (SHIFT-f6 pressed)
                         \
                         \ Zeroed in SetupGame
@@ -4639,7 +4640,7 @@ ENDIF
 
 IF _ACORNSOFT
 
- PHA
+ PHA                    \ Store A on the stack so we can retrieve it later
 
 ELIF _SUPERIOR
 
@@ -4652,14 +4653,15 @@ ENDIF
  STA T
 
  TXA                    \ Set bit 0 of T to the sign bit in X (1 = right,
- ORA T                  \ 0 = left)
+ ORA T                  \ 0 = left), so this sets (A T) to the correct sign
  STA T
 
 IF _ACORNSOFT
 
- PLA
+ PLA                    \ Retrieve the value of A that we stored on the stack
 
- JMP keys11
+ JMP keys11             \ Jump to the end of part 2 to update the steering value
+                        \ in (steeringHi steeringLo) to (A T)
 
 ELIF _SUPERIOR
 
@@ -4670,12 +4672,13 @@ ELIF _SUPERIOR
                         \ and converted into a sign-magnitude number with the
                         \ sign in bit 0 (0 = left, 1 = right)
 
- JMP AssistSteering     \ Jump to AssistSteering, which in turn jumps back to
-                        \ keys7 or keys11 in part 2
+ JMP AssistSteering     \ Jump to AssistSteering to apply Computer Assisted
+                        \ Steering (CAS), which in turn jumps back to keys7 or
+                        \ keys11 in part 2
 
  NOP                    \ These instructions are unused, and are included to
- NOP                    \ pad out the code from when the steering assist code
-                        \ was inserted into the original version
+ NOP                    \ pad out the code from when the CAS code was inserted
+                        \ into the original version
 
 ENDIF
 
@@ -4685,10 +4688,6 @@ ENDIF
 \       Type: Subroutine
 \   Category: Keyboard
 \    Summary: Process keyboard steering
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
 \
 \ ******************************************************************************
 
@@ -4720,6 +4719,16 @@ ENDIF
                         \   * V = 2 if "L" is being pressed (steer left)
                         \
                         \   * V = 0 if neither is being pressed
+                        \
+                        \ We now calculate the amount of steering change into
+                        \ (A T), so we can apply it to (steeringHi steeringLo),
+                        \ which is a sign-magnitude number with the sign bit in
+                        \ bit 0
+                        \
+                        \ In the following, we swap the steering change between
+                        \ (A T) and (U T) quite a bit, and in the Superior
+                        \ Software variant of the game, we also apply Computer
+                        \ Assisted Steering (CAS)
 
  LDA #3                 \ Set U = 3
  STA U
@@ -4762,43 +4771,56 @@ ENDIF
  CMP #3                 \ If V = 3, jump to keys13 to move on to the throttle
  BEQ keys13             \ and brake keys without applying any steering
 
+                        \ If we get here then V = 1 or 2, so steering is being
+                        \ applied, so we start by fetching the current value
+                        \ of (steeringHi steeringLo) into (U T) and converting
+                        \ it to a signed 16-bit number, before jumping down to
+                        \ keys8 or keys9
+
  EOR steeringLo         \ If bit 0 of steeringLo is clear, jump to keys9
  AND #1
  BEQ keys9
 
- JSR Negate16Bit+2      \ Set (A T) = -(U T)
+ JSR Negate16Bit+2      \ Otherwise (steeringHi steeringLo) is negative, so
+                        \ set (A T) = -(U T)
 
- JMP keys8              \ Jump to keys8
+ JMP keys8              \ Jump to keys8 to store the negated value in (U T)
 
 .keys7
 
- LDA L62DAHi            \ Set T = L62DAHi top nibble only
- AND #&F0
+                        \ If we get here then no steering is being applied
+
+ LDA L62DALo            \ Set T = L62DALo AND %11110000
+ AND #%11110000
  STA T
 
- LDA L62EAHi            \ Set (A T) = (L62EAHi L62DAHi-top-nibble)
+ LDA L62EAHi            \ Set (A T) = (L62EAHi L62DALo) AND %11110000
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  LSR A                  \ Set (A T) = (A T) >> 2
  ROR T                  \           = |A T| / 4
- LSR A
+ LSR A                  \           = |L62EAHi L62DALo| AND %111100 / 4
  ROR T
 
 IF _ACORNSOFT
 
- CMP #12
+ CMP #12                \ If A < 12, skip the following instruction
  BCC keys8
- LDA #12
+
+ LDA #12                \ Set A = 12, so A has a maximum value of 12, and |A T|
+                        \ is set to a maximum value of 12 * 256
 
 ELIF _SUPERIOR
 
- CMP steeringHi         \ If A < steeringHi, clear the C flag
-                        \ If A >= steeringHi, set the C flag
+ CMP steeringHi         \ If A < steeringHi, clear the C flag, so the following
+                        \ call to SetSteeringLimit does nothing
 
- JSR sub_C1F9B          \ If the C flag is set (i.e. A >= steeringHi), set:
+ JSR SetSteeringLimit   \ If  A >= steeringHi, set:
                         \
-                        \   (A T) = (steeringHi steeringLo) with bit 0 cleared
+                        \   (A T) = |steeringHi steeringLo|
+                        \
+                        \ so this is the maximum value of |A T|
 
 ENDIF
 
@@ -4810,42 +4832,48 @@ ENDIF
 
 IF _ACORNSOFT
 
- LDA steeringLo
+ LDA steeringLo         \ Set A = steeringLo
 
 ELIF _SUPERIOR
 
  JMP AssistSteeringKeys \ Jump to AssistSteeringKeys, which in turn jumps back
                         \ to keys10, so this is effectively a JSR call
+                        \
+                        \ The routine returns with A = steeringLo
 
 ENDIF
 
 .keys10
 
- SEC
- SBC T
- STA T
- LDA steeringHi
+ SEC                    \ Set (A T) = (steeringHi steeringLo) - (U T)
+ SBC T                  \
+ STA T                  \ starting with the high bytes
+
+ LDA steeringHi         \ And then the low bytes
  SBC U
 
- CMP #200
- BCC keys11
+ CMP #200               \ If the high byte in A < 200, skip the following
+ BCC keys11             \ instructions
+
+                        \ Otherwise the high byte in A >= 200, so we negate
+                        \ (A T)
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
 
- STA U
+ STA U                  \ Set (U T) = (A T)
 
- LDA T
+ LDA T                  \ Flip the sign bit in bit 0 of T
  EOR #1
  STA T
 
- LDA U
+ LDA U                  \ Set (A T) = (U T)
 
 .keys11
 
- CMP #145
- BCC keys12
+ CMP #145               \ If the high byte in A < 145, skip the following
+ BCC keys12             \ instruction
 
- LDA #145
+ LDA #145               \ Set A = 145, so A has a maximum value of 145
 
 .keys12
 
@@ -7568,7 +7596,7 @@ ENDIF
 \       Name: AssistSteering
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: 
+\    Summary: Apply Computer Assisted Steering (CAS) when configured
 \
 \ ------------------------------------------------------------------------------
 \
@@ -7585,6 +7613,8 @@ ENDIF
 \
 \   V
 \
+\   A                   A is set to steeringLo
+\
 \ Other entry points:
 \
 \   AssistSteeringKeys  For keyboard-controlled steering
@@ -7596,11 +7626,11 @@ IF _SUPERIOR
 .AssistSteering
 
  JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
-                        \ L0025, and update the steering assist indicator on the
-                        \ dashboard
+                        \ L0025, and update the Computer Assisted Steering (CAS)
+                        \ indicator on the dashboard
 
- BNE C1EF1              \ If steering assist is enabled, jump to C1EF1 to skip
-                        \ the following instruction, otherwise we jump to keys11
+ BNE C1EF1              \ If CAS is enabled, jump to C1EF1 to skip the following
+                        \ instruction, otherwise we jump to keys11
 
 .P1EEE
 
@@ -7619,12 +7649,10 @@ IF _SUPERIOR
 .AssistSteeringKeys
 
  JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
-                        \ L0025, and update the steering assist indicator on the
-                        \ dashboard
+                        \ L0025, and update the CAS indicator on the dashboard
 
- BEQ C1F05              \ If steering assist is not enabled, jump to C1F05 to
-                        \ set A and jump to keys10 in the ProcessDrivingKeys
-                        \ routine
+ BEQ C1F05              \ If CAS is not enabled, jump to C1F05 to set A and jump
+                        \ to keys10 in the ProcessDrivingKeys routine
 
  BCS C1F05              \ If bit 7 of L0025 is set, jump to C1F05
 
@@ -7779,22 +7807,29 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1F9B
+\       Name: SetSteeringLimit
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Keyboard
+\    Summary: Apply a maximum limit to the amount of steering
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   C flag              The result of CMP steeringHi
+\
+\ Returns:
+\
+\   (A T)               A is set to |steeringHi steeringLo|
 \
 \ ******************************************************************************
 
 IF _SUPERIOR
 
-.sub_C1F9B
+.SetSteeringLimit
 
- BCC C1FA7              \ If the C flag is clear, jump to C1FA7 to return from
+ BCC slim1              \ Before calling this routine, we did a CMP steeringHi,
+                        \ so if A < steeringHi, jump to slim1 to return from
                         \ the subroutine
 
  LDA steeringLo         \ Set T = steeringLo with bit 0 cleared
@@ -7802,9 +7837,9 @@ IF _SUPERIOR
  STA T
 
  LDA steeringHi         \ Set A = steeringHi, so (A T) = (steeringHi steeringLo)
-                        \ with bit 0 cleared
+                        \ with the sign bit in bit 0 cleared
 
-.C1FA7
+.slim1
 
  RTS                    \ Return from the subroutine
 
@@ -18228,7 +18263,7 @@ ENDIF
  LDA #&0C
  JSR sub_C4874
 
- LDX #10                 \ Add (L62EEHi L62DELo) to (L62EAHi L62DAHi)
+ LDX #10                 \ Add (L62EEHi L62DELo) to (L62EAHi L62DALo)
  JSR sub_C47E5
 
  RTS                    \ Return from the subroutine
@@ -18248,7 +18283,7 @@ ENDIF
 \
 \                         *  8 = add (L62EEHi L62DELo) to (L62E8Hi L62D8Lo)
 \
-\                         * 10 = add (L62EEHi L62DELo) to (L62EAHi L62DAHi)
+\                         * 10 = add (L62EEHi L62DELo) to (L62EAHi L62DALo)
 \
 \ ******************************************************************************
 
@@ -18281,7 +18316,7 @@ ENDIF
 .sub_C47F9
 
  LDY #&4E
- LDA L62DAHi
+ LDA L62DALo
  SEC
  SBC L62DBHi
  STA T
@@ -18307,7 +18342,7 @@ ENDIF
 .C4820
 
  ROR L62EAHi,X
- ROR L62DAHi,X
+ ROR L62DALo,X
  DEX
  BPL P4819
  DEY
@@ -18326,7 +18361,7 @@ ENDIF
  STA U
  LDA T
  CLC
- ADC L62DAHi,X
+ ADC L62DALo,X
  STA T
  LDY #&CD
  LDA U
@@ -18917,7 +18952,7 @@ ENDIF
 .C4AB4
 
  LDA T
- STA L62DAHi,X
+ STA L62DALo,X
  JSR sub_C4B88
  BCC C4ACF
  LDA #0
@@ -19009,7 +19044,7 @@ ENDIF
  BEQ C4B41
  LDA #0
  STA L62EAHi,X
- STA L62DAHi,X
+ STA L62DALo,X
  BEQ C4B41
 
 .C4B3E
@@ -19069,7 +19104,7 @@ ENDIF
  LDY G
  STA L62EAHi,Y
  LDA T
- STA L62DAHi,Y
+ STA L62DALo,Y
  RTS
 
 \ ******************************************************************************
@@ -23853,7 +23888,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62DAHi
+\       Name: L62DALo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23864,7 +23899,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62DAHi
+.L62DALo
 
  EQUB 0
 
@@ -24902,13 +24937,13 @@ ENDIF
 \       Name: GetSteeringAssist
 \       Type: Subroutine
 \   Category: Dashboard
-\    Summary: Fetch the current steering assist status and show or hide the
-\             steering assist indicator
+\    Summary: Fetch the current Computer Assisted Steering (CAS) status and show
+\             or hide the CAS indicator
 \
 \ ------------------------------------------------------------------------------
 \
-\ The steering assist indicator is in the centre-bottom of the rev counter, and
-\ is made up of four pixels in colour 2 (white) as follows:
+\ The Computer Assisted Steering (CAS) indicator is in the centre-bottom of the
+\ rev counter, and is made up of four pixels in colour 2 (white) as follows:
 \
 \   ...xx...
 \   ..x..x..
@@ -24925,9 +24960,9 @@ ENDIF
 \
 \   X                   The current value of configAssist:
 \
-\                         * %10000000 if steering assist is enabled
+\                         * %10000000 if Computer Assisted Steering is enabled
 \
-\                         * 0 if steering assist is not enabled
+\                         * 0 if Computer Assisted Steering is not enabled
 \
 \   A                   A is unchanged
 \
@@ -24943,14 +24978,14 @@ IF _SUPERIOR
 
  LDA configAssist       \ Set A to configAssist, which has the following value:
                         \
-                        \   * %10000000 if steering assist is enabled
+                        \   * %10000000 if Computer Assisted Steering is enabled
                         \
-                        \   * 0 if steering assist is not enabled
+                        \   * 0 if Computer Assisted Steering is not enabled
                         \
                         \ The following updates screen memory to add a small
                         \ "hat" marker to the centre-bottom of the rev counter
-                        \ when steering assist is enabled (or to to remove the
-                        \ marker when it isn't enabled)
+                        \ when CAS is enabled (or to to remove the marker when
+                        \ it isn't enabled)
 
  STA assistRight1       \ Set assistRight1 = 0 or %10000000
 
@@ -24987,9 +25022,10 @@ IF _SUPERIOR
 
 .SuperiorSetupGame
 
-CLEAR &3850, &3880      \ In the Superior Software release of Revs, the steering
-ORG &3850               \ assist routines take up extra memory, so we need to
-                        \ claw back some memory from somewhere
+CLEAR &3850, &3880      \ In the Superior Software release of Revs, the routines
+ORG &3850               \ for Computer Assisted Steering (CAS) take up extra
+                        \ memory, so we need to claw back some memory from
+                        \ somewhere
                         \
                         \ The clever solution is to move the SetupGame routine,
                         \ which is run when the game loads, but is never needed
