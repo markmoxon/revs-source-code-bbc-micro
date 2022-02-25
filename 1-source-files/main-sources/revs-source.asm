@@ -63,21 +63,36 @@ trackLoad = &70DB       \ The load address of the track data file
 trackChecksum = &7800   \ The address of the checksums in the track data file
                         \ after it is loaded but before it is moved in memory
 
-tyreLeft1 = &6E85       \ The left and right tyres in screen memory
+                        \ The following configuration variables represent screen
+                        \ addresses for the custom screen
+
+tyreLeft1 = &6E85       \ The tread on the left tyre in screen memory
 tyreLeft2 = &6E8A
-tyreRight1 = &6FB2
-tyreRight2 = &6FBD
 tyreLeft3 = &6FC0
+
+tyreRight1 = &6FB2      \ The tread on the right tyre in screen memory
+tyreRight2 = &6FBD
 tyreRight3 = &70F8
 
-L7000 = &7000
-L713D = &713D
-L7205 = &7205
+L713D = &713D           \ A point in the track view next to the left tyre
+
+L7205 = &7205           \ A point in the track view next to the right tyre
+
+mirror0 = &7540         \ Mirror 0 base address (left mirror, outer segment)
+mirror1 = &7548         \ Mirror 1 base address (left mirror, middle segment)
+mirror2 = &7418         \ Mirror 2 base address (left mirror, inner segment)
+
+mirror3 = &7530         \ Mirror 3 base address (right mirror, inner segment)
+mirror4 = &7670         \ Mirror 4 base address (right mirror, middle segment)
+mirror5 = &7678         \ Mirror 5 base address (right mirror, outer segment)
 
 assistLeft1 = &77DB     \ Centre-bottom of dashboard in screen memory for
 assistLeft2 = &77DC     \ showing the Computer Assisted Steering (CAS)
 assistRight1 = &77E3    \ indicator
 assistRight2 = &77E4
+
+                        \ The following configuration variables represent screen
+                        \ addresses for mode 7
 
 row2_column1 = &7C79    \ Chequered flag mode 7 screen address
 row18_column5 = &7E85   \ The first entry's number in a mode 7 menu
@@ -800,7 +815,7 @@ ORG &0100
                         \ Gets set in InitialiseDrivers to the number of each
                         \ driver, so the initial order is driver number
 
-.L3850Hi
+.var01Hi
 
  SKIP 20                \ 
 
@@ -833,7 +848,7 @@ ORG &0100
 
 ORG &0380
 
-.L0380
+.var13Lo
 
  SKIP 23                \ 
 
@@ -841,7 +856,7 @@ ORG &0380
 
  SKIP 1                 \ 
 
-.L0398
+.var13Hi
 
  SKIP 23                \ 
 
@@ -1923,12 +1938,15 @@ ORG &0B00
 
  LDA #0
  STA L5EE0,Y
+
  LDA L5E40,Y
  SEC
- SBC L62D2Lo
+ SBC var03Lo
  STA L5E40,Y
+
  LDA L5E90,Y
- SBC L62E2Hi
+ SBC var03Hi
+
  STA L5E90,Y
  LDA L5F20,Y
  SEC
@@ -2695,7 +2713,10 @@ ORG &0B00
  LDA L62A6
  ORA L62A7
  BPL C0E92
- LDA VIA+&68            \ user_via_t2c_l
+
+ LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
+
  CMP #&3F
  BCS C0E92
  AND #3
@@ -3247,8 +3268,8 @@ ORG &0B00
  LSR L0066
  LDA #&21
  CLC
- ADC L62EFHi
- STA L62EFHi
+ ADC L62EF
+ STA L62EF
  BEQ C104F
 
  LDA #%00100110         \ Print the current lap time at the top of the screen in
@@ -3269,9 +3290,9 @@ ORG &0B00
 
 .C1056
 
- LDA L62EFHi
+ LDA L62EF
  BEQ C106A
- DEC L62EFHi
+ DEC L62EF
  BNE C106F
  JSR PrintBestLapTime
 
@@ -3465,7 +3486,7 @@ ORG &0B00
  CMP #&60
  BCS C1138
  LDA #&14
- BIT L62E2Hi
+ BIT var03Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -3486,7 +3507,7 @@ ORG &0B00
 
 .P114C
 
- STA L62D0Lo,X
+ STA var02Lo,X
  DEX
  BPL P114C
  STA L0061
@@ -3546,7 +3567,7 @@ ORG &0B00
  BMI C1199
  CPX currentPlayer
  BNE C11AA
- LDA L62DFHi
+ LDA L62DF
  CMP #&0E
  BCC C1171
  RTS
@@ -3661,12 +3682,12 @@ ORG &0B00
  TAY
  LDX L0045
  JSR sub_C2937
- LDA L0380,X
+ LDA var13Lo,X
  STA L000A
 
 .C1200
 
- LDA L0398,X
+ LDA var13Hi,X
  EOR L0025
  STA L000B
  RTS
@@ -4790,17 +4811,18 @@ ENDIF
 
                         \ If we get here then no steering is being applied
 
- LDA L62DALo            \ Set T = L62DALo AND %11110000
+ LDA var09Lo            \ Set T = var09Lo AND %11110000
  AND #%11110000
  STA T
 
- LDA L62EAHi            \ Set (A T) = (L62EAHi L62DALo) AND %11110000
+ LDA var09Hi            \ Set (A T) = (var09Hi var09Lo) AND %11110000
+                        \           = var09 AND %11110000
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  LSR A                  \ Set (A T) = (A T) >> 2
  ROR T                  \           = |A T| / 4
- LSR A                  \           = |L62EAHi L62DALo| AND %111100 / 4
+ LSR A                  \           = (|var09| AND %11110000) / 4
  ROR T
 
 IF _ACORNSOFT
@@ -5657,9 +5679,9 @@ ENDIF
  STA L04B4,X
  STA L0114,X
  STA L0164,X
- STA L3850Hi,X
+ STA var01Hi,X
  STA positionNumber,X
- STA L3850Lo,X
+ STA var01Lo,X
  LDA #&FF
  STA L01A4,X
  DEX
@@ -5676,7 +5698,7 @@ ENDIF
 
 .P1885
 
- STA L6293,X
+ STA carInMirror,X
  DEX
  BPL P1885
  JSR PrintGearNumber
@@ -5695,7 +5717,7 @@ ENDIF
  JSR PrintBestLapTime
 
  LDA #&DF
- STA L62EFHi
+ STA L62EF
 
  RTS
 
@@ -6530,24 +6552,24 @@ ENDIF
 
 .C1BDF
 
- LDA L0398,X
+ LDA var13Hi,X
  SEC
  SBC L000B
  ASL A
  ASL A
  PHP
- LDA L3850Hi,Y
+ LDA var01Hi,Y
  CPX #&14
  BCS C1BFE
- CMP L3850Hi,X
+ CMP var01Hi,X
  BCS C1BF9
- LDA L3850Hi,X
+ LDA var01Hi,X
  BNE C1BFE
 
 .C1BF9
 
  ADC #&0B
- STA L3850Hi,X
+ STA var01Hi,X
 
 .C1BFE
 
@@ -6565,7 +6587,7 @@ ENDIF
 
 .C1C0B
 
- STA L62E2Hi
+ STA var03Hi
  LDA #&80
  STA L62A6
  STA L62A7
@@ -8940,7 +8962,7 @@ ENDIF
 
  LDA L0044
  SEC
- SBC L62E2Hi
+ SBC var03Hi
  BPL C24C3
  EOR #&FF
 
@@ -9475,11 +9497,11 @@ ENDIF
 
  CMP #5
  BCS C26E6
- LDA L3850Lo,X
+ LDA var01Lo,X
  CLC
- SBC L3850Lo,Y
- LDA L3850Hi,X
- SBC L3850Hi,Y
+ SBC var01Lo,Y
+ LDA var01Hi,X
+ SBC var01Hi,Y
  ROR V
  BPL C26E6
  LSR A
@@ -9541,7 +9563,10 @@ ENDIF
 
  LDA L018C,X
  BPL C275E
- LDA VIA+&68            \ user_via_t2c_l
+
+ LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
+
  AND #&1F
  BNE C278C
  LDA V
@@ -9722,7 +9747,7 @@ ENDIF
  LDY L06E8,X
  LDA trackData+&600,Y
  BPL C280D
- LDA L3850Hi,X
+ LDA var01Hi,X
  CMP L01A4,X
  BCS C287F
  BCC C282F
@@ -9734,7 +9759,7 @@ ENDIF
  LDA trackData+&007,Y
  STA L01A4,X
  CLC
- SBC L3850Hi,X
+ SBC var01Hi,X
  BCS C282F
  LSR A
  LSR A
@@ -9749,7 +9774,7 @@ ENDIF
 
 .C282F
 
- LDA L3850Hi,X
+ LDA var01Hi,X
  CMP #&3C
  BCS C2838
  LDA #&16
@@ -9796,18 +9821,18 @@ ENDIF
  ASL A
  ROL U
  CLC
- ADC L3850Lo,X
- STA L3850Lo,X
+ ADC var01Lo,X
+ STA var01Lo,X
  LDA U
- ADC L3850Hi,X
+ ADC var01Hi,X
  CMP #&BE
  BCC C287C
  LDA #0
- STA L3850Lo,X
+ STA var01Lo,X
 
 .C287C
 
- STA L3850Hi,X
+ STA var01Hi,X
 
 .C287F
 
@@ -9816,7 +9841,7 @@ ENDIF
 
 .P2883
 
- LDA L3850Hi,X
+ LDA var01Hi,X
  CLC
  ADC L0164,X
  STA L0164,X
@@ -9949,7 +9974,7 @@ ENDIF
  LDA positionNumber,X
  AND #&10
  BNE sub_C2937
- LDA L3850Hi,X
+ LDA var01Hi,X
  CMP #&32
  BCC sub_C2937
  LDA L0701,Y
@@ -10181,9 +10206,9 @@ ENDIF
  JSR sub_C2145
  LDY L0042
  LDA II
- STA L0380,Y
+ STA var13Lo,Y
  LDA JJ
- STA L0398,Y
+ STA var13Hi,Y
  JSR sub_C2AB1
  JSR sub_C2285
 
@@ -10335,11 +10360,11 @@ ENDIF
  BMI C2B0B
  AND #&0F
  STA L0037
- LDA L0380,X
+ LDA var13Lo,X
  SEC
  SBC L000A
  STA T
- LDA L0398,X
+ LDA var13Hi,X
  SBC L000B
  BPL C2AEF
  CMP #&E0
@@ -11272,7 +11297,7 @@ ENDIF
 
 .mod_C2F4E
 
- STA L7000,Y
+ STA &7000,Y
  LDA (R),Y
  BNE C2F63
  LDA L628F,X
@@ -11350,7 +11375,7 @@ ENDIF
 
 .mod_C2F90
 
- STA L7000,Y
+ STA &7000,Y
  LDA (P),Y
  BNE C2FA5
  LDA L628F,X
@@ -13705,14 +13730,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3850Lo
+\       Name: var01Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
 \
 \ ******************************************************************************
 
-.L3850Lo
+.var01Lo
 
 IF _ACORNSOFT
 
@@ -14756,18 +14781,18 @@ NEXT
 \       Name: mirrorAddressLo
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The low byte of the base screen address of each mirror segment
 \
 \ ******************************************************************************
 
 .mirrorAddressLo
 
- EQUB &40, &48, &18
- EQUB &30, &70, &78
+ EQUB LO(mirror0)
+ EQUB LO(mirror1)
+ EQUB LO(mirror2)
+ EQUB LO(mirror3)
+ EQUB LO(mirror4)
+ EQUB LO(mirror5)
 
 \ ******************************************************************************
 \
@@ -14916,24 +14941,24 @@ NEXT
 \       Name: mirrorAddressHi
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The high byte of the base screen address of each mirror segment
 \
 \ ******************************************************************************
 
 .mirrorAddressHi
 
- EQUB &75, &75, &74
- EQUB &75, &76, &76
+ EQUB HI(mirror0)
+ EQUB HI(mirror1)
+ EQUB HI(mirror2)
+ EQUB HI(mirror3)
+ EQUB HI(mirror4)
+ EQUB HI(mirror5)
 
 \ ******************************************************************************
 \
 \       Name: L3BA4
 \       Type: Variable
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -14944,7 +14969,13 @@ NEXT
 
 .L3BA4
 
- EQUB &12, &11, &10, &0E, &0D, &0C
+ EQUB 18                \ Mirror segment 0 (left mirror, outer segment)
+ EQUB 17                \ Mirror segment 1 (left mirror, middle segment)
+ EQUB 16                \ Mirror segment 2 (left mirror, inner segment)
+
+ EQUB 14                \ Mirror segment 3 (right mirror, inner segment)
+ EQUB 13                \ Mirror segment 4 (right mirror, middle segment)
+ EQUB 12                \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -16224,20 +16255,22 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3EFA
+\       Name: startMirror
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Dashboard
+\    Summary: The offset from mirrorAddress for the start of each mirror segment
 \
 \ ******************************************************************************
 
-.L3EFA
+.startMirror
 
- EQUB &AA, &AC, &B0, &B0, &AC, &AA
+ EQUB &AA               \ Mirror segment 0 (left mirror, outer segment)
+ EQUB &AC               \ Mirror segment 1 (left mirror, middle segment)
+ EQUB &B0               \ Mirror segment 2 (left mirror, inner segment)
+
+ EQUB &B0               \ Mirror segment 3 (right mirror, inner segment)
+ EQUB &AC               \ Mirror segment 4 (right mirror, middle segment)
+ EQUB &AA               \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -16626,20 +16659,22 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L40FA
+\       Name: endMirror
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Dashboard
+\    Summary: The offset from mirrorAddress for the end of each mirror segment
 \
 \ ******************************************************************************
 
-.L40FA
+.endMirror
 
- EQUB &C2, &C0, &BC, &BC, &C0, &C2
+ EQUB &C2               \ Mirror segment 0 (left mirror, outer segment)
+ EQUB &C0               \ Mirror segment 1 (left mirror, middle segment)
+ EQUB &BC               \ Mirror segment 2 (left mirror, inner segment)
+
+ EQUB &BC               \ Mirror segment 3 (right mirror, inner segment)
+ EQUB &C0               \ Mirror segment 4 (right mirror, middle segment)
+ EQUB &C2               \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -17758,7 +17793,7 @@ NEXT
  ASL U
  CLC
  ADC U
- STA L3850Hi,X
+ STA var01Hi,X
  RTS
 
 \ ******************************************************************************
@@ -17990,14 +18025,14 @@ ENDIF
  JSR sub_C0D01
  JSR sub_C48B9
 
- LDA L62D8Lo
+ LDA var07Lo
  STA L0038
- LDA L62E8Hi
+ LDA var07Hi
  STA L0039
 
- LDA L62D9Lo
+ LDA var08Lo
  STA T
- LDA L62E9Hi
+ LDA var08Hi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
@@ -18020,16 +18055,16 @@ ENDIF
  LDX #1
  JSR sub_C4779
  LDA L0038
- STA L62D8Lo
+ STA var07Lo
  LDA L0039
- STA L62E8Hi
- LDA L62D8Lo
+ STA var07Hi
+ LDA var07Lo
  CLC
  ADC L003A
- STA L62D8Lo
- LDA L62E8Hi
+ STA var07Lo
+ LDA var07Hi
  ADC L003B
- STA L62E8Hi
+ STA var07Hi
  JSR sub_C47A5
  LDX #0
  JSR sub_C4779
@@ -18043,8 +18078,8 @@ ENDIF
 
 .P4710
 
- STA L62D5Lo,X
- STA L62E5Hi,X
+ STA var05Lo,X
+ STA var05Hi,X
  DEX
  BPL P4710
 
@@ -18072,19 +18107,19 @@ ENDIF
 
 .sub_C4729
 
- LDA L62D2Lo
+ LDA var03Lo
  STA T
  LDY #&58
- LDA L62E2Hi
+ LDA var03Hi
  JSR sub_C4753
  STA U
- LDA L62D8Lo
+ LDA var07Lo
  SEC
  SBC T
- STA L62D8Lo
- LDA L62E8Hi
+ STA var07Lo
+ LDA var07Hi
  SBC U
- STA L62E8Hi
+ STA var07Hi
  JSR sub_C4765
  STA L003B
  LDA T
@@ -18230,7 +18265,7 @@ ENDIF
  LDA #9
  JSR sub_C4874
 
- LDX #8                 \ Add (L62EEHi L62DELo) to (L62E8Hi L62D8Lo)
+ LDX #8                 \ Add (var12Hi var12Lo) to (var07Hi var07Lo)
  JSR sub_C47E5
 
  RTS                    \ Return from the subroutine
@@ -18263,7 +18298,7 @@ ENDIF
  LDA #&0C
  JSR sub_C4874
 
- LDX #10                 \ Add (L62EEHi L62DELo) to (L62EAHi L62DALo)
+ LDX #10                 \ Add (var12Hi var12Lo) to (var09Hi var09Lo)
  JSR sub_C47E5
 
  RTS                    \ Return from the subroutine
@@ -18273,7 +18308,7 @@ ENDIF
 \       Name: sub_C47E5
 \       Type: Subroutine
 \   Category: Utility routines
-\    Summary: Add (L62EEHi L62DELo) to (L62E0Hi+X L62D0Lo+X)
+\    Summary: Add (var12Hi var12Lo) to (var02Hi+X var02Lo+X)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -18281,22 +18316,22 @@ ENDIF
 \
 \   X                   Called with either 8 or 10:
 \
-\                         *  8 = add (L62EEHi L62DELo) to (L62E8Hi L62D8Lo)
+\                         *  8 = add (var12Hi var12Lo) to (var07Hi var07Lo)
 \
-\                         * 10 = add (L62EEHi L62DELo) to (L62EAHi L62DALo)
+\                         * 10 = add (var12Hi var12Lo) to (var09Hi var09Lo)
 \
 \ ******************************************************************************
 
 .sub_C47E5
 
- LDA L62D0Lo,X          \ Add (L62EEHi L62DELo) to (L62E0Hi+X L62D0Lo+X),
+ LDA var02Lo,X          \ Add (var12Hi var12Lo) to (var02Hi+X var02Lo+X),
  CLC                    \ starting with the low bytes
- ADC L62DELo
- STA L62D0Lo,X
+ ADC var12Lo
+ STA var02Lo,X
 
- LDA L62E0Hi,X          \ And then the high bytes
- ADC L62EEHi
- STA L62E0Hi,X
+ LDA var02Hi,X          \ And then the high bytes
+ ADC var12Hi
+ STA var02Hi,X
 
  RTS                    \ Return from the subroutine
 
@@ -18316,16 +18351,16 @@ ENDIF
 .sub_C47F9
 
  LDY #&4E
- LDA L62DALo
+ LDA var09Lo
  SEC
- SBC L62DBHi
+ SBC var10Lo
  STA T
- LDA L62EAHi
- SBC L62EBHi
+ LDA var09Hi
+ SBC var10Hi
  JSR sub_C4753
- STA L62E5Hi
+ STA var05Hi
  LDA T
- STA L62D5Lo
+ STA var05Lo
  LDY #1
 
 .P4817
@@ -18334,15 +18369,15 @@ ENDIF
 
 .P4819
 
- LDA L62EAHi,X
+ LDA var09Hi,X
  CLC
  BPL C4820
  SEC
 
 .C4820
 
- ROR L62EAHi,X
- ROR L62DALo,X
+ ROR var09Hi,X
+ ROR var09Lo,X
  DEX
  BPL P4819
  DEY
@@ -18353,26 +18388,26 @@ ENDIF
 
 .C4832
 
- LDA L62DBHi,X
+ LDA var10Lo,X
  STA T
- LDA L62EBHi,X
+ LDA var10Hi,X
  STA U
  JSR sub_C4765
  STA U
  LDA T
  CLC
- ADC L62DALo,X
+ ADC var09Lo,X
  STA T
  LDY #&CD
  LDA U
- ADC L62EAHi,X
+ ADC var09Hi,X
  JSR sub_C4753
  ASL T
  ROL A
  LDY G
- STA L62E6Hi,Y
+ STA var06Hi,Y
  LDA T
- STA L62D6Lo,Y
+ STA var06Lo,Y
  DEC G
  DEX
  DEX
@@ -18419,9 +18454,9 @@ ENDIF
 
 .C4876
 
- LDA L62D0Lo,Y
+ LDA var02Lo,Y
  STA PP
- LDA L62E0Hi,Y
+ LDA var02Hi,Y
  STA QQ
  LDA L62A0,X
  STA RR
@@ -18433,9 +18468,9 @@ ENDIF
  BIT H
  BVS C48A7
  LDA T
- STA L62D0Lo,Y
+ STA var02Lo,Y
  LDA U
- STA L62E0Hi,Y
+ STA var02Hi,Y
  RTS
 
 \ ******************************************************************************
@@ -18461,13 +18496,13 @@ ENDIF
 
 .C48A7
 
- LDA L62D0Lo,Y
+ LDA var02Lo,Y
  CLC
  ADC T
- STA L62D0Lo,Y
- LDA L62E0Hi,Y
+ STA var02Lo,Y
+ LDA var02Hi,Y
  ADC U
- STA L62E0Hi,Y
+ STA var02Hi,Y
  RTS
 
 \ ******************************************************************************
@@ -18554,9 +18589,9 @@ ENDIF
 
  LDA #0
  STA V
- LDA L62D0Lo,X
+ LDA var02Lo,X
  STA T
- LDA L62E0Hi,X
+ LDA var02Hi,X
  BPL C4903
  DEC V
 
@@ -18581,10 +18616,10 @@ ENDIF
  BPL C48F3
  LDA L000A
  CLC
- ADC L62D2Lo
+ ADC var03Lo
  STA L000A
  LDA L000B
- ADC L62E2Hi
+ ADC var03Hi
  STA L000B
  RTS
 
@@ -18609,9 +18644,9 @@ ENDIF
 
  LDA #0
  STA V
- LDA L62D3Lo,X
+ LDA var04Lo,X
  STA T
- LDA L62E3Hi,X
+ LDA var04Hi,X
  BPL C4949
  DEC V
 
@@ -18634,12 +18669,12 @@ ENDIF
  CLC
  ADC T
  STA L62AE,X
- LDA L62D0Lo,X
+ LDA var02Lo,X
  ADC U
- STA L62D0Lo,X
- LDA L62E0Hi,X
+ STA var02Lo,X
+ LDA var02Hi,X
  ADC V
- STA L62E0Hi,X
+ STA var02Hi,X
  DEX
  BPL C4939
  RTS
@@ -18677,7 +18712,9 @@ ENDIF
 
 .C498C
 
- LDA VIA+&68            \ user_via_t2c_l
+ LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
+
  AND L0009
  BNE C49BB
 
@@ -18720,7 +18757,10 @@ ENDIF
 .C49BB
 
  STA T
- LDA VIA+&68            \ user_via_t2c_l
+
+ LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
+
  AND #7
  CLC
  ADC T
@@ -18926,11 +18966,11 @@ ENDIF
 
 .sub_C4A91
 
- LDA L62D8Lo
+ LDA var07Lo
  STA T
- ORA L62E8Hi
+ ORA var07Hi
  PHP
- LDA L62E8Hi
+ LDA var07Hi
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
 
@@ -18942,23 +18982,25 @@ ENDIF
  ROL A
  DEY
  BNE P4AA2
- STA L62EAHi,X
+ STA var09Hi,X
  PLP
  BEQ C4AB4
- EOR L62E8Hi
+ EOR var07Hi
  SEC
  BPL C4AF3
 
 .C4AB4
 
  LDA T
- STA L62DALo,X
+ STA var09Lo,X
  JSR sub_C4B88
  BCC C4ACF
+
  LDA #0
- STA L62DCHi
- STA L62ECHi
- LDA L62EAHi
+ STA var11Lo
+ STA var11Hi
+
+ LDA var09Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -18967,12 +19009,12 @@ ENDIF
 .C4ACF
 
  JSR sub_C4B42
- LDA L62ECHi,X
+ LDA var11Hi,X
 
  JSR Absolute8Bit       \ Set A = |A|
 
  STA T
- LDA L62EAHi,X
+ LDA var09Hi,X
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -19017,11 +19059,11 @@ ENDIF
 .sub_C4AF7
 
  LDA #0
- STA L62ECHi,X
- STA L62DCHi,X
+ STA var11Hi,X
+ STA var11Lo,X
  LDY #8
  JSR sub_C4B61
- LDA L62E8Hi
+ LDA var07Hi
  EOR #&80
  STA H
  LDA #0
@@ -19043,8 +19085,8 @@ ENDIF
  CPX #0
  BEQ C4B41
  LDA #0
- STA L62EAHi,X
- STA L62DALo,X
+ STA var09Hi,X
+ STA var09Lo,X
  BEQ C4B41
 
 .C4B3E
@@ -19102,9 +19144,9 @@ ENDIF
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  LDY G
- STA L62EAHi,Y
+ STA var09Hi,Y
  LDA T
- STA L62DALo,Y
+ STA var09Lo,Y
  RTS
 
 \ ******************************************************************************
@@ -19122,16 +19164,16 @@ ENDIF
 
 .sub_C4B61
 
- LDA L62D0Lo,Y
+ LDA var02Lo,Y
  STA MM
- LDA L62E0Hi,Y
+ LDA var02Hi,Y
  BPL C4B77
  LDA #0
  SEC
  SBC MM
  STA MM
  LDA #0
- SBC L62E0Hi,Y
+ SBC var02Hi,Y
 
 .C4B77
 
@@ -19179,7 +19221,7 @@ ENDIF
  BEQ C4BAF
  LDY #9
  JSR sub_C4B61
- LDA L62E9Hi
+ LDA var08Hi
  EOR #&80
  STA H
  LDA L62AA,X
@@ -19273,7 +19315,8 @@ ENDIF
 
 .C4C06
 
- LDA VIA+&68            \ user_via_t2c_l
+ LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -19312,7 +19355,7 @@ ENDIF
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- BIT L62E9Hi
+ BIT var08Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -19426,7 +19469,7 @@ ENDIF
  STA U
  JSR sub_C0DBF
  LDY #7
- LDA L62E9Hi
+ LDA var08Hi
  JSR sub_C48A0
  RTS
 
@@ -19837,7 +19880,7 @@ ENDIF
  STA L0028
  INC L002D
  SEC
- ROR L62D2Lo
+ ROR var03Lo
  LDA #4
  JSR MakeSound-3
  RTS
@@ -20956,7 +20999,7 @@ ENDIF
 
  INC L006A
  BNE C506F
- INC L62DFHi
+ INC L62DF
 
 .C506F
 
@@ -23392,9 +23435,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L6293
+\       Name: carInMirror
 \       Type: Variable
-\   Category: 
+\   Category: Dashboard
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -23403,7 +23446,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6293
+.carInMirror
 
  EQUB 0, 0, 0, 0, 0, 0
 
@@ -23769,7 +23812,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62D0Lo
+\       Name: var02Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23780,13 +23823,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D0Lo
+.var02Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62D2Lo
+\       Name: var03Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23797,13 +23840,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D2Lo
+.var03Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62D3Lo
+\       Name: var04Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23814,13 +23857,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D3Lo
+.var04Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62D5Lo
+\       Name: var05Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23831,13 +23874,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D5Lo
+.var05Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62D6Lo
+\       Name: var06Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23848,13 +23891,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D6Lo
+.var06Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62D8Lo
+\       Name: var07Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23865,13 +23908,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D8Lo
+.var07Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62D9Lo
+\       Name: var08Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23882,13 +23925,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62D9Lo
+.var08Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DALo
+\       Name: var09Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23899,13 +23942,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62DALo
+.var09Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DBHi
+\       Name: var10Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23916,13 +23959,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62DBHi
+.var10Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DCHi
+\       Name: var11Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23933,13 +23976,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62DCHi
+.var11Lo
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62DELo
+\       Name: var12Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23950,13 +23993,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62DELo
+.var12Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62DFHi
+\       Name: L62DF
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23967,13 +24010,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62DFHi
+.L62DF
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E0Hi
+\       Name: var02Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23984,13 +24027,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E0Hi
+.var02Hi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62E2Hi
+\       Name: var03Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24001,13 +24044,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E2Hi
+.var03Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E3Hi
+\       Name: var04Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24018,13 +24061,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E3Hi
+.var04Hi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62E5Hi
+\       Name: var05Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24035,13 +24078,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E5Hi
+.var05Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E6Hi
+\       Name: var06Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24052,7 +24095,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E6Hi
+.var06Hi
 
  EQUB 0
 
@@ -24075,7 +24118,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62E8Hi
+\       Name: var07Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24086,13 +24129,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E8Hi
+.var07Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62E9Hi
+\       Name: var08Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24103,13 +24146,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E9Hi
+.var08Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EAHi
+\       Name: var09Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24120,13 +24163,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62EAHi
+.var09Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EBHi
+\       Name: var10Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24137,13 +24180,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62EBHi
+.var10Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62ECHi
+\       Name: var11Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24154,13 +24197,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62ECHi
+.var11Hi
 
  EQUB 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62EEHi
+\       Name: var12Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24171,13 +24214,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62EEHi
+.var12Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62EFHi
+\       Name: L62EF
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24188,7 +24231,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62EFHi
+.L62EF
 
  EQUB 0
 
@@ -25030,11 +25073,11 @@ ORG &3850               \ for Computer Assisted Steering (CAS) take up extra
                         \ The clever solution is to move the SetupGame routine,
                         \ which is run when the game loads, but is never needed
                         \ again, so in the Superior version, SetupGame is put
-                        \ into the same block of memory as the L3850Lo,
+                        \ into the same block of memory as the var01Lo,
                         \ totalPointsLo and totalPointsLo variables, which are
                         \ only used after the game has started
                         \
-                        \ These lines rewind BeebAsm's assembly back to L3850Lo
+                        \ These lines rewind BeebAsm's assembly back to var01Lo
                         \ (which is at address &3850), and clear the block that
                         \ is occupied by these three variables, so we can
                         \ assemble SetupGame in the right place while retaining
@@ -26450,11 +26493,7 @@ ORG &6C00
 \       Name: UpdateMirrors
 \       Type: Subroutine
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Update the wing mirrors to show any cars behind us
 \
 \ ******************************************************************************
 
@@ -26462,60 +26501,120 @@ ORG &6C00
 
 .UpdateMirrors
 
- LDY positionBehind
- LDX driversInOrder,Y
- LDA L018C,X
- BMI L7B2A
- LDA L03C8,X
- LSR A
- LSR A
+ LDY positionBehind     \ Set Y to the position of the driver behind us
+
+ LDX driversInOrder,Y   \ Set X to the number of the driver behind us
+
+ LDA L018C,X            \ If L018C for the driver behind us has bit 7 set, jump
+ BMI upmi1              \ to upmi1 to clear the mirror (as V will be set to a
+                        \ negative value, and this will never match any values
+                        \ from L3BA4, as all the L3BA4 entries are positive)
+
+                        \ We now calculate the size of the car to draw in the
+                        \ mirror (in other words, the height of the block we
+                        \ draw)
+                        \
+                        \ We do this by taking the L03C8 for the driver behind
+                        \ and dividing by 8 to give us half the number of pixel
+                        \ lines to draw, in T
+                        \
+                        \ We then calculate the upper and lower offsets within
+                        \ the mirror segment, by taking the offset of the middle
+                        \ row in the segment, and adding and subtracting T to
+                        \ give us T rows either side of &B6 in TT and N
+                        \
+                        \ We then pass N and TT (the latter via A) into the
+                        \ DrawCarInMirror routine
+
+ LDA L03C8,X            \ Set A = L03C8 for the driver behind
+
+ LSR A                  \ Set T = A / 8
+ LSR A                  \       = L03C8 / 8
  LSR A
  STA T
- CLC
+
+ CLC                    \ Set TT = &B6 + T
  ADC #&B6
  STA TT
- LDA #&B6
+
+ LDA #&B6               \ Set N = &B6 - T
  SEC
  SBC T
  STA N
- LDA L0398,X
+
+                        \ Next we calculate the mirror segment that the car
+                        \ should appear in, based on the var13Hi value for the
+                        \ car, and L000B, storing the result in A
+                        \
+                        \ This will then be matched with the values in L3BA4 to
+                        \ see which segment to update
+
+ LDA var13Hi,X          \ Set A = var13Hi for the driver behind
+
+ SEC                    \ Set A = (A - L000B - 4) / 8
+ SBC L000B              \       = (var13Hi - L000B - 4) / 8
  SEC
- SBC L000B
- SEC
- SBC #&04
+ SBC #4
  LSR A
  LSR A
  LSR A
 
-.L7B2A
+.upmi1
 
- STA V
- LDY #&05
+ STA V                  \ Set V = A
 
-.L7B2E
+                        \ So by this point:
+                        \
+                        \  * V is negative if there is no car in the mirror
+                        \
+                        \  * Otherwise V is potentially a segment number (and if
+                        \    it is, we draw the car in that segment below)
 
- LDA V
- CMP L3BA4,Y
- BEQ L7B3E
- LDA L6293,Y
- BEQ L7B46
- LDA #0
- BEQ L7B40
+ LDY #5                 \ We now loop through the six mirror segments, either
+                        \ clearing or drawing each of them, so we set up a loop
+                        \ counter in Y to count from 5 to 0
 
-.L7B3E
+.upmi2
 
- LDA TT
+ LDA V                  \ If this segment's L3BA4 = V, then we can see a car in
+ CMP L3BA4,Y            \ this segment, so jump to upmi3 to set A = TT (which we
+ BEQ upmi3              \ calculated above to denote the size of the car) and
+                        \ send this to carInMirror and DrawCarInMirror
 
-.L7B40
+                        \ If we get here then we can't see a car in this
+                        \ segment, so we need to clear the mirror to white
 
- STA L6293,Y
- JSR DrawCarInMirror
+ LDA carInMirror,Y      \ If this segment's carInMirror value is 0, then there
+ BEQ upmi5              \ is no car being shown in this segment, so jump to
+                        \ upmi5 to move on to the next segment, as the mirror
+                        \ segment is already clear
 
-.L7B46
+ LDA #0                 \ Otherwise we need to clear this segment, so set A = 0
+ BEQ upmi4              \ and jump to upmi4 to send this to carInMirror and
+                        \ DrawCarInMirror (this BEQ is effectively a JMP as A is
+                        \ always zero)
 
- DEY
- BPL L7B2E
- RTS
+.upmi3
+
+ LDA TT                 \ Set A = TT to store in carInMirror and pass to
+                        \ DrawCarInMirror
+
+.upmi4
+
+ STA carInMirror,Y      \ Store A in the Y-th entry in carInMirror, which will
+                        \ be zero if there is no car in this segment, non-zero
+                        \ if there is
+
+ JSR DrawCarInMirror    \ Draw the car in the specified mirror segment, between
+                        \ the upper and lower offsets in A and N
+
+.upmi5
+
+ DEY                    \ Decrement the loop counter
+
+ BPL upmi2              \ Loop back until we have looped through 5 to 0
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -27195,9 +27294,9 @@ ENDMACRO
  STA P
  STA R
 
- LDA Q                  \ And then the high bytes, so (Q P) points to start of
- ADC #&01               \ the character block on the next character row (i.e.
- STA Q                  \ the next pixel row down)
+ LDA Q                  \ And then the high bytes, so (Q P) points to the start
+ ADC #&01               \ of the character block on the next character row
+ STA Q                  \ (i.e. the next pixel row down)
 
  ADC #&01               \ Set (S R) = (Q P) + &100
  STA S
@@ -27530,64 +27629,167 @@ ENDMACRO
 \       Name: DrawCarInMirror
 \       Type: Subroutine
 \   Category: Dashboard
-\    Summary: 
+\    Summary: Draw a car in a specified segment of one of the wing mirrors, or
+\             clear a specified segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine draw white or black pixel lines in the specified mirror segment
+\ (the latter with randomly added distortion), depending on this calculation:
+\
+\   * If N <= offset < A              then draw a black line (draw a car)
+\
+\   * If N > offset or offset >= A    then draw a white line (clear the mirror)
+\
+\ where offset runs from the startMirror value for this segment to the endMirror
+\ value for this segment. In other words, when we draw a car, we draw it between
+\ offset N and offset A - 1.
+\
+\ If A = 0, then we end up clearing the mirror segment, as the offset is always
+\ greater or equal to zero.
+\
+\ So, for example, segment 2 has a startMirror of &B0 and endMirror of &BC, so
+\ the offset will run from &BC down to &B0, one for each line we draw. If this
+\ value is between A and N, as above, then we draw a black pixel line, otherwise
+\ we clear that pixel line in the mirror. In other words, we can restrict the
+\ size of the car that's drawn by setting A and N to values within the range for
+\ this segment.
+\
+\ The mirror segments have the following addresses and offsets, for reference:
+\
+\   Mirror 0 base address = &7540 (left mirror, outer segment)
+\   Centre point = &7540 + &B6 (&75F6)
+\   Range = &7540 + &AA (&75EA) to &7540 + &C2 (&7602)
+\
+\   Mirror 1 base address = &7548 (left mirror, middle segment)
+\   Centre point = &7548 + &B6 (&75FE)
+\   Range = &7548 + &AC (&75F4) to &7548 + &C0 (&7608)
+\
+\   Mirror 2 base address = &7418 (left mirror, inner segment)
+\   Range = &7418 + &B0 (&74C8) to &7418 + &BC (&74D4)
+\   Centre point = &7418 + &B6 (&74CE)
+\
+\   Mirror 3 base address = &7530 (right mirror, inner segment)
+\   Range = &7530 + &B0 (&75E0) to &7530 + &BC (&75EC)
+\   Centre point = &7530 + &B6 (&75E6)
+\
+\   Mirror 4 base address = &7670 (right mirror, middle segment)
+\   Range = &7670 + &AC (&771C) to &7670 + &C0 (&7730)
+\   Centre point = &7670 + &B6 (&7726)
+\
+\   Mirror 5 base address = &7678 (right mirror, outer segment)
+\   Range = &7678 + &AA (&7722) to &7678 + &C2 (&773A)
+\   Centre point = &7678 + &B6 (&772E)
+\
+\ Arguments:
+\
+\   Y                   Mirror segment (0 to 5)
+\
+\                         * 0 = left mirror, outer segment
+\                         * 1 = left mirror, middle segment
+\                         * 2 = left mirror, inner segment
+\                         * 3 = right mirror, inner segment
+\                         * 4 = right mirror, middle segment
+\                         * 5 = right mirror, outer segment
+\
+\   N                   Start offset within the segment for the car lines
+\
+\   A                   End offset within the segment for the car lines (or 0 to
+\                       clear the mirror segment)
+\
+\ Returns:
+\
+\   Y                   Y is unchanged
 \
 \ ******************************************************************************
 
 .DrawCarInMirror
 
- STA RR
- STY G
- LDA mirrorAddressHi,Y
- STA Q
- LDA mirrorAddressLo,Y
+ STA RR                 \ Store A in RR
+
+ STY G                  \ Store Y in G so we can retrieve it before returning
+                        \ from the subroutine
+
+ LDA mirrorAddressHi,Y  \ Set (Q P) to the base screen address of this mirror
+ STA Q                  \ segment (to which we add the following offsets to get
+ LDA mirrorAddressLo,Y  \ the screen address for this particular segment)
  STA P
 
- LDA L3EFA,Y
- STA W
- LDA L40FA,Y
- TAY
+ LDA startMirror,Y      \ Set W to the offset of the first pixel byte in this
+ STA W                  \ mirror segment
 
-.L7FCD
+ LDA endMirror,Y        \ Set Y to the offset of the first pixel byte in this
+ TAY                    \ mirror segment
 
- LDA #&F0
- CPY RR
- BCS L7FDF
- CPY N
- BCC L7FDF
- LDX VIA+&68
- AND &2000,X
- AND L0061
+.mirr1
 
-.L7FDF
+                        \ We now work our way through the mirror segment pixel
+                        \ bytes, going backwards from the end byte to the start
+                        \ byte, either removing the car or drawing the car with
+                        \ added random blurriness
 
- STA (P),Y
- DEY
- BPL L7FF8
- TYA
- AND #&07
- CMP #&07
- BCC L7FF8
- LDA P
- SEC
- SBC #&38
+ LDA #%11110000         \ Set A to the pixel byte containing four pixels of
+                        \ colour 2 (white)
+
+ CPY RR                 \ If Y >= RR, jump to mirr2 to draw a white pixel byte
+ BCS mirr2
+
+ CPY N                  \ If Y < N, jump to mirr2 to draw a white pixel byte
+ BCC mirr2
+
+                        \ If we get here then N <= Y < RR, so we draw a pixel
+                        \ byte of black pixels to represent the car, with the
+                        \ pixels randomised but tending to black, especially
+                        \ with lower values of L0061
+
+ LDX VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+                        \ (SHEILA &68), which will be a pretty random figure
+
+ AND &2000,X            \ There is game code at location &2000, so this randomly
+                        \ switches some of the white pixels (colour 2) to black
+                        \ (colour 0) in the pixel byte in A
+
+ AND L0061              \ Switch more pixels to black, depending on the value of
+                        \ L0061
+
+.mirr2
+
+ STA (P),Y              \ Draw the pixel byte in A at screen address (Q P) + Y
+
+ DEY                    \ Decrement Y to point to the pixel byte above
+
+ BPL mirr3              \ If Y is positive then jump to mirr3 to move on to the
+                        \ next pixel byte
+
+ TYA                    \ If Y mod 8 < 7 then jump to mirr3 to move on to the
+ AND #7                 \ next pixel byte
+ CMP #7
+ BCC mirr3
+
+                        \ If we get here then we need to move up a character row
+                        \ as we just moved Y past of the top of the current
+                        \ character block
+
+ LDA P                  \ Set (Q P) = (Q P) - &138
+ SEC                    \
+ SBC #&38               \ starting with the low bytes
  STA P
- LDA Q
- SBC #&01
- STA Q
 
-.L7FF8
+ LDA Q                  \ And then the high bytes, so (Q P) points to the end of
+ SBC #&01               \ the character block on the previous character row
+ STA Q                  \ (i.e. the next pixel row up)
 
- CPY W
- BCS L7FCD
- LDY G
- RTS
+.mirr3
 
- EQUB &FF
+ CPY W                  \ Loop back to draw the next pixel byte, until Y < W
+ BCS mirr1
+
+ LDY G                  \ Retrieve the value of Y that we stored in G, so that
+                        \ Y is preserved through the call to the routine
+
+ RTS                    \ Return from the subroutine
+
+ EQUB &FF               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
