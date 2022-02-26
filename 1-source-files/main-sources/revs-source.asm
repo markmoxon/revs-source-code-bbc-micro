@@ -157,11 +157,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L000A
+.var14Lo
 
  SKIP 1                 \ 
 
-.L000B
+.var14Hi
 
  SKIP 1                 \ 
 
@@ -350,19 +350,19 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0038
+.var15Lo
 
  SKIP 1                 \ 
 
-.L0039
+.var15Hi
 
  SKIP 1                 \ 
 
-.L003A
+.var16Lo
 
  SKIP 1                 \ 
 
-.L003B
+.var16Hi
 
  SKIP 1                 \ 
 
@@ -1008,7 +1008,7 @@ ORG &0380
                         \
                         \ Zeroed in SetupGame
 
- SKIP 5
+ SKIP 5                 \ These bytes appear to be unused
 
 .volumeLevel
 
@@ -1067,15 +1067,7 @@ ORG &0380
 
 .L0700
 
- SKIP 1                 \ 
-
-.L0701
-
- SKIP 1                 \ 
-
-.L0702
-
- SKIP 126               \ 
+ SKIP 128               \ 
 
 .lineBufferPixel
 
@@ -1110,25 +1102,17 @@ ORG &0880
 
  SKIP 36                \ 
 
-.L08D0
+.var18Lo
 
  SKIP 24                \ 
 
-.L08E8
+.var18Hi
 
  SKIP 24                \ 
 
-.L0900
+.var20Lo
 
- SKIP 1                 \ 
-
-.L0901
-
- SKIP 1                 \ 
-
-.L0902
-
- SKIP 118               \ 
+ SKIP 120               \ 
 
 .L0978
 
@@ -1138,7 +1122,7 @@ ORG &0880
 
  SKIP 1                 \ 
 
-.L097A
+.var17Lo
 
  SKIP 128               \ 
 
@@ -1154,17 +1138,9 @@ ORG &0880
 
  SKIP 2                 \ 
 
-.L0A00
+.var20Hi
 
- SKIP 1                 \ 
-
-.L0A01
-
- SKIP 1                 \ 
-
-.L0A02
-
- SKIP 118               \ 
+ SKIP 120               \ 
 
 .L0A78
 
@@ -1174,7 +1150,7 @@ ORG &0880
 
  SKIP 1                 \ 
 
-.L0A7A
+.var17Hi
 
  SKIP 128               \ 
 
@@ -1939,15 +1915,15 @@ ORG &0B00
  LDA #0
  STA L5EE0,Y
 
- LDA L5E40,Y
+ LDA var24Lo,Y
  SEC
  SBC var03Lo
- STA L5E40,Y
+ STA var24Lo,Y
 
- LDA L5E90,Y
+ LDA var24Hi,Y
  SBC var03Hi
 
- STA L5E90,Y
+ STA var24Hi,Y
  LDA L5F20,Y
  SEC
  SBC L004E
@@ -1976,27 +1952,27 @@ ORG &0B00
 
 .sub_C0BCC
 
- LDA L0900,Y
+ LDA var20Lo,Y
  CLC
  ADC T
- STA L0900,X
- LDA L0A00,Y
+ STA var20Lo,X
+ LDA var20Hi,Y
  ADC SS
- STA L0A00,X
- LDA L0901,Y
+ STA var20Hi,X
+ LDA var20Lo+1,Y
  CLC
  ADC U
- STA L0901,X
- LDA L0A01,Y
+ STA var20Lo+1,X
+ LDA var20Hi+1,Y
  ADC TT
- STA L0A01,X
- LDA L0902,Y
+ STA var20Hi+1,X
+ LDA var20Lo+2,Y
  CLC
  ADC V
- STA L0902,X
- LDA L0A02,Y
+ STA var20Lo+2,X
+ LDA var20Hi+2,Y
  ADC UU
- STA L0A02,X
+ STA var20Hi+2,X
  RTS
 
 \ ******************************************************************************
@@ -2321,10 +2297,10 @@ ORG &0B00
  SBC U
  ASL T
  ROL A
- STA L62A3,X
+ STA var26Hi,X
  LDA T
  AND #&FE
- STA L62A0,X
+ STA var26Lo,X
  JMP C0D7F
 
 .C0D4F
@@ -2344,17 +2320,17 @@ ORG &0B00
  SEC
  SBC T
  AND #&FE
- STA L62A0,X
+ STA var26Lo,X
  LDA #0
  SBC U
  BCC C0D7C
  LDA #&FE
- STA L62A0,X
+ STA var26Lo,X
  LDA #&FF
 
 .C0D7C
 
- STA L62A3,X
+ STA var26Hi,X
 
 .C0D7F
 
@@ -2376,8 +2352,8 @@ ORG &0B00
  LDA J
  BPL C0DA3
  LDA #1
- ORA L62A0
- STA L62A0
+ ORA var26Lo
+ STA var26Lo
 
 .C0DA3
 
@@ -3379,8 +3355,8 @@ ORG &0B00
  JSR sub_C147C
  DEX
  BPL P10A3
- LDA L08D0
- ORA L08E8
+ LDA var18Lo
+ ORA var18Hi
  BNE P10A1
  LDA #&FF
  STA G
@@ -3665,9 +3641,9 @@ ORG &0B00
 .P11DB
 
  LDA L09FD,X
- STA L6280,X
+ STA var22Lo,X
  LDA L0AFD,X
- STA L6283,X
+ STA var22Hi,X
  DEX
  BPL P11DB
  LDA L0022
@@ -3683,13 +3659,13 @@ ORG &0B00
  LDX L0045
  JSR sub_C2937
  LDA var13Lo,X
- STA L000A
+ STA var14Lo
 
 .C1200
 
  LDA var13Hi,X
  EOR L0025
- STA L000B
+ STA var14Hi
  RTS
 
 \ ******************************************************************************
@@ -3708,17 +3684,17 @@ ORG &0B00
 .sub_C1208
 
  LDA trackData+&601,Y
- STA L0900,X
+ STA var20Lo,X
  LDA trackData+&602,Y
- STA L0901,X
+ STA var20Lo+1,X
  LDA trackData+&603,Y
- STA L0902,X
+ STA var20Lo+2,X
  LDA trackData+&001,Y
- STA L0A00,X
+ STA var20Hi,X
  LDA trackData+&002,Y
- STA L0A01,X
+ STA var20Hi+1,X
  LDA trackData+&003,Y
- STA L0A02,X
+ STA var20Hi+2,X
  RTS
 
 \ ******************************************************************************
@@ -3740,11 +3716,11 @@ ORG &0B00
  LDA trackData+&604,Y
  STA L0978,X
  LDA trackData+&606,Y
- STA L097A,X
+ STA var17Lo,X
  LDA trackData+&004,Y
  STA L0A78,X
  LDA trackData+&006,Y
- STA L0A7A,X
+ STA var17Hi,X
  LDA trackData+&605,Y
  STA L0002
 
@@ -3763,9 +3739,9 @@ ORG &0B00
 
 .sub_C124D
 
- LDA L0901,X
+ LDA var20Lo+1,X
  STA L0979,X
- LDA L0A01,X
+ LDA var20Hi+1,X
  STA L0A79,X
  RTS
 
@@ -3842,7 +3818,7 @@ ORG &0B00
  LDA trackData+&600,Y
  STA L0001
  LDA #0
- STA L0702,X
+ STA L0700+2,X
  RTS
 
 \ ******************************************************************************
@@ -3864,9 +3840,9 @@ ORG &0B00
 
 .P12A2
 
- LDA L5E40,X
+ LDA var24Lo,X
  STA L5E41,X
- LDA L5E90,X
+ LDA var24Hi,X
  STA L5E91,X
  LDA L5F20,X
  STA L5F21,X
@@ -4085,7 +4061,7 @@ ORG &0B00
 .C137C
 
  AND L0001
- STA L0702,X
+ STA L0700+2,X
  LDY L0023
  JSR sub_C0BCC
  JSR sub_C124D
@@ -4104,10 +4080,10 @@ ORG &0B00
  ASL A
  ROL SS
  CLC
- ADC L0900,X
+ ADC var20Lo,X
  STA L0978,X
  LDA SS
- ADC L0A00,X
+ ADC var20Hi,X
  STA L0A78,X
  LDA trackData+&500,Y
  BPL C13B4
@@ -4120,11 +4096,11 @@ ORG &0B00
  ASL A
  ROL UU
  CLC
- ADC L0902,X
- STA L097A,X
+ ADC var20Lo+2,X
+ STA var17Lo,X
  LDA UU
- ADC L0A02,X
- STA L0A7A,X
+ ADC var20Hi+2,X
+ STA var17Hi,X
  JSR sub_C13DA
 
 .C13CC
@@ -4399,21 +4375,21 @@ ORG &0B00
 .C149B
 
  STA L0880,X
- INC L08D0,X
+ INC var18Lo,X
  BNE C14A6
- INC L08E8,X
+ INC var18Hi,X
 
 .C14A6
 
- LDA L08D0,X
+ LDA var18Lo,X
  CMP trackData+&6FC
  BNE C14C1
- LDA L08E8,X
+ LDA var18Hi,X
  CMP trackData+&6FD
  BNE C14C1
  LDA #0
- STA L08D0,X
- STA L08E8,X
+ STA var18Lo,X
+ STA var18Hi,X
  JSR sub_C4F77
 
 .C14C1
@@ -4462,14 +4438,14 @@ ORG &0B00
 
 .C14E4
 
- LDA L08D0,X
+ LDA var18Lo,X
  BNE C1509
- DEC L08E8,X
+ DEC var18Hi,X
  BPL C1509
  LDA trackData+&6FC
- STA L08D0,X
+ STA var18Lo,X
  LDA trackData+&6FD
- STA L08E8,X
+ STA var18Hi,X
  CPX currentPlayer
  BNE C14E4
  LDA L04B4,X
@@ -4479,7 +4455,7 @@ ORG &0B00
 
 .C1509
 
- DEC L08D0,X
+ DEC var18Lo,X
  PLP
  RTS
 
@@ -4573,7 +4549,7 @@ ORG &0B00
 .C1573
 
  LDY L0024
- STA L0701,Y
+ STA L0700+1,Y
  RTS
 
 \ ******************************************************************************
@@ -5629,7 +5605,7 @@ ENDIF
 
 .P1810
 
- STA L6280,X
+ STA var22Lo,X
  DEX
  BPL P1810
 
@@ -5641,9 +5617,9 @@ ENDIF
 .P181E
 
  LDA trackData+&6FF
- STA L08E8,X
+ STA var18Hi,X
  LDA trackData+&6FE
- STA L08D0,X
+ STA var18Lo,X
  LDA #0
  STA L06E8,X
  STA L0880,X
@@ -5761,7 +5737,7 @@ ENDIF
  CLC
  ADC #&14
  BPL C18D4
- LDA L5E90,X
+ LDA var24Hi,X
  CLC
  ADC #&14
  BMI C18D4
@@ -5972,7 +5948,7 @@ ENDIF
 
 .sub_C1933
 
- LDA L5E90,X
+ LDA var24Hi,X
  CLC
  ADC #&14
  CMP #&28
@@ -6294,16 +6270,16 @@ ENDIF
  LDA GG
  CMP #&14
  BEQ C1AC4
- LDA L5EA0,X
+ LDA var25Hi,X
  STA W
- LDA L5E90,X
+ LDA var24Hi,X
  JMP C1ACC
 
 .C1AC4
 
- LDA L5E90,X
+ LDA var24Hi,X
  STA W
- LDA L5EA0,X
+ LDA var25Hi,X
 
 .C1ACC
 
@@ -6392,16 +6368,16 @@ ENDIF
 
 .C1B29
 
- LDA L62BA,Y
+ LDA var27Lo,Y
  STA U
- LDA L62B7,Y
+ LDA var27Hi,Y
  ASL A
  ROL U
  STA T
  CLC
- ADC L5E40,X
+ ADC var24Lo,X
  STA V
- LDA L5E90,X
+ LDA var24Hi,X
  ADC U
  CMP #&18
  BCC C1B49
@@ -6554,7 +6530,7 @@ ENDIF
 
  LDA var13Hi,X
  SEC
- SBC L000B
+ SBC var14Hi
  ASL A
  ASL A
  PHP
@@ -7736,12 +7712,12 @@ IF _SUPERIOR
 
  STA W
 
- LDA L5E40,X
+ LDA var24Lo,X
  SEC
  SBC V
  STA T
 
- LDA L5E90,X
+ LDA var24Hi,X
  SBC W
 
  PHP
@@ -7766,7 +7742,7 @@ IF _SUPERIOR
  ADC #32
  STA U
 
- LDA L0701,Y
+ LDA L0700+1,Y
 
  AND #%01111111
 
@@ -8236,12 +8212,12 @@ ENDIF
 
 .sub_C2147
 
- LDA L0900,X
+ LDA var20Lo,X
  SEC
- SBC L6280,Y
+ SBC var22Lo,Y
  STA PP
- LDA L0A00,X
- SBC L6283,Y
+ LDA var20Hi,X
+ SBC var22Hi,Y
  STA VV
  BPL C2165
  LDA #0
@@ -8254,12 +8230,12 @@ ENDIF
 .C2165
 
  STA SS
- LDA L0902,X
+ LDA var20Lo+2,X
  SEC
- SBC L6282,Y
+ SBC var19Lo,Y
  STA RR
- LDA L0A02,X
- SBC L6285,Y
+ LDA var20Hi+2,X
+ SBC var19Hi,Y
  STA GG
  BPL C2185
  LDA #0
@@ -8486,12 +8462,12 @@ ENDIF
 
 .sub_C2287
 
- LDA L0901,X
+ LDA var20Lo+1,X
  SEC
- SBC L6281,Y
+ SBC var21Lo,Y
  STA QQ
- LDA L0A01,X
- SBC L6284,Y
+ LDA var20Hi+1,X
+ SBC var21Hi,Y
  STA WW
  BPL C22A5
  LDA #0
@@ -8759,11 +8735,11 @@ ENDIF
 
  LDA II
  SEC
- SBC L000A
- STA L5E40,Y
+ SBC var14Lo
+ STA var24Lo,Y
  LDA JJ
- SBC L000B
- STA L5E90,Y
+ SBC var14Hi
+ STA var24Hi,Y
  JMP sub_C0CA5
 
 \ ******************************************************************************
@@ -8805,7 +8781,7 @@ ENDIF
  STA L0013
  LDY L0012
  STY L005C
- LDA L5E90,Y
+ LDA var24Hi,Y
  STA L005E
 
 .C23FC
@@ -8829,12 +8805,12 @@ ENDIF
 
 .C2410
 
- LDA L0900,X
+ LDA var20Lo,X
  SEC
- SBC L0900,Y
+ SBC var20Lo,Y
  STA T
- LDA L0A00,X
- SBC L0A00,Y
+ LDA var20Hi,X
+ SBC var20Hi,Y
  CLC
  BPL C2423
  SEC
@@ -8849,11 +8825,11 @@ ENDIF
  ROR T
  STA V
  LDX U
- LDA L0900,Y
+ LDA var20Lo,Y
  CLC
  ADC T
  STA L09FA,X
- LDA L0A00,Y
+ LDA var20Hi,Y
  ADC V
  STA L0AFA,X
  INX
@@ -8892,7 +8868,7 @@ ENDIF
  BEQ C2490
  BCC C2490
  LDY L0012
- LDA L5E90,Y
+ LDA var24Hi,Y
  BPL C247E
  EOR #&FF
 
@@ -9065,7 +9041,7 @@ ENDIF
 
  STA L5F20,Y
  STA L5F48,Y
- LDA L5E90,Y
+ LDA var24Hi,Y
  SEC
  SBC L5EB8,Y
 
@@ -9132,7 +9108,7 @@ ENDIF
  LDY L0049
  CPX #&78
  BCS C2570
- LDA L0702,X
+ LDA L0700+2,X
  BCC C2573
 
 .C2570
@@ -9199,13 +9175,13 @@ ENDIF
 .C25C0
 
  LDY L0012
- LDA L5E40,Y
+ LDA var24Lo,Y
  CLC
  ADC T
- STA L5E50,Y
- LDA L5E90,Y
+ STA var25Lo,Y
+ LDA var24Hi,Y
  ADC U
- STA L5EA0,Y
+ STA var25Hi,Y
  LDA W
  AND #&18
  BEQ C25FD
@@ -9224,9 +9200,9 @@ ENDIF
 .C25F1
 
  LDA T
- STA L62B7,Y
+ STA var27Hi,Y
  LDA U
- STA L62BA,Y
+ STA var27Lo,Y
  INC L0057
 
 .C25FD
@@ -9667,11 +9643,11 @@ ENDIF
 
 .sub_C27AB
 
- LDA L08D0,Y
- SBC L08D0,X
+ LDA var18Lo,Y
+ SBC var18Lo,X
  STA T
- LDA L08E8,Y
- SBC L08E8,X
+ LDA var18Hi,Y
+ SBC var18Hi,X
  PHP
  BPL C27BF
 
@@ -9977,7 +9953,7 @@ ENDIF
  LDA var01Hi,X
  CMP #&32
  BCC sub_C2937
- LDA L0701,Y
+ LDA L0700+1,Y
  STA L0114,X
 
 \ ******************************************************************************
@@ -10040,9 +10016,9 @@ ENDIF
 .C297E
 
  CLC
- ADC L0900,Y
+ ADC var20Lo,Y
  STA L09FD,X
- LDA L0A00,Y
+ LDA var20Hi,Y
  PHP
  CPX #1
  BNE C298F
@@ -10362,10 +10338,10 @@ ENDIF
  STA L0037
  LDA var13Lo,X
  SEC
- SBC L000A
+ SBC var14Lo
  STA T
  LDA var13Hi,X
- SBC L000B
+ SBC var14Hi
  BPL C2AEF
  CMP #&E0
  BCC C2B0B
@@ -10486,7 +10462,7 @@ ENDIF
  SBC #1
  CMP #&4E
  BCS C2B40
- LDA L5E90,X
+ LDA var24Hi,X
  BPL C2B3E
  EOR #&FF
 
@@ -10497,9 +10473,9 @@ ENDIF
 .C2B40
 
  ROR GG
- LDA L5E90,X
+ LDA var24Hi,X
  STA W
- LDA L5E40,X
+ LDA var24Lo,X
  ASL A
  ROL W
  ASL A
@@ -10546,12 +10522,12 @@ ENDIF
  BEQ C2BCD
  LDY L0045
  LDX L004F
- LDA L5E40,Y
+ LDA var24Lo,Y
  SEC
- SBC L5E40,X
+ SBC var24Lo,X
  STA T
- LDA L5E90,Y
- SBC L5E90,X
+ LDA var24Hi,Y
+ SBC var24Hi,X
  STA VV
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
@@ -17206,7 +17182,7 @@ NEXT
  JSR Absolute8Bit       \ Set A = |A|
 
  SEC
- SBC L000B
+ SBC var14Hi
  STA L0044
  BPL C456E
  EOR #&FF
@@ -17301,21 +17277,21 @@ NEXT
 
  LDY L0022
  CLC
- ADC L0901,Y
+ ADC var20Lo+1,Y
  PHP
  CLC
  ADC #&AC
  PHP
  CLC
  ADC V
- STA L6281
- LDA L0A01,Y
+ STA var21Lo
+ LDA var20Hi+1,Y
  ADC W
  PLP
  ADC #0
  PLP
  ADC #0
- STA L6284
+ STA var21Hi
  LDA speedHi
  STA U
  LDA #&21
@@ -17552,15 +17528,15 @@ ENDIF
 
 .sub_C46A1
 
- LDA L000B
- LDX L000A
+ LDA var14Hi
+ LDX var14Lo
  JSR sub_C0D01
  JSR sub_C48B9
 
  LDA var07Lo
- STA L0038
+ STA var15Lo
  LDA var07Hi
- STA L0039
+ STA var15Hi
 
  LDA var08Lo
  STA T
@@ -17586,16 +17562,16 @@ ENDIF
  JSR sub_C49CE
  LDX #1
  JSR sub_C4779
- LDA L0038
+ LDA var15Lo
  STA var07Lo
- LDA L0039
+ LDA var15Hi
  STA var07Hi
  LDA var07Lo
  CLC
- ADC L003A
+ ADC var16Lo
  STA var07Lo
  LDA var07Hi
- ADC L003B
+ ADC var16Hi
  STA var07Hi
  JSR sub_C47A5
  LDX #0
@@ -17653,9 +17629,9 @@ ENDIF
  SBC U
  STA var07Hi
  JSR sub_C4765
- STA L003B
+ STA var16Hi
  LDA T
- STA L003A
+ STA var16Lo
  RTS
 
 \ ******************************************************************************
@@ -17990,9 +17966,9 @@ ENDIF
  STA PP
  LDA var02Hi,Y
  STA QQ
- LDA L62A0,X
+ LDA var26Lo,X
  STA RR
- LDA L62A3,X
+ LDA var26Hi,X
  STA SS
  JSR sub_C0DD7
  STA U
@@ -18136,23 +18112,23 @@ ENDIF
  LDA L62B1,Y
  ADC T
  STA L62B1,Y
- LDA L6280,Y
+ LDA var22Lo,Y
  ADC U
- STA L6280,Y
- LDA L6283,Y
+ STA var22Lo,Y
+ LDA var22Hi,Y
  ADC V
- STA L6283,Y
+ STA var22Hi,Y
  DEY
  DEY
  DEX
  BPL C48F3
- LDA L000A
+ LDA var14Lo
  CLC
  ADC var03Lo
- STA L000A
- LDA L000B
+ STA var14Lo
+ LDA var14Hi
  ADC var03Hi
- STA L000B
+ STA var14Hi
  RTS
 
 \ ******************************************************************************
@@ -18963,7 +18939,7 @@ ENDIF
 
 .sub_C4C65
 
- LDA L0039
+ LDA var15Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -18986,7 +18962,7 @@ ENDIF
 
  STA U
  LDY #6
- LDA L0039
+ LDA var15Hi
  JSR sub_C48A0
  LDA speedHi
  STA U
@@ -19063,7 +19039,7 @@ ENDIF
  LDA JJ
  STA L03AF
  SEC
- SBC L000B
+ SBC var14Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -19122,13 +19098,13 @@ ENDIF
  STA U
  LDY W
  DEC W
- LDA L6280,Y
+ LDA var22Lo,Y
  SEC
  SBC T
- STA L6286,Y
- LDA L6283,Y
+ STA var23Lo,Y
+ LDA var22Hi,Y
  SBC U
- STA L6289,Y
+ STA var23Hi,Y
  RTS
 
 \ ******************************************************************************
@@ -22035,7 +22011,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L5E40
+\       Name: var24Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22048,7 +22024,7 @@ ENDIF
 
 ORG &5E40
 
-.L5E40
+.var24Lo
 
  SKIP 1
 
@@ -22071,7 +22047,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5E50
+\       Name: var25Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22082,7 +22058,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5E50
+.var25Lo
 
  SKIP 63
 
@@ -22105,7 +22081,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5E90
+\       Name: var24Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22116,7 +22092,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5E90
+.var24Hi
 
  SKIP 1
 
@@ -22139,7 +22115,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5EA0
+\       Name: var25Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22150,7 +22126,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5EA0
+.var25Hi
 
  SKIP 24
 
@@ -22780,7 +22756,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L6280
+\       Name: var22Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22791,13 +22767,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6280
+.var22Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L6281
+\       Name: var21Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22808,13 +22784,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6281
+.var21Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L6282
+\       Name: var19Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22825,13 +22801,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6282
+.var19Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L6283
+\       Name: var22Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22842,13 +22818,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6283
+.var22Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L6284
+\       Name: var21Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22859,13 +22835,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6284
+.var21Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L6285
+\       Name: var19Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22876,13 +22852,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6285
+.var19Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L6286
+\       Name: var23Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22893,13 +22869,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6286
+.var23Lo
 
  EQUB 0, 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L6289
+\       Name: var23Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -22910,7 +22886,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6289
+.var23Hi
 
  EQUB 0, 0, 0, 0, 0, 0
 
@@ -23018,7 +22994,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62A0
+\       Name: var26Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23029,7 +23005,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62A0
+.var26Lo
 
  EQUB 0
 
@@ -23070,7 +23046,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62A3
+\       Name: var26Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23081,7 +23057,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62A3
+.var26Hi
 
  EQUB 0, 0
 
@@ -23241,7 +23217,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62B7
+\       Name: var27Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23252,13 +23228,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62B7
+.var27Hi
 
  EQUB 0, 0, 0
 
 \ ******************************************************************************
 \
-\       Name: L62BA
+\       Name: var27Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23269,7 +23245,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62BA
+.var27Lo
 
  EQUB 0, 0, 0
 
@@ -26076,15 +26052,15 @@ ORG &6C00
 
                         \ Next we calculate the mirror segment that the car
                         \ should appear in, based on the var13Hi value for the
-                        \ car, and L000B, storing the result in A
+                        \ car, and var14Hi, storing the result in A
                         \
                         \ This will then be matched with the values in L3BA4 to
                         \ see which segment to update
 
  LDA var13Hi,X          \ Set A = var13Hi for the driver behind
 
- SEC                    \ Set A = (A - L000B - 4) / 8
- SBC L000B              \       = (var13Hi - L000B - 4) / 8
+ SEC                    \ Set A = (A - var14Hi - 4) / 8
+ SBC var14Hi            \       = (var13Hi - var14Hi - 4) / 8
  SEC
  SBC #4
  LSR A
