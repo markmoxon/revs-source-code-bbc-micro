@@ -3472,7 +3472,8 @@ ORG &0B00
 
  DEC L62F6
  INC L001F
- JSR sub_C3D5C
+ JSR DrawFence          \ Draw the fence that we crash into when running off the
+                        \ track
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
@@ -11941,56 +11942,88 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C31D0
+\       Name: DrawFence (Part 2 of 2)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Draw the fence that we crash into when running off the track
 \
 \ ******************************************************************************
 
-.sub_C31D0
+.fenc2
 
- LDX #3
+ LDX #3                 \ Set X = 3, to use as an index into the fencePixelsSky
+                        \ and fencePixelsGrass tables, so we draw pixel bytes
+                        \ repeatedly from these two tables to build up the fence
+                        \ effect
 
-.P31D2
+.fenc3
 
- CPY L001F
- BCC C31DB
- LDA L3D7C,X
- BNE C31DE
+ CPY L001F              \ If Y < L001F, then this pixel row is below the
+ BCC fenc4              \ horizon, so jump to fenc4 to draw the fence with green
+                        \ grass behind it
 
-.C31DB
+ LDA fencePixelsSky,X   \ Otherwise this pixel row is above the horizon, so set
+                        \ A to the correct pixel byte for the fence with blue
+                        \ sky behind it
 
- LDA L3D78,X
+ BNE fenc5              \ Jump to fenc5 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
-.C31DE
+.fenc4
 
- STA (P),Y
- STA firstPixelTyre,Y
- STA firstPixelTrack,Y
- DEX
- BPL C31EB
- LDX #3
+ LDA fencePixelsGrass,X \ Set A to the correct pixel byte for the fence with
+                        \ green grass behind it
 
-.C31EB
+.fenc5
 
- DEY
- CPY U
- BNE P31D2
- INC T
- LDA P
- EOR #&80
- STA P
- BMI C31FC
- INC Q
+ STA (P),Y              \ Store A in the dash data block at (Q P), to draw this
+                        \ four-pixel part of the fence in the track view
 
-.C31FC
+ STA firstPixelTyre,Y   \ Store A in the firstPixelTyre and firstPixelTrack
+ STA firstPixelTrack,Y  \ entries for this row, so the drawing routines can wrap
+                        \ the fence correctly around the dashboard and tyres
 
- JMP C3D68
+ DEX                    \ Decrement X to point to the next pixel byte in the
+                        \ fence pixel byte tables
+
+ BPL fenc6              \ If we just decremented X to -1, set it back to 3, so
+ LDX #3                 \ X goes 3, 2, 1, 0, then 3, 2, 1, 0, and so on
+
+.fenc6
+
+ DEY                    \ Decrement the byte counter in Y to point to the next
+                        \ byte in the dash data block
+
+ CPY U                  \ If Y <> U then we have not yet drawn the fence in all
+ BNE fenc3              \ the bytes in the dash data block (as U contains the
+                        \ dashDataOffset for this block, which contains the
+                        \ offset of the last byte that we need to fill), so loop
+                        \ back to draw the next byte of the fence
+
+                        \ If we get here then we have drawn fence through the
+                        \ whole dash data block, so now we move on to the next
+                        \ block by updating the counter in T and pointing (Q P)
+                        \ to the next dash data block
+
+ INC T                  \ Increment the loop counter to point to the next dash
+                        \ data block
+
+ LDA P                  \ Set (Q P) = (Q P) + &80
+ EOR #&80               \
+ STA P                  \ starting with the low bytes
+                        \
+                        \ We can do the addition more efficiently by using EOR
+                        \ to flip between &xx00 and &xx80, as the dash data
+                        \ blocks always start at these addresses
+
+ BMI fenc7              \ We then increment the high byte, but only if the EOR
+ INC Q                  \ set the low byte to &00 rather than &80 (if we just
+                        \ set it to the latter, the BMI will skip the INC)
+
+.fenc7
+
+ JMP fenc1              \ Loop back to part 1 to draw the fence in the next dash
+                        \ data block
 
  EQUB 0                 \ This byte appears to be unused
 
@@ -15358,84 +15391,80 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C3D5C
+\       Name: DrawFence (Part 1 of 2)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Draw the fence that we crash into when running off the track
 \
 \ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
-\   sub_C3D5C-1         Contains an RTS
+\   DrawFence-1         Contains an RTS
 \
 \ ******************************************************************************
 
-.sub_C3D5C
+.DrawFence
 
- LDA #0
+ LDA #0                 \ Set carMoving = 0 to denote that the car is not moving
  STA carMoving
- STA T
- STA P
- LDA #&30
- STA Q
+
+ STA T                  \ Set T = 0, to use as a counter as we work our way
+                        \ through the 40 dash data blocks that contain the track
+                        \ view
+
+ STA P                  \ Set (Q P) to point to the first dash data block at
+ LDA #HI(dashData)      \ dashData (this works because the low byte of dashData
+ STA Q                  \ is zero)
+
+.fenc1
+
+ LDX T                  \ If X = 40 then we have drawn the fencs across all the
+ CPX #40                \ dash data blocks, so return from the subroutine (as
+ BEQ DrawFence-1        \ DrawFence-1 contains an RTS)
+
+ LDA dashDataOffset,X   \ Set U to the dashDataOffset for the current dash data
+ STA U                  \ block
+
+ LDY #70                \ Set Y = 70, to use as a loop counter that works
+                        \ through all 70 bytes in the dash data block
+
+ JMP fenc2              \ We now jump to part 2 to work our way through the 70
+                        \ bytes in the dash data block, each of which represents
+                        \ a four-pixel line, with 70 lines stacked one on top of
+                        \ the other, in a four-pixel-wide vertical strip
 
 \ ******************************************************************************
 \
-\       Name: sub_C3D68
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.C3D68
-
- LDX T
- CPX #&28
- BEQ sub_C3D5C-1
- LDA dashDataOffset,X
- STA U
- LDY #&46
- JMP sub_C31D0
-
-\ ******************************************************************************
-\
-\       Name: L3D78
+\       Name: fencePixelsGrass
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Pixel bytes for the fence with green grass behind it
 \
 \ ******************************************************************************
 
-.L3D78
+.fencePixelsGrass
 
- EQUB &AA, &77, &AA, &DD
+ EQUB %10101010         \ Four pixels: green, black, green, black
+ EQUB %01110111         \ Four pixels: black, green, green, green
+ EQUB %10101010         \ Four pixels: green, black, green, black
+ EQUB %11011101         \ Four pixels: green, green, black, green
 
 \ ******************************************************************************
 \
-\       Name: L3D7C
+\       Name: fencePixelsSky
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Pixel bytes for the fence with blue sky behind it
 \
 \ ******************************************************************************
 
-.L3D7C
+.fencePixelsSky
 
- EQUB &0A, &07, &0A, &0D
+ EQUB %00001010         \ Four pixels: blue, black, blue, black
+ EQUB %00000111         \ Four pixels: black, blue, blue, blue
+ EQUB %00001010         \ Four pixels: blue, black, blue, black
+ EQUB %00001101         \ Four pixels: blue, blue, black, blue
 
 \ ******************************************************************************
 \
