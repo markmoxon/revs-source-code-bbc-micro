@@ -1613,31 +1613,6 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: soundBlock
-\       Type: Variable
-\   Category: Sound
-\    Summary: Temporary storage for data relating to sounds 0 to 3
-\
-\ ******************************************************************************
-
-ORG &0B00
-
-.soundBlock
-
- EQUB &10, &10          \ Sound #0
- EQUB &10, &10
-
- EQUB &10, &10          \ Sound #1
- EQUB &10, &10
-
- EQUB &10, &10          \ Sound #2
- EQUB &10, &10
-
- EQUB &10, &10          \ Sound #3
- EQUB &10, &10
-
-\ ******************************************************************************
-\
 \       Name: soundData
 \       Type: Variable
 \   Category: Sound
@@ -1654,44 +1629,51 @@ ORG &0B00
 \ where each value consists of two bytes, with the low byte first and the high
 \ byte second.
 \
-\ For the channel/flush parameter, the first byte is the channel while the
-\ second is the flush control (where a flush control of 0 queues the sound,
-\ while a flush control of 1 makes the sound instantly). When written in
-\ hexadecimal, the first figure gives the flush control, while the second is
-\ the channel (so &13 indicates flush control = 1 and channel = 3).
+\ For the channel/flush parameter, the top nibble of the low byte is the channel
+\ number, while the bottom nibble of the low byte is the flush control (where a
+\ flush control of 0 queues the sound, and a flush control of 1 makes the sound
+\ instantly). When written in hexadecimal, the first figure gives the flush
+\ control, while the second is the channel (so &13 indicates flush control = 1
+\ and channel = 3).
 \
 \ ******************************************************************************
 
+ORG &0B00
+
+ EQUB &10, &10          \ These bytes appear to be unused
+ EQUB &10, &10
+ EQUB &10, &10
+ EQUB &10, &10
+ EQUB &10, &10
+ EQUB &10, &10
+ EQUB &10, &10
+ EQUB &10, &10
+
 .soundData
 
- EQUB &10, &00          \ Sound #0
+ EQUB &10, &00          \ Sound #0: Engine roar (SOUND &10, -10, 3, 255)
  EQUB &F6, &FF
-
- EQUB &03, &00          \ Sound #1
+ EQUB &03, &00
  EQUB &FF, &00
 
- EQUB &11, &00          \ Sound #2
+ EQUB &11, &00          \ Sound #1: Engine tone 1 (SOUND &11, -10, 187, 255)
  EQUB &F6, &FF
-
- EQUB &BB, &00          \ Sound #3
+ EQUB &BB, &00
  EQUB &FF, &00
 
- EQUB &12, &00          \ Sound #4
+ EQUB &12, &00          \ Sound #2: Engine tone 2 (SOUND &12, -10, 40, 255)
  EQUB &F6, &FF
-
- EQUB &28, &00          \ Sound #5
+ EQUB &28, &00
  EQUB &FF, &00
 
- EQUB &13, &00          \ Sound #6
+ EQUB &13, &00          \ Sound #3: Tyre squeal (SOUND &13, 1, 130, 255)
  EQUB &01, &00
-
- EQUB &82, &00          \ Sound #7
+ EQUB &82, &00
  EQUB &FF, &00
 
- EQUB &10, &00          \ Sound #8
+ EQUB &10, &00          \ Sound #4: Crash/bump (SOUND &10, -10, 6, 4)
  EQUB &F6, &FF
-
- EQUB &06, &00          \ Sound #9
+ EQUB &06, &00
  EQUB &04, &00
 
 \ ******************************************************************************
@@ -1738,13 +1720,15 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   A                   The sound number from the soundData table (0 to 7)
+\   A                   The sound number from the soundData table (0 to 4)
 \
-\   Y                   A value to store in byte #2 in this sound's soundBlock
+\   Y                   The volume level to use for the sound, or the envelope
+\                       number (the latter is used for sound #3 only, and is
+\                       always set to envelope 1, which is the only envelope)
 \
 \ Other entry points:
 \
-\   MakeSound-3         Use the current volume level for argument Y
+\   MakeSound-3         Make the sound at the current volume level
 \
 \ ******************************************************************************
 
@@ -1763,19 +1747,26 @@ ORG &0B00
 
  CLC                    \ Set (Y X) = soundData + A
  ADC #LO(soundData)     \
- TAX                    \ starting with the low byte in X
+ TAX                    \ starting with the low byte in X, which gets set to the
+                        \ following, as LO(soundData) is 16:
+                        \
+                        \   * 16 for sound #0
+                        \   * 24 for sound #1
+                        \   * 32 for sound #2
+                        \   * 40 for sound #3
+                        \   * 48 for sound #4
+                        \
+                        \ This means that soundData - 16 + X points to the sound
+                        \ data block for the sound we are making, which we now
+                        \ use to set the volume or envelope for the sound to Y,
+                        \ and flag the correct sound buffer as being in use
 
-                        \ We now use the low byte in X to point to this sound's
-                        \ corresponding four-byte block in soundBlock (though it
-                        \ is unclear what effect this has, as soundBlock is
-                        \ never written to and soundBlock+2 is never read)
+ TYA                    \ Set byte #2 of the sound data (low byte of amplitude
+ STA soundData-16+2,X   \ or envelope number) to Y
 
- TYA                    \ Store Y in byte #2 of this sound's soundBlock
- STA soundBlock+2,X
-
- LDA soundBlock,X       \ Set Y to byte #0 of this sound's soundBlock, reduced
- AND #3                 \ to the range 0 to 3, to give us the relevant sound
- TAY                    \ buffer for this sound
+ LDA soundData-16,X     \ Set Y to byte #0 of the sound data (channel/flush),
+ AND #3                 \ and extract the channel number into Y
+ TAY
 
  LDA #7                 \ Set A = 7 for the OSWORD command to make a sound
 
@@ -2734,9 +2725,10 @@ ORG &0B00
  AND #3
  CLC
  ADC #&82
- STA soundData+28
 
- LDA #3
+ STA soundData+28       \ Update byte #5 of sound #4 (low byte of pitch)
+
+ LDA #3                 \ Make sound #3 (tyre squeal) using envelope 1
  LDY #1
  JSR MakeSound
 
@@ -2763,8 +2755,10 @@ ORG &0B00
  SBC #&5C
  BCS C0EB8
  PHA
- LDA #0
- JSR MakeSound-3
+
+ LDA #0                 \ Make sound #0 (engine roar) at the current volume
+ JSR MakeSound-3        \ level
+
  PLA
  CLC
  ADC #&BB
@@ -2780,9 +2774,9 @@ ORG &0B00
 
 .C0EC0
 
- STA soundData+12
+ STA soundData+12       \ Update byte #5 of sound #1 (low byte of pitch)
 
- LDA #1
+ LDA #1                 \ Make sound #1 (engine tone 1) with volume Y
  JSR MakeSound
 
  LDY volumeLevel
@@ -2796,11 +2790,11 @@ ORG &0B00
 
 .C0ED8
 
- STA soundData+20
+ STA soundData+20       \ Update byte #5 of sound #2 (low byte of pitch)
 
 .C0EDB
 
- LDA #2
+ LDA #2                 \ Make sound #2 (engine tone 2) with volume Y
  JSR MakeSound
 
 .C0EE0
@@ -3560,8 +3554,9 @@ ORG &0B00
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
- LDA #4
+ LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
  JSR MakeSound-3
+
  LDA #0
  LDX #&1E
 
@@ -6727,7 +6722,8 @@ ENDIF
  LDA #&80
  STA L62A6
  STA L62A7
- LDA #4
+
+ LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
  JSR MakeSound-3
 
 .C1C1B
@@ -17925,7 +17921,7 @@ ENDIF
  LDA soundBuffer+3
  BNE C47A4
 
- LDY #1
+ LDY #1                 \ Make sound #3 (tyre squeal) using envelope 1
  LDA #3
  JSR MakeSound
 
@@ -19577,8 +19573,10 @@ ENDIF
  INC L002D
  SEC
  ROR var03Lo
- LDA #4
+
+ LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
  JSR MakeSound-3
+
  RTS
 
 \ ******************************************************************************
