@@ -144,6 +144,8 @@ ORG &0000
 .L0006
 
  SKIP 1                 \ 
+                        \
+                        \ Set to 6 in ResetVariables
 
 .L0007
 
@@ -152,10 +154,14 @@ ORG &0000
 .L0008
 
  SKIP 1                 \ 
+                        \
+                        \ Set to 6 in ResetVariables
 
 .L0009
 
  SKIP 1                 \ 
+                        \
+                        \ Set to 7 in ResetVariables
 
 .var14Lo
 
@@ -248,9 +254,13 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L001F
+.horizonLine
 
- SKIP 1                 \ 
+ SKIP 1                 \ The track line number of the horizon
+                        \
+                        \ Track lines are one pixel high, and go from 79 (at the
+                        \ top of the track view, in the sky), down to 3 (the
+                        \ lowest track line, between the mirrors and dashboard)
 
 .L0020
 
@@ -316,11 +326,14 @@ ORG &0000
 
 .L002F
 
- SKIP 1                 \ 
+ SKIP 1                 \ Set to the player's current position in BCD in
+                        \ ResetVariables
 
 .L0030
 
  SKIP 1                 \ 
+                        \
+                        \ Set to 1 in ResetVariables
 
 .L0031
 
@@ -592,6 +605,8 @@ ORG &0000
 .L0066
 
  SKIP 1                 \ 
+                        \
+                        \ Set to &80 in ResetVariables for race laps
 
 .L0067
 
@@ -830,10 +845,14 @@ ORG &0100
 .L018C
 
  SKIP 24                \ 
+                        \
+                        \ Set to &80 in ResetVariables
 
 .L01A4
 
  SKIP 20                \ 
+                        \
+                        \ Set to &FF in ResetVariables
 
 
 \ ******************************************************************************
@@ -904,6 +923,8 @@ ORG &0380
 .bestLapMinutes
 
  SKIP 20                \ 
+                        \
+                        \ Set to &80 in ResetVariables
 
 .totalPointsTop
 
@@ -1109,6 +1130,10 @@ ORG &0880
 .var18Hi
 
  SKIP 24                \ 
+                        \
+                        \ Set to trackData(&6FF &6FE) in ResetVariables
+                        \
+                        \ &034B for Silverstone
 
 .var20Lo
 
@@ -1928,9 +1953,9 @@ ORG &0B00
  SEC
  SBC L004E
  STA L5F20,Y
- CMP L001F
+ CMP horizonLine
  BCC C0BCB
- STA L001F
+ STA horizonLine
  STY L0051
 
 .C0BCB
@@ -2179,64 +2204,75 @@ ORG &0B00
 \
 \       Name: sub_C0CA5
 \       Type: Subroutine
-\   Category: 
+\   Category: Maths
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If M < 103, set (L K) = (J I) + (H G) / 8
+\
+\ If M >= 103, set (L K) = (J I) * 7/8 + (H G) / 2
 \
 \ ******************************************************************************
 
 .sub_C0CA5
 
- LDA M
- CMP #&67
+ LDA M                  \ If M >= 103, jump to C0CC2
+ CMP #103
  BCS C0CC2
- LDA G
+
+ LDA G                  \ Set A = G
+
+ LSR H                  \ Set (H A) = (H A) >> 3
+ ROR A                  \           = (H G) >> 3
  LSR H
  ROR A
  LSR H
  ROR A
- LSR H
- ROR A
- CLC
- ADC I
- STA K
+
+ CLC                    \ Set (L K) = (J I) + (H A)
+ ADC I                  \           = (J I) + (H G) >> 3
+ STA K                  \           = (J I) + (H G) / 8
  LDA H
  ADC J
  STA L
- RTS
+
+ RTS                    \ Return from the subroutine
 
 .C0CC2
 
- LSR H
+ LSR H                  \ Set (H G) = (H G) >> 1
  ROR G
- LDA J
+
+ LDA J                  \ Set (T A) = (J I)
  STA T
  LDA I
- LSR T
- ROR A
+
+ LSR T                  \ Set (T U) = (T A) >> 3
+ ROR A                  \           = (J I) >> 3
  LSR T
  ROR A
  LSR T
  ROR A
  STA U
- LDA G
- CLC
+
+ LDA G                  \ Set (L K) = (J I) + (H G)
+ CLC                    \           = (J I) + (H G) >> 1
  ADC I
  STA K
  LDA H
  ADC J
  STA L
- LDA K
- SEC
- SBC U
+
+ LDA K                  \ Set (L K) = (L K) - (T U)
+ SEC                    \           = (J I) + (H G) >> 1 - (J I) >> 3
+ SBC U                  \           = (J I) * 7/8 + (H G) / 2
  STA K
  LDA L
  SBC T
  STA L
- RTS
+
+ RTS                    \ Return from the subroutine
 
  EQUB &F1, &0C, &E5, &74, &8D, &F6, &0C, &60
  EQUB &00, &00, &00, &00, &00, &00, &40
@@ -2873,7 +2909,7 @@ ORG &0B00
 
 .shif4
 
- JSR Reset0554          \ Reset the blocks at L05A4, L0554, L0600, L0650 and
+ JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
                         \ L5F60
 
  LDX #&A6               \ Scan the keyboard to see if DELETE is being pressed
@@ -3210,7 +3246,8 @@ ORG &0B00
  ADC numberOfLaps
  PHP
 
- JSR GetDriverNumberBCD
+ JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
+                        \ (BCD), adding 1 in the process
 
  LDX #&0C
  LDY #&21
@@ -3331,35 +3368,48 @@ ORG &0B00
 \
 \       Name: sub_C109B
 \       Type: Subroutine
-\   Category: 
+\   Category: Main loop
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   Contains:
+\
+\                         * 1 if this is a race
+\
+\                         * The value of trackData+&718 if this is practice or
+\                           qualifying (40 for Silverstone)
 \
 \ ******************************************************************************
 
 .sub_C109B
 
- STA V
- SEC
+ STA V                  \ Store the value of A in V, so we can retrieve it later
+
+ SEC                    \ Set bit 7 of L62F8
  ROR L62F8
 
 .P10A1
 
- LDX #&13
+ LDX #19
 
 .P10A3
 
  JSR sub_C147C
+
  DEX
+
  BPL P10A3
+
  LDA var18Lo
  ORA var18Hi
  BNE P10A1
+
  LDA #&FF
  STA G
+
  BNE C10CF
 
 .C10B7
@@ -3371,71 +3421,104 @@ ORG &0B00
 
  TXA
  PHA
+
  LDA driversInOrder,X
+
  TAX
  JSR sub_C14C3
+
  PLA
  TAX
+
  DEC W
+
  BPL P10BB
+
  INX
- CPX #&14
+
+ CPX #20
  BCC C10B7
 
 .C10CF
 
  INC G
+
  LDX G
- CPX #&14
+
+ CPX #20
  BCC C10B7
 
 .C10D7
 
- LDX #&17
+ LDX #23
+
  JSR sub_C147C
- LDY #&17
+
+ LDY #23
+
  LDX currentPlayer
+
  SEC
+
  JSR sub_C27AB
+
  BCS C10D7
+
  CMP #&20
+
  BNE C10D7
- LDX #&17
- LDA #&31
+
+ LDX #23
+
+ LDA #49
  STA V
+
  STA L0042
 
 .P10F2
 
  JSR sub_C14C3
+
  DEC V
+
  BNE P10F2
 
 .P10F9
 
  INC L0042
+
  JSR sub_C14C3
+
  BCC P10F9
+
  LDA #&50
- LDY #&13
+
+ LDY #19
 
 .P1104
 
  LDX driversInOrder,Y
  EOR #&FF
  STA L0178,X
+
  DEY
+
  BPL P1104
+
  LDA #0
  STA L0024
 
 .P1113
 
  JSR sub_C12F7
+
  DEC L0042
+
  BNE P1113
- LSR L62F8
- RTS
+
+ LSR L62F8              \ Clear bit 7 of L62F8
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -3471,7 +3554,7 @@ ORG &0B00
 .C1138
 
  DEC L62F6
- INC L001F
+ INC horizonLine
  JSR DrawFence          \ Draw the fence that we crash into when running off the
                         \ track
 
@@ -3761,17 +3844,19 @@ ORG &0B00
 
 .sub_C125A
 
- LDA L0024
+ LDA L0024              \ Set A = L0024 - 96
  SEC
- SBC #&60
- BPL C1264
+ SBC #96
+
+ BPL C1264              \ If A < 0, set A = A + 120
  CLC
- ADC #&78
+ ADC #120
 
 .C1264
 
- STA L0022
- RTS
+ STA L0022              \ Set L0022 = A
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5210,7 +5295,8 @@ ENDIF
 
                         \ We jump back here when restarting qualifying laps
 
- JSR sub_C1805          \ ??? Set up the top two text lines
+ JSR ResetVariables     \ Reset a number of variables for driving, and print the
+                        \ top two text lines
 
 .main3
 
@@ -5257,7 +5343,7 @@ ENDIF
 
  JSR sub_C0E74
 
- JSR Reset0554          \ Reset the blocks at L05A4, L0554, L0600, L0650 and
+ JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
                         \ L5F60
 
  JSR sub_C1A20
@@ -5581,106 +5667,170 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1805
+\       Name: ResetVariables
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Main Loop
+\    Summary: Reset a number of variables for driving, and print the top two
+\             text lines
 \
 \ ******************************************************************************
 
-.sub_C1805
+.ResetVariables
 
- LDA #0
- LDX #&68
+ LDA #0                 \ Set A = 0, so we can use it to reset variables to zero
+                        \ in the following loops
 
-.P1809
+ LDX #&68               \ We start by zeroing all zero-page variables from
+                        \ carMoving to L0068, so set up a loop counter in X
 
- STA carMoving,X
- DEX
- BPL P1809
- LDX #&7F
+.rese1
 
-.P1810
+ STA carMoving,X        \ Zero the X-th byte from carMoving
 
- STA var22Lo,X
- DEX
- BPL P1810
+ DEX                    \ Decrement the loop counter
 
- JSR DefineEnvelope
+ BPL rese1              \ Loop back until we have zeroed all variables from
+                        \ carMoving to L0068
 
- LDX #&17
- STX L62F9
+ LDX #&7F               \ We now zero all variables from var22Lo to L62FF, so
+                        \ set up a loop counter in X
 
-.P181E
+.rese2
 
- LDA trackData+&6FF
- STA var18Hi,X
- LDA trackData+&6FE
+ STA var22Lo,X          \ Zero the X-th byte from var22Lo
+
+ DEX                    \ Decrement the loop counter
+
+ BPL rese2              \ Loop back until we have zeroed all variables from
+                        \ var22Lo to L62FF
+
+ JSR DefineEnvelope     \ Define the first (and only) sound envelope
+
+ LDX #23                \ We now zero the 24-byte blocks at L06E8 and L0880, and
+                        \ initialise all 24 bytes in var18Hi and var18Lo, so set
+                        \ up a loop counter in X
+
+ STX L62F9              \ Set L62F9 = 23
+
+.rese3
+
+ LDA trackData+&6FF     \ Set the X-th byte of (var18Hi var18Lo) to the 16-bit
+ STA var18Hi,X          \ value in trackData(&6FF &6FE), which is &034B for the
+ LDA trackData+&6FE     \ Silverstone track
  STA var18Lo,X
- LDA #0
+
+ LDA #0                 \ Zero the X-th byte of L06E8
  STA L06E8,X
- STA L0880,X
- DEX
- BPL P181E
 
- JSR SetPlayerPositions \ Set the player's current position, plus the position
-                        \ ahead and the position behind
+ STA L0880,X            \ Zero the X-th byte of L0880
 
- LDA #1
- BIT raceStarted
- BMI C184C
- LDX trackData+&717
- LDY currentPosition
- JSR SwapDriverPosition
+ DEX                    \ Decrement the loop counter
 
- JSR SetPlayerPositions \ Set the player's current position, plus the position
-                        \ ahead and the position behind
+ BPL rese3              \ Loop back until we have zeroed or copied all 24
+                        \ variable bytes
 
- LDA trackData+&718
+ JSR SetPlayerPositions \ Set the player's current position in currentPosition,
+                        \ plus the number of the position ahead in positionAhead
+                        \ and number of the position behind in positionBehind
 
-.C184C
+ LDA #1                 \ Set A = 1, to pass to sub_C109B below if this is a
+                        \ race
 
- JSR sub_C109B
- LDX #&13
+ BIT raceStarted        \ If bit 7 of raceStarted is set then this is a race
+ BMI rese4              \ rather than practice or qualifying, so jump to rese4
+                        \ to skip the following
 
-.C1851
+                        \ This is a practice or qualifying lap, so we set the
+                        \ player's position as specified in the track data
 
- LDA #&80
+ LDX trackData+&717     \ Set A to trackData+&718, which is 4 for the
+                        \ Silverstone track
+
+ LDY currentPosition    \ Set Y to the player's current position
+
+ JSR SwapDriverPosition \ Swap the positions of drivers in positions X and Y in
+                        \ the driversInOrder table, so for Silverstone this sets
+                        \ the current player's position to 4
+
+ JSR SetPlayerPositions \ Set the player's current position in currentPosition,
+                        \ plus the number of the position ahead in positionAhead
+                        \ and number of the position behind in positionBehind
+
+ LDA trackData+&718     \ Set A to trackData+&718, which is &28 for the
+                        \ Silverstone track
+
+.rese4
+
+                        \ By this point, A = 1 if this is a race, or the value
+                        \ of trackData+&718 if this is practice or qualifying
+                        \ (&28 for Silverstone)
+
+ JSR sub_C109B          \ ???
+
+ LDX #19                \ We now zero the 20-byte blocks at L04B4, L0114, L0164,
+                        \ (var01Hi var01Lo) and positionNumber, and initialise
+                        \ the 20-byte blocks at L018C, bestLapMinutes and L01A4,
+                        \ so set up a loop counter in X
+
+.rese5
+
+ LDA #&80               \ Set the X-th byte of L018C to &80
  STA L018C,X
- STA bestLapMinutes,X
- LDA #0
+
+ STA bestLapMinutes,X   \ Set the X-th byte of bestLapMinutes to &80
+
+ LDA #0                 \ Zero the X-th byte of L04B4
  STA L04B4,X
- STA L0114,X
- STA L0164,X
- STA var01Hi,X
- STA positionNumber,X
- STA var01Lo,X
- LDA #&FF
+
+ STA L0114,X            \ Zero the X-th byte of L0114
+
+ STA L0164,X            \ Zero the X-th byte of L0164
+
+ STA var01Hi,X          \ Zero the X-th byte of var01Hi
+
+ STA positionNumber,X   \ Zero the X-th byte of positionNumber
+
+ STA var01Lo,X          \ Zero the X-th byte of var01Lo
+
+ LDA #&FF               \ Set the X-th byte of L01A4 to &FF
  STA L01A4,X
- DEX
- BPL C1851
- LDA #1
+
+ DEX                    \ Decrement the loop counter
+
+ BPL rese5              \ Loop back until we have zeroed or initialised all 20
+                        \ bytes in each block
+
+ LDA #1                 \ Set gearNumber = 1, to set the gears to neutral
  STA gearNumber
- STA L0030
- LDX #7
+
+ STA L0030              \ Set L0030 = 1
+
+ LDX #7                 \ Set L0009 = 7
  STX L0009
- DEX
+
+ DEX                    \ Set L0006 = 6
  STX L0006
- STX L0008
- DEX
 
-.P1885
+ STX L0008              \ Set L0008 = 6
 
- STA carInMirror,X
- DEX
- BPL P1885
- JSR PrintGearNumber
- LDA raceStarted
- BMI C18A5
+ DEX                    \ We now zero the six bytes at carInMirror to clear all
+                        \ six segments of the wing mirrors, so set X = 5 to use
+                        \ as a loop counter 
+
+.rese6
+
+ STA carInMirror,X      \ Zero the X-th wing mirror segment
+
+ DEX                    \ Decrement the loop counter
+
+ BPL rese6              \ Loop back until we have zeroed all six mirror segments
+
+ JSR PrintGearNumber    \ Print the new gear number on the gear stick (neutral)
+
+ LDA raceStarted        \ If bit 7 of raceStarted is set then this is a race
+ BMI rese7              \ rather than practice or qualifying, so jump to rese7
+                        \ with A = &80 to print the race header at the top of
+                        \ the screen
 
  LDX #40                \ Blank out the first text line at the top of the screen
  JSR PrintSecondLineGap \ and print token 40 on the second line, to give:
@@ -5691,17 +5841,19 @@ ENDIF
  LDX #1                 \ Zero (currentTenths currentSeconds currentMinutes)+1
  JSR ZeroLapTime
 
- JSR PrintBestLapTime
+ JSR PrintBestLapTime   \ Print the best lap time and the current lap time at
+                        \ the top of the screen
 
- LDA #&DF
+ LDA #223               \ Set L62EF = 223
  STA L62EF
 
- RTS
+ RTS                    \ Return from the subroutine
 
-.C18A5
+.rese7
 
- STA L0066
- STA L62FE
+ STA L0066              \ Set L0066 = &80
+
+ STA L62FE              \ Set L62FE = &80
 
  LDX #43                \ Print token 43 on the first text line at the top of
  JSR PrintFirstLine     \ the screen and token 44 on the second line, to give:
@@ -5712,10 +5864,14 @@ ENDIF
                         \ Token 44 includes five extra spaces at the end, though
                         \ I'm not sure why
 
- LDA currentPosition
- JSR GetDriverNumberBCD
- STA L002F
- RTS
+ LDA currentPosition    \ Set A to the player's current position
+
+ JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
+                        \ (BCD), adding 1 in the process
+
+ STA L002F              \ Set L002F to the player's current position in BCD
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5733,7 +5889,7 @@ ENDIF
 .sub_C18BC
 
  LDX L0051
- LDY L001F
+ LDY horizonLine
  LDA L5EB8,X
  CLC
  ADC #&14
@@ -5976,7 +6132,7 @@ ENDIF
  DEY
  STY U
  JSR sub_C1933
- LDY L001F
+ LDY horizonLine
  JMP C1977
 
 .C194E
@@ -7357,14 +7513,14 @@ ENDIF
 
 .sub_C1E9E
 
- CPY L001F
+ CPY horizonLine
 
  BCC C1EA8
  BEQ C1EA8
 
 IF _ACORNSOFT
 
- LDA L001F
+ LDA horizonLine
  JSR C1F9E
 
 ENDIF
@@ -7922,7 +8078,7 @@ ENDIF
  LDA L002A
  CMP L62FC
  BCS C1FEB
- LDX L001F
+ LDX horizonLine
 
 .C1FEB
 
@@ -8662,7 +8818,7 @@ ENDIF
  LDA LL
  STA L5F20,X
  STA L5F48,X
- CMP L001F
+ CMP horizonLine
  BCC C239A
  BNE C2396
  CPX L0051
@@ -8670,7 +8826,7 @@ ENDIF
 
 .C2396
 
- STA L001F
+ STA horizonLine
  STX L0051
 
 .C239A
@@ -8695,7 +8851,7 @@ ENDIF
  LDA #7
  CMP L0052
  BCS C23BA
- STA L001F
+ STA horizonLine
 
 .C23BA
 
@@ -9005,7 +9161,7 @@ ENDIF
 .sub_C24F6
 
  LDA #0
- STA L001F
+ STA horizonLine
  JSR sub_C22FF
  LDA #&FF
  STA L0011
@@ -9032,11 +9188,11 @@ ENDIF
 
  TAY
  STY L0052
- LDA L001F
+ LDA horizonLine
  CMP #79
  BCC C2535
  LDA #&4E
- STA L001F
+ STA horizonLine
 
 .C2535
 
@@ -9226,9 +9382,9 @@ ENDIF
  STA L5F20,Y
  CMP #&50
  BCS C261E
- CMP L001F
+ CMP horizonLine
  BCC C261E
- STA L001F
+ STA horizonLine
  STY L0051
 
 .C261E
@@ -11958,7 +12114,7 @@ ENDIF
 
 .fenc3
 
- CPY L001F              \ If Y < L001F, then this pixel row is below the
+ CPY horizonLine        \ If Y < horizonLine, then this pixel row is below the
  BCC fenc4              \ horizon, so jump to fenc4 to draw the fence with green
                         \ grass behind it
 
@@ -20152,7 +20308,7 @@ ENDIF
 
  LDA #&3C
  SEC
- SBC L001F
+ SBC horizonLine
  BPL C4F54
  CMP #&F5
  BCS C4F5B
@@ -22770,7 +22926,11 @@ ENDIF
  EQUB &E1, &E2, &E3, &E4, &E4, &E5, &E6, &E7, &E7, &E8, &E9, &EA
  EQUB &EA, &EB, &EC, &EC, &ED, &EE, &EF, &EF, &F0, &F1, &F1, &F2
  EQUB &F3, &F3, &F4, &F5, &F5, &F6, &F7, &F8, &F8, &F9, &FA, &FA
- EQUB &FB, &FB, &FC, &FD, &FD, &FE, &FF, &FF, &FF, &FE, &FC, &FA
+ EQUB &FB, &FB, &FC, &FD, &FD, &FE, &FF, &FF
+
+.L6200
+
+ EQUB &FF, &FE, &FC, &FA
  EQUB &F8, &F6, &F5, &F3, &F1, &EF, &ED, &EC, &EA, &E8, &E7, &E5
  EQUB &E4, &E2, &E0, &DF, &DD, &DC, &DA, &D9, &D8, &D6, &D5, &D3
  EQUB &D2, &D1, &CF, &CE, &CD, &CC, &CA, &C9, &C8, &C7, &C5, &C4
@@ -23764,7 +23924,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Set to 223 in ResetVariables, for practice or qualifying laps.
 \
 \ ******************************************************************************
 
@@ -23931,7 +24091,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Set to 23 in ResetVariables.
 \
 \ ******************************************************************************
 
@@ -24013,7 +24173,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Set to &80 in ResetVariables, for race laps.
 \
 \ ******************************************************************************
 
@@ -25443,28 +25603,27 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetDriverNumberBCD
+\       Name: ConvertNumberToBCD
 \       Type: Subroutine
-\   Category: Drivers
-\    Summary: Convert a driver number into binary coded decimal (BCD), ready for
-\             printing
+\   Category: Maths
+\    Summary: Convert a number into binary coded decimal (BCD), for printing
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine converts a driver number in the range 0 to 19 into a BCD number
-\ in the range 1 to 20, so the driver number can be printed.
+\ This routine converts a number in the range 0 to 19 into a BCD number in the
+\ range 1 to 20, so the number can be printed.
 \
 \ Arguments:
 \
-\   A                   The driver number to be converted into BCD (0 to 19)
+\   A                   The number to be converted into BCD (0 to 19)
 \
 \ Returns:
 \
-\   A                   The driver number in BCD (1 to 20)
+\   A                   The number in BCD (1 to 20)
 \
 \ ******************************************************************************
 
-.GetDriverNumberBCD
+.ConvertNumberToBCD
 
  CMP #10                \ If A < 10, skip the following instruction as A is in
  BCC ibcd1              \ the range 0 to 9, which is the same number in BCD
@@ -25598,7 +25757,7 @@ ENDIF
 
 .dtab2
 
- JSR GetDriverNumberBCD \ Convert the number in A into binary coded decimal
+ JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
                         \ (BCD), adding 1 in the process
 
  JSR Print2DigitBCD     \ Print the binary coded decimal (BCD) number in A, and
@@ -25890,31 +26049,33 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: Reset0554
+\       Name: ResetTrackLines
 \       Type: Subroutine
-\   Category: 
-\    Summary: Reset the blocks at L05A4, L0554, L0600, L0650 and L5F60
+\   Category: Graphics
+\    Summary: Reset the lines below the horizon in the track view, in the blocks
+\             at L05A4, L0554, L0600, L0650 and L5F60
 \
 \ ------------------------------------------------------------------------------
 \
 \ This routine does the following:
 \
-\   * Set L001F+1 bytes at L0554 to &80
+\   * Set horizonLine+1 bytes at L0554 to &80
 \
-\   * Set L001F+1 bytes at L05A4 to &80
+\   * Set horizonLine+1 bytes at L05A4 to &80
 \
-\   * Set L001F+1 bytes at L0600 to &80
+\   * Set horizonLine+1 bytes at L0600 to &80
 \
-\   * Set L001F+1 bytes at L0650 to &80
+\   * Set horizonLine+1 bytes at L0650 to &80
 \
 \   * Set 80 bytes at L5F60 to 0
 \
 \ ******************************************************************************
 
-.Reset0554
+.ResetTrackLines
 
- LDX L001F              \ We start by setting L001F+1 bytes at L05A4, L0554
-                        \ L0600 and L0650 to &80, so set a byte counter in X
+ LDX horizonLine        \ We start by setting horizonLine+1 bytes at L05A4,
+                        \ L0554 L0600 and L0650 to &80, so set a byte counter
+                        \ in X
 
  LDA #&80               \ Set A = &80 to use as our reset value
 
@@ -25930,7 +26091,7 @@ ENDIF
 
  DEX                    \ Decrement the byte counter
 
- BPL P66BA              \ Loop back until we have zeroed all L001F+1 bytes
+ BPL P66BA              \ Loop back until we have zeroed all horizonLine+1 bytes
 
  LDX #79                \ We now zero the 80 bytes at L5F60, so set a byte
                         \ counter in X

@@ -320,10 +320,12 @@ ORG CODE%
  EQUB &04
 
 \ trackData+&6FE = &59FE
+\ 24 bytes in (var18Hi var18Lo) are initialised to &034B (this is the low byte)
 
  EQUB &4B
 
 \ trackData+&6FF = &59FF
+\ 24 bytes in (var18Hi var18Lo) are initialised to &034B (this is the high byte)
 
  EQUB &03
 
@@ -363,11 +365,11 @@ ORG CODE%
 
 \ trackData+&717 = &5A17
 
- EQUB &04
+ EQUB 4
 
 \ trackData+&718 = &5A18
 
- EQUB &28
+ EQUB 40
 
 \ trackData+&719 = &5A19
 
