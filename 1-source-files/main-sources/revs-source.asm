@@ -2814,8 +2814,8 @@ ORG &0B00
 
  LDX soundRevCount      \ Set X = soundRevCount
 
- CPX soundRevTarget     \ If X = soundRevTarget, jump to soun8 to return from the
- BEQ soun8              \ subroutine
+ CPX soundRevTarget     \ If X = soundRevTarget, jump to soun8 to return from
+ BEQ soun8              \ the subroutine
 
  BCC soun2              \ If X < soundRevTarget, jump to soun2 to increment X
 
@@ -6858,7 +6858,8 @@ ENDIF
 .C1C0B
 
  STA var03Hi
- LDA #&80
+
+ LDA #%10000000         \ Set bit 7 in L62A6 and L62A7, so the tyres squeal
  STA L62A6
  STA L62A7
 
@@ -18028,37 +18029,45 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   0 or 1 (for left or right tyres?)
 \
 \ ******************************************************************************
 
 .sub_C4779
 
- LDA L002D
- CMP #2
+ LDA L002D              \ If L002D >= 2, jump to C478F to stop the tyres from
+ CMP #2                 \ squealing
  BCS C478F
+
  JSR sub_C4A91
- LDA L62A6,X
- AND #&C0
- BNE C4795
- LDA L006A
- AND #2
+
+ LDA L62A6,X            \ Set A to L62A6 (when X = 0) or L62A7 (when X = 1)
+            
+ AND #%11000000         \ If either of bit 6 or 7 is set in A, jump to C4795 to
+ BNE C4795              \ make the tyres squeal
+
+ LDA L006A              \ If bit 1 of L006A is set, jump to C4794 to return from
+ AND #%00000010         \ the subroutine
  BNE C4794
 
 .C478F
 
- LDX #3                 \ Flush the buffer for sound channel 3
- JSR FlushSoundBuffer
+ LDX #3                 \ Flush the buffer for sound channel 3 to stop any tyre
+ JSR FlushSoundBuffer   \ squeals we might already be making
 
 .C4794
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .C4795
 
  JSR sub_C4AF7
- LDA soundBuffer+3
- BNE C47A4
+
+ LDA soundBuffer+3      \ If sound buffer 3 is currently being used, then we are
+ BNE C47A4              \ already making the sound of the tyres squealing, so
+                        \ jump to C47A4 to return from the subroutine
 
  LDY #1                 \ Make sound #3 (tyre squeal) using envelope 1
  LDA #3
@@ -18066,7 +18075,7 @@ ENDIF
 
 .C47A4
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -18791,7 +18800,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   0 or 1 (for left or right tyres?)
 \
 \ ******************************************************************************
 
@@ -18883,7 +18894,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   0 or 1 (for left or right tyres?)
 \
 \ ******************************************************************************
 
@@ -23467,7 +23480,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If bit 7 is set L62A6, we make the sound of squealing tyres.
 \
 \ ******************************************************************************
 
@@ -23484,7 +23497,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If bit 7 is set L62A7, we make the sound of squealing tyres.
 \
 \ ******************************************************************************
 
