@@ -379,9 +379,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.revs
+.revCount
 
- SKIP 1                 \ The current revs, as shown on the rev counter
+ SKIP 1                 \ The current rev count, as shown on the rev counter
 
 .L003D
 
@@ -567,13 +567,19 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L005F
+.soundRevTarget
 
- SKIP 1                 \ 
+ SKIP 1                 \ The target pitch for the revs sound
+                        \
+                        \ The pitch for the revs sound moves towards this pitch
+                        \ level one step at a time, to simulate the sound of the
+                        \ engine "catching up" to the throttle
+                        \
+                        \ The target pitch is set to revCount + 25
 
-.L0060
+.soundRevCount
 
- SKIP 1                 \ 
+ SKIP 1                 \ The current pitch for the revs sound
 
 .L0061
 
@@ -1033,12 +1039,14 @@ ORG &0380
 
 .volumeLevel
 
- SKIP 2                 \ The game's volume level
+ SKIP 1                 \ The game's volume level
                         \
                         \ This uses the operating system's volume scale, with
                         \ -15 being full volume and 0 being silent
                         \
                         \ Set to -10 (246) in SetupGame
+
+ SKIP 1                 \ This byte appears to be unused
 
 .L0600
 
@@ -1629,10 +1637,10 @@ ENDIF
 \ where each value consists of two bytes, with the low byte first and the high
 \ byte second.
 \
-\ For the channel/flush parameter, the top nibble of the low byte is the channel
-\ number, while the bottom nibble of the low byte is the flush control (where a
-\ flush control of 0 queues the sound, and a flush control of 1 makes the sound
-\ instantly). When written in hexadecimal, the first figure gives the flush
+\ For the channel/flush parameter, the top nibble of the low byte is the flush
+\ control (where a flush control of 0 queues the sound, and a flush control of
+\ 1 makes the sound instantly), while the bottom nibble of the low byte is the
+\ channel number . When written in hexadecimal, the first figure gives the flush
 \ control, while the second is the channel (so &13 indicates flush control = 1
 \ and channel = 3).
 \
@@ -1651,7 +1659,7 @@ ORG &0B00
 
 .soundData
 
- EQUB &10, &00          \ Sound #0: Engine roar (SOUND &10, -10, 3, 255)
+ EQUB &10, &00          \ Sound #0: Engine exhaust (SOUND &10, -10, 3, 255)
  EQUB &F6, &FF
  EQUB &03, &00
  EQUB &FF, &00
@@ -1681,13 +1689,13 @@ ORG &0B00
 \       Name: envelopeData
 \       Type: Variable
 \   Category: Sound
-\    Summary: Data for the sound envelope
+\    Summary: Data for the sound envelope for squealing tyres
 \
 \ ------------------------------------------------------------------------------
 \
-\ There is one sound envelope defined in Revs:
+\ There is only one sound envelope defined in Revs:
 \
-\   * Envelope 1 defines the engine sound
+\   * Envelope 1 defines the sound of the tyres squealing
 \
 \ ******************************************************************************
 
@@ -2700,112 +2708,241 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0E74
+\       Name: MakeDrivingSounds
 \       Type: Subroutine
 \   Category: Sound
-\    Summary: 
+\    Summary: Make the relevant sounds for the engine and tyres
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The engine sound is made up of three parts:
+\
+\   * Engine exhaust on sound channel 0
+\   * Engine tone 1 on sound channel 1
+\   * Engine tone 2 on sound channel 2
+\
+\ The exhaust is a kind of "putter-putter" white-noise sound, while the tones
+\ get higher with higher rev counts, with tone 2 sounding for the whole range of
+\ engine speeds from idling and up, and tone 1 only kicking in at higher revs.
+\ The exhaust sound dies off at higher revs, when the engine is working at high
+\ efficiency. The two tones are separated by a pitch of 28, with tone 1 lower
+\ than tone 2.
+\
+\ The engine sounds depend on the value of soundRevTarget, which is set to
+\ revCount + 25 (where revCount is the current rev count, as shown on the rev
+\ counter). The soundRevCount variable moves towards the value of soundRevTarget
+\ in steps of 1 on each call of this routine, so the engine sound is constantly
+\ pitching up or down, trying to match the target in soundRevTarget.
+\
+\ This is how the engine sounds work with the various ranges of soundRevCount:
+\
+\   * If soundRevCount < 28:
+\
+\     * The engine is effectively off (revCount < 3)
+\     * Rev counter hand is resting on the pin at 8 o'clock (i.e. the minimum)
+\     * Stop all engine-related sounds
+\
+\   * If 28 <= soundRevCount < 64:
+\
+\     * The engine is idling (3 <= revCount < 39)
+\     * When the engine is idling, soundRevCountdrops below 28 every now and
+\       then, so the engine sound cuts out as if it is misfiring, but generally
+\       it stays just above 28
+\     * Rev counter hand is between 8 o'clock and 9 o'clock
+\     * Make the sound of the engine exhaust
+\     * Silence engine tone 1
+\     * Silence engine tone 2
+\
+\   * If 64 <= soundRevCount < 92:
+\
+\     * The engine is revving up (39 <= revCount < 67)
+\     * Rev counter hand is between 9 o'clock and 11 o'clock
+\     * Make the sound of the engine exhaust
+\     * Silence engine tone 1
+\     * Set the pitch of engine tone 2 to soundRevCount - 64 (0 to 27)
+\     * Make the sound of engine tone 2
+\
+\   * If soundRevCount >= 92:
+\
+\     * The engine is revved up (revCount >= 67)
+\     * Rev counter hand is past 11 o'clock
+\     * Do not make the sound of the engine exhaust
+\     * Set the pitch of engine tone 1 to soundRevCount - 92 (0 and up)
+\     * Make the sound of engine tone 1
+\     * Set the pitch of engine tone 2 to soundRevCount - 64 (28 and up)
+\     * Make the sound of engine tone 2
+\
+\ Note that in the above, the clock-face times are rounded to the nearest hour,
+\ to keep things simple (for example, both tones kick in when the rev counter
+\ passes 3.5 minutes to 12, which is a little way after 11 o'clock).
 \
 \ ******************************************************************************
 
-.sub_C0E74
+.MakeDrivingSounds
 
- LDA L62A6
- ORA L62A7
- BPL C0E92
+ LDA L62A6              \ If bit 7 is clear in both L62A6 and L62A7, jump to
+ ORA L62A7              \ soun1 to skip the following
+ BPL soun1
+
+                        \ Otherwise we add some random pitch variation to the
+                        \ crash/bump sound and make the sound of the tyres
+                        \ squealing
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which will be a pretty random figure
 
- CMP #&3F
- BCS C0E92
- AND #3
- CLC
- ADC #&82
+ CMP #63                \ If A < 63 (25% chance), jump to soun1 to skip the
+ BCS soun1              \ following
 
- STA soundData+28       \ Update byte #5 of sound #4 (low byte of pitch)
+ AND #3                 \ Reduce A to a random number in the range 0 to 3
+
+ CLC                    \ Add 130 to A, so A is a random number in the range
+ ADC #130               \ 130 to 133
+
+ STA soundData+28       \ Update byte #5 of sound #4 (low byte of pitch) so the
+                        \ pitch of the crash/bump sound wavers randomly
 
  LDA #3                 \ Make sound #3 (tyre squeal) using envelope 1
  LDY #1
  JSR MakeSound
 
-.C0E92
+.soun1
 
- LDX L0060
- CPX L005F
- BEQ C0EE0
- BCC C0E9D
- DEX
- BCS C0E9E
+                        \ We now increment or decrement soundRevCount so it
+                        \ steps towards the value of soundRevTarget, which moves
+                        \ the pitch of the engine towards the current rev count
 
-.C0E9D
+ LDX soundRevCount      \ Set X = soundRevCount
 
- INX
+ CPX soundRevTarget     \ If X = soundRevTarget, jump to soun8 to return from the
+ BEQ soun8              \ subroutine
 
-.C0E9E
+ BCC soun2              \ If X < soundRevTarget, jump to soun2 to increment X
 
- STX L0060
- CPX #&1C
- BCC C0EE1
- TXA
+ DEX                    \ Decrement X and skip the next instruction (this BCS
+ BCS soun3              \ is effectively a JMP as we passed through the BCC)
+
+.soun2
+
+ INX                    \ Increment X
+
+.soun3
+
+ STX soundRevCount      \ Store X in soundRevCount, so soundRevCount moves one
+                        \ step closed to soundRevTarget
+
+                        \ We now do the following, depending on the updated
+                        \ value of soundRevCount in X:
+                        \
+                        \   * If soundRevCount < 28, flush all the sound buffers
+                        \     (i.e. stop making any sounds)
+                        \
+                        \   * If 28 <= soundRevCount < 92, make the engine
+                        \     exhaust sound, set the pitch of engine tone 1 to
+                        \     soundRevCount + 95 and the volume of engine tone 1
+                        \     to 0, and make the sound of engine tone 1
+                        \
+                        \   * If soundRevCount >= 92, silence the exhaust, set
+                        \     the pitch of engine tone 1 to soundRevCount - 92,
+                        \     and make the sound of engine tone 1
+
+ CPX #28                \ If X < 28, then jump to soun9 to flush all the sound
+ BCC soun9              \ buffers, as the rev count is too low for the engine to
+                        \ make a sound
+
+ TXA                    \ Set A = X - 92
  SEC
- SBC #&5C
- BCS C0EB8
- PHA
+ SBC #92
 
- LDA #0                 \ Make sound #0 (engine roar) at the current volume
+ BCS soun4              \ If the subtraction didn't underflow, i.e. X >= 92,
+                        \ then jump to soun4 to silence the engine exhaust and
+                        \ set the pitch of engine tone 1 to X - 92
+
+ PHA                    \ Store A on the stack to we can retrieve it after the
+                        \ following call
+
+ LDA #0                 \ Make sound #0 (engine exhaust) at the current volume
  JSR MakeSound-3        \ level
 
- PLA
- CLC
- ADC #&BB
- LDY #0
- BEQ C0EC0
+ PLA                    \ Retrieve the value of A that we stored on the stack,
+                        \ so A = X - 92
 
-.C0EB8
+ CLC                    \ Set A = A + 187
+ ADC #187               \       = X - 92 + 187
+                        \       = X + 95
+                        \
+                        \ so we set the pitch of engine tone 1 to X + 95
 
- LDX #0                 \ Flush the buffer for sound channel 0
- JSR FlushSoundBuffer
+ LDY #0                 \ Set Y = 0, so we set the volume of engine tone 1 to
+                        \ zero (silent)
 
- LDY volumeLevel
+ BEQ soun5              \ Jump to soun5 (this BEQ is effectively a JMP as Y is
+                        \ always zero)
 
-.C0EC0
+.soun4
 
- STA soundData+12       \ Update byte #5 of sound #1 (low byte of pitch)
+ LDX #0                 \ Flush the buffer for sound channel 0, which will stop
+ JSR FlushSoundBuffer   \ the sound of the engine exhaust
+
+ LDY volumeLevel        \ Set Y to the current volume level
+
+.soun5
+
+ STA soundData+12       \ Update byte #5 of sound #1 (low byte of pitch), to set
+                        \ the pitch of engine tone 1 to A
 
  LDA #1                 \ Make sound #1 (engine tone 1) with volume Y
  JSR MakeSound
 
- LDY volumeLevel
- BEQ C0EDB
- LDA L0060
+                        \ We now do the following, depending on the updated
+                        \ value of soundRevCount:
+                        \
+                        \   * If the volume level is currently zero, make the
+                        \     sound of engine tone 2 sound with volume 0
+                        \
+                        \   * If soundRevCount >= 64, set the pitch of engine
+                        \     tone 2 to soundRevCount - 64, and make the sound
+                        \     of engine tone 2
+                        \
+                        \   * If soundRevCount < 64, make the sound of engine
+                        \     tone 2 with volume 0
+
+ LDY volumeLevel        \ If the volume level is currently zero (no sound), jump
+ BEQ soun7              \ to soun7 to make the engine tone 2 sound with volume 0
+
+ LDA soundRevCount      \ Set A = soundRevCount - 64
  SEC
- SBC #&40
- BCS C0ED8
- LDY #0
- BEQ C0EDB
+ SBC #64
 
-.C0ED8
+ BCS soun6              \ If the subtraction didn't underflow, i.e. A >= 64,
+                        \ then jump to soun6 to set the pitch of engine tone 2
+                        \ to soundRevCount - 64
 
- STA soundData+20       \ Update byte #5 of sound #2 (low byte of pitch)
+ LDY #0                 \ Set Y = 0, so we set the volume of engine tone 2 to
+                        \ zero (silent)
 
-.C0EDB
+ BEQ soun7              \ Jump to soun7 (this BEQ is effectively a JMP as Y is
+                        \ always zero)
+
+.soun6
+
+ STA soundData+20       \ Update byte #5 of sound #2 (low byte of pitch), to set
+                        \ the pitch of engine tone 2 to A
+
+.soun7
 
  LDA #2                 \ Make sound #2 (engine tone 2) with volume Y
  JSR MakeSound
 
-.C0EE0
+.soun8
 
- RTS
+ RTS                    \ Return from the subroutine
 
-.C0EE1
+.soun9
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2915,7 +3052,8 @@ ORG &0B00
 
 .shif5
 
- INC L0060              \ Increment L0060
+ INC soundRevCount      \ Increment soundRevCount to make the engine sound jump
+                        \ a little
 
  LDA #0                 \ Set configPause = 0 to clear the pause/unpause key
  STA configPause        \ press
@@ -2981,7 +3119,8 @@ ORG &0B00
  LDA #0                 \ Set up the envelope for the engine sound, with the
  JSR DefineEnvelope     \ volume changed accordingly
 
- INC L0060              \ Increment L0060
+ INC soundRevCount      \ Increment soundRevCount to make the engine sound jump
+                        \ a little
 
 .shif9
 
@@ -3567,8 +3706,8 @@ ORG &0B00
  BPL P114C
  STA L0061
  STA L0026
- STA L0060
- STA L005F
+ STA soundRevCount
+ STA soundRevTarget
  LDA #&7F
  STA L002D
  LDA #&1F
@@ -5065,7 +5204,7 @@ ENDIF
 
  LDX #%10000000         \ Set bit 7 of X to store in throttleBrakeState below
 
- LDA revs               \ Set A = 5 + revs / 4
+ LDA revCount           \ Set A = 5 + revCount / 4
  LSR A                  \
  LSR A                  \ to store in throttleBrake below
  CLC
@@ -5083,7 +5222,7 @@ ENDIF
                         \     or joystick:
                         \
                         \       throttleBrakeState = bit 7 set
-                        \       throttleBrake = 5 + revs / 4
+                        \       throttleBrake = 5 + revCount / 4
                         \
                         \   * Joystick is enabled and 2.5 * y-axis < 250 (so
                         \     joystick is in the zone around the centre)
@@ -5338,14 +5477,14 @@ ENDIF
 
  JSR sub_C0FFE
 
- JSR sub_C0E74
+ JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
                         \ L5F60
 
  JSR sub_C1A20
 
- JSR sub_C0E74
+ JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR sub_C18BC
 
@@ -5362,7 +5501,7 @@ ENDIF
 
  JSR UpdateMirrors      \ Update the view in the wing mirrors
 
- JSR sub_C0E74
+ JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR MoveHorizon        \ Move the position of the horizon palette switch up or
                         \ down, depending on the current track height
@@ -5557,7 +5696,7 @@ ENDIF
 
 .main12
 
- JSR sub_C0E74          \ ??? Sound related
+ JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR UpdateDashboard    \ Update the rev counter on the dashboard
 
@@ -18424,7 +18563,7 @@ ENDIF
 
 .C499F
 
- LDA revs
+ LDA revCount
  LDX throttleBrakeState
  DEX
  BNE C49B0
@@ -18459,7 +18598,7 @@ ENDIF
 
 .C49C5
 
- STA revs
+ STA revCount
  STA L005A
 
 .C49C9
@@ -18565,7 +18704,7 @@ ENDIF
 
 .C4A37
 
- STA revs
+ STA revCount
  CMP #&AA
  BCC C4A3F
  LDA #&AA
@@ -18636,10 +18775,10 @@ ENDIF
 
  STA L003D
 
- LDA revs
+ LDA revCount           \ Set soundRevTarget = revCount + 25
  CLC
- ADC #&19
- STA L005F
+ ADC #25
+ STA soundRevTarget
 
  RTS
 
@@ -21360,8 +21499,8 @@ ENDIF
  LDA #%000              \ Set H = %000 to pass into DrawDashboardLine below
  STA H
 
- LDA revs               \ Set A = revs, which is the value we want to draw on
-                        \ the rev counter, in the range 0 to 170
+ LDA revCount           \ Set A = revCount, which is the value we want to draw
+                        \ on the rev counter, in the range 0 to 170
 
  CMP #30                \ If A >= 30, skip the following instruction
  BCS revs1
@@ -21377,12 +21516,12 @@ ENDIF
  LSR A                  \ Set A = A / 2 + T
  CLC                    \       = A / 2 + A
  ADC T                  \       = 1.5 * A
-                        \       = 1.5 * revs
+                        \       = 1.5 * revCount
                         \
                         \ which is in the range 45 to 255
 
  ROR A                  \ Set A = A / 2
-                        \       = 0.75 * revs
+                        \       = 0.75 * revCount
                         \
                         \ which is in the range 22 to 127
 
