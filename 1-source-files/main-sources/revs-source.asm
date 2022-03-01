@@ -3388,7 +3388,7 @@ ORG &0B00
 
  STA V                  \ Store the value of A in V, so we can retrieve it later
 
- SEC                    \ Set bit 7 of L62F8
+ SEC                    \ Set bit 7 of L62F8, so the sub_C4F77 has no effect
  ROR L62F8
 
 .P10A1
@@ -3414,8 +3414,8 @@ ORG &0B00
 
 .C10B7
 
- LDA V
- STA W
+ LDA V                  \ Set W to the original value of A, which we stored in
+ STA W                  \ W above
 
 .P10BB
 
@@ -4433,7 +4433,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   L62F8               If bit 7 is set, the call to sub_C4F77 has no effect
 \
 \ ******************************************************************************
 
@@ -5367,7 +5369,8 @@ ENDIF
 
  JSR sub_C0E74
 
- JSR sub_C4F44
+ JSR MoveHorizon        \ Move the position of the horizon palette switch up or
+                        \ down, depending on the current track height
 
  JSR sub_C1BB9
 
@@ -20293,46 +20296,93 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4F44
+\       Name: MoveHorizon
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Screen mode
+\    Summary: Move the position of the horizon palette switch up or down,
+\             depending on the current track height
+\  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
-.sub_C4F44
+.MoveHorizon
 
- LDA #&3C
- SEC
- SBC horizonLine
- BPL C4F54
- CMP #&F5
- BCS C4F5B
- LDA #&F5
- SEC
- BCS C4F5B
+ LDA #60                \ Set A = 60 - horizonLine
+ SEC                    \
+ SBC horizonLine        \ So A is larger when the horizon is low (i.e. when we
+                        \ are cresting a hill), and smaller when the horizon is
+                        \ high (i.e. when we are in a dip)
 
-.C4F54
+ BPL hori1              \ If A >= 0, then horizonLine <= 60, so jump to hori1
 
- CMP #&12
- BCC C4F5B
- LDA #&12
- CLC
+ CMP #&F5               \ If A >= -11, then horizonLine <= 71, so jump to hori2
+ BCS hori2              \ with the C flag set
 
-.C4F5B
+ LDA #&F5               \ Otherwise set A = -11 and set the C flag, so A has a
+ SEC                    \ minimum value of -11
 
- PHP
- STA U
- LDA #0
- ROR U
- ROR A
- PLP
- ROR U
- ROR A
+ BCS hori2              \ Jump to hori2 (this BCS is effectively a JMP as we
+                        \ just set the C flag)
+
+.hori1
+
+                        \ If we get here then A >= 0, i.e. horizonLine <= 60
+
+ CMP #18                \ If A < 18, jump to hori2 to skip the following two
+ BCC hori2              \ instructions
+
+ LDA #18                \ Otherwise set A = 18 and clear the C flag, so A has a
+ CLC                    \ maximum value of 18
+
+.hori2
+
+ PHP                    \ Store the C flag on the stack, which will be clear if
+                        \ A >= 0, or set if A < 0 (so the C flag is effectively
+                        \ the sign bit of A)
+
+ STA U                  \ Set (U A) = (A 0)
+ LDA #0                 \           = A * 256
+                        \
+                        \ where -11 <= A < 18 and the sign bit of A is in C
+
+ ROR U                  \ Set (U A) = (U A) >> 1, inserting the sign bit from C
+ ROR A                  \ into bit 7
+
+ PLP                    \ Set the C flag to the sign bit once again
+
+ ROR U                  \ Set (U A) = (U A) >> 1, inserting the sign bit from C
+ ROR A                  \ into bit 7
+                        \
+                        \ So by this point, we have:
+                        \
+                        \   (U A) = A * 256 / 4
+                        \         = A * 64
+                        \
+                        \ with the correct sign, so (U A) is in the range -704
+                        \ to 1152, and is larger when the horizon is low (i.e.
+                        \ when we are cresting a hill), and smaller when the
+                        \ horizon is high (i.e. when we are in a dip)
+                        \
+                        \ We now add this figure to (timer1Hi timer1Lo), which
+                        \ determines the height of the horizon portion of the
+                        \ custom screen mode, i.e. where the palette switches
+                        \ from blue sky to the green ground
+                        \
+                        \ So when we are cresting a hill, (U A) is large and so
+                        \ is timer 1, and therefore so is the size of the sky
+                        \ above the the horizon in section 2 of the screen, so
+                        \ the horizon dips down
+                        \
+                        \ Conversely, when we are in a dip, (U A) is small and
+                        \ and so is timer 1, so the size of the sky section
+                        \ above the horizon is smaller, so the horizon rises up
+                        \
+                        \ The range of (timer1Hi timer1Lo) values from the
+                        \ following calculation is therefore:
+                        \
+                        \   Minimum: &04D8 - 704 = &0218 (we are in a dip)
+                        \
+                        \   Maximum: &04D8 + 1152 = &0958 (we are on a hill)
 
  SEI                    \ Disable interrupts so we can update the custom screen
                         \ variables
@@ -20347,7 +20397,7 @@ ENDIF
 
  CLI                    \ Re-enable interrupts
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -20358,14 +20408,17 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   L62F8               If bit 7 is set, this routine does nothing
 \
 \ ******************************************************************************
 
 .sub_C4F77
 
- BIT L62F8
- BMI C4F90
+ BIT L62F8              \ If bit 7 of L62F8 is set, jump to C4F90 to return from
+ BMI C4F90              \ the subroutine
+
  CPX #&14
  BCS C4F90
  LDA L018C,X
@@ -20379,7 +20432,7 @@ ENDIF
 
 .C4F90
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .C4F91
 
