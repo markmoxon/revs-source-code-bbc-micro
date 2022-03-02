@@ -372,8 +372,11 @@ ORG CODE%
  EQUB 40
 
 \ trackData+&719 = &5A19
+\ Something to do with the lap timer - when L0046 matches this number, the lap
+\ timer is bumped up by 18/100 rather than 9/100 in sub_C17C3
+\ L0046 is incremented in sub_C5052
 
- EQUB &18
+ EQUB 24
 
 \ trackData+&71A = &5A1A
 

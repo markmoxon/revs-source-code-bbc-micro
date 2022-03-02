@@ -324,9 +324,14 @@ ORG &0000
                         \
                         \ In mph? This looks like the fractional part
 
-.L002F
+.positionChange
 
- SKIP 1                 \ Set to the player's current position in BCD in
+ SKIP 1                 \ Some kind of delta in BCD for the player's race
+                        \ position ???
+                        \
+                        \ Gets added to currentPositionBCD when non-zero
+                        \
+                        \ Set to the player's current position in BCD in
                         \ ResetVariables
 
 .L0030
@@ -335,9 +340,11 @@ ORG &0000
                         \
                         \ Set to 1 in ResetVariables
 
-.L0031
+.currentPositionBCD
 
- SKIP 1                 \ 
+ SKIP 1                 \ The current race position in BCD
+                        \
+                        \ Displayed at the top of the screen after "Position"
 
 .L0032
 
@@ -604,15 +611,28 @@ ORG &0000
                         \
                         \  * 1 = print the character with OSWRCH (for mode 7)
 
-.L0065
+.qualifyTimeEnding
 
- SKIP 1                 \ 
-
-.L0066
-
- SKIP 1                 \ 
+ SKIP 1                 \ Determines whether the time warnings have been shown
+                        \ at the end of the qualifying time:
                         \
-                        \ Set to &80 in ResetVariables for race laps
+                        \   * Bit 6 set = the one-minute warning has been shown
+                        \
+                        \   * Bit 7 set = the time-up watning has been shown
+
+.updateDrivingInfo
+
+ SKIP 1                 \ Determines which parts of the driving information
+                        \ should be updated at the top of the screen
+                        \
+                        \   * Bit 7 set = update lap number (during a race)
+                        \                 update lap time (practice/qualifying)
+                        \
+                        \   * Bit 6 set = we are driving the first practice or
+                        \                 qualifying lap, so do not update the
+                        \                 best lap time
+                        \
+                        \ Set to %10000000 in ResetVariables for race laps only
 
 .L0067
 
@@ -3352,42 +3372,55 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0FFE
+\       Name: UpdateLapTimers
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: Update the lap timers and display timer-related messages at the
+\             top of the screen
 \
 \ ******************************************************************************
 
-.sub_C0FFE
+.UpdateLapTimers
 
- LDA raceStarted
- BPL C1032
- BIT L0066
- BPL C102A
- LDA #0
- STA L0066
- STA G
- LDX currentPlayer
- LDA L04B4,X
- CMP #1
- EOR #&FF
- ADC numberOfLaps
- PHP
+ LDA raceStarted        \ If bit 7 of raceStarted is clear then this is either
+ BPL laps2              \ a practice or qualifying lap, so jump to laps2 to
+                        \ update the lap timers for qualifying
+
+                        \ If we get here then this is a race lap
+
+ BIT updateDrivingInfo  \ If bit 7 of updateDrivingInfo is clear then we do not
+ BPL laps1              \ need to update the lap number, so jump to laps1 to
+                        \ skip straight to updating the driver positions
+
+ LDA #%00000000         \ Clear bits 6 and 7 of updateDrivingInfo so we don't
+ STA updateDrivingInfo  \ update the number of laps again until the value of
+                        \ updateDrivingInfo changes to indicate that we should
+
+ STA G                  \ Set G = 0 so the call to Print2DigitBCD below will
+                        \ print the second digit and will not print leading
+                        \ zeroes when printing the number of laps
+
+ LDX currentPlayer      \ Set X to the driver number of the current player
+
+ LDA L04B4,X            \ Set A = the L04B4 value for the current player
+
+ CMP #1                 \ If A >= 1, set the C flag, otherwise clear it
+
+ EOR #&FF               \ Set A = numberOfLaps + ~A + C
+ ADC numberOfLaps       \       = numberOfLaps - A      if A >= 1
+                        \       = numberOfLaps - 1      if A = 0
+
+ PHP                    \ Store the resulting flags on the stack
 
  JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
                         \ (BCD), adding 1 in the process
 
- LDX #&0C
- LDY #&21
+ LDX #12                \ Print the number in A at column 12, pixel row 33, on
+ LDY #33                \ the second text line at the top of the screen
  JSR Print2DigitBCD-6
 
- PLP
- BPL C102A
+ PLP                    \ If the result of the above addition was positive, jump
+ BPL laps1              \ to laps1 to skip printing the finished message
 
  LDX #53                \ Blank out the first text line at the top of the screen
  JSR PrintSecondLineGap \ and print token 53 on the second line, to give:
@@ -3395,28 +3428,54 @@ ORG &0B00
                         \    "                                      "
                         \    "               FINISHED               "
 
-.C102A
+.laps1
 
- LDA L000F
- BNE C109A
+ LDA L000F              \ If A <> L000F, return from the subroutine (as laps8
+ BNE laps8              \ contains an RTS)
 
- JSR sub_C1B84
+ JSR UpdatePositionInfo \ Otherwise update the position number and driver names
+                        \ at the top of the screeen
 
- RTS
+ RTS                    \ Return from the subroutine
 
-.C1032
+.laps2
 
- LDX #1
- JSR sub_C17C3
- BIT L0066
- BVS C1056
- BPL C106F
- LSR L0066
- LDA #&21
- CLC
- ADC L62EF
- STA L62EF
- BEQ C104F
+                        \ If we get here then this is a practice or qualifying
+                        \ lap
+
+ LDX #1                 \ Add time to the lap timer at (currentMinutes
+ JSR AddTimeToLapTimer  \ currentSeconds currentTenths)+1, setting the C flag
+                        \ if the time has changed
+
+ BIT updateDrivingInfo  \ If bit 6 of updateDrivingInfo is set then we have
+ BVS laps4              \ started the first lap, so jump to laps4 to skip the
+                        \ following and print the lap time only (we make the
+                        \ jump with the C flag indicating whether the timer has
+                        \ changed)
+
+ BPL laps6              \ If bit 7 of updateDrivingInfo is clear then we do not
+                        \ need to update the lap time, so jump to laps6 to skip
+                        \ the following
+
+                        \ If we get here then we have started the first lap of
+                        \ practice or qualifying and we need to print the lap
+                        \ time
+
+ LSR updateDrivingInfo  \ Bit 7 of updateDrivingInfo is set and bit 6 is clear,
+                        \ so clear bit 7 and set bit 6 of updateDrivingInfo to
+                        \ indicate that we are now driving the first lap
+
+ LDA #33                \ Set firstLapStarted = firstLapStarted + 33
+ CLC                    \
+ ADC firstLapStarted    \ So if we have just started the first lap, then this
+ STA firstLapStarted    \ changes firstLapStarted from -33 to 0
+
+ BEQ laps3              \ If A = 0, then we just started the first qualifying or
+                        \ practice lap, so jump to laps3 to skip the following
+                        \ two instructions
+
+                        \ I am not sure if we ever get here, as the current lap
+                        \ time is never printed with tenths of a second
 
  LDA #%00100110         \ Print the current lap time at the top of the screen in
  JSR PrintThisLapTime+2 \ the following format:
@@ -3426,30 +3485,50 @@ ORG &0B00
                         \   * %0  Tenths: Print tenths of a second
                         \   * %11 Tenths: Leading zeroes, no second digit
 
-.C104F
+.laps3
 
- LDX #1                 \ Zero (currentTenths currentSeconds currentMinutes)+1
+ LDX #1                 \ Zero (currentMinutes currentSeconds currentTenths)+1
  JSR ZeroLapTime
 
- BEQ C106F              \ Jump to C106F (this BNE is effectively a JMP as the
+ BEQ laps6              \ Jump to laps6 (this BNE is effectively a JMP as the
                         \ ZeroLapTime routine sets the Z flag)
 
-.C1056
+.laps4
 
- LDA L62EF
- BEQ C106A
- DEC L62EF
- BNE C106F
- JSR PrintBestLapTime
+                        \ If we get here, then the C flag indicates whether the
+                        \ lap timer at (currentMinutes currentSeconds
+                        \ currentTenths)+1 has changed
+
+ LDA firstLapStarted    \ If firstLapStarted = 0 then we are currently driving
+ BEQ laps5              \ the first qualifying or practice lap, so jump to laps5
+                        \ to print the current lap time, but not the best lap
+                        \ time (as we haven't completed a lap yet)
+                        \
+                        \ We jump with the C flag indicating whether the timer
+                        \ has changed
+
+ DEC firstLapStarted    \ Decrement firstLapStarted
+
+ BNE laps6              \ If firstLapStarted is non-zero, jump to laps6 to skip
+                        \ printing any lap times
+
+ JSR PrintBestLapTime   \ Print the best lap time and the current lap time at
+                        \ the top of the screen
 
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
 
- BEQ C106F
+ BEQ laps6              \ Jump to laps6 to skip the following (this BEQ is
+                        \ effectively a JMP, as PrintSpaces sets the Z flag)
 
-.C106A
+.laps5
 
- BCC C106F
+                        \ If we get here, then the C flag indicates whether the
+                        \ lap timer at (currentMinutes currentSeconds
+                        \ currentTenths)+1 has changed
+
+ BCC laps6              \ If the C flag is clear then the timer has not changed,
+                        \ so jump to laps6 to skip the following instruction
 
  JSR PrintThisLapTime   \ Print the current lap time at the top of the screen in
                         \ the following format:
@@ -3458,17 +3537,36 @@ ORG &0B00
                         \   * Seconds: Leading zeroes, print both digits
                         \   * Tenths: Do not print tenths of a second
 
-.C106F
+.laps6
 
- LDA qualifyingTime
- BMI C109A
- CMP currentMinutes
- BCC C1089
- BNE C109A
- BIT L0065
- BVS C109A
- LDA #&40
- STA L0065
+ LDA qualifyingTime     \ If bit 7 of qualifyingTime is set then this is a
+ BMI laps8              \ practice lap (i.e. qualifyingTime = 255), so jump to
+                        \ laps8 to return from the subroutine
+
+                        \ If we get here then this is a qualifying lap, and the
+                        \ number of minutes of qualifying lap time is in A, as
+                        \ follows:
+                        \
+                        \   * A = 4 indicates 5 minutes of qualifying time
+                        \
+                        \   * A = 9 indicates 10 minutes of qualifying time
+                        \
+                        \   * A = 25 indicates 26 minutes of qualifying time
+
+ CMP currentMinutes     \ If A < currentMinutes then we have reached the end of
+ BCC laps7              \ qualifying time, so jump to laps7 to display the
+                        \ time-up message
+
+ BNE laps8              \ If A <> currentMinutes, i.e. A > currentMinutes, then
+                        \ there is still some qualifying time left, so jump to
+                        \ laps8 to return from the subroutine
+
+ BIT qualifyTimeEnding  \ If bit 6 of qualifyTimeEnding is set, then we have
+ BVS laps8              \ already displayed the one-minute warning, so jump to
+                        \ laps8 to return from the subroutine
+
+ LDA #%01000000         \ Set bit 6 of qualifyTimeEnding to indicate that the
+ STA qualifyTimeEnding  \ one-minute warning has been displayed
 
  LDX #41                \ Print token 41 on the first text line at the top of
  JSR PrintFirstLine     \ the screen, to give:
@@ -3477,15 +3575,17 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
-.C1089
+.laps7
 
- LDA L0065
- BMI C109A
+ LDA qualifyTimeEnding  \ If bit 7 of qualifyTimeEnding is set, then we have
+ BMI laps8              \ already displayed the time-up message, so jump to
+                        \ laps8 to return from the subroutine
 
- LDA #&C0
- STA L0065
+ LDA #%11000000         \ Set bits of 6 and 7 of qualifyTimeEnding to indicate
+ STA qualifyTimeEnding  \ that we have displayed both the one-minute warning and
+                        \ the time-up message
 
- LDA #60
+ LDA #60                \ Set L000F = 60
  STA L000F
 
  LDX #42                \ Print token 42 on the first text line at the top of
@@ -3493,7 +3593,7 @@ ORG &0B00
                         \
                         \   "           YOUR TIME IS UP!           "
 
-.C109A
+.laps8
 
  RTS                    \ Return from the subroutine
 
@@ -3521,65 +3621,74 @@ ORG &0B00
 
  STA V                  \ Store the value of A in V, so we can retrieve it later
 
- SEC                    \ Set bit 7 of L62F8, so the sub_C4F77 has no effect
- ROR L62F8
+ SEC                    \ Set bit 7 of L62F8, so the JSR sub_C4F77 in sub_C147C
+ ROR L62F8              \ has no effect
 
 .P10A1
 
- LDX #19
+ LDX #19                \ Set a loop counter in X to loop through the drivers
 
 .P10A3
 
- JSR sub_C147C
+ JSR sub_C147C          \ Updates L06E8, L0880, var18 for this driver ???
 
- DEX
+ DEX                    \ Decrement the loop counter
 
- BPL P10A3
+ BPL P10A3              \ Loop back until we have processed all 20 drivers
 
- LDA var18Lo
- ORA var18Hi
+                        \ At this point X = -1
+
+ LDA var18Lo            \ If var18 is non-zero, jump back to P10A1 to repeat
+ ORA var18Hi            \ the above loop
  BNE P10A1
 
- LDA #&FF
+ LDA #&FF               \ Set G = -1
  STA G
 
- BNE C10CF
+ BNE C10CF              \ Jump to C10CF (this BNE is effectively a JMP as A is
+                        \ never zero)
+
+                        \ We now do an outer loop of G from -1 to 19, with an
+                        \ inner loop X = G to 19, with a further inner loop of
+                        \ W = V to 0
 
 .C10B7
 
- LDA V                  \ Set W to the original value of A, which we stored in
- STA W                  \ W above
+ LDA V                  \ Set W = V
+ STA W
 
 .P10BB
 
- TXA
+ TXA                    \ Store X on the stack
  PHA
 
- LDA driversInOrder,X
-
- TAX
- JSR sub_C14C3
-
- PLA
+ LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- DEC W
+ JSR sub_C14C3          \ Updates L06E8, L0880, var18 for this driver ???
 
- BPL P10BB
+ PLA                    \ Retrieve X from the stack
+ TAX
 
- INX
+ DEC W                  \ Decrement W
 
- CPX #20
+ BPL P10BB              \ Loop back until we have repeated the above W times
+
+ INX                    \ Increment the loop counter
+
+ CPX #20                \ Loop back until we have processed all 20 drivers
  BCC C10B7
 
 .C10CF
 
- INC G
+ INC G                  \ Increment G
 
- LDX G
+ LDX G                  \ Set X = G, so the inner loop does G to 19
 
- CPX #20
+ CPX #20                \ Loop back until we have done G = -1 to 19
  BCC C10B7
+
+                        \ Loop until sub_C27AB returns C flag clear and A = 32
 
 .C10D7
 
@@ -3597,32 +3706,38 @@ ORG &0B00
 
  BCS C10D7
 
- CMP #&20
-
+ CMP #32
  BNE C10D7
 
  LDX #23
 
- LDA #49
+                        \ Loop V = 49 to 1
+
+ LDA #49                \ Set V = 49
  STA V
 
- STA L0042
+ STA L0042              \ Set L0042 = 49
 
 .P10F2
 
- JSR sub_C14C3
+ JSR sub_C14C3          \ Updates L06E8, L0880, var18 for driver 23 ???
 
  DEC V
 
  BNE P10F2
 
+                        \ Loop until C flag set
+
 .P10F9
 
  INC L0042
 
- JSR sub_C14C3
+ JSR sub_C14C3          \ Updates L06E8, L0880, var18 for driver 23 ???
 
  BCC P10F9
+
+                        \ Loop, Y = 19 to 0, setting L0178 to alternating &50
+                        \ and &AF
 
  LDA #&50
 
@@ -3638,8 +3753,10 @@ ORG &0B00
 
  BPL P1104
 
- LDA #0
+ LDA #0                 \ Set A = L0024
  STA L0024
+
+                        \ Loop, L0042 to 0
 
 .P1113
 
@@ -3649,7 +3766,7 @@ ORG &0B00
 
  BNE P1113
 
- LSR L62F8              \ Clear bit 7 of L62F8
+ LSR L62F8              \ Clear bit 7 of L62F8, so calls to sub_C4F77 work again
 
  RTS                    \ Return from the subroutine
 
@@ -5424,7 +5541,7 @@ ENDIF
 
                         \ We jump back here when restarting practice laps
 
- LDX #0                 \ Zero (currentTenths currentSeconds currentMinutes)
+ LDX #0                 \ Zero (currentMinutes currentSeconds currentTenths)
  JSR ZeroLapTime
 
 .main2
@@ -5445,7 +5562,8 @@ ENDIF
  LDA #0                 \ Set configStop = 0 so we clear out any existing
  STA configStop         \ stop-related key presses
 
- JSR sub_C0B77          \ ??? Something to do with wing settings
+ JSR ScaleWingSettings  \ Scale the wing settings and calculate the wing balance
+                        \ for use in the driving model
 
 \ ******************************************************************************
 \
@@ -5475,7 +5593,8 @@ ENDIF
 
  JSR sub_C24B9
 
- JSR sub_C0FFE
+ JSR UpdateLapTimers    \ Update the lap timers and display timer-related
+                        \ messages at the top of the screen
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
@@ -5717,63 +5836,90 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C17C3
+\       Name: AddTimeToLapTimer
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Add time to the specified lap timer
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   0 or 1
+\   X                   The lap timer to increment:
+\
+\                         * 0 = (currentMinutes currentSeconds currentTenths)
+\
+\                         * 1 = (currentMinutes currentSeconds currentTenths)+1
+\
+\ Returns:
+\
+\   C flag              Denotes whether the number of seconds has changed:
+\
+\                         * Set if the lap time just ticked on to the next second
+\
+\                         * Clear if the lap time is unchanged
 \
 \ ******************************************************************************
 
-.sub_C17C3
+.AddTimeToLapTimer
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
- LDA #9
- LDY L0046
- CPY trackData+&719
- BNE C17CF
- LDA #&18
+ LDA #&09               \ Set A = &09, so we add 9/100 of a second below
 
-.C17CF
+ LDY L0046              \ If L0046 <> trackData+&719 (which is 24 for the
+ CPY trackData+&719     \ Silverstone track), jump to time1 to skip the
+ BNE time1              \ following
 
- CLC
- ADC currentTenths,X
- STA currentTenths,X
- PHP
- LDA currentSeconds,X
+ LDA #&18               \ Set A = &18, so we add 18/100 of a second below
+
+.time1
+
+ CLC                    \ Add A to the currentTenths for timer X
+ ADC currentTenths,X    \
+ STA currentTenths,X    \ starting with the tenths of a second
+
+ PHP                    \ Store the C flag on the stack, so we can return it
+                        \ from the subroutine below (the C flag will be set
+                        \ if the lap time just ticked on to the next second)
+
+ LDA currentSeconds,X   \ Then we add the seconds into A
  ADC #0
- CMP #&60
- BCC C17E2
- LDA #0
 
-.C17E2
+ CMP #&60               \ If A < &60, then the number of seconds is still valid,
+ BCC time2              \ so jump to time2 to skip the following instruction
 
- STA currentSeconds,X
- LDA currentMinutes,X
+ LDA #0                 \ Otherwise set A = 0, so 60 seconds on the timer
+                        \ increments back round to 0 seconds
+
+.time2
+
+ STA currentSeconds,X   \ Update the seconds value for the timer
+
+ LDA currentMinutes,X   \ Finally, we add the minutes 
  ADC #0
  STA currentMinutes,X
- BPL C17F9
 
- JSR ZeroLapTime          \ Zero (currentTenths currentSeconds currentMinutes)+X
+ BPL time3              \ If the updates minutes value for the timer is
+                        \ positive, jump to time3 to skip the following
 
- LDY currentPlayer
- LDA #&80
- STA bestLapMinutes,Y
+ JSR ZeroLapTime        \ Otherwise the timer just reached the maximum
+                        \ possible value, so wrap it back round to zero
 
-.C17F9
+ LDY currentPlayer      \ Set the best lap for the current player to -1, as
+ LDA #&80               \ otherwise the driver might finish with a very low lap
+ STA bestLapMinutes,Y   \ time, as we just set it back to zero
 
- PLP
+.time3
+
+ PLP                    \ Retrieve the C flag from the stack, which will be set
+                        \ if the addition of tenths overflowed (in other words,
+                        \ if the lap time just ticked on to the next second)
 
  CLD                    \ Clear the D flag to switch arithmetic to normal
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5966,8 +6112,8 @@ ENDIF
 
  LDA raceStarted        \ If bit 7 of raceStarted is set then this is a race
  BMI rese7              \ rather than practice or qualifying, so jump to rese7
-                        \ with A = &80 to print the race header at the top of
-                        \ the screen
+                        \ with bit 7 of A set and bit 6 of A clear, to print the
+                        \ race header at the top of the screen
 
  LDX #40                \ Blank out the first text line at the top of the screen
  JSR PrintSecondLineGap \ and print token 40 on the second line, to give:
@@ -5975,22 +6121,24 @@ ENDIF
                         \    "                                      "
                         \    "Lap Time   :         Best Time        "
 
- LDX #1                 \ Zero (currentTenths currentSeconds currentMinutes)+1
+ LDX #1                 \ Zero (currentMinutes currentSeconds currentTenths)+1
  JSR ZeroLapTime
 
  JSR PrintBestLapTime   \ Print the best lap time and the current lap time at
                         \ the top of the screen
 
- LDA #223               \ Set L62EF = 223
- STA L62EF
+ LDA #&DF               \ Set firstLapStarted = -33
+ STA firstLapStarted
 
  RTS                    \ Return from the subroutine
 
 .rese7
 
- STA L0066              \ Set L0066 = &80
+ STA updateDrivingInfo  \ Set bit 7 and clear bit 6 of updateDrivingInfo so the
+                        \ lap number gets printed at the top of the screen
 
- STA L62FE              \ Set L62FE = &80
+ STA updateDriverInfo   \ Set bit 7 of updateDriverInfo so the driver names get
+                        \ printed at the top of the screen
 
  LDX #43                \ Print token 43 on the first text line at the top of
  JSR PrintFirstLine     \ the screen and token 44 on the second line, to give:
@@ -6006,7 +6154,8 @@ ENDIF
  JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
                         \ (BCD), adding 1 in the process
 
- STA L002F              \ Set L002F to the player's current position in BCD
+ STA positionChange     \ Set positionChange to the player's current position in
+                        \ BCD
 
  RTS                    \ Return from the subroutine
 
@@ -6726,45 +6875,56 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1B84
+\       Name: UpdatePositionInfo
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Text
+\    Summary: Apply any position changes and update the position information at
+\             the top of the screen
 \
 \ ******************************************************************************
 
-.sub_C1B84
+.UpdatePositionInfo
 
- LDA L002F
- BEQ C1BA2
+ LDA positionChange     \ Set A = positionChange
+
+ BEQ posi1              \ If A = 0 then the race position has not changed, so
+                        \ jump to posi1 to skip updating the position number
+
+                        \ Otherwise we need to add the position change to the
+                        \ current position number, so we can update the number
+                        \ at the top of the screen
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
- CLC
- ADC L0031
- STA L0031
+ CLC                    \ Set A = currentPositionBCD + A
+ ADC currentPositionBCD \       = currentPositionBCD + positionChange
+
+ STA currentPositionBCD \ Set currentPositionBCD = A
 
  CLD                    \ Clear the D flag to switch arithmetic to normal
 
- BEQ C1BA2
- CMP #&21
- BCS C1BA2
- LDX #0
- STX L002F
- STX G
- LDX #&0A
- LDY #&18
- JSR Print2DigitBCD-6
+ BEQ posi1              \ If A = 0, jump to posi1
 
-.C1BA2
+ CMP #&21               \ If A >= &21, jump to posi1
+ BCS posi1
 
- BIT L62FE
- BPL C1BB5
+ LDX #0                 \ Set positionChange = 0, as we have now applied the
+ STX positionChange     \ change of position to currentPositionBCD
+
+ STX G                  \ Set G = 0 so the call to Print2DigitBCD below will
+                        \ print the second digit and will not print leading
+                        \ zeroes when printing the position number
+
+ LDX #10                \ Print the position number in A at column 10, pixel
+ LDY #24                \ row 24, on the first text line at the top of the
+ JSR Print2DigitBCD-6   \ screen
+
+.posi1
+
+ BIT updateDriverInfo   \ If bit 7 of updateDriverInfo is clear, jump to posi2
+ BPL posi2              \ to skip printing the driver names at the top of the
+                        \ screen
 
  LDY positionAhead      \ Set Y to the position of the driver in front of us
 
@@ -6776,10 +6936,13 @@ ENDIF
  LDA #33                \ Print the name of driver Y in the "Behind:" part of
  JSR PrintNearestDriver \ the header
 
-.C1BB5
+.posi2
 
- LSR L62FE
- RTS
+ LSR updateDriverInfo   \ Clear bit 7 of updateDriverInfo so we don't update the
+                        \ driver names until the value of updateDriverInfo
+                        \ changes
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -9730,8 +9893,10 @@ ENDIF
  LDX W
  LDY G
  JSR SwapDriverPosition
- SEC
- ROR L62FE
+
+ SEC                    \ Set bit 7 of updateDriverInfo so the driver names get
+ ROR updateDriverInfo   \ updated at the top of the screen
+
  CPY currentPlayer
  BNE C26CB
  LDA #&99
@@ -9754,10 +9919,10 @@ ENDIF
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
- CLC
+ CLC                    \ Set positionChange = positionChange + T
  LDA T
- ADC L002F
- STA L002F
+ ADC positionChange
+ STA positionChange
 
  CLD                    \ Clear the D flag to switch arithmetic to normal
 
@@ -13717,9 +13882,9 @@ ENDIF
 \
 \ Other entry points:
 \
-\   (X, Y)              The screen coordinate where we should print the number,
-\                       where X is the character column and Y is the pixel row
-\                       of the bottom of the character
+\   Print2DigitBCD-6    Print the number at screen coordinate (X, Y), where X
+\                       is the character column and Y is the pixel row of the
+\                       bottom of the character
 \
 \ ******************************************************************************
 
@@ -19195,7 +19360,8 @@ ENDIF
 .C4C30
 
  STA U
- LDA L62A8,X
+
+ LDA wingSetting,X
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -19302,7 +19468,7 @@ ENDIF
  JSR sub_C48A0
  LDA speedHi
  STA U
- LDA L62F1
+ LDA wingBalance
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -20586,8 +20752,8 @@ ENDIF
 
 .C4F91
 
- LDA #&80
- STA L0066
+ LDA #%10000000         \ Set bit 7 and clear bit 6 of updateDrivingInfo so the
+ STA updateDrivingInfo  \ lap number gets updated at the top of the screen
 
 .C4F95
 
@@ -20616,7 +20782,7 @@ ENDIF
  CPX currentPlayer
  BNE C4FB7
 
- LDA #80
+ LDA #80                \ Set L000F = 80
  STA L000F
 
 .C4FB7
@@ -20686,9 +20852,9 @@ ENDIF
 \
 \   X                   The lap time to zero:
 \
-\                         * 0 = (currentTenths currentSeconds currentMinutes)
+\                         * 0 = (currentMinutes currentSeconds currentTenths)
 \
-\                         * 1 = (currentTenths currentSeconds currentMinutes)+1
+\                         * 1 = (currentMinutes currentSeconds currentTenths)+1
 \
 \ Returns:
 \
@@ -20776,9 +20942,8 @@ ENDIF
  LDX #33                \ Move the cursor to pixel row 33 (i.e. the second text
  STX yCursor            \ line at the top of the screen)
 
- LDX #21                \ Print the lap time for the current lap (which is
- JSR PrintLapTime       \ stored just after driver 20's best lap time, i.e. for
-                        \ driver 21, if there was one) in the format given in A
+ LDX #21                \ Print (currentMinutes currentSeconds currentTenths)+1
+ JSR PrintLapTime       \ in the format given in A
 
  RTS                    \ Return from the subroutine
 
@@ -20888,8 +21053,8 @@ ENDIF
  LDA L006D              \ If bit 7 of L006D is set, jump to C5068
  BMI C5068
 
- LDX #0
- JSR sub_C17C3
+ LDX #0                 \ Add time to the lap timer at (currentMinutes
+ JSR AddTimeToLapTimer  \ currentSeconds currentTenths)
 
 .C5068
 
@@ -23338,17 +23503,19 @@ ENDIF
 \       Name: carInMirror
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contains the size of the car in each mirror segment
 \
 \ ******************************************************************************
 
 .carInMirror
 
- EQUB 0, 0, 0, 0, 0, 0
+ EQUB 0                 \ Mirror segment 0 (left mirror, outer segment)
+ EQUB 0                 \ Mirror segment 1 (left mirror, middle segment)
+ EQUB 0                 \ Mirror segment 2 (left mirror, inner segment)
+
+ EQUB 0                 \ Mirror segment 3 (right mirror, inner segment)
+ EQUB 0                 \ Mirror segment 4 (right mirror, middle segment)
+ EQUB 0                 \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -24120,18 +24287,28 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62EF
+\       Name: firstLapStarted
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Flag to keep track of whether we have started the first lap of
+\             practice or qualifying
 \
 \ ------------------------------------------------------------------------------
 \
-\ Set to 223 in ResetVariables, for practice or qualifying laps.
+\ For practice and qualifying laps, firstLapStarted keeps track of whether we
+\ have started the first lap (at which point the lap timer starts).
+\
+\ Before we reach the starting line, firstLapStarted is -33, which is the value
+\ it gets in ResetVariables for practice or qualifying laps. This is then
+\ incremented to 0 when we start the first lap.
+\
+\ The value of firstLapStarted is decremented with each call to UpdateLapTimers
+\ for practice or qualifying, but only if bit 6 of updateDrivingInfo is set and
+\ firstLapStarted is non-zero. I am not sure why.
 \
 \ ******************************************************************************
 
-.L62EF
+.firstLapStarted
 
  EQUB 0
 
@@ -24154,7 +24331,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F1
+\       Name: wingBalance
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -24165,7 +24342,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62F1
+.wingBalance
 
  EQUB 0
 
@@ -24369,18 +24546,22 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62FE
+\       Name: updateDriverInfo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Text
+\    Summary: Flag that controls whether the driver names are updated in the
+\             information block at the top of the screen
 \
 \ ------------------------------------------------------------------------------
 \
-\ Set to &80 in ResetVariables, for race laps.
+\ If bit 7 is set, then we update the driver names in the "In front" and
+\ "Behind" sections at the top of the screen.
+\
+\ Bit 7 gets set in ResetVariables, for race laps only.
 \
 \ ******************************************************************************
 
-.L62FE
+.updateDriverInfo
 
  EQUB 0
 
@@ -24823,16 +25004,16 @@ ENDIF
                         \ in X, starting at the end of the list (i.e. last
                         \ place)
 
-.P63A6
+.ppos1
 
  CMP driversInOrder,X   \ If the driver in position X in the list matches the
- BEQ C63AE              \ current player, jump to C63AE
+ BEQ ppos2              \ current player, jump to ppos2
 
  DEX                    \ Decrement the driver number
 
- BPL P63A6              \ Loop back until we have gone through the whole table
+ BPL ppos1              \ Loop back until we have gone through the whole table
 
-.C63AE
+.ppos2
 
                         \ By this point, X contains the position within the
                         \ driversInOrder list of the current player
@@ -26608,13 +26789,19 @@ ORG &6C00
 \       Name: PrintLapTime
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print the best lap time for a specific driver
+\    Summary: Print the lap time for the specified driver
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The driver number
+\   X                   The lap time to print:
+\
+\                         * 0 to 19: Lap time for the specified driver
+\
+\                         * 20: (currentMinutes currentSeconds currentTenths)
+\
+\                         * 21: (currentMinutes currentSeconds currentTenths)+1
 \
 \   A                   Flags to control how the time is printed:
 \
