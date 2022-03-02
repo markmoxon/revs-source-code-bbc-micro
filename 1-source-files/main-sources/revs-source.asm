@@ -1885,61 +1885,89 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0B77
+\       Name: ScaleWingSettings
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Scale the wing settings and calculate the wing balance, for use in
+\             the driving model
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The wing settings (0 to 40) are scaled to the range 90 to 218.
+\
+\ The wing balance is calculated as:
+\
+\   60 + (rearWingSetting * 3 + frontWingSetting) / 2
+\
+\ which is in the range 60 to 140, with higher numbers when the rear wing is
+\ greater (i.e. pushes down more) than the front wing.
 \
 \ ******************************************************************************
 
-.sub_C0B77
+.ScaleWingSettings
 
- LDX #1
+ LDX #1                 \ We are about to loop through the two wing settings, so
+                        \ set a counter in X so we do the rear wing setting
+                        \ first, and then the front wing setting
 
 .P0B79
 
- LDA frontWingSetting,X
+ LDA frontWingSetting,X \ Set U = wing setting * 4
  ASL A
  ASL A
  STA U
- LDA L0BA0,X
+
+ LDA wingScaleFactor,X  \ Set A to the wingScaleFactor for this wing setting,
+                        \ which is hard-coded to 205
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- CLC
- ADC #&5A
- STA L62A8,X
- DEX
- BPL P0B79
- LDA rearWingSetting
- ASL A
- ADC rearWingSetting
- ADC frontWingSetting
- LSR A
- ADC #&3C
- STA L62F1
- RTS
+                        \ So by this point, we have:
+                        \
+                        \   A = A * U / 256
+                        \     = U * 205 / 256
+                        \     = wing setting * 4 * 205 / 256
+                        \     = wing setting * 820 / 256
+                        \
+                        \ The wing settings can be from 0 to 40, so this scales
+                        \ the setting to the range 0 to 128
+
+ CLC                    \ Set A = A + 90
+ ADC #90                \
+                        \ which is in the range 90 to 218
+
+ STA wingSetting,X      \ Store the scaled wing setting in wingSetting
+
+ DEX                    \ Decrement the loop counter
+
+ BPL P0B79              \ Loop back until we have scaled both wing settings
+
+ LDA rearWingSetting    \ Set A = (rearWingSetting * 2 + rearWingSetting
+ ASL A                  \         + frontWingSetting) / 2 + 60
+ ADC rearWingSetting    \       = (rearWingSetting * 3 + frontWingSetting) / 2
+ ADC frontWingSetting   \         + 60
+ LSR A                  \
+ ADC #60                \ which is in the range 60 to 140, with higher numbers
+                        \ when the rear wing is greater than the front wing
+
+ STA wingBalance        \ Store the wing balance in wingBalance
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: L0BA0
+\       Name: wingScaleFactor
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Scale factors for the wing settings
 \
 \ ******************************************************************************
 
-.L0BA0
+.wingScaleFactor
 
- EQUB &CD, &CD
+ EQUB 205               \ Scale factor for the front wing setting
+
+ EQUB 205               \ Scale factor for the rear wing setting
 
 \ ******************************************************************************
 \
@@ -23674,20 +23702,18 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62A8
+\       Name: wingSetting
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Contains the scaled wing settings
 \
 \ ******************************************************************************
 
-.L62A8
+.wingSetting
 
- EQUB 0, 0
+ EQUB 0                 \ Front wing setting, scaled to the range 90 to 218
+
+ EQUB 0                 \ Rear wing setting, scaled to the range 90 to 218
 
 \ ******************************************************************************
 \
