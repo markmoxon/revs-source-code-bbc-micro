@@ -938,9 +938,11 @@ ORG &0380
                         \
                         \ Gets set in InitialiseDrivers
 
-.L04B4
+.driverLapNumber
 
- SKIP 20                \ 
+ SKIP 20                \ The current lap number for each driver
+                        \
+                        \ Indexed by driver number (0 to 19)
 
 .driversInOrder2
 
@@ -3430,7 +3432,7 @@ ORG &0B00
 
  LDX currentPlayer      \ Set X to the driver number of the current player
 
- LDA L04B4,X            \ Set A = the L04B4 value for the current player
+ LDA driverLapNumber,X  \ Set A to the current lap number for the current player
 
  CMP #1                 \ If A >= 1, set the C flag, otherwise clear it
 
@@ -3800,39 +3802,47 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C111E
+\       Name: CheckForCrash
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Check to see if we have crashed into the fence, and if so, display
+\             the fence and make the crash sound
 \
 \ ******************************************************************************
 
-.sub_C111E
+.CheckForCrash
 
- LDA L0011
- CMP #2
- BCC C1162
- LDA L005E
+ LDA L0011              \ If L0011 < 2, jump to cras3 to return from the
+ CMP #2                 \ subroutine
+ BCC cras3
 
- JSR Absolute8Bit       \ Set A = |A|
-
- CMP #&60
- BCS C1138
- LDA #&14
- BIT var03Hi
+ LDA L005E              \ Set A = L005E
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |L005E|
 
- JMP C1C0B
+ CMP #96                \ If A >= 96, jump to cras1 to crash into the fence
+ BCS cras1
 
-.C1138
+ LDA #20                \ Set A = 20
 
- DEC L62F6
- INC horizonLine
+ BIT var03Hi            \ Set the flags according to the sign of var03Hi, so the
+                        \ call to Absolute8Bit sets the sign of A to the same
+                        \ sign as var03
+
+ JSR Absolute8Bit       \ Set A = 20 * abs(var03)
+
+ JMP SquealTyres        \ Jump to SquealTyres to update var03 and make the tyres
+                        \ squeal, returning from the subroutine using a tail
+                        \ call
+
+.cras1
+
+ DEC crashedIntoFence   \ Decrement crashedIntoFence from 0 to &FF so the main
+                        \ driving loop will pause while showing the fence
+
+ INC horizonLine        \ Increment horizonLine ???
+
  JSR DrawFence          \ Draw the fence that we crash into when running off the
                         \ track
 
@@ -3841,32 +3851,44 @@ ORG &0B00
  LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
  JSR MakeSound-3
 
- LDA #0
- LDX #&1E
+ LDA #0                 \ Set A = 0, so we can use it to reset variables to zero
+                        \ in the following loop
 
-.P114C
+ LDX #&1E               \ We now zero all variables from var02Lo to var12Hi, so
+                        \ so set up a loop counter in X
 
- STA var02Lo,X
- DEX
- BPL P114C
- STA L0061
- STA L0026
- STA soundRevCount
- STA soundRevTarget
- LDA #&7F
+.cras2
+
+ STA var02Lo,X          \ Zero the X-th byte from var02Lo
+
+ DEX                    \ Decrement the loop counter
+
+ BPL cras2              \ Loop back until we have zeroed all variables from
+                        \ var02Lo to var12Hi
+
+ STA L0061              \ Set L0061 = 0
+
+ STA L0026              \ Set L0026 = 0
+
+ STA soundRevCount      \ Set soundRevCount = 0 to stop the engine sound
+
+ STA soundRevTarget     \ Set soundRevTarget = 0 to stop the engine sound
+
+ LDA #&7F               \ Set L002D = &7F
  STA L002D
- LDA #&1F
+
+ LDA #31                \ Set L0009 = 31
  STA L0009
 
-.C1162
+.cras3
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: sub_C1163
 \       Type: Subroutine
-\   Category: 
+\   Category: Drivers
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -3882,9 +3904,10 @@ ORG &0B00
 
  STA L006D              \ Set L006D = 0
 
- JSR SetL018CBit7
- LDX currentPlayer
- JSR sub_C11BE
+ JSR SetL018CBit7       \ Set bit 7 of all driver's L018C entries
+
+ LDX currentPlayer      \ Clear the current player's best lap time if this is an 
+ JSR ClearBestLapTime   \ incomplete race
 
 .C1171
 
@@ -3895,20 +3918,26 @@ ORG &0B00
 
  LDA configStop
  BMI C11AA
+
  JSR sub_C27ED
+
  JSR sub_C2692
 
  JSR SetPlayerPositions \ Set the player's current position, plus the position
                         \ ahead and the position behind
 
- LDX #&13
+ LDX #19
+
  LDA raceStarted
  BMI C1199
+
  CPX currentPlayer
  BNE C11AA
+
  LDA L62DF
- CMP #&0E
+ CMP #14
  BCC C1171
+
  RTS
 
 .C1199
@@ -3916,13 +3945,15 @@ ORG &0B00
  LDA L018C,X
  AND #&40
  BNE C11A7
+
  LDA numberOfLaps
- CMP L04B4,X
+ CMP driverLapNumber,X
  BCS C1171
 
 .C11A7
 
  DEX
+
  BPL C1199
 
 .C11AA
@@ -3945,7 +3976,7 @@ ORG &0B00
 .sub_C11AB
 
  CPX #&14
- BCS C11CD
+ BCS sub_C11CE-1
  LDA L0178,X
  AND #&7F
  ORA #&45
@@ -3955,29 +3986,39 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C11BE
+\       Name: ClearBestLapTime
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Clear the current player's best lap time following the end of an
+\             incomplete race
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   This is only called with the current player number in X
 \
 \ ******************************************************************************
 
-.sub_C11BE
+.ClearBestLapTime
 
- LDA numberOfLaps
- CMP L04B4,X
- LDA #&C0
+ LDA numberOfLaps       \ Compare numberOfLaps with the player's current lap
+ CMP driverLapNumber,X  \ number
+
+ LDA #%11000000         \ Set bits 6 and 7 of the current player's L018C entry
  STA L018C,X
- BCC C11CD
- STA bestLapMinutes,X
 
-.C11CD
+ BCC clap1              \ If numberOfLaps < current player's current lap number,
+                        \ then the player has finished the race, so skip the
+                        \ folllowing instruction
 
- RTS
+ STA bestLapMinutes,X   \ The player didn't finish the race, so set the player's
+                        \ bestLapMinutes to &C0, which is negative and therefore
+                        \ not a valid time
+
+.clap1
+
+ RTS                    \ Return from the subnroutine
 
 \ ******************************************************************************
 \
@@ -3988,7 +4029,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   sub_C11CE-1         Contains an RTS
 \
 \ ******************************************************************************
 
@@ -4815,9 +4858,9 @@ ORG &0B00
  STA var18Hi,X
  CPX currentPlayer
  BNE C14E4
- LDA L04B4,X
+ LDA driverLapNumber,X
  BEQ C14E4
- DEC L04B4,X
+ DEC driverLapNumber,X
  JMP C14E4
 
 .C1509
@@ -5655,7 +5698,9 @@ ENDIF
 
  JSR sub_C1BB9
 
- JSR sub_C111E
+ JSR CheckForCrash      \ Check to see if we have crashed into the fence, and if
+                        \ so, display the fence, make the crash sound and set
+                        \ crashedIntoFence = &FF
 
  JSR DrawTrackView      \ Copy the data from the dash data blocks to the screen
                         \ to draw the track view
@@ -5688,10 +5733,13 @@ ENDIF
 
 .main6
 
- LDA L62F6              \ If L62F6 = 0, jump to main10 to continue the main
- BEQ main10             \ driving loop in part 5
+ LDA crashedIntoFence   \ If crashedIntoFence = 0 then we have not crashed into
+ BEQ main10             \ the fence, so jump to main10 to continue with the main
+                        \ driving loop in part 5
 
- INC L62F6              \ Otherwise L62F6  is non-zero, so increment L62F6
+ INC crashedIntoFence   \ Otherwise crashedIntoFence must be &FF, which means we
+                        \ have crashed into the fence, so increment it back to
+                        \ zero, to clear the "we have crashed" flag
 
                         \ We now pause for a few seconds, before jumping back to
                         \ the relevant starting point for the loop
@@ -6078,10 +6126,11 @@ ENDIF
 
  JSR sub_C109B          \ ???
 
- LDX #19                \ We now zero the 20-byte blocks at L04B4, L0114, L0164,
-                        \ (var01Hi var01Lo) and positionNumber, and initialise
-                        \ the 20-byte blocks at L018C, bestLapMinutes and L01A4,
-                        \ so set up a loop counter in X
+ LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
+                        \ L0114, L0164, (var01Hi var01Lo) and positionNumber,
+                        \ and initialise the 20-byte blocks at L018C,
+                        \ bestLapMinutes and L01A4, so set up a loop counter
+                        \ in X
 
 .rese5
 
@@ -6090,8 +6139,8 @@ ENDIF
 
  STA bestLapMinutes,X   \ Set the X-th byte of bestLapMinutes to &80
 
- LDA #0                 \ Zero the X-th byte of L04B4
- STA L04B4,X
+ LDA #0                 \ Zero the X-th byte of driverLapNumber
+ STA driverLapNumber,X
 
  STA L0114,X            \ Zero the X-th byte of L0114
 
@@ -7046,9 +7095,27 @@ ENDIF
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
-.C1C0B
+                        \ Fall through into SquealTyres to set var03Hi and make
+                        \ the sound of squealing tyres
 
- STA var03Hi
+\ ******************************************************************************
+\
+\       Name: SquealTyres
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Make the tyres squeal
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   A                   The new value for var03Hi
+\
+\ ******************************************************************************
+
+.SquealTyres
+
+ STA var03Hi            \ Set var03Hi = A
 
  LDA #%10000000         \ Set bit 7 in L62A6 and L62A7, so the tyres squeal
  STA L62A6
@@ -7059,7 +7126,7 @@ ENDIF
 
 .C1C1B
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -9939,9 +10006,9 @@ ENDIF
 .C26D1
 
  STA T
- LDA L04B4,Y
+ LDA driverLapNumber,Y
  ROL H
- SBC L04B4,X
+ SBC driverLapNumber,X
  BNE C26E6
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
@@ -13039,9 +13106,19 @@ ENDIF
 \
 \ This routine returns |A|.
 \
+\ It can also return A * abs(n), where A is given the sign of n.
+\
 \ Arguments:
 \
 \   A                   The number to make positive
+\
+\   N flag              Controls the sign to be applied:
+\
+\                         * If we want to calculate |A|, do an LDA or equivalent
+\                           before calling the routine
+\
+\                         * If we want to calculate A * abs(n), do a BIT n
+\                           before calling the routine
 \
 \ ******************************************************************************
 
@@ -20785,9 +20862,9 @@ ENDIF
 
 .C4F95
 
- LDA L04B4,X
+ LDA driverLapNumber,X
  BMI C4F9D
- INC L04B4,X
+ INC driverLapNumber,X
 
 .C4F9D
 
@@ -24442,20 +24519,20 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F6
+\       Name: crashedIntoFence
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Flag that records whether we have crashed into the fence
 \
 \ ******************************************************************************
 
-.L62F6
+.crashedIntoFence
 
- EQUB 0
+ EQUB 0                 \ Crash status
+                        \
+                        \   * 0 = we have not crashed into the fence
+                        \
+                        \   * &FF = we have crashed into the fence
 
 \ ******************************************************************************
 \
