@@ -1701,7 +1701,7 @@ ORG &0B00
  EQUB &82, &00
  EQUB &FF, &00
 
- EQUB &10, &00          \ Sound #4: Crash/bump (SOUND &10, -10, 6, 4)
+ EQUB &10, &00          \ Sound #4: Crash/contact (SOUND &10, -10, 6, 4)
  EQUB &F6, &FF
  EQUB &06, &00
  EQUB &04, &00
@@ -2835,7 +2835,7 @@ ORG &0B00
  BPL soun1
 
                         \ Otherwise we add some random pitch variation to the
-                        \ crash/bump sound and make the sound of the tyres
+                        \ crash/contact sound and make the sound of the tyres
                         \ squealing
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
@@ -2850,7 +2850,7 @@ ORG &0B00
  ADC #130               \ 130 to 133
 
  STA soundData+28       \ Update byte #5 of sound #4 (low byte of pitch) so the
-                        \ pitch of the crash/bump sound wavers randomly
+                        \ pitch of the crash/contact sound wavers randomly
 
  LDA #3                 \ Make sound #3 (tyre squeal) using envelope 1
  LDY #1
@@ -3848,8 +3848,8 @@ ORG &0B00
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
- LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
- JSR MakeSound-3
+ LDA #4                 \ Make sound #4 (crash/contact) at the current volume
+ JSR MakeSound-3        \ level
 
  LDA #0                 \ Set A = 0, so we can use it to reset variables to zero
                         \ in the following loop
@@ -5672,22 +5672,22 @@ ENDIF
  JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
                         \ L5F60
 
- JSR sub_C1A20
+ JSR DrawTrack          \ Draw the track into the screen buffer
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR sub_C18BC
+ JSR DrawHorizon
 
- JSR sub_C4CA4
+ JSR DrawRoadSigns1
 
  LDX #23
- JSR sub_C2AD1
+ JSR DrawRoadSigns2
 
- JSR sub_C1B12
+ JSR DrawCornerMarkers
 
- JSR sub_C2637
+ JSR DrawCars
 
- JSR sub_C1E15
+ JSR DrawDashboardEdge
 
  JSR UpdateMirrors      \ Update the view in the wing mirrors
 
@@ -5696,7 +5696,7 @@ ENDIF
  JSR MoveHorizon        \ Move the position of the horizon palette switch up or
                         \ down, depending on the current track height
 
- JSR sub_C1BB9
+ JSR CheckForContact
 
  JSR CheckForCrash      \ Check to see if we have crashed into the fence, and if
                         \ so, display the fence, make the crash sound and set
@@ -6238,9 +6238,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C18BC
+\       Name: DrawHorizon
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -6249,7 +6249,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C18BC
+.DrawHorizon
 
  LDX L0051
  LDY horizonLine
@@ -6596,7 +6596,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   0 to 3
 \
 \ ******************************************************************************
 
@@ -6609,12 +6611,15 @@ ENDIF
  CLC
  ADC L30FC,Y
  STA L004F
- LDA L2B1E,Y
- STA mod_C2F4E+2
- STA mod_C2F90+2
- LDA L2B22,Y
- STA mod_C2F4E+1
- STA mod_C2F90+1
+
+ LDA var29Hi,Y          \ Modify the following instruction at mod_C2F4E and 
+ STA mod_C2F4E+2        \ mod_C2F90, depending on the value of Y:
+ STA mod_C2F90+2        \
+ LDA var29Lo,Y          \   * 0 = STA &7000,Y -> STA L05A4,Y
+ STA mod_C2F4E+1        \   * 1 = STA &7000,Y -> STA L0650,Y
+ STA mod_C2F90+1        \   * 2 = STA &7000,Y -> STA L0600,Y
+                        \   * 3 = STA &7000,Y -> STA L0554,Y
+
  LDX L004F
  LDY L004C
  SEC
@@ -6678,18 +6683,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1A20
+\       Name: DrawTrack
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Draw the track into the screen buffer
 \
 \ ******************************************************************************
 
-.sub_C1A20
+.DrawTrack
 
  LDA #&80
  STA P
@@ -6859,9 +6860,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1B12
+\       Name: DrawCornerMarkers
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -6870,7 +6871,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C1B12
+.DrawCornerMarkers
 
  LDY #0
 
@@ -7023,7 +7024,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1BB9
+\       Name: CheckForContact
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -7034,7 +7035,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C1BB9
+.CheckForContact
 
  LDA L0068
  BEQ C1C1B
@@ -7121,8 +7122,8 @@ ENDIF
  STA L62A6
  STA L62A7
 
- LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
- JSR MakeSound-3
+ LDA #4                 \ Make sound #4 (crash/contact) at the current volume
+ JSR MakeSound-3        \ level
 
 .C1C1B
 
@@ -7286,7 +7287,7 @@ ENDIF
  STA V
  CPY #1
  BCS C1D15
- LDA L337C,X
+ LDA vergePixels,X
  AND G
  STA T
  LDA H
@@ -7328,7 +7329,7 @@ ENDIF
 .C1D15
 
  BNE C1D34
- LDA L337C,X
+ LDA vergePixels,X
  STA L
  EOR #&FF
  AND H
@@ -7760,9 +7761,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1E15
+\       Name: DrawDashboardEdge
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -7771,7 +7772,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C1E15
+.DrawDashboardEdge
 
  LDA #5
  STA S
@@ -9847,9 +9848,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2637
+\       Name: DrawCars
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -9858,7 +9859,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2637
+.DrawCars
 
  LDA qualifyingTime
  BMI Delay
@@ -10875,9 +10876,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2AD1
+\       Name: DrawRoadSigns2
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -10886,7 +10887,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2AD1
+.DrawRoadSigns2
 
  LDA L018C,X
  BMI C2B0B
@@ -10962,7 +10963,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L2B1E
+\       Name: var29Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -10973,13 +10974,16 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L2B1E
+.var29Hi
 
- EQUB 5, 6, 6, 5
+ EQUB HI(L05A4)
+ EQUB HI(L0650)
+ EQUB HI(L0600)
+ EQUB HI(L0554)
 
 \ ******************************************************************************
 \
-\       Name: L2B22
+\       Name: var29Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -10990,9 +10994,12 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L2B22
+.var29Lo
 
- EQUB &A4, &50, &00, &54
+ EQUB LO(L05A4)
+ EQUB LO(L0650)
+ EQUB LO(L0600)
+ EQUB LO(L0554)
 
 \ ******************************************************************************
 \
@@ -11812,20 +11819,31 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   
+\
+\   UU                  
+\
+\ Returns:
+\
+\   C flag              
 \
 \ ******************************************************************************
 
 .sub_C2F45
 
- STA II
+ STA II                 \ Store A in II so we can retrieve it later
 
 .C2F47
 
- NOP
- CPY RR
- BEQ C2F7E
- LDA UU
+ NOP                    \ This does nothing, and is presumably left over from
+                        \ development
+
+ CPY RR                 \ If Y = RR, jump to C2F7E to return from the subroutine
+ BEQ C2F7E              \ with A unchanged and the C flag clear
+
+ LDA UU                 \ Set A = UU
 
 .mod_C2F4E
 
@@ -11842,20 +11860,26 @@ ENDIF
 
 .P2F5E
 
- LDA II
+ LDA II                 \ Retrieve the value of A we stored above, so A is
+                        \ unchanged by the routine
 
 .C2F60
 
  INY
- CLC
- RTS
+
+ CLC                    \ Clear the C flag
+
+ RTS                    \ Return from the subroutine
 
 .C2F63
 
  CPY #44
  BCS C2F6C
- JSR sub_C2FEE
- BCC P2F5E
+
+ JSR CheckDashData      \ Check whether offset Y points to dash data within
+                        \ block UU, clearing the C flag if it does
+
+ BCC P2F5E              \ If offset Y points to dash data, jump to P2F5E
 
 .C2F6C
 
@@ -11865,7 +11889,7 @@ ENDIF
 
 .C2F72
 
- AND L337C,X
+ AND vergePixels,X
  ORA L629C,X
  BNE C2F58
  LDA #&55
@@ -11932,8 +11956,11 @@ ENDIF
 
  CPY #44
  BCS C2FAE
- JSR sub_C2FEE
- BCC P2FA0
+
+ JSR CheckDashData      \ Check whether offset Y points to dash data within
+                        \ block UU, clearing the C flag if it does
+
+ BCC P2FA0              \ If offset Y points to dash data, jump to P2FA0
 
 .C2FAE
 
@@ -11943,7 +11970,7 @@ ENDIF
 
 .C2FB4
 
- AND L337C,X
+ AND vergePixels,X
  ORA L629C,X
  BNE C2F9A
  LDA #&55
@@ -11955,8 +11982,11 @@ ENDIF
  BNE C2FD3
  CPY #44
  BCS C2FCD
- JSR sub_C2FEE
- BCC C2FD3
+
+ JSR CheckDashData      \ Check whether offset Y points to dash data within
+                        \ block UU, clearing the C flag if it does
+
+ BCC C2FD3              \ If offset Y points to dash data, jump to C2FD3
 
 .C2FCD
 
@@ -11977,8 +12007,11 @@ ENDIF
  BNE C2FEA
  CPY #44
  BCS C2FE4
- JSR sub_C2FEE
- BCC C2FEA
+
+ JSR CheckDashData      \ Check whether offset Y points to dash data within
+                        \ block UU, clearing the C flag if it does
+
+ BCC C2FEA              \ If offset Y points to dash data, jump to C2FEA
 
 .C2FE4
 
@@ -11995,32 +12028,61 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2FEE
+\       Name: CheckDashData
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Check whether a dash data block index is pointing to dash data
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine checks whether an index in Y, which is relative to the start of a
+\ dash data block, is pointing to dash data within the block.
+\
+\ Arguments:
+\
+\   UU                  Dash data block number (0 to 39)
+\
+\   Y                   The index from the start of the dash data block
+\
+\ Returns:
+\
+\   C flag              The result, as follows:
+\
+\                         * Clear if offset Y points to dash data
+\
+\                         * Set if offset Y does not point to dash data
+\
+\   A                   A is unchanged
+\
+\   X                   X is unchanged
 \
 \ ******************************************************************************
 
-.sub_C2FEE
+.CheckDashData
 
- STA T
+ STA T                  \ Store A and X in T and U so we can retrieve them below
  STX U
- LDX UU
- TYA
- CMP dashDataOffset,X
- BNE C2FFB
- CLC
+
+ LDX UU                 \ Set X to the dash data block number
+
+ TYA                    \ Set the C flag as follows:
+ CMP dashDataOffset,X   \
+                        \   * C flag set if Y >= dashDataOffset,X
+                        \
+                        \   * C flag clear if Y < dashDataOffset,X
+
+ BNE C2FFB              \ If Y <> the dashDataOffset of block X, skip the
+                        \ following instruction
+
+ CLC                    \ If we get here then Y = the dashDataOffset of block X,
+                        \ so clear the C flag
 
 .C2FFB
 
- LDA T
+ LDA T                  \ Restore the values of A and X that we stored above
  LDX U
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12941,9 +13003,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L337C
+\       Name: vergePixels
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -12952,9 +13014,12 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L337C
+.vergePixels
 
- EQUB &00, &88, &CC, &EE
+ EQUB %00000000
+ EQUB %10001000
+ EQUB %11001100
+ EQUB %11101110
 
  EQUB &81, &81          \ These bytes appear to be unused
  EQUB &81, &81
@@ -15315,18 +15380,15 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3BA4
+\       Name: mirrorSegment
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Lookup table for working out which mirror segment a car should
+\             appear in
 \
 \ ******************************************************************************
 
-.L3BA4
+.mirrorSegment
 
  EQUB 18                \ Mirror segment 0 (left mirror, outer segment)
  EQUB 17                \ Mirror segment 1 (left mirror, middle segment)
@@ -19590,9 +19652,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4CA4
+\       Name: DrawRoadSigns1
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19601,7 +19663,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C4CA4
+.DrawRoadSigns1
 
  LDX currentPlayer
  LDY L06E8,X
@@ -19997,8 +20059,8 @@ ENDIF
  SEC
  ROR var03Lo
 
- LDA #4                 \ Make sound #4 (crash/bump) at the current volume level
- JSR MakeSound-3
+ LDA #4                 \ Make sound #4 (crash/contact) at the current volume
+ JSR MakeSound-3        \ level
 
  RTS
 
@@ -26649,7 +26711,7 @@ ENDIF
 .P66EF
 
  STX L0045
- JSR sub_C2AD1
+ JSR DrawRoadSigns2
  DEX
  CPX #&14
  BCS P66EF
@@ -26693,7 +26755,8 @@ ORG &6C00
  LDA L018C,X            \ If L018C for the driver behind us has bit 7 set, jump
  BMI upmi1              \ to upmi1 to clear the mirror (as V will be set to a
                         \ negative value, and this will never match any values
-                        \ from L3BA4, as all the L3BA4 entries are positive)
+                        \ from mirrorSegment, as all the mirrorSegment entries
+                        \ are positive)
 
                         \ We now calculate the size of the car to draw in the
                         \ mirror (in other words, the height of the block we
@@ -26731,8 +26794,8 @@ ORG &6C00
                         \ should appear in, based on the var13Hi value for the
                         \ car, and var14Hi, storing the result in A
                         \
-                        \ This will then be matched with the values in L3BA4 to
-                        \ see which segment to update
+                        \ This will then be matched with the values in
+                        \ mirrorSegment to see which segment to update
 
  LDA var13Hi,X          \ Set A = var13Hi for the driver behind
 
@@ -26761,10 +26824,11 @@ ORG &6C00
 
 .upmi2
 
- LDA V                  \ If this segment's L3BA4 = V, then we can see a car in
- CMP L3BA4,Y            \ this segment, so jump to upmi3 to set A = TT (which we
- BEQ upmi3              \ calculated above to denote the size of the car) and
-                        \ send this to carInMirror and DrawCarInMirror
+ LDA V                  \ If V matches this segment's mirrorSegment value, then
+ CMP mirrorSegment,Y    \ we can see a car in this segment, so jump to upmi3 to
+ BEQ upmi3              \ set A = TT (which we calculated above to denote the
+                        \ size of the car) and send this to carInMirror and
+                        \ DrawCarInMirror
 
                         \ If we get here then we can't see a car in this
                         \ segment, so we need to clear the mirror to white
