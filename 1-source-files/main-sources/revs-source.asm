@@ -1085,18 +1085,31 @@ ORG &0380
                         \
                         \ Indexed by driver number (0 to 19)
 
-.currentTenths
+.clockTenths
 
- SKIP 4                 \ Tenths for current lap time for multi-player X
+ SKIP 1                 \ Tenths of seconds for the clock timer
+
+.lapTenths
+
+ SKIP 1                 \ Tenths of seconds for the lap timer
+
+ SKIP 2                 \ These bytes appear to be unused
 
 .driverSeconds
 
  SKIP 20                \ The seconds of each driver's lap time, stored in BCD
                         \
                         \ Indexed by driver number (0 to 19)
-.currentSeconds
 
- SKIP 4                 \ Seconds for current lap time for multi-player X
+.clockSeconds
+
+ SKIP 1                 \ Seconds for the clock timer
+
+.lapSeconds
+
+ SKIP 1                 \ Seconds for the lap timer
+
+ SKIP 2                 \ These bytes appear to be unused
 
 .driverMinutes
 
@@ -1104,9 +1117,15 @@ ORG &0380
                         \
                         \ Indexed by driver number (0 to 19)
 
-.currentMinutes
+.clockMinutes
 
- SKIP 4                 \ Minutes for current lap time for multi-player X
+ SKIP 1                 \ Minutes for the clock timer
+
+.lapMinutes
+
+ SKIP 1                 \ Minutes for the lap timer
+
+ SKIP 2                 \ These bytes appear to be unused
 
 .L06E8
 
@@ -3473,9 +3492,8 @@ ORG &0B00
                         \ If we get here then this is a practice or qualifying
                         \ lap
 
- LDX #1                 \ Add time to the lap timer at (currentMinutes
- JSR AddTimeToLapTimer  \ currentSeconds currentTenths)+1, setting the C flag
-                        \ if the time has changed
+ LDX #1                 \ Add time to the lap timer at (lapMinutes lapSeconds 
+ JSR AddTimeToTimer     \ lapTenths), setting the C flag if the time has changed
 
  BIT updateDrivingInfo  \ If bit 6 of updateDrivingInfo is set then we have
  BVS laps4              \ started the first lap, so jump to laps4 to skip the
@@ -3508,7 +3526,7 @@ ORG &0B00
                         \ time is never printed with tenths of a second
 
  LDA #%00100110         \ Print the current lap time at the top of the screen in
- JSR PrintThisLapTime+2 \ the following format:
+ JSR PrintLapTime+2     \ the following format:
                         \
                         \   * %00 Minutes: No leading zeroes, print both digits
                         \   * %10 Seconds: Leading zeroes, print both digits
@@ -3517,17 +3535,17 @@ ORG &0B00
 
 .laps3
 
- LDX #1                 \ Zero (currentMinutes currentSeconds currentTenths)+1
- JSR ZeroLapTime
+ LDX #1                 \ Zero the lap timer
+ JSR ZeroTimer
 
  BEQ laps6              \ Jump to laps6 (this BNE is effectively a JMP as the
-                        \ ZeroLapTime routine sets the Z flag)
+                        \ ZeroTimer routine sets the Z flag)
 
 .laps4
 
                         \ If we get here, then the C flag indicates whether the
-                        \ lap timer at (currentMinutes currentSeconds
-                        \ currentTenths)+1 has changed
+                        \ lap timer at (lapMinutes lapSeconds lapTenths) has
+                        \ changed
 
  LDA firstLapStarted    \ If firstLapStarted = 0 then we are currently driving
  BEQ laps5              \ the first qualifying or practice lap, so jump to laps5
@@ -3554,13 +3572,13 @@ ORG &0B00
 .laps5
 
                         \ If we get here, then the C flag indicates whether the
-                        \ lap timer at (currentMinutes currentSeconds
-                        \ currentTenths)+1 has changed
+                        \ lap timer at (lapMinutes lapSeconds lapTenths) has
+                        \ changed
 
  BCC laps6              \ If the C flag is clear then the timer has not changed,
                         \ so jump to laps6 to skip the following instruction
 
- JSR PrintThisLapTime   \ Print the current lap time at the top of the screen in
+ JSR PrintLapTime       \ Print the current lap time at the top of the screen in
                         \ the following format:
                         \
                         \   * Minutes: No leading zeroes, print both digits
@@ -3583,11 +3601,11 @@ ORG &0B00
                         \
                         \   * A = 25 indicates 26 minutes of qualifying time
 
- CMP currentMinutes     \ If A < currentMinutes then we have reached the end of
+ CMP clockMinutes     \ If A < clockMinutes then we have reached the end of
  BCC laps7              \ qualifying time, so jump to laps7 to display the
                         \ time-up message
 
- BNE laps8              \ If A <> currentMinutes, i.e. A > currentMinutes, then
+ BNE laps8              \ If A <> clockMinutes, i.e. A > clockMinutes, then
                         \ there is still some qualifying time left, so jump to
                         \ laps8 to return from the subroutine
 
@@ -5612,8 +5630,8 @@ ENDIF
 
                         \ We jump back here when restarting practice laps
 
- LDX #0                 \ Zero (currentMinutes currentSeconds currentTenths)
- JSR ZeroLapTime
+ LDX #0                 \ Zero the clock timer, as there is no time limit on the
+ JSR ZeroTimer          \ practice session
 
 .main2
 
@@ -5912,32 +5930,34 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: AddTimeToLapTimer
+\       Name: AddTimeToTimer
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Add time to the specified lap timer
+\    Summary: Add time to the specified timer
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The lap timer to increment:
+\   X                   The timer to increment:
 \
-\                         * 0 = (currentMinutes currentSeconds currentTenths)
+\                         * 0 = the clock timer
+\                               (clockMinutes clockSeconds clockTenths)
 \
-\                         * 1 = (currentMinutes currentSeconds currentTenths)+1
+\                         * 1 = the lap timer
+\                               (lapMinutes lapSeconds lapTenths)
 \
 \ Returns:
 \
 \   C flag              Denotes whether the number of seconds has changed:
 \
-\                         * Set if the lap time just ticked on to the next second
+\                         * Set if the time just ticked on to the next second
 \
-\                         * Clear if the lap time is unchanged
+\                         * Clear if the time is unchanged
 \
 \ ******************************************************************************
 
-.AddTimeToLapTimer
+.AddTimeToTimer
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
@@ -5952,15 +5972,15 @@ ENDIF
 
 .time1
 
- CLC                    \ Add A to the currentTenths for timer X
- ADC currentTenths,X    \
- STA currentTenths,X    \ starting with the tenths of a second
+ CLC                    \ Add A to the tenths for the timer
+ ADC clockTenths,X      \
+ STA clockTenths,X      \ starting with the tenths of a second
 
  PHP                    \ Store the C flag on the stack, so we can return it
                         \ from the subroutine below (the C flag will be set
                         \ if the lap time just ticked on to the next second)
 
- LDA currentSeconds,X   \ Then we add the seconds into A
+ LDA clockSeconds,X     \ Then we add the seconds into A
  ADC #0
 
  CMP #&60               \ If A < &60, then the number of seconds is still valid,
@@ -5971,21 +5991,21 @@ ENDIF
 
 .time2
 
- STA currentSeconds,X   \ Update the seconds value for the timer
+ STA clockSeconds,X     \ Update the seconds value for the timer
 
- LDA currentMinutes,X   \ Finally, we add the minutes 
+ LDA clockMinutes,X     \ Finally, we add the minutes 
  ADC #0
- STA currentMinutes,X
+ STA clockMinutes,X
 
  BPL time3              \ If the updates minutes value for the timer is
                         \ positive, jump to time3 to skip the following
 
- JSR ZeroLapTime        \ Otherwise the timer just reached the maximum
-                        \ possible value, so wrap it back round to zero
+ JSR ZeroTimer          \ Otherwise the timer just reached the maximum possible
+                        \ value, so wrap it back round to zero
 
  LDY currentPlayer      \ Set the best lap for the current player to -1, as
  LDA #&80               \ otherwise the driver might finish with a very low lap
- STA bestLapMinutes,Y   \ time, as we just set it back to zero
+ STA bestLapMinutes,Y   \ time, as we just set the timer back to zero
 
 .time3
 
@@ -6198,8 +6218,8 @@ ENDIF
                         \    "                                      "
                         \    "Lap Time   :         Best Time        "
 
- LDX #1                 \ Zero (currentMinutes currentSeconds currentTenths)+1
- JSR ZeroLapTime
+ LDX #1                 \ Zero the lap timer
+ JSR ZeroTimer
 
  JSR PrintBestLapTime   \ Print the best lap time and the current lap time at
                         \ the top of the screen
@@ -20958,10 +20978,10 @@ ENDIF
                         \ Decimal (BCD)
 
  SEC
- LDA currentTenths
+ LDA clockTenths
  SBC bestLapTenths,X
  STA T
- LDA currentSeconds
+ LDA clockSeconds
  SBC bestLapSeconds,X
  BCS C4FCC
  ADC #&60
@@ -20970,7 +20990,7 @@ ENDIF
 .C4FCC
 
  STA U
- LDA currentMinutes
+ LDA clockMinutes
  SBC bestLapMinutes,X
  STA H
  BCC C4FFB
@@ -20992,11 +21012,11 @@ ENDIF
 
 .C4FFB
 
- LDA currentTenths
+ LDA clockTenths
  STA bestLapTenths,X
- LDA currentSeconds
+ LDA clockSeconds
  STA bestLapSeconds,X
- LDA currentMinutes
+ LDA clockMinutes
  STA bestLapMinutes,X
 
  CLD                    \ Clear the D flag to switch arithmetic to normal
@@ -21008,20 +21028,22 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ZeroLapTime
+\       Name: ZeroTimer
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Zero the current lap time
+\    Summary: Zero the specified timer
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The lap time to zero:
+\   X                   The timer to set to zero:
 \
-\                         * 0 = (currentMinutes currentSeconds currentTenths)
+\                         * 0 = the clock timer
+\                               (clockMinutes clockSeconds clockTenths)
 \
-\                         * 1 = (currentMinutes currentSeconds currentTenths)+1
+\                         * 1 = the lap timer
+\                               (lapMinutes lapSeconds lapTenths)
 \
 \ Returns:
 \
@@ -21029,14 +21051,14 @@ ENDIF
 \
 \ ******************************************************************************
 
-.ZeroLapTime
+.ZeroTimer
 
- LDA #0                 \ Zero currentTenths+X
- STA currentTenths,X
+ LDA #0                 \ Zero clockTenths or lapTenths
+ STA clockTenths,X
 
- STA currentSeconds,X   \ Zero currentSeconds+X
+ STA clockSeconds,X     \ Zero clockSeconds or lapSeconds
 
- STA currentMinutes,X   \ Zero currentMinutes+X
+ STA clockMinutes,X     \ Zero clockMinutes or lapMinutes
 
  RTS                    \ Return from the subroutine
 
@@ -21058,22 +21080,24 @@ ENDIF
  INX                    \ Move the cursor to pixel row 33 (i.e. the second text
  STX yCursor            \ line at the top of the screen)
 
- LDX currentPlayer      \ Set X to the driver number of the current player
+ LDX currentPlayer      \ Set X to the driver number of the current player, so
+                        \ the call to PrintTimer prints the lap time for the
+                        \ current driver
 
  LDA #%00100110         \ Print the best lap time for driver X in the following
- JSR PrintLapTime       \ format:
+ JSR PrintTimer         \ format:
                         \
                         \   * %00 Minutes: No leading zeroes, print both digits
                         \   * %10 Seconds: Leading zeroes, print both digits
                         \   * %0  Tenths: Print tenths of a second
                         \   * %11 Tenths: Leading zeroes, no second digit
 
-                        \ Fall through into PrintThisLapTime to print the
-                        \ current lap time at the top of the screen
+                        \ Fall through into PrintLapTime to print the current
+                        \ lap time at the top of the screen
 
 \ ******************************************************************************
 \
-\       Name: PrintThisLapTime
+\       Name: PrintLapTime
 \       Type: Subroutine
 \   Category: Text
 \    Summary: Print the current lap time at the top of the screen
@@ -21089,15 +21113,15 @@ ENDIF
 \
 \ Other entry points:
 \
-\   PrintThisLapTime+2  Format the lap time using the format value in A (see
-\                       PrintLapTime for details)
+\   PrintLapTime+2      Format the lap time using the format value in A (see
+\                       PrintTimer for details)
 \
 \ ******************************************************************************
 
-.PrintThisLapTime
+.PrintLapTime
 
  LDA #%00101000         \ Set A so the current lap time is printed in the
-                        \ following format by the call to PrintLapTime:
+                        \ following format by the call to PrintTimer:
                         \
                         \   * %00 Minutes: No leading zeroes, print both digits
                         \   * %10 Seconds: Leading zeroes, print both digits
@@ -21109,8 +21133,8 @@ ENDIF
  LDX #33                \ Move the cursor to pixel row 33 (i.e. the second text
  STX yCursor            \ line at the top of the screen)
 
- LDX #21                \ Print (currentMinutes currentSeconds currentTenths)+1
- JSR PrintLapTime       \ in the format given in A
+ LDX #21                \ Print (lapMinutes lapSeconds lapTenths) in the format
+ JSR PrintTimer         \ given in A
 
  RTS                    \ Return from the subroutine
 
@@ -21220,8 +21244,8 @@ ENDIF
  LDA L006D              \ If bit 7 of L006D is set, jump to C5068
  BMI C5068
 
- LDX #0                 \ Add time to the lap timer at (currentMinutes
- JSR AddTimeToLapTimer  \ currentSeconds currentTenths)
+ LDX #0                 \ Increment the clock timer
+ JSR AddTimeToTimer
 
 .C5068
 
@@ -21231,7 +21255,7 @@ ENDIF
 
 .C506F
 
- LDA currentSeconds
+ LDA clockSeconds
  BEQ C507A
  LDA L006A
  AND #&1F
@@ -26328,7 +26352,9 @@ ENDIF
  JSR PrintToken         \ colours as configured above, so this inserts a black
                         \ gap between the second and third table columns
 
- LDX driverPrinted      \ Set X to the number of the driver we just printed
+ LDX driverPrinted      \ Set X to the number of the driver we just printed, so
+                        \ the call to PrintTimer prints the lap time for driver
+                        \ X
 
  PLA                    \ If the value of A that we stored on the stack at the
  PHA                    \ start of the routine is non-zero, jump to dtab3 to
@@ -26339,7 +26365,7 @@ ENDIF
                         \ containing the driver's best lap time
 
  LDA #%00100110         \ Print the lap time for driver X in the following
- JSR PrintLapTime       \ format:
+ JSR PrintTimer         \ format:
                         \
                         \   * %00 Minutes: No leading zeroes, print both digits
                         \   * %10 Seconds: Leading zeroes, print both digits
@@ -26953,10 +26979,10 @@ ORG &6C00
 
 \ ******************************************************************************
 \
-\       Name: PrintLapTime
+\       Name: PrintTimer
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Print the lap time for the specified driver
+\    Summary: Print the specified timer
 \
 \ ------------------------------------------------------------------------------
 \
@@ -26966,9 +26992,11 @@ ORG &6C00
 \
 \                         * 0 to 19: Lap time for the specified driver
 \
-\                         * 20: (currentMinutes currentSeconds currentTenths)
+\                         * 20 = the clock timer
+\                                (clockMinutes clockSeconds clockTenths)
 \
-\                         * 21: (currentMinutes currentSeconds currentTenths)+1
+\                         * 21 = the lap timer
+\                                (lapMinutes lapSeconds lapTenths)
 \
 \   A                   Flags to control how the time is printed:
 \
@@ -26995,7 +27023,7 @@ ORG &6C00
 \
 \ ******************************************************************************
 
-.PrintLapTime
+.PrintTimer
 
  STA G                  \ Store A in G so we can check the value of bit 7 below
 
