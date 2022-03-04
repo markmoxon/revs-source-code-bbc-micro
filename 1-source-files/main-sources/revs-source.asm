@@ -529,9 +529,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0056
+.temp1
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage
 
 .L0057
 
@@ -2392,7 +2392,9 @@ ORG &0B00
  JSR Multiply8x8        \ Set (A T) = A * U
 
  STA V
- JSR sub_C0DBF
+
+ JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+
  LDA G
  SEC
  SBC T
@@ -2417,7 +2419,9 @@ ORG &0B00
  SBC H
  STA U
  STA V
- JSR sub_C0DBF
+
+ JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+
  ASL T
  ROL U
  LDA #0
@@ -2498,37 +2502,54 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0DBF
+\       Name: Multiply8x16
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Multiply an 8-bit and a 16-bit number
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Do the following multiplication of two unsigned numbers:
+\
+\   (U T) = U * (V T) / 256
 \
 \ ******************************************************************************
 
-.sub_C0DBF
+.Multiply8x16
 
  JSR Multiply8x8+2      \ Set (A T) = T * U
 
- STA W
- LDA V
+ STA W                  \ Set (W T) = (A T)
+                        \           = T * U
+                        \
+                        \ So W = T * U / 256
+
+ LDA V                  \ Set A = V
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = V * U
 
- STA U
- LDA W
- CLC
- ADC T
+ STA U                  \ Set (U T) = (A T)
+                        \           = V * U
+
+ LDA W                  \ Set (U T) = (U T) + W
+ CLC                    \
+ ADC T                  \ starting with the low bytes
  STA T
- BCC C0DD6
- INC U
 
-.C0DD6
+ BCC mult1              \ And then the high bytes, so we get the following:
+ INC U                  \
+                        \   (U T) = (U T) + W
+                        \         = V * U + (T * U / 256)
+                        \         = U * (V + T / 256)
+                        \         = U * (256 * V + T) / 256
+                        \         = U * (V T) / 256
+                        \
+                        \ which is what we want
 
- RTS
+.mult1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -3924,7 +3945,7 @@ ORG &0B00
 
  JSR SetL018CBit7       \ Set bit 7 of all driver's L018C entries
 
- LDX currentPlayer      \ Clear the current player's best lap time if this is an 
+ LDX currentPlayer      \ Clear the current player's best lap time if this is an
  JSR ClearBestLapTime   \ incomplete race
 
 .C1171
@@ -6893,83 +6914,111 @@ ENDIF
 
 .DrawCornerMarkers
 
- LDY #0
+ LDY #0                 \ Set Y as a loop counter, counting up
 
-.C1B14
+.corn1
 
- CPY L0057
- BEQ C1B7F
- LDX L62B4,Y
- STY L0056
- LDA L6299,Y
- AND #&20
- BEQ C1B29
- LDA #&0F
+ CPY L0057              \ If Y = L0057, jump to corn7 to zero L0057 and return
+ BEQ corn7              \ from the subroutine
+
+ LDX L62B4,Y            \ Set X = the Y-th value from L62B4
+
+ STY temp1              \ Store the loop counter in temp1, so we can retrieve it
+                        \ at the end of the loop
+
+ LDA L6299,Y            \ If bit 5 of the Y-th L6299 is zero, skip the following
+ AND #%00100000         \ two instructions
+ BEQ corn2
+
+ LDA #%00001111         \ Set the third colourByte to four pixels of colour 1
  STA colourByte+2
 
-.C1B29
+.corn2
 
- LDA var27Lo,Y
+ LDA var27Hi,Y          \ Set (U A) = Y-th value from var27
  STA U
- LDA var27Hi,Y
- ASL A
- ROL U
- STA T
- CLC
- ADC var24Lo,X
- STA V
- LDA var24Hi,X
+ LDA var27Lo,Y
+
+ ASL A                  \ Set (U A) = (U A) << 1
+ ROL U                  \           = var27 << 1
+
+ STA T                  \ Set (U T) = (U A)
+                        \           = var27 << 1
+
+ CLC                    \ Set (A V) = (U A) + X-th value from var24
+ ADC var24Lo,X          \
+ STA V                  \ starting with the low bytes
+
+ LDA var24Hi,X          \ And then the high bytes
  ADC U
- CMP #&18
- BCC C1B49
- CMP #&E8
- BCC C1B74
 
-.C1B49
+ CMP #24                \ If A < 24, jump to corn3
+ BCC corn3
 
- ASL V
+ CMP #232               \ If A < 232, i.e. 24 <= A < 232, jump to corn6 to move
+ BCC corn6              \ on to the next loop
+
+.corn3
+
+ ASL V                  \ Set (A V) = (A V) << 2
  ROL A
  ASL V
  ROL A
- CLC
- ADC #&50
+
+ CLC                    \ Set L0035 = A + 80
+ ADC #80
  STA L0035
- LDA L5F20,X
+
+ LDA L5F20,X            \ Set L0036 = X-th value from L5F20
  STA L0036
- LDY #2
 
-.P1B5B
+ LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
+                        \ two places
 
- ASL T
+.corn4
+
+ ASL T                  \ Set (U T) = (U T) << 1
  ROL U
- DEY
- BNE P1B5B
- LDA U
- BPL C1B6B
- EOR #&FF
- CLC
+
+ DEY                    \ Decrement the shift counter
+
+ BNE corn4              \ Loop back until we have left-shifted by Y places
+
+ LDA U                  \ Set A = U
+
+ BPL corn5              \ If A is positive, jump to corn5 to skip the following
+
+ EOR #&FF               \ A is negative, so negate A using two's complement, so
+ CLC                    \ A now contains |U|
  ADC #1
 
-.C1B6B
+.corn5
 
- STA L002A
- LDA #6
+ STA L002A              \ Set L002A = |U|
+
+ LDA #6                 \ Set L0037 = 6
  STA L0037
+
  JSR sub_C1FB4
 
-.C1B74
+.corn6
 
- LDA #&F0
- STA colourByte+2
- LDY L0056
- INY
- JMP C1B14
+ LDA #%11110000         \ Set the third colourByte to four pixels of colour 2,
+ STA colourByte+2       \ which sets it back to the default value
 
-.C1B7F
+ LDY temp1              \ Set Y to the loop counter that we stored at the start
+                        \ of the loop
 
- LDA #0
+ INY                    \ Increment the loop counter
+
+ JMP corn1              \ Loop back to corn1
+
+.corn7
+
+ LDA #0                 \ Set L0057 = 0
  STA L0057
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -7169,7 +7218,7 @@ ENDIF
  STX G
  AND #3
  TAX
- LDA L628F,X
+ LDA colourByte2,X
  STA H
  LDA UU
  STA K
@@ -7178,7 +7227,7 @@ ENDIF
  LSR A
  LSR A
  TAX
- LDA L628F,X
+ LDA colourByte2,X
  STA V
  LDA #0
  STA P
@@ -7249,9 +7298,9 @@ ENDIF
 
 IF _ACORNSOFT
 
- STA &1D8C
+ STA mod_C1D8A+2
  LDA P
- STA &1D8B
+ STA mod_C1D8A+1
 
 ENDIF
 
@@ -7293,7 +7342,7 @@ ENDIF
  LDA TT
  AND #3
  TAX
- LDA L628F,X
+ LDA colourByte2,X
  STA V
 
 .C1CC3
@@ -7470,7 +7519,10 @@ IF _ACORNSOFT
 
  STA (P),Y
  DEY
- LDX token26,Y
+
+.mod_C1D8A
+
+ LDX &3000,Y
  BEQ L1D87
  TXA
 
@@ -8347,7 +8399,7 @@ IF _SUPERIOR
 
 .C1F79
 
- JSR sub_C0DBF
+ JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
 
  LDA U
 
@@ -8457,87 +8509,118 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X
+\
+\   L002A
+\
+\   L0037
 \
 \ ******************************************************************************
 
 .sub_C1FB4
 
- STX T
- LDX #3
+ STX T                  \ Store X in T
+
+ LDX #3                 \ We start by copying the four pixel bytes from
+                        \ colourByte to colourByte2, so set up a counter in X
 
 .P1FB8
 
- LDA colourByte,X
- STA L628F,X
- DEX
- BPL P1FB8
- LDA #&F0
+ LDA colourByte,X       \ Copy the X-th byte of colourByte to the X-th byte of
+ STA colourByte2,X      \ colourByte2
+
+ DEX                    \ Decrement the loop counter
+
+ BPL P1FB8              \ Loop back until we have copied all four bytes
+
+ LDA #%11110000         \ Set the third colourByte to four pixels of colour 2
  STA colourByte+2
- LDA T
- CMP #&17
+
+ LDA T                  \ Set A = T
+
+ CMP #23                \ If A = 32, jump to C1FDE
  BEQ C1FDE
- CMP #&14
+
+ CMP #20                \ If A < 20, jump to C1FD5
  BCC C1FD5
- LDX positionAhead
- LDA driversInOrder,X
+
+ LDX positionAhead      \ Set X to the position of the driver in front of us
+
+ LDA driversInOrder,X   \ Set A the number of the driver in front of us
 
 .C1FD5
 
- AND #3
+ AND #3                 \ Set X = A mod 3
  TAX
- LDA colourByte,X
- STA L6290
+
+ LDA colourByte,X       \ Set the second byte of colourByte2 to the X-th byte of
+ STA colourByte2+1      \ colourByte
 
 .C1FDE
 
- LDX #0
+ LDX #0                 \ Set L002B = 0
  STX L002B
- LDA L002A
- CMP L62FC
- BCS C1FEB
- LDX horizonLine
+
+ LDA L002A              \ Set A = L002A
+
+ CMP L62FC              \ If A >= L62FC, jump to C1FEB to skip the following
+ BCS C1FEB              \ instruction and set L62FD to 0
+
+ LDX horizonLine        \ Set X to the track line number of the horizon
 
 .C1FEB
 
- STX L62FD
- CMP #&40
+ STX L62FD              \ Set L62FD = X (which is 0 or horizonLine)
+
+ CMP #64                \ If A >= 64, jump to C1FFA to skip the following
  BCS C1FFA
- ASL A
+
+ ASL A                  \ Set L002A = A << 2
  ASL A
  STA L002A
- LDA #2
+
+ LDA #2                 \ Set L002B = 2
  STA L002B
 
 .C1FFA
 
- LDX L0037
- CPX #&0A
- BCC C2002
- LDX #9
+ LDX L0037              \ Set X = L0037
+
+ CPX #10                \ If X < 10, jump to C2002 to skip the following
+ BCC C2002              \ instruction
+
+ LDX #9                 \ Set X = 9, so X has a maximum value of 9
 
 .C2002
 
- STX L62F3
+ STX L62F3              \ Set L62F3 = X
+
  LDA L3CDD,X
  STA QQ
  LDA L3CDE,X
  STA II
  LDA L3CD0,X
  STA MM
+
  JSR sub_C202A
+
  BCS C2029
+
  JSR sub_C209A
+
  LDX L0037
  LDA L62F3
  CMP #9
  BNE C2029
+
  LDA L0025
  BPL C2002
 
 .C2029
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -8548,7 +8631,13 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   QQ
+\
+\   II
+\
+\   MM
 \
 \ ******************************************************************************
 
@@ -9425,9 +9514,9 @@ ENDIF
  BCS C2469
  LDX L0014
  LDA L0057
- STA L0056
+ STA temp1
  JSR sub_C2565
- LDA L0056
+ LDA temp1
  STA L0057
  INC L0012
 
@@ -9775,9 +9864,9 @@ ENDIF
 .C25F1
 
  LDA T
- STA var27Hi,Y
- LDA U
  STA var27Lo,Y
+ LDA U
+ STA var27Hi,Y
  INC L0057
 
 .C25FD
@@ -9937,34 +10026,34 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The driver number
+\   X                   The first position
 \
-\   Y                   The other driver number
+\   Y                   The second position
 \
 \ Returns:
 \
-\   X                   The new position for driver X
+\   X                   The number of the driver now at position X
 \
-\   Y                   The new position for driver Y
+\   Y                   The number of the driver now at position Y
 \
 \ ******************************************************************************
 
 .SwapDriverPosition
 
- LDA driversInOrder,X   \ Set T = driver X's current position
+ LDA driversInOrder,X   \ Set T to the number of the driver at position X
  STA T
 
- LDA driversInOrder,Y   \ Set A = driver Y's current position
+ LDA driversInOrder,Y   \ Set A to the number of the driver at position Y
 
- STA driversInOrder,X   \ Set driver X's new position to A (i.e. driver Y's old
-                        \ position) 
+ STA driversInOrder,X   \ Set the driver at position X to the driver from
+                        \ position Y
 
- TAX                    \ Set X = the new position for driver X
+ TAX                    \ Set X to the number of the driver now at position X
 
- LDA T                  \ Set driver Y's new position to T (i.e. driver X's old
- STA driversInOrder,Y   \ position)
+ LDA T                  \ Set the driver at position y to the driver from
+ STA driversInOrder,Y   \ position X
 
- TAY                    \ Set Y = the new position for driver Y
+ TAY                    \ Set Y to the number of the driver now at position Y
 
  RTS                    \ Return from the subroutine
 
@@ -11204,7 +11293,7 @@ ENDIF
 .P2C13
 
  LDA L5FD0,Y
- STA L628F,X
+ STA colourByte2,X
  AND L33FC,X
  STA L629C,X
  INY
@@ -11216,7 +11305,7 @@ ENDIF
  ASL A
  ASL A
  STA T
- LDA L628F
+ LDA colourByte2
  LSR A
  LSR A
  LSR A
@@ -11224,18 +11313,18 @@ ENDIF
  ORA T
  ORA #&40
  STA L0034
- LDA L628F
+ LDA colourByte2
  BNE C2C44
  LDA #&55
- STA L628F
+ STA colourByte2
 
 .C2C44
 
  STA JJ
- LDA L6292
+ LDA colourByte2+3
  LSR A
  AND #1
- BIT L6292
+ BIT colourByte2+3
  BPL C2C53
  ORA #2
 
@@ -11287,7 +11376,7 @@ ENDIF
  LDA SS
  CMP TT
  BCC C2CEF
- LDA L628F
+ LDA colourByte2
  CMP #&FF
  BEQ C2CB4
  LDA L0033
@@ -11870,7 +11959,7 @@ ENDIF
  STA &7000,Y
  LDA (R),Y
  BNE C2F63
- LDA L628F,X
+ LDA colourByte2,X
 
 .C2F58
 
@@ -11954,7 +12043,7 @@ ENDIF
  STA &7000,Y
  LDA (P),Y
  BNE C2FA5
- LDA L628F,X
+ LDA colourByte2,X
 
 .C2F9A
 
@@ -14468,10 +14557,10 @@ ENDIF
 
 .colourByte
 
- EQUB &00               \ Four pixels of colour 0
- EQUB &0F               \ Four pixels of colour 1
- EQUB &F0               \ Four pixels of colour 2
- EQUB &FF               \ Four pixels of colour 3
+ EQUB %00000000         \ Four pixels of colour 0
+ EQUB %00001111         \ Four pixels of colour 1
+ EQUB %11110000         \ Four pixels of colour 2
+ EQUB %11111111         \ Four pixels of colour 3
 
 \ ******************************************************************************
 \
@@ -18331,7 +18420,9 @@ ENDIF
 
  STA V
  STY U
- JSR sub_C0DBF
+
+ JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+
  LDA U
  PLP
 
@@ -19664,7 +19755,9 @@ ENDIF
  STA V
  LDA W
  STA U
- JSR sub_C0DBF
+
+ JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+
  LDY #7
  LDA var08Hi
  JSR sub_C48A0
@@ -23640,9 +23733,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L628F
+\       Name: colourByte2
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -23651,43 +23744,9 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L628F
+.colourByte2
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L6290
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L6290
-
- EQUB 0, 0
-
-\ ******************************************************************************
-\
-\       Name: L6292
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L6292
-
- EQUB 0
+ EQUB 0, 0, 0, 0
 
 \ ******************************************************************************
 \
@@ -23965,23 +24024,6 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var27Hi
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.var27Hi
-
- EQUB 0, 0, 0
-
-\ ******************************************************************************
-\
 \       Name: var27Lo
 \       Type: Variable
 \   Category: 
@@ -23994,6 +24036,23 @@ ENDIF
 \ ******************************************************************************
 
 .var27Lo
+
+ EQUB 0, 0, 0
+
+\ ******************************************************************************
+\
+\       Name: var27Hi
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var27Hi
 
  EQUB 0, 0, 0
 
