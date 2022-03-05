@@ -1999,32 +1999,38 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y
 \
 \ ******************************************************************************
 
 .sub_C0BA2
 
- LDA #0
+ LDA #0                 \ Set the Y-th entry in L5EE0 to 0
  STA L5EE0,Y
 
- LDA var24Lo,Y
- SEC
- SBC var03Lo
+ LDA var24Lo,Y          \ Set var24 = var24 - var03
+ SEC                    \
+ SBC var03Lo            \ starting with the high bytes
  STA var24Lo,Y
 
- LDA var24Hi,Y
+ LDA var24Hi,Y          \ And then the low bytes
  SBC var03Hi
-
  STA var24Hi,Y
- LDA L5F20,Y
+
+ LDA L5F20,Y            \ Set A = Y-th entry in L5F20 - L004E
  SEC
  SBC L004E
- STA L5F20,Y
- CMP horizonLine
- BCC C0BCB
- STA horizonLine
- STY L0051
+
+ STA L5F20,Y            \ Store the result in the Y-th entry in L5F20
+
+ CMP horizonLine        \ If A < horizonLine, jump to C0BCB to return from the
+ BCC C0BCB              \ subroutine
+
+ STA horizonLine        \ Store the result in horizonLine
+
+ STY L0051              \ Set L0051 = Y
 
 .C0BCB
 
@@ -3131,7 +3137,7 @@ ORG &0B00
 .shif4
 
  JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
-                        \ L5F60
+                        \ trackLineColour
 
  LDX #&A6               \ Scan the keyboard to see if DELETE is being pressed
  JSR ScanKeyboard
@@ -5709,13 +5715,13 @@ ENDIF
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
-                        \ L5F60
+                        \ trackLineColour
 
  JSR DrawTrack          \ Draw the track into the screen buffer
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR DrawHorizon
+ JSR DrawBackground
 
  JSR DrawRoadSigns1
 
@@ -6279,54 +6285,85 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawHorizon
+\       Name: DrawBackground
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Sets the background colour for all the track lines in the track
+\             view
 \
 \ ******************************************************************************
 
-.DrawHorizon
+.DrawBackground
 
- LDX L0051
- LDY horizonLine
- LDA L5EB8,X
+ LDX L0051              \ Set X = L0051
+
+ LDY horizonLine        \ Set Y to the track line number of the horizon
+
+ LDA L5EB8,X            \ Set A = X-th entry in L5EB8 + 20
  CLC
- ADC #&14
- BPL C18D4
- LDA var24Hi,X
+ ADC #20
+
+ BPL back1              \ If A is positive, jump to back1 to set the lines below
+                        \ the horizon to the colour of grass
+
+ LDA var24Hi,X          \ Set A = X-th entry in var24Hi + 20
  CLC
- ADC #&14
- BMI C18D4
- LDA #&20
- BNE C18D6
+ ADC #20
 
-.C18D4
+ BMI back1              \ If A is negative, jump to back1 to set the lines below
+                        \ the horizon to the colour of grass
 
- LDA #&23
+ LDA #%00100000         \ Set A = %00100000 (colour 0, black) for the horizon
+                        \ line and all lines below it, so the view below the
+                        \ horizon is all track
 
-.C18D6
+ BNE back2              \ Jump to back2 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
- STA L5F60,Y
- LDA #&21
- LDY #79
+.back1
 
-.P18DD
+ LDA #%00100011         \ Set A = %00100011 (colour 3, green) for the horizon
+                        \ line and all lines below it, so the view below the
+                        \ horizon is all grass
 
- LDX L5F60,Y
- BEQ C18E3
- TXA
+.back2
 
-.C18E3
+ STA trackLineColour,Y  \ Set the colour of the horizon line to A, which also
+                        \ sets the horizon line to the only non-zero line colour
+                        \ (as trackLineColour is all zeroes at this point)
 
- STA L5F60,Y
- DEY
- BPL P18DD
- RTS
+ LDA #%00100001         \ Set A = %00100011 (colour 1, blue) to use as the line
+                        \ colour for lines above the horizon, i.e. the sky
+
+ LDY #79                \ We now loop through all the track lines, starting from
+                        \ line 79 at the top of the track view down to 0 at the
+                        \ bottom, so set a counter in Y
+
+.back3
+
+ LDX trackLineColour,Y  \ Set X to the line colour for track line Y
+
+ BEQ back4              \ If it is zero, then this can't be the horizon line (as
+                        \ we set that to a non-zero value above), so jump to
+                        \ back4 we have not already set the colour
+                        \ jump to 
+
+ TXA                    \ If we get here then X is non-zero, so we must have
+                        \ reached the horizon line, so set A to the value we
+                        \ stored for the horizon line above, so that all the
+                        \ rest of the lines get set to this colour
+
+.back4
+
+ STA trackLineColour,Y  \ Set the line colour for track line Y to A
+
+ DEY                    \ Decrement the loop counter to move down to the next
+                        \ track line
+
+ BPL back3              \ Loop back until we have set the line colour for all
+                        \ 80 track lines
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -6864,9 +6901,9 @@ ENDIF
 
 .C1AE4
 
- LDA L5F60,Y
+ LDA trackLineColour,Y
  STA T
- LDA L5F60,Y
+ LDA trackLineColour,Y
  BEQ C1AF9
  AND #&1C
  CMP GG
@@ -6880,7 +6917,7 @@ ENDIF
  LDA L5EE0,X
  AND #3
  ORA GG
- STA L5F60,Y
+ STA trackLineColour,Y
 
 .C1B03
 
@@ -7595,7 +7632,19 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   UU                  Dash data block number
+\
+\   RR                  Dash data offset for block UU
+\
+\   N                   Starting byte in dash data block
+\
+\   A                   
+\
+\   X                   
+\
+\   Y                   
 \
 \ ******************************************************************************
 
@@ -7624,52 +7673,164 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   UU                  Dash data block number
+\
+\   RR                  Dash data offset for block UU
+\
+\   N                   Starting byte in dash data block
 \
 \ ******************************************************************************
 
 .sub_C1DAF
 
- LDA UU
- CMP #&28
- BCS C1DE4
- CLC
- ADC #&60
- LSR A
- STA Q
+ LDA UU                 \ Set A to the dash data block number in UU
+
+ CMP #40                \ If A >= 40 then this is not a valid dash data block
+ BCS C1DE4              \ number, so jump to C1DE4 to return from the subroutine
+
+                        \ We now calculate the start address of dash data block
+                        \ A, which will be at dashData + &80 * A (because the
+                        \ dash data blocks occur every &80 bytes from dashData)
+                        \
+                        \ We do this using the following simplification:
+                        \
+                        \     dashData + &80 * A
+                        \   = dashData + 256 / 2 * A
+                        \   = HI(dashData) << 8 + LO(dashData) + A << 7
+                        \
+                        \ LO(dashData) happens to be zero (as dashData = &3000),
+                        \ so we can keep going:
+                        \
+                        \   = HI(dashData) << 8 + A << 7
+                        \   = (HI(dashData) << 1 + A) << 7
+                        \   = ((HI(dashData) << 1 + A) << 8) >> 1
+                        \
+                        \ In other words, if we build a 16-bit number with the
+                        \ high byte set to HI(dashData) << 1 + A, and then shift
+                        \ the whole thing right by one place, we have our result
+                        \
+                        \ We do this below, storing the 16-bit number in (Q P)
+
+ CLC                    \ Set A = A + HI(dashData) << 1
+ ADC #HI(dashData)<<1   \
+                        \ so our 16-bit number is (A 0), and we want to shift
+                        \ right by one place
+
+ LSR A                  \ Shift (A 0) right by 1, shifting bit 0 of A into the
+                        \ C flag
+
+ STA Q                  \ Set Q = A, to store the high byte of the result in Q
 
 IF _ACORNSOFT
 
- STA mod_1E1D+2
+ STA mod_1E1D+2         \ Modify the high byte of the address in the instruction
+                        \ at mod_1E1D to Q
+
+ LDA #0                 \ Shift the C flag into bit 7 of A, so A now contains
+ ROR A                  \ the low byte of our result
+
+ STA P                  \ Set P = A, to store the low byte of the result in P,
+                        \ giving the result we wanted in (Q P)
+
+ STA mod_1E1D+1         \ Modify the low byte of the address in the instruction
+                        \ at mod_1E1D to P, so if we have the following:
+                        \
+                        \   LDX &3000,Y -> LDX #(Q P),Y
+                        \
+                        \ This is pseudo-code, but it means we have modified the
+                        \ instruction to load the Y-th byte from the dash data
+                        \ block address we just calculated, i.e. load the Y-th
+                        \ byte of dash data block A (i.e. dash data block UU)
+
+ LDY RR                 \ Set Y to the dash data offset for block UU
+
+ LDA (P),Y              \ Set W to the byte in the dash data offset from this
+ STA W                  \ block, which is the byte before the actual dash data
+
+ LDA #&AA               \ Store &AA in this byte, so it can act as a backstop
+ STA (P),Y              \ for when we work our way through the data below
+
+ LDY N                  \ Set Y to the starting byte number in N, so we work
+                        \ from byte N within the data block, down in memory,
+                        \ which is down the screen (as the block is in the
+                        \ reverse order to screen memory)
+
+ JMP P1DD2
+
+ CMP #&55
+ BNE L160D
+
  LDA #0
- ROR A
- STA P
- STA mod_1E1D+1
- LDY RR
- LDA (P),Y
- STA W
- LDA #&AA
+
+.L160D
+
+ STA (R),Y
+
+.C1E0E
+
+ DEY                    \ Decrement the byte counter to move down the screen
+                        \ within the dash data block
+
+.P1DD2
+
+ LDA (P),Y              \ Fetch the Y-th byte from the dash data block
+
+ BNE L1E23
+
+.C1E13
+
+ JSR sub_C1E9E
+ BNE C1DDD
+
+.mod_1DDB
+
+ LDA #&55               \ Value modified by sub_C1DA6 to argument A
+
+.C1DDD
+
+ STA (P),Y              \ High byte modified by sub_C1DA6 to argument X
+
+.C1DDF
+
+ DEY                    \ Decrement the byte counter to move down the screen
+                        \ within the dash data block
+
+.C1DE0
+
+.mod_1E1D
+
+ LDX &3000,Y
+ BEQ C1DDD
+ TXA
+
+.L1E23
+
+ CMP #&AA
+
+.mod_1E25
+
+ BNE C1E0E              \ Branch destination modified by sub_C1DA6 to argument Y
+
+ LDA #0
+ STA (P),Y
+
+ CPY RR
+ BNE C1E13
+ LDA W
  STA (P),Y
 
 ELIF _SUPERIOR
 
- LDA #0
- ROR A
- STA P
+ LDA #0                 \ Shift the C flag into bit 7 of A, so A now contains
+ ROR A                  \ the low byte of our result
 
-ENDIF
+ STA P                  \ Set P = A, to store the low byte of the result in P,
+                        \ giving the result we wanted in (Q P)
 
  LDY N
-
-IF _ACORNSOFT
-
- JMP P1DD2
-
-ELIF _SUPERIOR
-
  JMP C1DE0
-
-ENDIF
 
  CMP #&55
  BNE L160D
@@ -7683,12 +7844,8 @@ ENDIF
 
  DEY
 
-IF _SUPERIOR
-
  CPY &82
  BEQ C1DE4
-
-ENDIF
 
 .P1DD2
 
@@ -7696,28 +7853,19 @@ ENDIF
 
 .mod_1DD4
 
-IF _ACORNSOFT
+ BNE C1DDF              \ Branch destination modified by sub_C1DA6 to argument Y
 
- BNE L1E23
-
-.C1E13
-
-ELIF _SUPERIOR
-
- BNE C1DDF
-
-ENDIF
 
  JSR sub_C1E9E
  BNE C1DDD
 
 .mod_1DDB
 
- LDA #&55
+ LDA #&55               \ Value modified by sub_C1DA6 to argument A
 
 .C1DDD
 
- STA (P),Y
+ STA (P),Y              \ High byte modified by sub_C1DA6 to argument X
 
 .C1DDF
 
@@ -7725,36 +7873,7 @@ ENDIF
 
 .C1DE0
 
-IF _ACORNSOFT
-
-.mod_1E1D
-
- LDX token26,Y
- BEQ C1DDD
- TXA
-
-.L1E23
-
- CMP #&AA
-
-.mod_1E25
-
- BNE C1E0E
- LDA #0
- STA (P),Y
-
-ENDIF
-
  CPY RR
-
-IF _ACORNSOFT
-
- BNE C1E13
- LDA W
- STA (P),Y
-
-ELIF _SUPERIOR
-
  BNE P1DD2
 
 ENDIF
@@ -7778,65 +7897,80 @@ ENDIF
 \
 \       Name: sub_C1DEF
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The number of the leftmost dash data block to draw
+\
+\   A                   The number of the dash data block after the last block
+\                       to draw (so the last block to draw is A - 1)
+\
+\   Y                   
 \
 \ ******************************************************************************
 
 .sub_C1DEF
 
- STA L0042
+ STA L0042              \ Set L0042 = A, so in the following, the loop counter
+                        \ in UU loops from X to A - 1
 
 .C1DF1
 
- STX UU
- STY N
- LDA dashDataOffset,X
+ STX UU                 \ Store the loop counter in UU
+
+ STY N                  
+
+ LDA dashDataOffset,X   \ Set RR = the dash data offset for block X
  STA RR
+
  LDX #&72
 
 IF _ACORNSOFT
 
  LDY #&DF
 
-ELIF _SUPERIOR
-
- LDY #&EF
-
-ENDIF
-
  LDA #0
  JSR sub_C1DA6
+
  LDX #&70
-
-IF _ACORNSOFT
-
  LDY #&E7
 
 ELIF _SUPERIOR
 
+ LDY #&EF
+
+ LDA #0
+ JSR sub_C1DA6
+
+ LDX #&70
  LDY #9
 
 ENDIF
 
  LDA #&55
- INC UU
+
+ INC UU                 \ Increment the loop counter in UU
+
  JSR sub_C1DA6
- LDX UU
- CPX L0042
+
+ LDX UU                 \ Fetch the loop counter from UU into X
+
+ CPX L0042              \ If X <> L0042, loop back
  BNE C1DF1
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: DrawDashboardEdge
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw along the right edge of the left tyre and the right edge of
+\             the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -7846,26 +7980,31 @@ ENDIF
 
 .DrawDashboardEdge
 
- LDA #5
+ LDA #&05               \ Set (S R) = &0504
  STA S
- LDA #4
+ LDA #&04
  STA R
- LDY #&1B
- LDX #3
+
+ LDY #27                \ Start at byte 27 in the dash data
+
+ LDX #3                 \ Loop through dash data blocks 3 to 5
  LDA #6
 
-.C1E23
+ JSR sub_C1DEF          \ Draw along the right edge of the left tyre
 
- JSR sub_C1DEF
- LDA #&44
+ LDA #HI(dashRightEdge) \ Set (S R) = dashRightEdge
  STA S
- LDA #0
+ LDA #LO(dashRightEdge)
  STA R
- LDY #&2B
- LDX #&1A
- LDA #&22
- JSR sub_C1DEF
- RTS
+
+ LDY #43                \ Start at byte 43 in the dash data
+
+ LDX #26                \ Loop through dash data blocks 26 to 33
+ LDA #34
+
+ JSR sub_C1DEF          \ Draw along the right edge of the dashboard
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -8035,7 +8174,7 @@ ELIF _SUPERIOR
 
 ENDIF
 
- LDA L5F60,Y
+ LDA trackLineColour,Y
 
 IF _ACORNSOFT
 
@@ -8052,7 +8191,7 @@ IF _ACORNSOFT
 
 .C1F31
 
- LDA L5F60,Y
+ LDA trackLineColour,Y
  AND #&10
  BNE C1F3E
  JSR C1F5C
@@ -8064,7 +8203,7 @@ IF _ACORNSOFT
 
 .C1F41
 
- LDA L5F60,Y
+ LDA trackLineColour,Y
  AND #3
  TAX
  LDA colourByte,X
@@ -9667,53 +9806,71 @@ ENDIF
 
 .sub_C24F6
 
- LDA #0
+ LDA #0                 \ Set horizonLine = 0
  STA horizonLine
+
  JSR sub_C22FF
- LDA #&FF
+
+ LDA #&FF               \ Set L0011 = -1
  STA L0011
- LDA #&0D
+
+ LDA #13                \ Set L0013 = 13
  STA L0013
+
  LDA #0
  JSR sub_C254A
+
  LDA #6
  JSR sub_C23D2
- LDA L0012
+
+ LDA L0012              \ Set L0015 = L0012
  STA L0015
+
  LDA #&80
  JSR sub_C254A
+
  LDA #&2E
  JSR sub_C23D2
- LDA L0051
- CMP #&28
+
+ LDA L0051              \ If L0051 < 40, jump to C2528 to skip the following
+ CMP #40                \ three instructions
  BCC C2528
- SEC
- SBC #&28
+
+ SEC                    \ Set L0051 = L0051 - 40
+ SBC #40
  STA L0051
 
 .C2528
 
- TAY
- STY L0052
- LDA horizonLine
- CMP #79
+ TAY                    \ Set Y to the updated value of L0051
+
+ STY L0052              \ Set L0052 to the updated value of L0051
+
+ LDA horizonLine        \ If horizonLine < 79, jump to C2535 to skip the 
+ CMP #79                \ following two instructions
  BCC C2535
- LDA #&4E
- STA horizonLine
+
+ LDA #78                \ Set horizonLine = 78, so horizonLine is a maximum of
+ STA horizonLine        \ 78
 
 .C2535
 
- STA L5F20,Y
- STA L5F48,Y
- LDA var24Hi,Y
+ STA L5F20,Y            \ Set the Y-th entry in L5F20 to the updated value of
+                        \ horizonLine
+
+ STA L5F48,Y            \ Set the Y-th entry in L5F48 to the updated value of
+                        \ horizonLine
+
+ LDA var24Hi,Y          \ Set A = var24Hi - L5EB8 for Y
  SEC
  SBC L5EB8,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
- LSR A
+ LSR A                  \ Set L62FC = A / 2
  STA L62FC
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -11893,7 +12050,7 @@ ENDIF
 .C2F22
 
  DEY
- LDA L5F60,Y
+ LDA trackLineColour,Y
  BNE C2F44
  LDA L0033
 
@@ -11913,7 +12070,7 @@ ENDIF
 
 .C2F41
 
- STA L5F60,Y
+ STA trackLineColour,Y
 
 .C2F44
 
@@ -12705,8 +12862,8 @@ ENDIF
  STA (P),Y              \ Store A in the dash data block at (Q P), to draw this
                         \ four-pixel part of the fence in the track view
 
- STA firstPixelTyre,Y   \ Store A in the firstPixelTyre and firstPixelTrack
- STA firstPixelTrack,Y  \ entries for this row, so the drawing routines can wrap
+ STA firstPixelTyre,Y   \ Store A in the firstPixelTyre and dashRightEdge
+ STA dashRightEdge,Y    \ entries for this row, so the drawing routines can wrap
                         \ the fence correctly around the dashboard and tyres
 
  DEX                    \ Decrement X to point to the next pixel byte in the
@@ -17650,7 +17807,7 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: firstPixelTrack
+\       Name: dashRightEdge
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Storage for the first track pixel byte along the right edge of the
@@ -17670,7 +17827,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.firstPixelTrack
+.dashRightEdge
 
  EQUB &81, &81
  EQUB &81, &81
@@ -23288,18 +23445,19 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F60
+\       Name: trackLineColour
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Bits 0 and 1 give the starting colour (i.e. the background colour) of each
+\ track line. This value is used to look up the actual colour from colourByte.
 \
 \ ******************************************************************************
 
-.L5F60
+.trackLineColour
 
  SKIP 80
 
@@ -26687,7 +26845,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Reset the lines below the horizon in the track view, in the blocks
-\             at L05A4, L0554, L0600, L0650 and L5F60
+\             at L05A4, L0554, L0600, L0650 and trackLineColour
 \
 \ ------------------------------------------------------------------------------
 \
@@ -26701,7 +26859,7 @@ ENDIF
 \
 \   * Set horizonLine+1 bytes at L0650 to &80
 \
-\   * Set 80 bytes at L5F60 to 0
+\   * Set 80 bytes at trackLineColour to 0
 \
 \ ******************************************************************************
 
@@ -26727,14 +26885,14 @@ ENDIF
 
  BPL P66BA              \ Loop back until we have zeroed all horizonLine+1 bytes
 
- LDX #79                \ We now zero the 80 bytes at L5F60, so set a byte
-                        \ counter in X
+ LDX #79                \ We now zero the 80 bytes at trackLineColour, so set a
+                        \ byte counter in X
 
  LDA #0                 \ Set A = 0 to use as our zero value
 
 .P66CD
 
- STA L5F60,X            \ Zero the X-th byte of L5F60
+ STA trackLineColour,X  \ Zero the X-th byte of trackLineColour
 
  DEX                    \ Decrement the byte counter
 
@@ -27213,8 +27371,8 @@ ORG &6C00
                         \ At this point, X contains the offset within the dash
                         \ data of the pixel line to be drawn across the screen
 
- LDA L5F60,X            \ Fetch the colour of the first byte on the line from
- AND #%00000011         \ the X-th entry in L5F60 (bits 0 to 2)
+ LDA trackLineColour,X  \ Fetch the colour of the first byte on the line from
+ AND #%00000011         \ the X-th entry in trackLineColour (bits 0 to 2)
  TAY
 
  LDA colourByte,Y       \ Set A to the pixel byte for four pixels in colour Y
@@ -27489,7 +27647,7 @@ ENDMACRO
                         \ and replacing them with the pixels from the left edge
                         \ of the dashboard (with ORA leftDashPixels)
 
- LDA firstPixelTrack,X  \ Fetch the the track pixel byte that would be shown
+ LDA dashRightEdge,X    \ Fetch the the track pixel byte that would be shown
                         \ along the right edge of the dashboard, i.e. the
                         \ leftmost byte of the right portion of the track line,
                         \ where the line meets the right border of the central
@@ -27912,7 +28070,7 @@ ENDMACRO
                         \ the LDA #0 instruction in the DRAW_BYTE macro
                         \ specified in the table
 
- LDA firstPixelTrack,X  \ Fetch the the track pixel byte that would be shown
+ LDA dashRightEdge,X    \ Fetch the the track pixel byte that would be shown
                         \ along the right edge of the dashboard, i.e. the
                         \ leftmost byte of the right portion of the track line,
                         \ where the line meets the right border of the central
