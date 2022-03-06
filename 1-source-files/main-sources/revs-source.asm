@@ -7430,7 +7430,8 @@ ENDIF
 .C1D10
 
  LDY N
- JMP C1DE8
+
+ JMP EdgeLoop
 
 .C1D15
 
@@ -7496,21 +7497,20 @@ ENDIF
 
 .P1D4F
 
-IF _SUPERIOR
-
- LDA (P),Y
- BEQ C1D5D
-
-ENDIF
+IF _ACORNSOFT
 
  CMP #&55
  BNE C1D60
 
-IF _ACORNSOFT
-
  LDA #0
 
 ELIF _SUPERIOR
+
+ LDA (P),Y
+ BEQ C1D5D
+
+ CMP #&55
+ BNE C1D60
 
  LDA I
  BNE C1D68
@@ -7518,7 +7518,7 @@ ELIF _SUPERIOR
 
 .C1D5D
 
- JSR sub_C1E9E
+ JSR GetColourS
 
 ENDIF
 
@@ -7546,7 +7546,7 @@ IF _ACORNSOFT
 
 .L1D7C
 
- JSR sub_C1E9E
+ JSR GetColour
  AND &7D
  ORA &7A
  BNE L1D87
@@ -7575,19 +7575,26 @@ IF _ACORNSOFT
  LDA W
  STA (P),Y
 
+ LDX J
+ CPX #1
+ BEQ C1D93
+ INC UU
+ JSR DrawEdge
+ DEC UU
+
 ELIF _SUPERIOR
 
  CPY RR
  BNE P1D4F
 
-ENDIF
-
  LDX J
  CPX #1
  BEQ C1D93
  INC UU
- JSR sub_C1DAF
+ JSR DrawEdgeS
  DEC UU
+
+ENDIF
 
 .C1D7C
 
@@ -7625,9 +7632,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1DA6
+\       Name: DrawEdge
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -7640,55 +7647,42 @@ ENDIF
 \
 \   N                   Starting byte in dash data block
 \
-\   A                   
+\ Other entry points:
 \
-\   X                   
+\   DrawEdge-9          Modify the routine before running, as shown in the
+\                       first few comments below
 \
-\   Y                   
+\   EdgeLoop
 \
 \ ******************************************************************************
-
-.sub_C1DA6
-
- STX C1DDD+1
 
 IF _ACORNSOFT
 
- STY mod_1E25+1
+ STX edge7+1            \ Modify the following instruction at edge7:
+                        \
+                        \   STA (P),Y -> STA (R),Y          when X = LO(R)
+                        \
+                        \   STA (P),Y -> STA (P),Y          when X = LO(P)
 
-ELIF _SUPERIOR
+ STY edge11+1           \ Modify the following instruction at edge11:
+                        \
+                        \   BNE edge3 -> BNE edge1          when Y = &DF
+                        \
+                        \   BNE edge3 -> BNE edge3          when Y = &E7
 
- STY mod_1DD4+1
+ STA edge6+1            \ Modify the following instruction at edge6:
+                        \
+                        \   LDA #&55 -> LDA #0              when A = 0
+                        \
+                        \   LDA #&55 -> LDA #&55            when A = &55
 
-ENDIF
-
- STA mod_1DDB+1
-
-\ ******************************************************************************
-\
-\       Name: sub_C1DAF
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Arguments:
-\
-\   UU                  Dash data block number
-\
-\   RR                  Dash data offset for block UU
-\
-\   N                   Starting byte in dash data block
-\
-\ ******************************************************************************
-
-.sub_C1DAF
+.DrawEdge
 
  LDA UU                 \ Set A to the dash data block number in UU
 
  CMP #40                \ If A >= 40 then this is not a valid dash data block
- BCS C1DE4              \ number, so jump to C1DE4 to return from the subroutine
+ BCS edge12             \ number, so jump to edge12 to return from the
+                        \ subroutine
 
                         \ We now calculate the start address of dash data block
                         \ A, which will be at dashData + &80 * A (because the
@@ -7723,10 +7717,8 @@ ENDIF
 
  STA Q                  \ Set Q = A, to store the high byte of the result in Q
 
-IF _ACORNSOFT
-
- STA mod_1E1D+2         \ Modify the high byte of the address in the instruction
-                        \ at mod_1E1D to Q
+ STA edge9+2            \ Modify the high byte of the address in the instruction
+                        \ at edge9 to Q
 
  LDA #0                 \ Shift the C flag into bit 7 of A, so A now contains
  ROR A                  \ the low byte of our result
@@ -7734,8 +7726,8 @@ IF _ACORNSOFT
  STA P                  \ Set P = A, to store the low byte of the result in P,
                         \ giving the result we wanted in (Q P)
 
- STA mod_1E1D+1         \ Modify the low byte of the address in the instruction
-                        \ at mod_1E1D to P, so if we have the following:
+ STA edge9+1            \ Modify the low byte of the address in the instruction
+                        \ at edge9 to P, so if we have the following:
                         \
                         \   LDX &3000,Y -> LDX #(Q P),Y
                         \
@@ -7749,79 +7741,204 @@ IF _ACORNSOFT
  LDA (P),Y              \ Set W to the byte in the dash data offset from this
  STA W                  \ block, which is the byte before the actual dash data
 
- LDA #&AA               \ Store &AA in this byte, so it can act as a backstop
- STA (P),Y              \ for when we work our way through the data below
+ LDA #&AA               \ Store &AA in this byte, so it can act as a marker for
+ STA (P),Y              \ when we work our way through the data below
 
  LDY N                  \ Set Y to the starting byte number in N, so we work
-                        \ from byte N within the data block, down in memory,
-                        \ which is down the screen (as the block is in the
-                        \ reverse order to screen memory)
+                        \ from byte N within the data block, moving down in
+                        \ memory until we reach the marker
+                        \
+                        \ So we are working down the screen, going backwards in
+                        \ memory from byte N to the marker that we just placed
+                        \ at the start of the dash data
 
- JMP P1DD2
+ JMP edge4
+
+.edge1
 
  CMP #&55
- BNE L160D
+ BNE edge2
 
  LDA #0
 
-.L160D
+.edge2
 
  STA (R),Y
 
-.C1E0E
+.edge3
 
  DEY                    \ Decrement the byte counter to move down the screen
                         \ within the dash data block
 
-.P1DD2
+.edge4
 
  LDA (P),Y              \ Fetch the Y-th byte from the dash data block
 
- BNE L1E23
+ BNE edge10
 
-.C1E13
+.edge5
 
- JSR sub_C1E9E
- BNE C1DDD
+ JSR GetColour          \ Fetch the relevant colour into A
 
-.mod_1DDB
+ BNE edge7              \ If the colour byte is non-zero, skip the following
+                        \ instruction
 
- LDA #&55               \ Value modified by sub_C1DA6 to argument A
+.edge6
 
-.C1DDD
+ LDA #&55               \ Set A = &55, which indicates a switch to colour 0
+                        \ (black)
+                        \
+                        \ Gets modified by the DrawEdge-9 routine:
+                        \
+                        \   * LDA #0   when DrawEdge-9 is called with A = 0
+                        \
+                        \   * LDA #&55 when DrawEdge-9 is called with A = &55
 
- STA (P),Y              \ High byte modified by sub_C1DA6 to argument X
+.edge7
 
-.C1DDF
+ STA (P),Y              \
+                        \
+                        \ Gets modified by the DrawEdge-9 routine:
+                        \
+                        \   * STA (R),Y when DrawEdge-9 is called with X = LO(R)
+                        \
+                        \   * STA (P),Y when DrawEdge-9 is called with X = LO(P)
+
+.edge8
 
  DEY                    \ Decrement the byte counter to move down the screen
                         \ within the dash data block
 
-.C1DE0
-
-.mod_1E1D
+.edge9
 
  LDX &3000,Y
- BEQ C1DDD
+ BEQ edge7
  TXA
 
-.L1E23
+.edge10
 
  CMP #&AA
 
-.mod_1E25
+.edge11
 
- BNE C1E0E              \ Branch destination modified by sub_C1DA6 to argument Y
+ BNE edge3              \ 
+                        \
+                        \ Gets modified by the DrawEdge-9 routine:
+                        \
+                        \   * BNE edge1 when DrawEdge-9 is called with Y = &DF
+                        \
+                        \   * BNE edge3 when DrawEdge-9 is called with Y = &E7
 
  LDA #0
  STA (P),Y
 
  CPY RR
- BNE C1E13
+ BNE edge5
  LDA W
  STA (P),Y
 
-ELIF _SUPERIOR
+.edge12
+
+ RTS
+
+.edge13
+
+ STA (P),Y
+ DEY
+
+.EdgeLoop
+
+ CPY RR
+ BNE edge13
+ JMP C1D7C
+
+ENDIF
+
+\ ******************************************************************************
+\
+\       Name: DrawEdgeS
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   UU                  Dash data block number
+\
+\   RR                  Dash data offset for block UU
+\
+\   N                   Starting byte in dash data block
+\
+\ Other entry points:
+\
+\   DrawEdge-9          Modify the routine before running, as shown in the
+\                       first few comments below
+\
+\   EdgeLoop
+\
+\ ******************************************************************************
+
+IF _SUPERIOR
+
+ STX sedg7+1            \ Modify the following instruction at sedg7:
+                        \
+                        \   STA (P),Y -> STA (R),Y          when X = LO(R)
+                        \
+                        \   STA (P),Y -> STA (P),Y          when X = LO(P)
+
+ STY sedg5+1            \ Modify the following instruction at sedg5:
+                        \
+                        \   BNE sedg8 -> BNE sedg1          when Y = &EF
+                        \
+                        \   BNE sedg8 -> BNE sedg8          when Y = &09
+
+ STA sedg6+1            \ Modify the following instruction at sedg6:
+                        \
+                        \   LDA #&55 -> LDA #0              when A = 0
+                        \
+                        \   LDA #&55 -> LDA #&55            when A = &55
+
+.DrawEdgeS
+
+ LDA UU                 \ Set A to the dash data block number in UU
+
+ CMP #40                \ If A >= 40 then this is not a valid dash data block
+ BCS sedg10             \ number, so jump to sedg10 to return from the subroutine
+
+                        \ We now calculate the start address of dash data block
+                        \ A, which will be at dashData + &80 * A (because the
+                        \ dash data blocks occur every &80 bytes from dashData)
+                        \
+                        \ We do this using the following simplification:
+                        \
+                        \     dashData + &80 * A
+                        \   = dashData + 256 / 2 * A
+                        \   = HI(dashData) << 8 + LO(dashData) + A << 7
+                        \
+                        \ LO(dashData) happens to be zero (as dashData = &3000),
+                        \ so we can keep going:
+                        \
+                        \   = HI(dashData) << 8 + A << 7
+                        \   = (HI(dashData) << 1 + A) << 7
+                        \   = ((HI(dashData) << 1 + A) << 8) >> 1
+                        \
+                        \ In other words, if we build a 16-bit number with the
+                        \ high byte set to HI(dashData) << 1 + A, and then shift
+                        \ the whole thing right by one place, we have our result
+                        \
+                        \ We do this below, storing the 16-bit number in (Q P)
+
+ CLC                    \ Set A = A + HI(dashData) << 1
+ ADC #HI(dashData)<<1   \
+                        \ so our 16-bit number is (A 0), and we want to shift
+                        \ right by one place
+
+ LSR A                  \ Shift (A 0) right by 1, shifting bit 0 of A into the
+                        \ C flag
+
+ STA Q                  \ Set Q = A, to store the high byte of the result in Q
 
  LDA #0                 \ Shift the C flag into bit 7 of A, so A now contains
  ROR A                  \ the low byte of our result
@@ -7830,68 +7947,89 @@ ELIF _SUPERIOR
                         \ giving the result we wanted in (Q P)
 
  LDY N
- JMP C1DE0
+ JMP sedg9
+
+.sedg1
 
  CMP #&55
- BNE L160D
+ BNE sedg2
  LDA #0
 
-.L160D
+.sedg2
 
  STA (R),Y
 
-.C1E0E
+.sedg3
 
  DEY
 
  CPY &82
- BEQ C1DE4
+ BEQ sedg10
 
-.P1DD2
+.sedg4
 
  LDA (P),Y
 
-.mod_1DD4
+.sedg5
 
- BNE C1DDF              \ Branch destination modified by sub_C1DA6 to argument Y
+ BNE sedg8              \ 
+                        \
+                        \ Gets modified by the DrawEdge-9 routine:
+                        \
+                        \   * BNE sedg1 when DrawEdge-9 is called with Y = &EF
+                        \
+                        \   * BNE sedg8 when DrawEdge-9 is called with Y = &09
 
 
- JSR sub_C1E9E
- BNE C1DDD
+ JSR GetColourS
+ BNE sedg7
 
-.mod_1DDB
+.sedg6
 
- LDA #&55               \ Value modified by sub_C1DA6 to argument A
+ LDA #&55               \ Set A = &55, which indicates a switch to colour 0
+                        \ (black)
+                        \
+                        \ Gets modified by the DrawEdge-9 routine:
+                        \
+                        \   * LDA #0   when DrawEdge-9 is called with A = 0
+                        \
+                        \   * LDA #&55 when DrawEdge-9 is called with A = &55
 
-.C1DDD
+.sedg7
 
- STA (P),Y              \ High byte modified by sub_C1DA6 to argument X
+ STA (P),Y              \
+                        \
+                        \ Gets modified by the DrawEdge-9 routine:
+                        \
+                        \   * STA (R),Y when DrawEdge-9 is called with X = LO(R)
+                        \
+                        \   * STA (P),Y when DrawEdge-9 is called with X = LO(P)
 
-.C1DDF
+.sedg8
 
  DEY
 
-.C1DE0
+.sedg9
 
  CPY RR
- BNE P1DD2
+ BNE sedg4
 
-ENDIF
-
-.C1DE4
+.sedg10
 
  RTS
 
-.P1DE5
+.sedg11
 
  STA (P),Y
  DEY
 
-.C1DE8
+.EdgeLoop
 
  CPY RR
- BNE P1DE5
+ BNE sedg11
  JMP C1D7C
+
+ENDIF
 
 \ ******************************************************************************
 \
@@ -7909,7 +8047,8 @@ ENDIF
 \   A                   The number of the dash data block after the last block
 \                       to draw (so the last block to draw is A - 1)
 \
-\   Y                   
+\   Y                   Start at this byte in the dash data, so we work down the
+\                       screen from track line Y
 \
 \ ******************************************************************************
 
@@ -7922,40 +8061,63 @@ ENDIF
 
  STX UU                 \ Store the loop counter in UU
 
- STY N                  
+ STY N                  \ Set N to the offset of the start byte
 
  LDA dashDataOffset,X   \ Set RR = the dash data offset for block X
  STA RR
 
- LDX #&72
+ LDX #LO(R)             \ Set X so the call to DrawEdge-9 modifies the DrawEdge
+                        \ routine to draw to (S R) instead of (Q P)
 
 IF _ACORNSOFT
 
- LDY #&DF
+ LDY #&DF               \ Set Y = &DF so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine at edge11 to BNE edge1
 
- LDA #0
- JSR sub_C1DA6
+ LDA #0                 \ Set A = 0, so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine to store 0 as the value for colour 0
 
- LDX #&70
- LDY #&E7
+ JSR DrawEdge-9
 
-ELIF _SUPERIOR
+ LDX #LO(P)             \ Set X so the call to DrawEdge-9 modifies the DrawEdge
+                        \ routine back to drawing to (Q P)
 
- LDY #&EF
+ LDY #&E7               \ Set Y = &E7 so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine at edge11 back to BNE edge3
 
- LDA #0
- JSR sub_C1DA6
-
- LDX #&70
- LDY #9
-
-ENDIF
-
- LDA #&55
+ LDA #&55               \ Set A = &55, so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine back to storing &55 as the value
+                        \ for colour 0
 
  INC UU                 \ Increment the loop counter in UU
 
- JSR sub_C1DA6
+ JSR DrawEdge-9
+
+ELIF _SUPERIOR
+
+ LDY #&EF               \ Set Y = &DF so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine at sedg5 to BNE C1DC5
+
+ LDA #0                 \ Set A = 0, so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine to store 0 as the value for colour 0
+
+ JSR DrawEdgeS-9
+
+ LDX #LO(P)             \ Set X so the call to DrawEdge-9 modifies the DrawEdge
+                        \ routine at back to drawing to (Q P)
+
+ LDY #&09               \ Set Y = &09 so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine at sedg5 back to BNE edge8
+
+ LDA #&55               \ Set A = &55, so the call to DrawEdge-9 modifies the
+                        \ DrawEdge routine back to storing &55 as the value
+                        \ for colour 0
+
+ INC UU                 \ Increment the loop counter in UU
+
+ JSR DrawEdgeS-9
+
+ENDIF
 
  LDX UU                 \ Fetch the loop counter from UU into X
 
@@ -7985,7 +8147,8 @@ ENDIF
  LDA #&04
  STA R
 
- LDY #27                \ Start at byte 27 in the dash data
+ LDY #27                \ Start at byte 27 in the dash data, so we work down the
+                        \ screen from track line 27
 
  LDX #3                 \ Loop through dash data blocks 3 to 5
  LDA #6
@@ -7997,7 +8160,8 @@ ENDIF
  LDA #LO(dashRightEdge)
  STA R
 
- LDY #43                \ Start at byte 43 in the dash data
+ LDY #43                \ Start at byte 43 in the dash data, so we work down the
+                        \ screen from track line 43
 
  LDX #26                \ Loop through dash data blocks 26 to 33
  LDA #34
@@ -8109,9 +8273,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1E9E
+\       Name: GetColour
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -8120,36 +8284,27 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C1E9E
+IF _ACORNSOFT
+
+.GetColour
 
  CPY horizonLine
 
- BCC C1EA8
- BEQ C1EA8
-
-IF _ACORNSOFT
+ BCC gcol1
+ BEQ gcol1
 
  LDA horizonLine
- JSR C1F9E
-
-ENDIF
+ JSR gcol17
 
  LDA colourByte+1
  RTS
 
-.C1EA8
-
-IF _ACORNSOFT
+.gcol1
 
  LDA #0
  STA T
 
-ENDIF
-
  LDA UU
-
-IF _ACORNSOFT
-
  CMP L05A4,Y
  ROL T
  CMP L0650,Y
@@ -8159,49 +8314,33 @@ IF _ACORNSOFT
  CMP L0554,Y
  LDA T
  ROL A
- BNE C1ECB
-
-ELIF _SUPERIOR
-
- CMP L0554,Y
- BCS C1EC7
- CMP L0600,Y
- BCS C1ED5
- CMP L0650,Y
- BCS C1EC3
- CMP L05A4,Y
- BCS C1ECB
-
-ENDIF
+ BNE gcol7
 
  LDA trackLineColour,Y
-
-IF _ACORNSOFT
-
  AND #&EC
  CMP #&40
- BEQ C1F31
+ BEQ gcol2
  CMP #&88
- BEQ C1F31
+ BEQ gcol2
  CMP #&04
- BEQ C1F31
+ BEQ gcol2
  LDA L0554,Y
- BPL C1F3E
- BMI C1F41
+ BPL gcol3
+ BMI gcol4
 
-.C1F31
+.gcol2
 
  LDA trackLineColour,Y
  AND #&10
- BNE C1F3E
- JSR C1F5C
- JMP C1F41
+ BNE gcol3
+ JSR gcol8
+ JMP gcol4
 
-.C1F3E 
+.gcol3 
 
- JSR C1F7F
+ JSR gcol12
 
-.C1F41
+.gcol4
 
  LDA trackLineColour,Y
  AND #3
@@ -8209,108 +8348,111 @@ IF _ACORNSOFT
  LDA colourByte,X
  RTS
 
-ELIF _SUPERIOR
-
- BCC C1EE2
-
-ENDIF
-
-.C1EC3
+.gcol5
 
  LDA colourByte
  RTS
 
-.C1EC7
+.gcol6
 
  LDA colourByte+3
  RTS
 
-.C1ECB
-
-IF _ACORNSOFT
+.gcol7
 
  LSR A
- BCS C1EC7
+ BCS gcol6
  LSR A
- BCS C1F7F
+ BCS gcol12
  LSR A
- BCS C1EC3
+ BCS gcol5
 
-.C1F5C
-
-ENDIF
+.gcol8
 
  CPY L002C
- BCS C1EC7
-
-IF _ACORNSOFT
-
+ BCS gcol6
  LDX L0400,Y
- BMI sub_C1F95
- JSR C1F9B
+ BMI gcol15
+ JSR gcol16
 
-.L1F68
+.gcol9
 
  LDA (P),Y
- BNE L1F7A
+ BNE gcol11
  LDA L0650,Y
- BMI L1F77
+ BMI gcol10
  CMP UU
  DEY
- BCS L1F68
+ BCS gcol9
  INY
 
-.L1F77
+.gcol10
 
- JSR C1FA1
+ JSR gcol18
 
-.L1F7A
+.gcol11
 
  LDY V
- JMP C1F8B
+ JMP gcol13
 
-.C1F7F
+.gcol12
 
  CPY L0029
- BCS C1EC7
+ BCS gcol6
  LDX L0450,Y
- BMI sub_C1F95
- JSR C1F9B
+ BMI gcol15
+ JSR gcol16
 
-.C1F8B
-
-ELIF _SUPERIOR
-
- LDA L0400,Y
- JMP C1EDC
-
-.C1ED5
-
- CPY L0029
- BCS C1EC7
- LDA L0450,Y
-
-.C1EDC
-
- AND #&7F
- TAX
-
-ENDIF
+.gcol13
 
  LDA L5EDF,X
 
-.C1EE2
+.gcol14
 
  AND #3
  TAX
  LDA colourByte,X
  RTS
 
+.gcol15
+
+ TXA
+ AND #&7F
+ TAX
+ BPL gcol13
+
+.gcol16
+
+ LDA L5F20,X
+
+.gcol17
+
+ STY V
+ TAY
+
+.gcol18
+
+ CPY V
+ BCS gcol19
+ CPY RR
+ BCC gcol19
+ LDA (P),Y
+ BNE gcol19
+ LDA #&AA
+ STA (P),Y
+
+.gcol19
+
+ LDY V
+ RTS
+
+ENDIF
+
 \ ******************************************************************************
 \
-\       Name: sub_C1F95
+\       Name: GetColourS
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -8319,38 +8461,69 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _SUPERIOR
 
-.sub_C1F95
+.GetColourS
 
- TXA
+ CPY horizonLine
+
+ BCC scol1
+ BEQ scol1
+
+ LDA colourByte+1
+ RTS
+
+.scol1
+
+ LDA UU
+ CMP L0554,Y
+ BCS scol3
+ CMP L0600,Y
+ BCS scol5
+ CMP L0650,Y
+ BCS scol2
+ CMP L05A4,Y
+ BCS scol4
+
+ LDA trackLineColour,Y
+ BCC scol7
+
+.scol2
+
+ LDA colourByte
+ RTS
+
+.scol3
+
+ LDA colourByte+3
+ RTS
+
+.scol4
+
+ CPY L002C
+ BCS scol3
+
+ LDA L0400,Y
+ JMP scol6
+
+.scol5
+
+ CPY L0029
+ BCS scol3
+ LDA L0450,Y
+
+.scol6
+
  AND #&7F
  TAX
- BPL C1F8B
 
-.C1F9B
+ LDA L5EDF,X
 
- LDA L5F20,X
+.scol7
 
-.C1F9E
-
- STY V
- TAY
-
-.C1FA1
-
- CPY V
- BCS L1FB1
- CPY RR
- BCC L1FB1
- LDA (P),Y
- BNE L1FB1
- LDA #&AA
- STA (P),Y
-
-.L1FB1
-
- LDY V
+ AND #3
+ TAX
+ LDA colourByte,X
  RTS
 
 ENDIF
@@ -8393,20 +8566,20 @@ IF _SUPERIOR
                         \ L0025, and update the Computer Assisted Steering (CAS)
                         \ indicator on the dashboard
 
- BNE C1EF1              \ If CAS is enabled, jump to C1EF1 to skip the following
+ BNE asst2              \ If CAS is enabled, jump to asst2 to skip the following
                         \ instruction, otherwise we jump to keys11
 
-.P1EEE
+.asst1
 
  JMP keys11             \ Jump to keys11 in the ProcessDrivingKeys routine
 
-.C1EF1
+.asst2
 
- BCS P1EEE              \ If bit 7 of L0025 is set, jump to P1EEE to jump to
+ BCS asst1              \ If bit 7 of L0025 is set, jump to asst1 to jump to
                         \ keys11 in the ProcessDrivingKeys routine
 
- CMP #5                 \ If A >= 5, jump to C1F08
- BCS C1F08
+ CMP #5                 \ If A >= 5, jump to asst4
+ BCS asst4
 
  JMP keys7              \ Jump to keys7 in the ProcessDrivingKeys routine
 
@@ -8415,20 +8588,20 @@ IF _SUPERIOR
  JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
                         \ L0025, and update the CAS indicator on the dashboard
 
- BEQ C1F05              \ If CAS is not enabled, jump to C1F05 to set A and jump
+ BEQ asst3              \ If CAS is not enabled, jump to asst3 to set A and jump
                         \ to keys10 in the ProcessDrivingKeys routine
 
- BCS C1F05              \ If bit 7 of L0025 is set, jump to C1F05
+ BCS asst3              \ If bit 7 of L0025 is set, jump to asst3
 
- LDA V                  \ If V is non-zero, jump to C1F11
- BNE C1F11
+ LDA V                  \ If V is non-zero, jump to asst5
+ BNE asst5
 
-.C1F05
+.asst3
 
- JMP C1F95              \ Jump to C1F95 to set A and jump to keys10 in the
+ JMP asst13             \ Jump to asst13 to set A and jump to keys10 in the
                         \ ProcessDrivingKeys routine
 
-.C1F08
+.asst4
 
  LDA T
  EOR #1
@@ -8437,16 +8610,16 @@ IF _SUPERIOR
  LDA #3
  SBC #0
 
-.C1F11
+.asst5
 
  LDX #50
 
  CMP #2
- BEQ C1F19
+ BEQ asst6
 
  LDX #10
 
-.C1F19
+.asst6
 
  LDA steeringLo
  STA V
@@ -8454,7 +8627,7 @@ IF _SUPERIOR
  LSR A
 
  LDA steeringHi
- BCC C1F30
+ BCC asst7
 
  LDA #0
  SEC
@@ -8464,17 +8637,17 @@ IF _SUPERIOR
  LDA #0
  SBC steeringHi
 
-.C1F30
+.asst7
 
  CLC
  ADC #1
 
  CPX #50
- BNE C1F39
+ BNE asst8
 
  SBC #2
 
-.C1F39
+.asst8
 
  STA W
 
@@ -8498,11 +8671,11 @@ IF _SUPERIOR
  SEC
  SBC speedHi
 
- BPL C1F59
+ BPL asst9
 
  LDA #0
 
-.C1F59
+.asst9
 
  ASL A
  ADC #32
@@ -8513,18 +8686,18 @@ IF _SUPERIOR
  AND #%01111111
 
  CMP #64
- BCC C1F69
+ BCC asst10
 
  LDA #2
 
-.C1F69
+.asst10
 
  CMP #8
- BCC C1F6F
+ BCC asst11
 
  LDA #7
 
-.C1F6F
+.asst11
 
  ASL A
  ASL A
@@ -8532,11 +8705,11 @@ IF _SUPERIOR
  ASL A
 
  CMP U
- BCC C1F79
+ BCC asst12
 
  STA U
 
-.C1F79
+.asst12
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
 
@@ -8555,13 +8728,13 @@ IF _SUPERIOR
  LDA steeringLo
  LSR A
 
- BCS C1F95
+ BCS asst13
 
  JSR Negate16Bit+2      \ Set (A T) = -(U T)
 
  STA U
 
-.C1F95
+.asst13
 
  LDA steeringLo
 
