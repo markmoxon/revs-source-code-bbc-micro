@@ -965,10 +965,10 @@ ORG &0380
                         \ Stored as a 24-bit value (totalPointsTop totalPointsHi
                         \ totalPointsLo)
 
-.firstPixelTyre
+.tyreRightEdge
 
- SKIP 80                \ Storage for the first track pixel byte along the edge
-                        \ of the left tyre
+ SKIP 80                \ Storage for the first track pixel byte along the right
+                        \ edge of the left tyre
                         \
                         \ This table is used to store the track pixel byte that
                         \ would be shown along the edge of the left tyre, but
@@ -5732,7 +5732,9 @@ ENDIF
 
  JSR DrawCars
 
- JSR DrawDashboardEdge
+ JSR CopyTyreDashEdges  \ Copy the pixels from the edges of the left tyre and
+                        \ right dashboard so they can be used when drawing the
+                        \ track view around the tyres and dashboard
 
  JSR UpdateMirrors      \ Update the view in the wing mirrors
 
@@ -5748,7 +5750,8 @@ ENDIF
                         \ crashedIntoFence = &FF
 
  JSR DrawTrackView      \ Copy the data from the dash data blocks to the screen
-                        \ to draw the track view
+                        \ to draw the track view, fitting it around the tyres
+                        \ and dashboard
 
 \ ******************************************************************************
 \
@@ -8128,7 +8131,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawDashboardEdge
+\       Name: CopyTyreDashEdges
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw along the right edge of the left tyre and the right edge of
@@ -8136,16 +8139,18 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine populates the tyreRightEdge and dashRightEdge tables with the
+\ pixel bytes along the right edge of the left tyre and the right edge of the
+\ dashboard respectively.
 \
 \ ******************************************************************************
 
-.DrawDashboardEdge
+.CopyTyreDashEdges
 
- LDA #&05               \ Set (S R) = &0504
- STA S
- LDA #&04
- STA R
+ LDA #HI(tyreRightEdge) \ Set (S R) = tyreRightEdge
+ STA S                  \
+ LDA #LO(tyreRightEdge) \ so the call to sub_C1DEF stores the pixel data in the
+ STA R                  \ tyreRightEdge table
 
  LDY #27                \ Start at byte 27 in the dash data, so we work down the
                         \ screen from track line 27
@@ -8156,9 +8161,9 @@ ENDIF
  JSR sub_C1DEF          \ Draw along the right edge of the left tyre
 
  LDA #HI(dashRightEdge) \ Set (S R) = dashRightEdge
- STA S
- LDA #LO(dashRightEdge)
- STA R
+ STA S                  \
+ LDA #LO(dashRightEdge) \ so the call to sub_C1DEF stores the pixel data in the
+ STA R                  \ dashRightEdge table
 
  LDY #43                \ Start at byte 43 in the dash data, so we work down the
                         \ screen from track line 43
@@ -8816,10 +8821,12 @@ ENDIF
 \
 \       Name: sub_C1FB4
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine is used to draw road signs, corner markers and cars.
 \
 \ Arguments:
 \
@@ -8943,95 +8950,142 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine is used to draw road signs, corner markers and cars.
+\
 \ Arguments:
 \
-\   QQ
+\   QQ                  Start loop counter (from L3CDD table)
 \
-\   II
+\   II                  End loop counter (so last is II - 1) (from L3CDE table)
 \
-\   MM
+\ Returns:
+\
+\   C flag              Clear if we manage to loop through all of them
+\
+\                       Set if we abort when poking a negative number into L5EF8
 \
 \ ******************************************************************************
 
 .sub_C202A
 
- LDA L002A
+ LDA L002A              \ Set L5FFA = L002A
  STA L5FFA
- LSR A
+
+ LSR A                  \ Set L5FFB = L002A >> 1
  STA L5FFB
- LSR A
+
+ LSR A                  \ Set L5FFC = L002A >> 2
  STA L5FFC
- LSR A
+
+ LSR A                  \ Set L5FFD = L002A >> 3
  STA L5FFD
- LSR A
+
+ LSR A                  \ Set L5FFE = L002A >> 4
  STA L5FFE
- LSR A
+
+ LSR A                  \ Set L5FFF = L002A >> 5
  STA L5FFF
- LDY QQ
- LDX #0
- STX W
+
+ LDY QQ                 \ Set Y = QQ, to be used as a loop counter from QQ to
+                        \ II - 1
+
+ LDX #0                 \ Set W = 0, to be used as an index as we populate the
+ STX W                  \ L5EF8 table, one byte for each loop
 
 .C2049
 
- LDA L4480,Y
- BPL C2072
- AND #7
+ LDA L4480,Y            \ Set A = Y-th L4480
+
+ BPL C2072              \ If A is positive, jump to C2072
+
+ AND #7                 \ Set X = A mod 7
  TAX
- LDA L5FF8,X
+
+ LDA L5FF8,X            \ Set T = X-th L5FF8
  STA T
- LDA L4480,Y
+
+ LDA L4480,Y            \ Set U = Y-th L4480
  STA U
- LSR A
+
+ LSR A                  \ Set X = (A / 8) mod 7
  LSR A
  LSR A
  AND #7
  TAX
- LDA L5FF8,X
+
+ LDA L5FF8,X            \ Set A = X-th L5FF8 + T
  CLC
  ADC T
- BIT U
+
+ BIT U                  \ If bit 6 of U is clear, jump to C2076
  BVC C2076
- CLC
- ADC L5FFB
- JMP C2076
+
+ CLC                    \ If bit 6 of U is set:
+ ADC L5FFB              \
+                        \   A = A + L5FFB
+                        \     = A + L002A >> 1
+
+ JMP C2076              \ Jump to C2076
 
 .C2072
 
- TAX
- LDA L5FF8,X
+                        \ If we get here, A = Y-th L4480 is positive
+
+ TAX                    \ Set X = A
+
+ LDA L5FF8,X            \ Set A = X-th L5FF8
 
 .C2076
 
- LDX L002B
+ LDX L002B              \ If L002B = 0, jump to C2080
  BEQ C2080
+
+                        \ We now shift A right by X places
 
 .P207A
 
- LSR A
- DEX
- BNE P207A
- ADC #0
+ LSR A                  \ Set A = A >> 1
+
+ DEX                    \ Decrement the shift counter
+
+ BNE P207A              \ Loop back until we have shifted A right by X places,
+                        \ and the C flag contains the last bit shifted out from
+                        \ bit 0 of A
+
+ ADC #0                 \ Set A = A + C (rounding?)
 
 .C2080
 
- LDX W
- STA L5EF8,X
- EOR #&FF
- BPL C2098
- CLC
+ LDX W                  \ Set X to W, the index into the tables we are building
+
+ STA L5EF8,X            \ Store A in the X-th byte of L5EF8
+
+ EOR #&FF               \ Set A = ~A
+
+ BPL C2098              \ If bit 7 of A is not clear, i.e. it was set before the
+                        \ EOR, jump to C2098 to return from the subroutine with
+                        \ the C flag set
+
+ CLC                    \ Store -A in the X-th byte of L5F00
  ADC #1
  STA L5F00,X
- INC W
- INY
- CPY II
+
+ INC W                  \ Increment the index counter
+
+ INY                    \ Increment the loop counter
+
+ CPY II                 \ Loop back until Y has looped through QQ to II - 1
  BNE C2049
- CLC
- RTS
+
+ CLC                    \ Clear the C flag
+
+ RTS                    \ Return from the subroutine
 
 .C2098
 
- SEC
- RTS
+ SEC                    \ Set the C flag
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -9042,7 +9096,11 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is used to draw road signs, corner markers and cars.
+\
+\ Arguments:
+\
+\   MM                  (from L3CD0 table)
 \
 \ ******************************************************************************
 
@@ -11322,7 +11380,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is used to draw road signs and cars.
 \
 \ ******************************************************************************
 
@@ -13035,7 +13093,7 @@ ENDIF
  STA (P),Y              \ Store A in the dash data block at (Q P), to draw this
                         \ four-pixel part of the fence in the track view
 
- STA firstPixelTyre,Y   \ Store A in the firstPixelTyre and dashRightEdge
+ STA tyreRightEdge,Y    \ Store A in the tyreRightEdge and dashRightEdge
  STA dashRightEdge,Y    \ entries for this row, so the drawing routines can wrap
                         \ the fence correctly around the dashboard and tyres
 
@@ -28156,10 +28214,10 @@ ENDMACRO
                         \ to fetch the correct entries from leftTyreMask and
                         \ leftTyrePixels
 
- LDA firstPixelTyre,X   \ Fetch the the track pixel byte that would be shown
-                        \ along the edge of the left tyre, i.e. the leftmost
-                        \ byte of the track line, where the line meets the left
-                        \ tyre
+ LDA tyreRightEdge,X    \ Fetch the the track pixel byte that would be shown
+                        \ along the right edge of the left tyre, i.e. the
+                        \ leftmost byte of the track line, where the line meets
+                        \ the left tyre
 
  AND leftTyreMask,Y     \ We now merge the track byte in A with the edge of the
  ORA leftTyrePixels,Y   \ left tyre, by masking out the pixels in A that are
