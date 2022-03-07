@@ -237,9 +237,13 @@ ORG &0000
 
  SKIP 1                 \ 
 
+.objectEntry
+
+ SKIP 0                 \ The current entry within the object tables
+
 .rowCounter
 
- SKIP 1                 \ 
+ SKIP 1                 \ The table row number when printing the driver tables
 
 .pressingShiftArrow
 
@@ -368,7 +372,7 @@ ORG &0000
 
 .objectType
 
- SKIP 1                 \ The type of object to draw
+ SKIP 1                 \ The type of object to draw (0 to 12)
                         \
                         \   * 0 = blank road sign
                         \   * 1 = start line road sign
@@ -7053,7 +7057,7 @@ ENDIF
  LDA #6                 \ Set objectType = 6
  STA objectType
 
- JSR sub_C1FB4
+ JSR DrawObject
 
 .corn6
 
@@ -7254,162 +7258,255 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1C1C
+\       Name: DrawObjectLine (Part 1 of )
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   SS                  
+\
+\   TT                  
+\
+\   UU                  
+\
+\   Y                   
+\
+\   H                   Colour byte
+\
+\   A                   Same as TT
+\
+\   M                   
+\
+\   LL                  
+\
+\   NN                  
+\
+\   L0047               
 \
 \ ******************************************************************************
 
-.sub_C1C1C
+.DrawObjectLine
 
- STY J
- LDX H
+ STY J                  \ Set J = Y
+
+ LDX H                  \ Set G = H
  STX G
- AND #3
+
+ AND #%00000011         \ Set H to the colourByte2 byte given in bits 0-1 of A
  TAX
  LDA colourByte2,X
  STA H
- LDA UU
+
+ LDA UU                 \ Set K = UU
  STA K
- LDA TT
- AND #&0C
+
+ LDA TT                 \ Set V to the colourByte2 byte given in bits 2-3 of A
+ AND #%00001100
  LSR A
  LSR A
  TAX
  LDA colourByte2,X
  STA V
- LDA #0
- STA P
- CPY #1
- BNE C1C5A
- LDA M
- BPL C1C4D
- SEC
- ROR A
- ADC #0
- JMP C1C4E
 
-.C1C4D
+ LDA #0                 \ Set P = 0, for use as the low byte of (Q P), in which
+ STA P                  \ we are going to build the address we need to draw into
+                        \ in the dash data
 
- LSR A
+ CPY #1                 \ If Y <> 1, jump to draw3
+ BNE draw3
 
-.C1C4E
+                        \ If we get here then Y = 1
 
- CLC
- ADC L0035
+ LDA M                  \ Set A = M
+
+ BPL draw1              \ If A is positive, jump to draw1
+
+ SEC                    \ Set A = A / 2, inserting a set bit into bit 7 to
+ ROR A                  \ retain the sign of A, and rounding the division up
+ ADC #0                 \ towards zero by adding bit 0 of A to the result
+
+ JMP draw2              \ Jump to draw2 to skip the following instruction
+
+.draw1
+
+ LSR A                  \ Set A = A / 2, which will retain the sign of A as we
+                        \ know A is positive, rounding the result down towards
+                        \ zero
+
+.draw2
+
+ CLC                    \ Set M = A + L0035
+ ADC L0035              \       = M / 2 + L0035
  STA M
- LSR A
- LSR A
- STA UU
- JMP C1C66
 
-.C1C5A
-
- LDA LL
+ LSR A                  \ Set UU = A / 4
+ LSR A                  \        = (M / 2 + L0035) / 4
  STA UU
- LDA NN
+
+ JMP draw4              \ Jump to draw4
+
+.draw3
+
+                        \ We jump here if Y <> 1
+
+ LDA LL                 \ Set UU = LL
+ STA UU
+
+ LDA NN                 \ Set M = NN
  STA M
- CPY #0
- BNE C1C7B
 
-.C1C66
+ CPY #0                 \ If Y <> 0, jump to draw7
+ BNE draw7
 
- LDA SS
- BPL C1C71
- SEC
- ROR A
- ADC #0
- JMP C1C72
+.draw4
 
-.C1C71
+                        \ If we get here then Y = 0 or 1
 
- LSR A
+ LDA SS                 \ Set A = SS
 
-.C1C72
+ BPL draw5              \ If A is positive, jump to draw5
 
- CLC
- ADC L0035
+ SEC                    \ Set A = A / 2, inserting a set bit into bit 7 to
+ ROR A                  \ retain the sign of A, and rounding the division up
+ ADC #0                 \ towards zero by adding bit 0 of A to the result
+
+ JMP draw6              \ Jump to draw6 to skip the following instruction
+
+.draw5
+
+ LSR A                  \ Set A = A / 2, which will retain the sign of A as we
+                        \ know A is positive, rounding the result down towards
+                        \ zero
+
+.draw6
+
+ CLC                    \ Set NN = A + L0035
+ ADC L0035              \        = SS / 2 + L0035
  STA NN
- LSR A
- LSR A
+
+ LSR A                  \ Set LL = A / 4
+ LSR A                  \        = (SS / 2 + L0035) / 4
  STA LL
 
-.C1C7B
+\ ******************************************************************************
+\
+\       Name: DrawObjectLine (Part 2 of )
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ******************************************************************************
 
- LDA UU
- CMP #&14
+.draw7
+
+ LDA UU                 \ Set A = UU
+
+ CMP #20                \ If UU >= 20, set bit 0 of T, otherwise clear it
  ROL T
- LSR A
- ROR P
- CLC
- ADC #&30
- STA Q
+
+ LSR A                  \ Set (A P) = (A P) >> 1
+ ROR P                  \           = (UU 0) >> 1
+                        \           = UU * 128
+                        \           = UU * &80
+
+ CLC                    \ Set (Q P) = (A P) + dashData
+ ADC #HI(dashData)      \
+ STA Q                  \ This addition works because the low byte of dashData
+                        \ is zero
+
+                        \ So we now have:
+                        \
+                        \   (Q P) = dashData + UU * &80
+                        \
+                        \ which is the start address of dash data block UU,
+                        \ because the dash data blocks occur every &80 bytes
+                        \ from dashData
 
 IF _ACORNSOFT
 
- STA mod_C1D8A+2
- LDA P
- STA mod_C1D8A+1
+ STA draw27+2           \ Modify the following instruction at draw27:
+ LDA P                  \
+ STA draw27+1           \   LDX &3000,Y -> LDX #(Q P),Y
+                        \
+                        \ This is pseudo-code, but it means we have modified the
+                        \ instruction to load the Y-th byte from the dash data
+                        \ block address we just calculated, i.e. load the Y-th
+                        \ byte of dash data block UU
 
 ENDIF
 
- LDX UU
- CPX #&28
- BCC C1C92
- JMP C1D94
+ LDX UU                 \ Set X to the dash data block number in UU
 
-.C1C92
+ CPX #40                \ If UU < 40 then UU is a valid dash data block number
+ BCC draw8              \ in the range 0 to 29, so jump to draw8
 
- LDA L0047
- CMP dashDataOffset,X
- BCS C1C9C
- LDA dashDataOffset,X
+ JMP draw32             \ Otherwise UU is not a valid dash data block number, so
+                        \ jump to draw32
 
-.C1C9C
+.draw8
 
- STA RR
- CMP N
- BCC C1CAA
- CPY #1
- BNE C1CA7
- RTS
+ LDA L0047              \ Set A = L0047
 
-.C1CA7
+ CMP dashDataOffset,X   \ If A >= the dash data offset for our dash data block,
+ BCS draw9              \ then A is pointing to dash data, so jump to draw9 to
+                        \ skip the following instruction
 
- JMP C1D7C
+ LDA dashDataOffset,X   \ Set A to the dash data offset for our dash data block,
+                        \ so it points to the first byte of the block's dash
+                        \ data
 
-.C1CAA
+.draw9
 
- LDA TT
- AND #&10
- BEQ C1CC3
- TYA
- BEQ C1CC3
- EOR T
+ STA RR                 \ Set RR = A
+
+ CMP N                  \ If A < N, jump to draw11
+ BCC draw11
+
+ CPY #1                 \ If Y <> 1, jump to draw29 via draw10
+ BNE draw10
+
+                        \ If we get here then A >= N and Y = 1
+
+ RTS                    \ Return from the subroutine
+
+.draw10
+
+ JMP draw29             \ Jump to draw29
+
+.draw11
+
+ LDA TT                 \ If bit 4 of TT is clear, jump to draw12
+ AND #%00010000
+ BEQ draw12
+
+ TYA                    \ If Y = 0, jump to draw12
+ BEQ draw12
+
+ EOR T                  \ If bit 0 of Y = bit 0 of T, jump to draw12
  AND #1
- BEQ C1CC3
- LDA TT
- AND #3
+ BEQ draw12
+
+ LDA TT                 \ Set V to the colourByte2 byte given in bits 0-1 of TT
+ AND #%00000011
  TAX
  LDA colourByte2,X
  STA V
 
-.C1CC3
+.draw12
 
  LDA M
- AND #3
+ AND #%00000011
  TAX
  LDA yLookupLo+8,X
  EOR #&FF
  AND V
  STA V
  CPY #1
- BCS C1D15
+ BCS draw16
  LDA vergePixels,X
  AND G
  STA T
@@ -7420,39 +7517,39 @@ ENDIF
  ORA V
  STA I
  LDA L0048
- BEQ C1CFD
+ BEQ draw13
  LDA #0
  STA L0048
  LDA KK
  STA L
  EOR #&FF
  AND I
- JMP C1D25
+ JMP draw17
 
-.C1CFD
+.draw13
 
  LDX UU
  CPX LL
- BNE C1D0A
+ BNE draw14
  LDA I
  STA H
- JMP C1D7C
+ JMP draw29
 
-.C1D0A
+.draw14
 
  LDA I
- BNE C1D10
+ BNE draw15
  LDA #&55
 
-.C1D10
+.draw15
 
  LDY N
 
  JMP EdgeLoop
 
-.C1D15
+.draw16
 
- BNE C1D34
+ BNE draw18
  LDA vergePixels,X
  STA L
  EOR #&FF
@@ -7460,18 +7557,18 @@ ENDIF
  AND yLookupLo+8,X
  ORA V
 
-.C1D25
+.draw17
 
  LDX UU
  CPX LL
- BNE C1D44
+ BNE draw19
  STA H
  LDA L
  STA KK
  ROR L0048
  RTS
 
-.C1D34
+.draw18
 
  LDA KK
  ORA L39D0,X
@@ -7481,25 +7578,21 @@ ENDIF
  AND yLookupLo+8,X
  ORA V
 
-.C1D44
+.draw19
 
  STA I
 
 IF _ACORNSOFT
 
- BNE L1D52
+ BNE draw20
  LDA #&55
 
-.L1D52
+.draw20
 
  STA &87
 
-ENDIF
-
  LDA #0
  STA KK
-
-IF _ACORNSOFT
 
  LDY RR
  LDA (P),Y
@@ -7507,145 +7600,168 @@ IF _ACORNSOFT
  LDA #&AA
  STA (P),Y
 
-ENDIF
-
  LDY N
- JMP C1D6B
+ JMP draw24
 
-.P1D4F
-
-IF _ACORNSOFT
+.draw21
 
  CMP #&55
- BNE C1D60
+ BNE draw22
 
  LDA #0
 
-ELIF _SUPERIOR
-
- LDA (P),Y
- BEQ C1D5D
-
- CMP #&55
- BNE C1D60
-
- LDA I
- BNE C1D68
- BEQ C1D66
-
-.C1D5D
-
- JSR GetColourS
-
-ENDIF
-
-.C1D60
+.draw22
 
  AND L
  ORA I
- BNE C1D68
-
-.C1D66
+ BNE draw23
 
  LDA #&55
 
-.C1D68
+.draw23
 
  STA (P),Y
  DEY
 
-.C1D6B
-
-IF _ACORNSOFT
+.draw24
 
  LDA (P),Y
- BNE L1D90
+ BNE draw28
 
-.L1D7C
+.draw25
 
  JSR GetColour
  AND &7D
  ORA &7A
- BNE L1D87
+ BNE draw26
  LDA #&55
 
-.L1D87
+.draw26
 
  STA (P),Y
  DEY
 
-.mod_C1D8A
+.draw27
 
  LDX &3000,Y
- BEQ L1D87
+ BEQ draw26
  TXA
 
-.L1D90
+.draw28
 
  CMP #&AA
- BNE P1D4F
+ BNE draw21
 
  LDA #0
  STA (P),Y
  CPY RR
- BNE L1D7C
+ BNE draw25
  LDA W
  STA (P),Y
 
  LDX J
  CPX #1
- BEQ C1D93
+ BEQ draw31
  INC UU
  JSR DrawEdge
  DEC UU
 
 ELIF _SUPERIOR
 
+ LDA #0
+ STA KK
+
+ LDY N
+ JMP sraw6
+
+.sraw1
+
+ LDA (P),Y
+ BEQ sraw2
+
+ CMP #&55
+ BNE sraw3
+
+ LDA I
+ BNE sraw5
+ BEQ sraw4
+
+.sraw2
+
+ JSR GetColourS
+
+.sraw3
+
+ AND L
+ ORA I
+ BNE sraw5
+
+.sraw4
+
+ LDA #&55
+
+.sraw5
+
+ STA (P),Y
+ DEY
+
+.sraw6
+
  CPY RR
- BNE P1D4F
+ BNE sraw1
 
  LDX J
  CPX #1
- BEQ C1D93
+ BEQ draw31
  INC UU
  JSR DrawEdgeS
  DEC UU
 
 ENDIF
 
-.C1D7C
+.draw29
 
- LDA K
- CMP #&28
- BCC C1D86
- LDA #&FF
+ LDA K                  \ If K < 40, jump to draw30 to skip the following
+ CMP #40                \ instruction
+ BCC draw30
+
+ LDA #&FF               \ K >= 40, so set K = -1
  STA K
 
-.C1D86
+.draw30
 
- LDA UU
+ LDA UU                 \ Set A = UU - K
  CLC
  SBC K
- BEQ C1D93
- BMI C1D93
- TAX
- JSR sub_C1E38
 
-.C1D93
+ BEQ draw31             \ If A <= 0, jump to draw31 to return from the
+ BMI draw31             \ subroutine
 
- RTS
+ TAX                    \ Set X = A
 
-.C1D94
+ JSR sub_C1E38          \ ???
 
- LDY J
- CPY #1
- BEQ C1D93
- LDA K
- CMP #&28
- BCS C1D93
- LDA #&28
+.draw31
+
+ RTS                    \ Return from the subroutine
+
+.draw32
+
+                        \ We jump here if the block number in UU is >= 40
+
+ LDY J                  \ If J = 1, jump to draw31 to return from the
+ CPY #1                 \ subroutine
+ BEQ draw31
+
+ LDA K                  \ If K >= 40, jump to draw31 to return from the
+ CMP #&28               \ subroutine
+ BCS draw31
+
+ LDA #40                \ Set UU = 40
  STA UU
- BNE C1D86
+
+ BNE draw30             \ Jump to draw30 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 \ ******************************************************************************
 \
@@ -7867,7 +7983,7 @@ IF _ACORNSOFT
 
  CPY RR
  BNE edge13
- JMP C1D7C
+ JMP draw29
 
 ENDIF
 
@@ -8044,7 +8160,7 @@ IF _SUPERIOR
 
  CPY RR
  BNE sedg11
- JMP C1D7C
+ JMP draw29
 
 ENDIF
 
@@ -8833,7 +8949,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1FB4
+\       Name: DrawObject
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
@@ -8844,15 +8960,15 @@ ENDIF
 \
 \ Arguments:
 \
-\   X
+\   X                   Affects the colour scheme (driver number?)
 \
 \   L002A
 \
-\   objectType           Type of object to draw
+\   objectType          The type of object to draw (0 to 12)
 \
 \ ******************************************************************************
 
-.sub_C1FB4
+.DrawObject
 
  STX T                  \ Store X in T
 
@@ -8873,7 +8989,7 @@ ENDIF
 
  LDA T                  \ Set A = T
 
- CMP #23                \ If A = 32, jump to C1FDE
+ CMP #23                \ If A = 23, jump to C1FDE
  BEQ C1FDE
 
  CMP #20                \ If A < 20, jump to C1FD5
@@ -8907,8 +9023,8 @@ ENDIF
 
  STX L62FD              \ Set L62FD = X (which is 0 or horizonLine)
 
- CMP #64                \ If A >= 64, jump to C1FFA to skip the following
- BCS C1FFA
+ CMP #64                \ If A >= 64, i.e. L002A >= 64, jump to C1FFA to skip
+ BCS C1FFA              \ the following
 
  ASL A                  \ Set L002A = A << 2
  ASL A
@@ -8929,29 +9045,36 @@ ENDIF
 
 .C2002
 
- STX temp2              \ Store X in temp2 so we can retrieve it below
+ STX thisObjectType     \ Store X in thisObjectType so we can check it again
+                        \ below
 
- LDA L3CDD,X
- STA QQ
- LDA L3CDD+1,X
- STA II
- LDA L3CD0,X
- STA MM
+ LDA L3CDD,X            \ Set QQ to the index of the first entry in L4480 for
+ STA QQ                 \ object type X
 
- JSR sub_C202A
+ LDA L3CDD+1,X          \ Set II to the index of the last entry in L4480 for
+ STA II                 \ object type X
+
+ LDA L3CD0,X            \ Set QQ to the index of the first entry in the
+ STA MM                 \ objectLookup tables for object type X
+
+ JSR PrepareObject
 
  BCS C2029
 
- JSR sub_C209A
+ JSR DrawObjectLines
 
- LDX objectType
+ LDX objectType         \ Set X to the type object to draw
 
- LDA temp2
- CMP #9
- BNE C2029
+ LDA thisObjectType     \ If the object we just drew is not an object of type 9,
+ CMP #9                 \ then this is not a multi-part object, so jump to C2029
+ BNE C2029              \ to return from the subroutine
 
- LDA L0025
- BPL C2002
+                        \ Otherwise we just drew an object of type 9, as part of
+                        \ a multi-part object of type objectType, so now we draw
+                        \ the second part
+
+ LDA L0025              \ If bit 7 of L0025 is clear, loop back to draw the
+ BPL C2002              \ object of type objectType
 
 .C2029
 
@@ -8959,9 +9082,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C202A
+\       Name: PrepareObject
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -8990,7 +9113,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C202A
+.PrepareObject
 
  LDA L002A              \ Set L5FF8+2 = L002A
  STA L5FF8+2
@@ -9017,11 +9140,11 @@ ENDIF
  LDX #0                 \ Set W = 0, to be used as an index as we populate the
  STX W                  \ L5EF8 table, incrementing by one byte for each loop
 
-.C2049
+.prep1
 
  LDA L4480,Y            \ Set A = Y-th L4480
 
- BPL C2072              \ If bit 7 of A is clear, jump to C2072 to store A in
+ BPL prep2              \ If bit 7 of A is clear, jump to prep2 to store A in
                         \ the L5EF8 table
 
                         \ If we get here, bit 7 of A is set, so now we do the
@@ -9030,6 +9153,10 @@ ENDIF
                         \   A = (L002A / 2^a) + (L002A / 2^b) + (c * L002A / 2)
                         \       -----------------------------------------------
                         \                          2^L002B
+                        \
+                        \     = L002A * (1 / 2^a + 1 / 2^b + c / 2)
+                        \       -----------------------------------
+                        \                    2^L002B
                         \
                         \ so we can store this in the next entry in L5EF8
                         \
@@ -9062,8 +9189,8 @@ ENDIF
  CLC                    \       = L002A / 2^X + L002A / 2^a
  ADC T                  \       = L002A / 2^b + L002A / 2^a
 
- BIT U                  \ If bit 6 of U is clear, jump to C2076
- BVC C2076
+ BIT U                  \ If bit 6 of U is clear, jump to prep3
+ BVC prep3
 
  CLC                    \ If bit 6 of U is set:
  ADC L5FF8+3            \
@@ -9071,42 +9198,42 @@ ENDIF
                         \     = A + L002A >> 1
                         \     = A + L002A / 2
 
- JMP C2076              \ Jump to C2076
+ JMP prep3              \ Jump to prep3
 
-.C2072
+.prep2
 
                         \ If we get here, bit 7 of the Y-th L4480 is clear, so
                         \ we do the following calculation, where A = %00000aaa:
                         \
-                        \   A = (L002A / 2^a)
-                        \       -------------
-                        \          2^L002B
+                        \   A = L002A * (1 / 2^a)
+                        \       -----------------
+                        \            2^L002B
                         \
                         \ so we can store this in the next entry in L5EF8
 
  TAX                    \ Set A = A-th L5FF8
- LDA L5FF8,X            \ Set A = L002A / 2^a
+ LDA L5FF8,X            \       = L002A / 2^a
 
-.C2076
+.prep3
 
- LDX L002B              \ If L002B = 0, jump to C2080
- BEQ C2080
+ LDX L002B              \ If L002B = 0, jump to prep5
+ BEQ prep5
 
                         \ We now shift A right by X places
 
-.P207A
+.prep4
 
  LSR A                  \ Set A = A >> 1
 
  DEX                    \ Decrement the shift counter
 
- BNE P207A              \ Loop back until we have shifted A right by X places,
+ BNE prep4              \ Loop back until we have shifted A right by X places,
                         \ and the C flag contains the last bit shifted out from
                         \ bit 0 of A
 
  ADC #0                 \ Set A = A + C (rounding?)
 
-.C2080
+.prep5
 
  LDX W                  \ Set X to W, the index into the tables we are building
 
@@ -9114,8 +9241,8 @@ ENDIF
 
  EOR #&FF               \ Set A = ~A
 
- BPL C2098              \ If bit 7 of A is not clear, i.e. it was set before the
-                        \ EOR, jump to C2098 to return from the subroutine with
+ BPL prep6              \ If bit 7 of A is not clear, i.e. it was set before the
+                        \ EOR, jump to prep6 to return from the subroutine with
                         \ the C flag set
 
  CLC                    \ Store -A in the X-th byte of L5F00
@@ -9127,13 +9254,13 @@ ENDIF
  INY                    \ Increment the loop counter
 
  CPY II                 \ Loop back until Y has looped through QQ to II - 1
- BNE C2049
+ BNE prep1
 
  CLC                    \ Clear the C flag
 
  RTS                    \ Return from the subroutine
 
-.C2098
+.prep6
 
  SEC                    \ Set the C flag
 
@@ -9141,9 +9268,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C209A
+\       Name: DrawObjectLines
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -9156,115 +9283,149 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C209A
+.DrawObjectLines
 
- LDY MM
+ LDY MM                 \ Set Y to the index of this object's first entry in the
+                        \ various object tables
 
-.C209C
+                        \ We now work our way through the entries for this
+                        \ object, with the entry index in Y and objectEntry
 
- LDA colourByte
+.drob1
+
+ LDA colourByte         \ Set H = colourByte for colour 0
  STA H
- LDA #0
+
+ LDA #0                 \ Set L0048 = 0
  STA L0048
- STA KK
- LDX L3550,Y
- LDA L5EF8,X
- CLC
+
+ STA KK                 \ Set KK = 0
+
+ LDX objectLookup1,Y    \ Set X to objectLookup1 for this object entry
+
+ LDA L5EF8,X            \ Set A to the X-th L5EF8 entry
+
+ CLC                    \ Set A = A + L0036
  ADC L0036
- BMI C210C
- CMP #&50
- BCC C20B8
+
+ BMI drob9              \ If A is negative, jump to drob9
+
+ CMP #80
+ BCC drob2
  LDA #79
 
-.C20B8
+.drob2
 
  STA N
- LDX L35D0,Y
+
+ LDX objectLookup2,Y
  LDA L5EF8,X
+
  CLC
  ADC L0036
- BMI C20CA
+ BMI drob3
  CMP L62FD
- BCS C20CF
+ BCS drob4
 
-.C20CA
+.drob3
 
  LDA L62FD
  NOP
  NOP
 
-.C20CF
+.drob4
 
  CMP N
- BCS C210C
+ BCS drob9
  STA L0047
- LDX L3650,Y
+
+ LDX objectLookup3,Y
  LDA L5EF8,X
  STA M
- LDX L36D0,Y
+
+ LDX objectLookup4,Y
  LDA L5EF8,X
  STA SS
- LDA L3750,Y
+
+ LDA objectLookup5,Y
  STA TT
- STY rowCounter
+
+ STY objectEntry        \ Store the object entry in objectEntry
+
  LDY #1
- JSR sub_C1C1C
+ JSR DrawObjectLine
 
-.C20F1
+.drob5
 
- BIT TT
- BMI C2117
+ BIT TT                 \ If bit 7 of TT is set, jump to drob10
+ BMI drob10
+
  LDA #0
  LDY #2
- JSR sub_C1C1C
- BIT TT
- BVS C2106
- LDY rowCounter
+ JSR DrawObjectLine
 
-.P2102
+ BIT TT                 \ If bit 6 of TT is set, jump to drob7 to return from
+ BVS drob7              \ the subroutine
 
- INY
- JMP C209C
+ LDY objectEntry        \ Set Y to the object entry
 
-.C2106
+.drob6
 
- RTS
+ INY                    \ Increment the object entry in Y
 
-.P2107
+ JMP drob1              \ Loop back to drob1 to process the next object entry
+
+.drob7
+
+ RTS                    \ Return from the subroutine
+
+.drob8
 
  AND #&40
- BNE C2106
+ BNE drob7
  INY
 
-.C210C
+.drob9
 
- LDA L3750,Y
- BMI P2107
+ LDA objectLookup5,Y
+ BMI drob8
  AND #&40
- BNE C2106
- BEQ P2102
+ BNE drob7
+ BEQ drob6
 
-.C2117
+.drob10
 
- LDY rowCounter
- INY
- STY rowCounter
- LDX L3650,Y
+                        \ If we get here then objectLookup5 for this object
+                        \ entry has bit 7 set
+
+ LDY objectEntry        \ Set Y to the object entry
+
+ INY                    \ Increment the object entry
+ STY objectEntry
+
+ LDX objectLookup3,Y
  LDA L5EF8,X
  STA SS
- LDA L36D0,Y
+
+ LDA objectLookup4,Y
  STA TT
+
  LDY #0
- JSR sub_C1C1C
- LDY rowCounter
- LDX L3550,Y
+ JSR DrawObjectLine
+
+ LDY objectEntry        \ Set Y to the object entry
+
+ LDX objectLookup1,Y
  LDA L5EF8,X
  STA SS
- LDA L3750,Y
+
+ LDA objectLookup5,Y    \ Set TT to objectLookup5 for this object entry
  STA TT
+
  LDY #0
- JSR sub_C1C1C
- JMP C20F1
+ JSR DrawObjectLine
+
+ JMP drob5              \ Loop back to drob5
 
 \ ******************************************************************************
 \
@@ -11473,7 +11634,7 @@ ENDIF
  STA L0036
  LDA L03C8,X
  STA L002A
- JSR sub_C1FB4
+ JSR DrawObject
 
 .C2B0B
 
@@ -11601,7 +11762,7 @@ ENDIF
  LDA L5F20,Y
  STA RR
  STX L0045
- STY rowCounter
+ STY objectEntry
  PLP
  BCS C2BCA
  BIT GG
@@ -11775,7 +11936,7 @@ ENDIF
  ORA #&80
  ORA T
  STA L0033
- LDA rowCounter
+ LDA objectEntry
  CLC
  ADC #1
  CMP L004B
@@ -11893,7 +12054,7 @@ ENDIF
 .C2D08
 
  LDX L0045
- LDY rowCounter
+ LDY objectEntry
  RTS
 
  LDA L0053
@@ -14044,7 +14205,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3550
+\       Name: objectLookup1
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
@@ -14055,12 +14216,61 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L3550
+.objectLookup1
 
- EQUB &0F, &0F, &0E, &0E, &0D, &05, &06, &0F, &04, &0E, &00, &0D
- EQUB &0F, &0F, &02, &03, &04, &09, &06, &0F, &0E, &00, &0D, &07
- EQUB &04, &0A, &00, &01, &0C, &0C, &02, &01, &01, &0A, &03, &04
- EQUB &00, &01, &03, &01, &03
+ EQUB 15                \ Object type  0
+ EQUB 15
+ EQUB 14
+ EQUB 14
+
+ EQUB 13                \ Object type  1
+ EQUB 5
+ EQUB 6
+ EQUB 15
+ EQUB 4
+
+ EQUB 14                \ Object type  2
+ EQUB 0
+ EQUB 13
+ EQUB 15
+ EQUB 15
+
+ EQUB 2                 \ Object type  3
+ EQUB 3
+ EQUB 4
+ EQUB 9
+
+ EQUB 6                 \ Object type  4
+ EQUB 15
+ EQUB 14
+ EQUB 0
+ EQUB 13
+ EQUB 7
+ EQUB 4
+
+ EQUB 10                \ Object type  5
+
+ EQUB 0                 \ Object type  6
+
+ EQUB 1                 \ Object type  7
+ EQUB 12
+ EQUB 12
+
+ EQUB 2                 \ Object type  8
+ EQUB 1
+
+ EQUB 1                 \ Object type  9
+ EQUB 10
+
+ EQUB 3                 \ Object type 10
+ EQUB 4
+ EQUB 0
+
+ EQUB 1                 \ Object type 11
+ EQUB 3
+
+ EQUB 1                 \ Object type 12
+ EQUB 3
 
 \ ******************************************************************************
 \
@@ -14152,9 +14362,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L35D0
+\       Name: objectLookup2
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -14163,12 +14373,61 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L35D0
+.objectLookup2
 
- EQUB &0E, &0E, &0B, &0B, &0B, &06, &0F, &0D, &05, &0D, &07, &0B
- EQUB &0E, &0E, &03, &04, &09, &08, &0F, &0D, &0D, &07, &09, &0D
- EQUB &06, &09, &02, &0C, &0A, &0A, &08, &02, &0A, &08, &04, &0A
- EQUB &03, &03, &0A, &03, &0A
+ EQUB 14                \ Object type  0
+ EQUB 14
+ EQUB 11
+ EQUB 11
+
+ EQUB 11                \ Object type  1
+ EQUB 6
+ EQUB 15
+ EQUB 13
+ EQUB 5
+
+ EQUB 13                \ Object type  2
+ EQUB 7
+ EQUB 11
+ EQUB 14
+ EQUB 14
+
+ EQUB 3                 \ Object type  3
+ EQUB 4
+ EQUB 9
+ EQUB 8
+
+ EQUB 15                \ Object type  4
+ EQUB 13
+ EQUB 13
+ EQUB 7
+ EQUB 9
+ EQUB 13
+ EQUB 6
+
+ EQUB 9                 \ Object type  5
+
+ EQUB 2                 \ Object type  6
+
+ EQUB 12                \ Object type  7
+ EQUB 10
+ EQUB 10
+
+ EQUB 8                 \ Object type  8
+ EQUB 2
+
+ EQUB 10                \ Object type  9
+ EQUB 8
+
+ EQUB 4                 \ Object type 10
+ EQUB 10
+ EQUB 3
+
+ EQUB 3                 \ Object type 11
+ EQUB 10
+
+ EQUB 3                 \ Object type 12
+ EQUB 10
 
 \ ******************************************************************************
 \
@@ -14237,7 +14496,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3650
+\       Name: objectLookup3
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14248,12 +14507,61 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L3650
+.objectLookup3
 
- EQUB &09, &02, &08, &04, &0A, &0D, &0B, &09, &0E, &08, &04, &08
- EQUB &09, &02, &08, &08, &0D, &0D, &0C, &0B, &08, &02, &08, &0F
- EQUB &0A, &08, &09, &08, &09, &03, &0B, &0B, &08, &0B, &08, &08
- EQUB &01, &08, &08, &09, &01
+ EQUB 9                 \ Object type  0
+ EQUB 2
+ EQUB 8
+ EQUB 4
+
+ EQUB 10                \ Object type  1
+ EQUB 13
+ EQUB 11
+ EQUB 9
+ EQUB 14
+
+ EQUB 8                 \ Object type  2
+ EQUB 4
+ EQUB 8
+ EQUB 9
+ EQUB 2
+
+ EQUB 8                 \ Object type  3
+ EQUB 8
+ EQUB 13
+ EQUB 13
+
+ EQUB 12                \ Object type  4
+ EQUB 11
+ EQUB 8
+ EQUB 2
+ EQUB 8
+ EQUB 15
+ EQUB 10
+
+ EQUB 8                 \ Object type  5
+
+ EQUB 9                 \ Object type  6
+
+ EQUB 8                 \ Object type  7
+ EQUB 9
+ EQUB 3
+
+ EQUB 11                \ Object type  8
+ EQUB 11
+
+ EQUB 8                 \ Object type  9
+ EQUB 11
+
+ EQUB 8                 \ Object type 10
+ EQUB 8
+ EQUB 1
+
+ EQUB 8                 \ Object type 11
+ EQUB 8
+
+ EQUB 9                 \ Object type 12
+ EQUB 1
 
 \ ******************************************************************************
 \
@@ -14345,7 +14653,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L36D0
+\       Name: objectLookup4
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14356,12 +14664,61 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L36D0
+.objectLookup4
 
- EQUB &0A, &01, &0C, &00, &02, &05, &03, &01, &06, &0C, &09, &00
- EQUB &0A, &01, &00, &00, &05, &05, &04, &03, &0A, &09, &00, &07
- EQUB &02, &00, &01, &00, &0B, &01, &03, &01, &00, &03, &00, &09
- EQUB &00, &01, &09, &00, &00
+ EQUB 10                \ Object type  0
+ EQUB 1
+ EQUB 12
+ EQUB 0
+
+ EQUB 2                 \ Object type  1
+ EQUB 5
+ EQUB 3
+ EQUB 1
+ EQUB 6
+
+ EQUB 12                \ Object type  2
+ EQUB 9
+ EQUB 0
+ EQUB 10
+ EQUB 1
+
+ EQUB 0                 \ Object type  3
+ EQUB 0
+ EQUB 5
+ EQUB 5
+
+ EQUB 4                 \ Object type  4
+ EQUB 3
+ EQUB 10
+ EQUB 9
+ EQUB 0
+ EQUB 7
+ EQUB 2
+
+ EQUB 0                 \ Object type  5
+
+ EQUB 1                 \ Object type  6
+
+ EQUB 0                 \ Object type  7
+ EQUB 11
+ EQUB 1
+
+ EQUB 3                 \ Object type  8
+ EQUB 1
+
+ EQUB 0                 \ Object type  9
+ EQUB 3
+
+ EQUB 0                 \ Object type 10
+ EQUB 9
+ EQUB 0
+
+ EQUB 1                 \ Object type 11
+ EQUB 9
+
+ EQUB 0                 \ Object type 12
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -14467,7 +14824,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3750
+\       Name: objectLookup5
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14478,12 +14835,61 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L3750
+.objectLookup5
 
- EQUB &0A, &0A, &08, &08, &45, &08, &08, &09, &4A, &88, &08, &08
- EQUB &0A, &4A, &02, &00, &02, &4A, &08, &05, &88, &08, &08, &02
- EQUB &42, &48, &52, &08, &11, &51, &00, &48, &0A, &52, &00, &00
- EQUB &40, &00, &40, &00, &40
+ EQUB 10                \ Object type  0
+ EQUB 10
+ EQUB 8
+ EQUB 8
+ EQUB 5 + 64
+
+ EQUB 8                 \ Object type  1
+ EQUB 8
+ EQUB 9
+ EQUB 10 + 64
+
+ EQUB 8 + 128           \ Object type  2
+ EQUB 8
+ EQUB 8
+ EQUB 10
+ EQUB 10 + 64
+
+ EQUB 2                 \ Object type  3
+ EQUB 0
+ EQUB 2
+ EQUB 10 + 64
+
+ EQUB 8                 \ Object type  4
+ EQUB 5
+ EQUB 8 + 128
+ EQUB 8
+ EQUB 8
+ EQUB 2
+ EQUB 2 + 64
+
+ EQUB 8 + 64            \ Object type  5
+
+ EQUB 18 + 64           \ Object type  6
+
+ EQUB 8                 \ Object type  7
+ EQUB 17
+ EQUB 17 + 64
+
+ EQUB 0                 \ Object type  8
+ EQUB 8 + 64
+
+ EQUB 10                \ Object type  9
+ EQUB 18 + 64
+
+ EQUB 0                 \ Object type 10
+ EQUB 0
+ EQUB 0 + 64
+
+ EQUB 0                 \ Object type 11
+ EQUB 0 + 64
+
+ EQUB 0                 \ Object type 12
+ EQUB 0 + 64
 
 \ ******************************************************************************
 \
@@ -16331,26 +16737,26 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ Convert object type into index range for L3550, L35D0, L3650, L36D0, L3750
+\ Convert object type into index range for objectLookup1, objectLookup2, objectLookup3, objectLookup4, objectLookup5
 \ tables.
 \
 \ ******************************************************************************
 
 .L3CD0
 
- EQUB 0                 \ Object type  0
- EQUB 5                 \ Object type  1
- EQUB 9                 \ Object type  2
- EQUB 14                \ Object type  3
- EQUB 18                \ Object type  4
- EQUB 25                \ Object type  5
- EQUB 26                \ Object type  6
- EQUB 27                \ Object type  7
- EQUB 30                \ Object type  8
- EQUB 32                \ Object type  9
- EQUB 34                \ Object type 10
- EQUB 37                \ Object type 11
- EQUB 39                \ Object type 12
+ EQUB 0                 \ Object type  0 =  0 to  4
+ EQUB 5                 \ Object type  1 =  5 to  8
+ EQUB 9                 \ Object type  2 =  9 to 13
+ EQUB 14                \ Object type  3 = 14 to 17
+ EQUB 18                \ Object type  4 = 18 to 24
+ EQUB 25                \ Object type  5 = 25
+ EQUB 26                \ Object type  6 = 26
+ EQUB 27                \ Object type  7 = 27 to 29
+ EQUB 30                \ Object type  8 = 30 to 31
+ EQUB 32                \ Object type  9 = 32 to 33
+ EQUB 34                \ Object type 10 = 34 to 36
+ EQUB 37                \ Object type 11 = 37 to 38
+ EQUB 39                \ Object type 12 = 39 to 40
 
 \ ******************************************************************************
 \
@@ -25007,18 +25413,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: temp2
+\       Name: thisObjectType
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: The type of object we are currently drawing
 \
 \ ******************************************************************************
 
-.temp2
+.thisObjectType
 
  EQUB 0
 
