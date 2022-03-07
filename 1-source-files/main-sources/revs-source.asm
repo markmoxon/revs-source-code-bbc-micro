@@ -380,6 +380,7 @@ ORG &0000
                         \   * 3 = right-turn chicane road sign
                         \   * 4 = right turn road sign
                         \   * 5 = left turn road sign
+                        \   * 6 = corner marker
                         \
                         \ e.g. road sign, marker etc.
 
@@ -8975,31 +8976,31 @@ ENDIF
  LDX #3                 \ We start by copying the four pixel bytes from
                         \ colourByte to colourByte2, so set up a counter in X
 
-.P1FB8
+.dobj1
 
  LDA colourByte,X       \ Copy the X-th byte of colourByte to the X-th byte of
  STA colourByte2,X      \ colourByte2
 
  DEX                    \ Decrement the loop counter
 
- BPL P1FB8              \ Loop back until we have copied all four bytes
+ BPL dobj1              \ Loop back until we have copied all four bytes
 
  LDA #%11110000         \ Set the third colourByte to four pixels of colour 2
  STA colourByte+2
 
  LDA T                  \ Set A = T
 
- CMP #23                \ If A = 23, jump to C1FDE
- BEQ C1FDE
+ CMP #23                \ If A = 23, jump to dobj3
+ BEQ dobj3
 
- CMP #20                \ If A < 20, jump to C1FD5
- BCC C1FD5
+ CMP #20                \ If A < 20, jump to dobj2
+ BCC dobj2
 
  LDX positionAhead      \ Set X to the position of the driver in front of us
 
  LDA driversInOrder,X   \ Set A the number of the driver in front of us
 
-.C1FD5
+.dobj2
 
  AND #3                 \ Set X = A mod 3
  TAX
@@ -9007,24 +9008,24 @@ ENDIF
  LDA colourByte,X       \ Set the second byte of colourByte2 to the X-th byte of
  STA colourByte2+1      \ colourByte
 
-.C1FDE
+.dobj3
 
  LDX #0                 \ Set L002B = 0
  STX L002B
 
  LDA L002A              \ Set A = L002A
 
- CMP L62FC              \ If A >= L62FC, jump to C1FEB to skip the following
- BCS C1FEB              \ instruction and set L62FD to 0
+ CMP L62FC              \ If A >= L62FC, jump to dobj4 to skip the following
+ BCS dobj4              \ instruction and set L62FD to 0
 
  LDX horizonLine        \ Set X to the track line number of the horizon
 
-.C1FEB
+.dobj4
 
  STX L62FD              \ Set L62FD = X (which is 0 or horizonLine)
 
- CMP #64                \ If A >= 64, i.e. L002A >= 64, jump to C1FFA to skip
- BCS C1FFA              \ the following
+ CMP #64                \ If A >= 64, i.e. L002A >= 64, jump to dobj5 to skip
+ BCS dobj5              \ the following
 
  ASL A                  \ Set L002A = A << 2
  ASL A
@@ -9033,50 +9034,50 @@ ENDIF
  LDA #2                 \ Set L002B = 2
  STA L002B
 
-.C1FFA
+.dobj5
 
  LDX objectType         \ Set X to the type object to draw
 
- CPX #10                \ If X < 10, jump to C2002 to skip the following
- BCC C2002              \ instruction
+ CPX #10                \ If X < 10, jump to dobj6 to skip the following
+ BCC dobj6              \ instruction
 
  LDX #9                 \ Set X = 9, so we do the following with X = 9 and then
                         \ again with X = objectType
 
-.C2002
+.dobj6
 
  STX thisObjectType     \ Store X in thisObjectType so we can check it again
                         \ below
 
- LDA L3CDD,X            \ Set QQ to the index of the first entry in L4480 for
- STA QQ                 \ object type X
+ LDA lookupIndex0,X     \ Set QQ to the index of the first entry in
+ STA QQ                 \ objectLookup0 for object type X
 
- LDA L3CDD+1,X          \ Set II to the index of the last entry in L4480 for
- STA II                 \ object type X
+ LDA lookupIndex0+1,X   \ Set II to the index of the last entry in objectLookup0
+ STA II                 \ for object type X
 
- LDA L3CD0,X            \ Set QQ to the index of the first entry in the
+ LDA lookupIndex15,X    \ Set QQ to the index of the first entry in the
  STA MM                 \ objectLookup tables for object type X
 
  JSR PrepareObject
 
- BCS C2029
+ BCS dobj7
 
  JSR DrawObjectLines
 
  LDX objectType         \ Set X to the type object to draw
 
  LDA thisObjectType     \ If the object we just drew is not an object of type 9,
- CMP #9                 \ then this is not a multi-part object, so jump to C2029
- BNE C2029              \ to return from the subroutine
+ CMP #9                 \ then this is not a multi-part object, so jump to dobj7
+ BNE dobj7              \ to return from the subroutine
 
                         \ Otherwise we just drew an object of type 9, as part of
                         \ a multi-part object of type objectType, so now we draw
                         \ the second part
 
  LDA L0025              \ If bit 7 of L0025 is clear, loop back to draw the
- BPL C2002              \ object of type objectType
+ BPL dobj6              \ object of type objectType
 
-.C2029
+.dobj7
 
  RTS                    \ Return from the subroutine
 
@@ -9093,9 +9094,9 @@ ENDIF
 \
 \ Arguments:
 \
-\   QQ                  Start loop counter (from L3CDD table)
+\   QQ                  Start index for objectLookup0 table
 \
-\   II                  End loop counter (so last is II - 1) (from L3CDD table)
+\   II                  End index for objectLookup0 table
 \
 \   L002A
 \
@@ -9133,16 +9134,16 @@ ENDIF
  LSR A                  \ Set L5FF8+7 = L002A >> 5
  STA L5FF8+7
 
- LDY QQ                 \ We now loop through the L4480 table from entry QQ to
-                        \ entry II - 1, so set a loop counter in Y to act as an
-                        \ index
+ LDY QQ                 \ We now loop through the objectLookup0 table from entry
+                        \ QQ to entry II - 1, so set a loop counter in Y to act
+                        \ as an index
 
  LDX #0                 \ Set W = 0, to be used as an index as we populate the
  STX W                  \ L5EF8 table, incrementing by one byte for each loop
 
 .prep1
 
- LDA L4480,Y            \ Set A = Y-th L4480
+ LDA objectLookup0,Y    \ Set A = Y-th objectLookup0
 
  BPL prep2              \ If bit 7 of A is clear, jump to prep2 to store A in
                         \ the L5EF8 table
@@ -9176,7 +9177,7 @@ ENDIF
                         \
                         \ or 3 if X = 0, 96 if X = 1
 
- LDA L4480,Y            \ Set U = Y-th L4480
+ LDA objectLookup0,Y    \ Set U = Y-th objectLookup0
  STA U
 
  LSR A                  \ Set X = bits 3-5 of A
@@ -9202,8 +9203,9 @@ ENDIF
 
 .prep2
 
-                        \ If we get here, bit 7 of the Y-th L4480 is clear, so
-                        \ we do the following calculation, where A = %00000aaa:
+                        \ If we get here, bit 7 of the Y-th objectLookup0 is
+                        \ clear, so we do the following calculation, where
+                        \ A = %00000aaa:
                         \
                         \   A = L002A * (1 / 2^a)
                         \       -----------------
@@ -9279,7 +9281,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   MM                  (from L3CD0 table)
+\   MM                  (from lookupIndex15 table)
 \
 \ ******************************************************************************
 
@@ -16730,19 +16732,19 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3CD0
+\       Name: lookupIndex15
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ Convert object type into index range for objectLookup1, objectLookup2, objectLookup3, objectLookup4, objectLookup5
-\ tables.
+\ Convert object type into index range for objectLookup1, objectLookup2,
+\ objectLookup3, objectLookup4, objectLookup5 tables.
 \
 \ ******************************************************************************
 
-.L3CD0
+.lookupIndex15
 
  EQUB 0                 \ Object type  0 =  0 to  4
  EQUB 5                 \ Object type  1 =  5 to  8
@@ -16760,18 +16762,18 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3CDD
+\       Name: lookupIndex0
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ Convert object type into index range for L4480 table.
+\ Convert object type into index range for objectLookup0 table.
 \
 \ ******************************************************************************
 
-.L3CDD
+.lookupIndex0
 
  EQUB 0                 \ Object type  0 =  0 to  7
  EQUB 8                 \ Object type  1 =  8 to 15
@@ -18579,7 +18581,7 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L4480
+\       Name: objectLookup0
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
@@ -18590,7 +18592,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.L4480
+.objectLookup0
 
  EQUB %10011100         \  0 = 1 0 011 100    a = 4, b = 3, c = 0
  EQUB %11101110         \      1 1 101 110    a = 6, b = 5, c = 1
@@ -27625,7 +27627,7 @@ ORG &6C00
 \
 \ ******************************************************************************
 
- ORG &7B00
+ORG &7B00
 
 .UpdateMirrors
 
