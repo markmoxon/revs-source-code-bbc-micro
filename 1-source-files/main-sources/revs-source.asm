@@ -366,9 +366,18 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0037
+.objectType
 
- SKIP 1                 \ 
+ SKIP 1                 \ The type of object to draw
+                        \
+                        \   * 0 = blank road sign
+                        \   * 1 = start line road sign
+                        \   * 
+                        \   * 3 = right-turn chicane road sign
+                        \   * 4 = right turn road sign
+                        \   * 5 = left turn road sign
+                        \
+                        \ e.g. road sign, marker etc.
 
 .var15Lo
 
@@ -4128,7 +4137,12 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   Copy track data from Y-th trackData+&601, trackData+&001
+\
+\   X                   &FD = copy Y-th trackData+&601 to (L09FD, L09FE, L09FF)
+\                             copy Y-th trackData+&001 to (L0AFD, L0AFD, L0AFD)
 \
 \ ******************************************************************************
 
@@ -7036,8 +7050,8 @@ ENDIF
 
  STA L002A              \ Set L002A = |U|
 
- LDA #6                 \ Set L0037 = 6
- STA L0037
+ LDA #6                 \ Set objectType = 6
+ STA objectType
 
  JSR sub_C1FB4
 
@@ -8834,7 +8848,7 @@ ENDIF
 \
 \   L002A
 \
-\   L0037
+\   objectType           Type of object to draw
 \
 \ ******************************************************************************
 
@@ -8905,20 +8919,21 @@ ENDIF
 
 .C1FFA
 
- LDX L0037              \ Set X = L0037
+ LDX objectType         \ Set X to the type object to draw
 
  CPX #10                \ If X < 10, jump to C2002 to skip the following
  BCC C2002              \ instruction
 
- LDX #9                 \ Set X = 9, so X has a maximum value of 9
+ LDX #9                 \ Set X = 9, so we do the following with X = 9 and then
+                        \ again with X = objectType
 
 .C2002
 
- STX L62F3              \ Set L62F3 = X
+ STX temp2              \ Store X in temp2 so we can retrieve it below
 
  LDA L3CDD,X
  STA QQ
- LDA L3CDE,X
+ LDA L3CDD+1,X
  STA II
  LDA L3CD0,X
  STA MM
@@ -8929,8 +8944,9 @@ ENDIF
 
  JSR sub_C209A
 
- LDX L0037
- LDA L62F3
+ LDX objectType
+
+ LDA temp2
  CMP #9
  BNE C2029
 
@@ -8956,7 +8972,11 @@ ENDIF
 \
 \   QQ                  Start loop counter (from L3CDD table)
 \
-\   II                  End loop counter (so last is II - 1) (from L3CDE table)
+\   II                  End loop counter (so last is II - 1) (from L3CDD table)
+\
+\   L002A
+\
+\   L002B               Distance scale factor?
 \
 \ Returns:
 \
@@ -8964,76 +8984,108 @@ ENDIF
 \
 \                       Set if we abort when poking a negative number into L5EF8
 \
+\   L5EF8
+\
+\   L5F00
+\
 \ ******************************************************************************
 
 .sub_C202A
 
- LDA L002A              \ Set L5FFA = L002A
- STA L5FFA
+ LDA L002A              \ Set L5FF8+2 = L002A
+ STA L5FF8+2
 
- LSR A                  \ Set L5FFB = L002A >> 1
- STA L5FFB
+ LSR A                  \ Set L5FF8+3 = L002A >> 1
+ STA L5FF8+3
 
- LSR A                  \ Set L5FFC = L002A >> 2
- STA L5FFC
+ LSR A                  \ Set L5FF8+4 = L002A >> 2
+ STA L5FF8+4
 
- LSR A                  \ Set L5FFD = L002A >> 3
- STA L5FFD
+ LSR A                  \ Set L5FF8+5 = L002A >> 3
+ STA L5FF8+5
 
- LSR A                  \ Set L5FFE = L002A >> 4
- STA L5FFE
+ LSR A                  \ Set L5FF8+6 = L002A >> 4
+ STA L5FF8+6
 
- LSR A                  \ Set L5FFF = L002A >> 5
- STA L5FFF
+ LSR A                  \ Set L5FF8+7 = L002A >> 5
+ STA L5FF8+7
 
- LDY QQ                 \ Set Y = QQ, to be used as a loop counter from QQ to
-                        \ II - 1
+ LDY QQ                 \ We now loop through the L4480 table from entry QQ to
+                        \ entry II - 1, so set a loop counter in Y to act as an
+                        \ index
 
  LDX #0                 \ Set W = 0, to be used as an index as we populate the
- STX W                  \ L5EF8 table, one byte for each loop
+ STX W                  \ L5EF8 table, incrementing by one byte for each loop
 
 .C2049
 
  LDA L4480,Y            \ Set A = Y-th L4480
 
- BPL C2072              \ If A is positive, jump to C2072
+ BPL C2072              \ If bit 7 of A is clear, jump to C2072 to store A in
+                        \ the L5EF8 table
 
- AND #7                 \ Set X = A mod 7
- TAX
+                        \ If we get here, bit 7 of A is set, so now we do the
+                        \ following calculation, where A = %1cbbbaaa:
+                        \
+                        \   A = (L002A / 2^a) + (L002A / 2^b) + (c * L002A / 2)
+                        \       -----------------------------------------------
+                        \                          2^L002B
+                        \
+                        \ so we can store this in the next entry in L5EF8
+                        \
+                        \ If a = 0, we use 3 instead of L002A / 2^a
+                        \    b = 0, we use 3 instead of L002A / 2^b
+                        \
+                        \ If a = 1, we use 96 instead of L002A / 2^a
+                        \    a = 1, we use 96 instead of L002A / 2^a
+
+ AND #%00000111         \ Set X = bits 0-2 of A
+ TAX                    \       = %aaa
+                        \       = a
 
  LDA L5FF8,X            \ Set T = X-th L5FF8
- STA T
+ STA T                  \       = L002A / 2^X
+                        \       = L002A / 2^a
+                        \
+                        \ or 3 if X = 0, 96 if X = 1
 
  LDA L4480,Y            \ Set U = Y-th L4480
  STA U
 
- LSR A                  \ Set X = (A / 8) mod 7
- LSR A
- LSR A
- AND #7
+ LSR A                  \ Set X = bits 3-5 of A
+ LSR A                  \       = %bbb
+ LSR A                  \       = b
+ AND #%00000111
  TAX
 
  LDA L5FF8,X            \ Set A = X-th L5FF8 + T
- CLC
- ADC T
+ CLC                    \       = L002A / 2^X + L002A / 2^a
+ ADC T                  \       = L002A / 2^b + L002A / 2^a
 
  BIT U                  \ If bit 6 of U is clear, jump to C2076
  BVC C2076
 
  CLC                    \ If bit 6 of U is set:
- ADC L5FFB              \
-                        \   A = A + L5FFB
+ ADC L5FF8+3            \
+                        \   A = A + L5FF8+3
                         \     = A + L002A >> 1
+                        \     = A + L002A / 2
 
  JMP C2076              \ Jump to C2076
 
 .C2072
 
-                        \ If we get here, A = Y-th L4480 is positive
+                        \ If we get here, bit 7 of the Y-th L4480 is clear, so
+                        \ we do the following calculation, where A = %00000aaa:
+                        \
+                        \   A = (L002A / 2^a)
+                        \       -------------
+                        \          2^L002B
+                        \
+                        \ so we can store this in the next entry in L5EF8
 
- TAX                    \ Set X = A
-
- LDA L5FF8,X            \ Set A = X-th L5FF8
+ TAX                    \ Set A = A-th L5FF8
+ LDA L5FF8,X            \ Set A = L002A / 2^a
 
 .C2076
 
@@ -9673,8 +9725,10 @@ ENDIF
 .C2360
 
  STX L0042
+
  LDX #&FD
  JSR sub_C1208
+
  JSR sub_C2145
  LDY L0042
  BIT L0025
@@ -11232,7 +11286,7 @@ ENDIF
 
 .sub_C2A5F
 
- STA L0037
+ STA objectType
  JSR sub_C2145
  LDY L0042
  LDA II
@@ -11290,7 +11344,7 @@ ENDIF
  STA L03C8,Y
  LDA L018C,Y
  AND #&70
- ORA L0037
+ ORA objectType
  JMP C2AAD
 
 .C2AA6
@@ -11389,7 +11443,7 @@ ENDIF
  LDA L018C,X
  BMI C2B0B
  AND #&0F
- STA L0037
+ STA objectType
  LDA var13Lo,X
  SEC
  SBC var14Lo
@@ -13992,7 +14046,7 @@ ENDIF
 \
 \       Name: L3550
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -16272,54 +16326,61 @@ NEXT
 \
 \       Name: L3CD0
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Convert object type into index range for L3550, L35D0, L3650, L36D0, L3750
+\ tables.
 \
 \ ******************************************************************************
 
 .L3CD0
 
- EQUB &00, &05, &09, &0E, &12, &19, &1A, &1B, &1E, &20, &22, &25
- EQUB &27
+ EQUB 0                 \ Object type  0
+ EQUB 5                 \ Object type  1
+ EQUB 9                 \ Object type  2
+ EQUB 14                \ Object type  3
+ EQUB 18                \ Object type  4
+ EQUB 25                \ Object type  5
+ EQUB 26                \ Object type  6
+ EQUB 27                \ Object type  7
+ EQUB 30                \ Object type  8
+ EQUB 32                \ Object type  9
+ EQUB 34                \ Object type 10
+ EQUB 37                \ Object type 11
+ EQUB 39                \ Object type 12
 
 \ ******************************************************************************
 \
 \       Name: L3CDD
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Convert object type into index range for L4480 table.
 \
 \ ******************************************************************************
 
 .L3CDD
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L3CDE
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L3CDE
-
- EQUB &08, &10, &18, &1E, &26, &29, &2C, &31, &35, &39, &3E, &42
- EQUB &46
+ EQUB 0                 \ Object type  0 =  0 to  7
+ EQUB 8                 \ Object type  1 =  8 to 15
+ EQUB 16                \ Object type  2 = 16 to 23
+ EQUB 24                \ Object type  3 = 24 to 29
+ EQUB 30                \ Object type  4 = 30 to 37
+ EQUB 38                \ Object type  5 = 38 to 40
+ EQUB 41                \ Object type  6 = 41 to 43
+ EQUB 44                \ Object type  7 = 44 to 48
+ EQUB 49                \ Object type  8 = 49 to 52
+ EQUB 53                \ Object type  9 = 53 to 56
+ EQUB 57                \ Object type 10 = 57 to 61
+ EQUB 62                \ Object type 11 = 62 to 65
+ EQUB 66                \ Object type 12 = 66 to 69
+ EQUB 70
 
 \ ******************************************************************************
 \
@@ -18114,7 +18175,7 @@ NEXT
 \
 \       Name: L4480
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18125,12 +18186,88 @@ NEXT
 
 .L4480
 
- EQUB &9C, &EE, &9E, &9F, &03, &04, &AF, &05, &9D, &A5, &A7, &04
- EQUB &AE, &AF, &06, &07, &E6, &9C, &9E, &9F, &03, &AF, &B7, &06
- EQUB &03, &A6, &AE, &05, &B7, &07, &E6, &9F, &03, &A5, &AE, &AF
- EQUB &B7, &07, &E6, &9F, &B7, &03, &A6, &07, &E5, &9D, &9E, &03
- EQUB &04, &9E, &03, &B7, &06, &03, &A5, &A6, &B7, &A6, &A7, &AE
- EQUB &05, &07, &A6, &04, &AE, &AF, &A6, &04, &AE, &AF
+ EQUB %10011100         \  0 = 1 0 011 100    a = 4, b = 3, c = 0
+ EQUB %11101110         \      1 1 101 110    a = 6, b = 5, c = 1
+ EQUB %10011110         \      1 0 011 110    a = 6, b = 3, c = 0
+ EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
+ EQUB %00000011         \      0 0 000 011    a = 3
+ EQUB %00000100         \      0 0 000 100    a = 4
+ EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+ EQUB %00000101         \      0 0 000 101    a = 5
+
+ EQUB %10011101         \  1 = 1 0 011 101    a = 5, b = 3, c = 0
+ EQUB %10100101         \      1 0 100 101    a = 5, b = 4, c = 0
+ EQUB %10100111         \      1 0 100 111    a = 7, b = 4, c = 0
+ EQUB %00000100         \      0 0 000 100    a = 4
+ EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
+ EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+ EQUB %00000110         \      0 0 000 110    a = 6
+ EQUB %00000111         \      0 0 000 111    a = 7
+
+ EQUB %11100110         \  2 = 1 1 100 110    a = 6, b = 4, c = 1
+ EQUB %10011100         \      1 0 011 100    a = 4, b = 3, c = 0
+ EQUB %10011110         \      1 0 011 110    a = 6, b = 3, c = 0
+ EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
+ EQUB %00000011         \      0 0 000 011    a = 3
+ EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+ EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+ EQUB %00000110         \      0 0 000 110    a = 6
+
+ EQUB %00000011         \  3 = 0 0 000 011    a = 3
+ EQUB %10100110         \      1 0 100 110    a = 6, b = 4, c = 0
+ EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
+ EQUB %00000101         \      0 0 000 101    a = 5
+ EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+ EQUB %00000111         \      0 0 000 111    a = 7
+
+ EQUB %11100110         \  4 = 1 1 100 110    a = 6, b = 4, c = 1
+ EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
+ EQUB %00000011         \      0 0 000 011    a = 3
+ EQUB %10100101         \      1 0 100 101    a = 5, b = 4, c = 0
+ EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
+ EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+ EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+ EQUB %00000111         \      0 0 000 111    a = 7
+
+ EQUB %11100110         \  5 = 1 1 100 110    a = 6, b = 4, c = 1
+ EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
+ EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+
+ EQUB %00000011         \  6 = 0 0 000 011    a = 3
+ EQUB %10100110         \      1 0 100 110    a = 6, b = 4, c = 0
+ EQUB %00000111         \      0 0 000 111    a = 7
+
+ EQUB %11100101         \  7 = 1 1 100 101    a = 5, b = 4, c = 1
+ EQUB %10011101         \      1 0 011 101    a = 5, b = 3, c = 0
+ EQUB %10011110         \      1 0 011 110    a = 6, b = 3, c = 0
+ EQUB %00000011         \      0 0 000 011    a = 3
+ EQUB %00000100         \      0 0 000 100    a = 4
+
+ EQUB %10011110         \  8 = 1 0 011 110    a = 6, b = 3, c = 0
+ EQUB %00000011         \      0 0 000 011    a = 3
+ EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+ EQUB %00000110         \      0 0 000 110    a = 6
+
+ EQUB %00000011         \  9 = 0 0 000 011    a = 3
+ EQUB %10100101         \      1 0 100 101    a = 5, b = 4, c = 0
+ EQUB %10100110         \      1 0 100 110    a = 6, b = 4, c = 0
+ EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+
+ EQUB %10100110         \ 10 = 1 0 100 110    a = 6, b = 4, c = 0
+ EQUB %10100111         \      1 0 100 111    a = 7, b = 4, c = 0
+ EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
+ EQUB %00000101         \      0 0 000 101    a = 5
+ EQUB %00000111         \      0 0 000 111    a = 7
+
+ EQUB %10100110         \ 11 = 1 0 100 110    a = 6, b = 4, c = 0
+ EQUB %00000100         \      0 0 000 100    a = 4
+ EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
+ EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+
+ EQUB %10100110         \ 12 = 1 0 100 110    a = 6, b = 4, c = 0
+ EQUB %00000100         \      0 0 000 100    a = 4
+ EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
+ EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
 
 \ ******************************************************************************
 \
@@ -20192,16 +20329,20 @@ ENDIF
  LDY #2
  LDA trackData+&0D0,X
  JSR sub_C4D21
- LDA trackData+&6EA,X
- AND #7
+
+ LDA trackData+&6EA,X   \ Set objectType to object type for road sign X
+ AND #%00000111
  CLC
  ADC #7
- STA L0037
- LDA trackData+&6EA,X
- AND #&F8
+ STA objectType
+
+ LDA trackData+&6EA,X   \ Set Y to track position for road sign X
+ AND #%11111000
  TAY
+
  LDX #&FD
  JSR sub_C1208
+
  LDY #6
  JSR sub_C2147
  LDA II
@@ -23733,7 +23874,7 @@ ORG &5E40
 \
 \       Name: L5FF8
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -23746,153 +23887,17 @@ ORG &5E40
 
  EQUB &03, &60
 
-\ ******************************************************************************
-\
-\       Name: L5FFA
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5FFA
-
 IF _ACORNSOFT
 
- EQUB &6F
+ EQUB &6F, &6E
+ EQUB &32, &00
+ EQUB &8D, &2B
 
 ELIF _SUPERIOR
 
- EQUB &30
-
-ENDIF
-
-\ ******************************************************************************
-\
-\       Name: L5FFB
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5FFB
-
-IF _ACORNSOFT
-
- EQUB &6E
-
-ELIF _SUPERIOR
-
- EQUB &18
-
-ENDIF
-
-\ ******************************************************************************
-\
-\       Name: L5FFC
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5FFC
-
-IF _ACORNSOFT
-
- EQUB &32
-
-ELIF _SUPERIOR
-
- EQUB &0C
-
-ENDIF
-
-\ ******************************************************************************
-\
-\       Name: L5FFD
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5FFD
-
-IF _ACORNSOFT
-
- EQUB 0
-
-ELIF _SUPERIOR
-
- EQUB 6
-
-ENDIF
-
-\ ******************************************************************************
-\
-\       Name: L5FFE
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5FFE
-
-IF _ACORNSOFT
-
- EQUB &8D
-
-ELIF _SUPERIOR
-
- EQUB 3
-
-ENDIF
-
-\ ******************************************************************************
-\
-\       Name: L5FFF
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5FFF
-
-IF _ACORNSOFT
-
- EQUB &2B
-
-ELIF _SUPERIOR
-
- EQUB &01
+ EQUB &30, &18
+ EQUB &0C, &06
+ EQUB &03, &01
 
 ENDIF
 
@@ -25002,7 +25007,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F3
+\       Name: temp2
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -25013,7 +25018,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62F3
+.temp2
 
  EQUB 0
 

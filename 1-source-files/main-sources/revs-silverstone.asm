@@ -299,9 +299,28 @@ ORG CODE%
  EQUB &59, &2B, &54, &14, &14, &67
 
 \ trackData+&6EA = &59EA
+\ Road sign positions and types
+\ Bits 0-2     Object type of road sign
+\ Bits 3-7 = Index into track data at trackData+&001, trackData+&601
+\ maybe marker position along track?
+\ Road sign 0 at position 23 is the sign we see when the track loads
 
- EQUB &03, &10, &19, &2C, &38, &4D
- EQUB &64, &75, &70, &70, &94, &98, &A4, &A8, &B5, &B8
+ EQUB %00000011         \ 00000 011     Object type 3 at position  0
+ EQUB %00010000         \ 00010 000     Object type 0 at position  2
+ EQUB %00011001         \ 00011 001     Object type 1 at position  3
+ EQUB %00101100         \ 00101 100     Object type 4 at position  5
+ EQUB %00111000         \ 00111 000     Object type 0 at position  7
+ EQUB %01001101         \ 01001 101     Object type 5 at position  9
+ EQUB %01100100         \ 01100 100     Object type 4 at position 12
+ EQUB %01110101         \ 01110 101     Object type 5 at position 14
+ EQUB %01110000         \ 01110 000     Object type 0 at position 14
+ EQUB %01110000         \ 01110 000     Object type 0 at position 14
+ EQUB %10010100         \ 10010 100     Object type 4 at position 18
+ EQUB %10011000         \ 10011 000     Object type 0 at position 19
+ EQUB %10100100         \ 10100 100     Object type 4 at position 20
+ EQUB %10101000         \ 10101 000     Object type 0 at position 21
+ EQUB %10110101         \ 10110 101     Object type 5 at position 22
+ EQUB %10111000         \ 10111 000     Object type 0 at position 23
 
 \ trackData+&6FA = &59FA
 
