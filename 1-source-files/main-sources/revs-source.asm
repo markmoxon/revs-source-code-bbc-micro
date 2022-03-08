@@ -306,13 +306,19 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L002A
+.scaleUp
 
- SKIP 1                 \ 
+ SKIP 1                 \ The nominator scale factor for scaling object
+                        \ measurements (i.e. scale up)
+                        \
+                        \ The measurements are multiplied by scaleUp
 
-.L002B
+.scaleDown
 
- SKIP 1                 \ 
+ SKIP 1                 \ The denominator scale factor for scaling object
+                        \ measurements (i.e. scale down)
+                        \
+                        \ The measurements are divided by 2^scaleDown
 
 .L002C
 
@@ -376,13 +382,17 @@ ORG &0000
                         \
                         \   * 0 = blank road sign
                         \   * 1 = start line road sign
-                        \   * 
+                        \   * 2 = 
                         \   * 3 = right-turn chicane road sign
                         \   * 4 = right turn road sign
                         \   * 5 = left turn road sign
                         \   * 6 = corner marker
-                        \
-                        \ e.g. road sign, marker etc.
+                        \   * 7 = 
+                        \   * 8 = 
+                        \   * 9 = 
+                        \   * 10 = 
+                        \   * 11 = 
+                        \   * 12 = 
 
 .var15Lo
 
@@ -5744,7 +5754,9 @@ ENDIF
 
  JSR DrawRoadSigns1
 
- LDX #23
+ LDX #23                \ Set the driver number to 23, so the following call to
+                        \ DrawRoadSigns2 uses the standard palette
+
  JSR DrawRoadSigns2
 
  JSR DrawCornerMarkers
@@ -7053,7 +7065,7 @@ ENDIF
 
 .corn5
 
- STA L002A              \ Set L002A = |U|
+ STA scaleUp            \ Set scaleUp = |U|
 
  LDA #6                 \ Set objectType = 6
  STA objectType
@@ -7268,19 +7280,19 @@ ENDIF
 \
 \ Arguments:
 \
-\   SS                  
+\   SS                  From scaledMeasures using index objectLookup4 / 3 / 1
 \
-\   TT                  
+\   TT                  From objectLookup4 / 5
 \
 \   UU                  
 \
-\   Y                   
+\   Y                   1, 2, 0
 \
 \   H                   Colour byte
 \
 \   A                   Same as TT
 \
-\   M                   
+\   M                   From scaledMeasures using index objectLookup3
 \
 \   LL                  
 \
@@ -8039,7 +8051,8 @@ IF _SUPERIOR
  LDA UU                 \ Set A to the dash data block number in UU
 
  CMP #40                \ If A >= 40 then this is not a valid dash data block
- BCS sedg10             \ number, so jump to sedg10 to return from the subroutine
+ BCS sedg10             \ number, so jump to sedg10 to return from the
+                        \ subroutine
 
                         \ We now calculate the start address of dash data block
                         \ A, which will be at dashData + &80 * A (because the
@@ -8953,7 +8966,7 @@ ENDIF
 \       Name: DrawObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw an object, such as a road sign or car
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8961,17 +8974,17 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   Affects the colour scheme (driver number?)
-\
-\   L002A
-\
 \   objectType          The type of object to draw (0 to 12)
+\
+\   X                   Driver number (0 to 23)
+\
+\   scaleUp             The scale factor for this object
 \
 \ ******************************************************************************
 
 .DrawObject
 
- STX T                  \ Store X in T
+ STX T                  \ Store the driver number in T
 
  LDX #3                 \ We start by copying the four pixel bytes from
                         \ colourByte to colourByte2, so set up a counter in X
@@ -8985,13 +8998,23 @@ ENDIF
 
  BPL dobj1              \ Loop back until we have copied all four bytes
 
- LDA #%11110000         \ Set the third colourByte to four pixels of colour 2
- STA colourByte+2
+ LDA #%11110000         \ Set the third colourByte to four pixels of colour 2,
+ STA colourByte+2       \ which sets it back to the default value
 
- LDA T                  \ Set A = T
+                        \ We now set the palette differently, depending on the
+                        \ driver number in X:
+                        \
+                        \   * 0-19 = set colour 1 to colour A mod 3
+                        \
+                        \   * 20-22 = set colour 1 to the number of the driver
+                        \             in front, mod 3
+                        \
+                        \   * 23 = use the palette from colourByte
 
- CMP #23                \ If A = 23, jump to dobj3
- BEQ dobj3
+ LDA T                  \ Set A = T, so A contains the driver number
+
+ CMP #23                \ If A = 23, jump to dobj3 to skip the following palette
+ BEQ dobj3              \ changes
 
  CMP #20                \ If A < 20, jump to dobj2
  BCC dobj2
@@ -9010,10 +9033,10 @@ ENDIF
 
 .dobj3
 
- LDX #0                 \ Set L002B = 0
- STX L002B
+ LDX #0                 \ Set scaleDown = 0, so object measurements are not
+ STX scaleDown          \ scaled down (as 2^scaleDown = 2^0 = 1)
 
- LDA L002A              \ Set A = L002A
+ LDA scaleUp            \ Set A = scaleUp
 
  CMP L62FC              \ If A >= L62FC, jump to dobj4 to skip the following
  BCS dobj4              \ instruction and set L62FD to 0
@@ -9022,17 +9045,17 @@ ENDIF
 
 .dobj4
 
- STX L62FD              \ Set L62FD = X (which is 0 or horizonLine)
+ STX L62FD              \ Set L62FD = X (so it is either 0 or horizonLine)
 
- CMP #64                \ If A >= 64, i.e. L002A >= 64, jump to dobj5 to skip
+ CMP #64                \ If A >= 64, i.e. scaleUp >= 64, jump to dobj5 to skip
  BCS dobj5              \ the following
 
- ASL A                  \ Set L002A = A << 2
+ ASL A                  \ Set scaleUp = A << 2
  ASL A
- STA L002A
+ STA scaleUp
 
- LDA #2                 \ Set L002B = 2
- STA L002B
+ LDA #2                 \ Set scaleDown = 2, so object measurements are scaled
+ STA scaleDown          \ down by 2^scaleDown = 2^2 = 4
 
 .dobj5
 
@@ -9049,20 +9072,25 @@ ENDIF
  STX thisObjectType     \ Store X in thisObjectType so we can check it again
                         \ below
 
- LDA lookupIndex0,X     \ Set QQ to the index of the first entry in
- STA QQ                 \ objectLookup0 for object type X
+ LDA measureIndex,X     \ Set QQ to the index of the first objMeasurements entry
+ STA QQ                 \ for object type X
 
- LDA lookupIndex0+1,X   \ Set II to the index of the last entry in objectLookup0
- STA II                 \ for object type X
+ LDA measureIndex+1,X   \ Set II to the index of the last objMeasurements entry
+ STA II                 \ for object type X (so the last entry is index II - 1)
 
- LDA lookupIndex15,X    \ Set QQ to the index of the first entry in the
- STA MM                 \ objectLookup tables for object type X
+ LDA lookupIndex15,X    \ Set QQ to the index of the first entry in the object
+ STA MM                 \ lookup tables for object type X
 
- JSR PrepareObject
+ JSR ScaleObject        \ Scale the object's measurements by the scaleUp and
+                        \ scaleDown factors, storing the results in the
+                        \ scaledMeasures table
 
- BCS dobj7
+ BCS dobj7              \ If the call to ScaleObject set the C flag then the
+                        \ scaling process overflowed, in which case we do not
+                        \ draw the object, so jump to dobj7 to return from the
+                        \ subroutine
 
- JSR DrawObjectLines
+ JSR DrawObjectLines    \ Draw the scaled object
 
  LDX objectType         \ Set X to the type object to draw
 
@@ -9083,101 +9111,126 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: PrepareObject
+\       Name: ScaleObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Scale an object's measurements by the scale factors in scaleUp and
+\             scaleDown
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is used to draw road signs, corner markers and cars.
+\ This routine is used when drawing objects such as road signs, corner markers
+\ and cars.
+\
+\ It takes the values from the objMeasurements table, which contain an object's
+\ measurements, and scales them according to the values of scaleUp and
+\ scaleDown. As the various measurements are used to construct each object,
+\ this routine effectively scales the whole object according to the two scale
+\ factors.
+\
+\ The value in scaleUp is the numerator of the scale factor, which scales the
+\ measurements up, so bigger values of scaleUp give bigger objects.
+\
+\ The value in scaleDown is the denominator of the scale factor, which scales
+\ the measurements down, so bigger values of scaleDown give smaller objects.
 \
 \ Arguments:
 \
-\   QQ                  Start index for objectLookup0 table
+\   QQ                  Index of the first objMeasurements entry for this object
 \
-\   II                  End index for objectLookup0 table
+\   II                  Index of the last objMeasurements entry for this object
+\                       (where the last entry is index II - 1)
 \
-\   L002A
+\   scaleUp             Numerator scale factor
 \
-\   L002B               Distance scale factor?
+\   scaleDown           Denominator scale factor
 \
 \ Returns:
 \
-\   C flag              Clear if we manage to loop through all of them
+\   C flag              Denotes whether the scaling was successful:
 \
-\                       Set if we abort when poking a negative number into L5EF8
+\                         * Clear if we manage to scale all measurements
 \
-\   L5EF8
+\                         * Set if the scaling of any measurements overflows,
+\                           in which case we do not draw the object
 \
-\   L5F00
+\   scaledMeasures      Filled with the scaled measurements
+\
+\   scaledMeasures+8    Filler with the scaled measurements, but negated
 \
 \ ******************************************************************************
 
-.PrepareObject
+.ScaleObject
 
- LDA L002A              \ Set L5FF8+2 = L002A
- STA L5FF8+2
+ LDA scaleUp            \ Set scaleRange = scaleUp
+ STA scaleRange
 
- LSR A                  \ Set L5FF8+3 = L002A >> 1
- STA L5FF8+3
+ LSR A                  \ Set scaleRange+1 = scaleUp >> 1
+ STA scaleRange+1       \                  = scaleUp / 2
 
- LSR A                  \ Set L5FF8+4 = L002A >> 2
- STA L5FF8+4
+ LSR A                  \ Set scaleRange+2 = scaleUp >> 2
+ STA scaleRange+2       \                  = scaleUp / 4
 
- LSR A                  \ Set L5FF8+5 = L002A >> 3
- STA L5FF8+5
+ LSR A                  \ Set scaleRange+3 = scaleUp >> 3
+ STA scaleRange+3       \                  = scaleUp / 8
 
- LSR A                  \ Set L5FF8+6 = L002A >> 4
- STA L5FF8+6
+ LSR A                  \ Set scaleRange+4 = scaleUp >> 4
+ STA scaleRange+4       \                  = scaleUp / 16
 
- LSR A                  \ Set L5FF8+7 = L002A >> 5
- STA L5FF8+7
+ LSR A                  \ Set scaleRange+5 = scaleUp >> 5
+ STA scaleRange+5       \                  = scaleUp / 32
 
- LDY QQ                 \ We now loop through the objectLookup0 table from entry
-                        \ QQ to entry II - 1, so set a loop counter in Y to act
-                        \ as an index
+                        \ So scaleRange + n contains scaleUp / 2^n
+
+ LDY QQ                 \ We now loop through the objMeasurements table from
+                        \ entry QQ to entry II - 1, so set a loop counter in Y
+                        \ to act as an index
 
  LDX #0                 \ Set W = 0, to be used as an index as we populate the
- STX W                  \ L5EF8 table, incrementing by one byte for each loop
+ STX W                  \ scaledMeasures table, incrementing by one byte for
+                        \ each loop
 
 .prep1
 
- LDA objectLookup0,Y    \ Set A = Y-th objectLookup0
+ LDA objMeasurements,Y  \ Set A to the Y-th object measurement
 
- BPL prep2              \ If bit 7 of A is clear, jump to prep2 to store A in
-                        \ the L5EF8 table
+ BPL prep2              \ If bit 7 of A is clear, jump to prep2 to do the
+                        \ calculation that only uses bits 0-2 of A
 
                         \ If we get here, bit 7 of A is set, so now we do the
-                        \ following calculation, where A = %1cbbbaaa:
+                        \ following calculation, where the value of A from the
+                        \ objMeasurements table is %1abbbccc:
                         \
-                        \   A = (L002A / 2^a) + (L002A / 2^b) + (c * L002A / 2)
-                        \       -----------------------------------------------
-                        \                          2^L002B
+                        \   A = a * scaleUp/2 + scaleUp/2^b-2 + scaleUp/2^c-2
+                        \       ---------------------------------------------
+                        \                       2^scaleDown
                         \
-                        \     = L002A * (1 / 2^a + 1 / 2^b + c / 2)
+                        \     = scaleUp * (a/2 + 1/2^b-2 + 1/2^c-2)
                         \       -----------------------------------
-                        \                    2^L002B
+                        \                    2^scaleDown
                         \
-                        \ so we can store this in the next entry in L5EF8
+                        \         scaleUp
+                        \     = ----------- * (a/2 + 1/2^b-2 + 1/2^c-2)
+                        \       2^scaleDown
                         \
-                        \ If a = 0, we use 3 instead of L002A / 2^a
-                        \    b = 0, we use 3 instead of L002A / 2^b
+                        \         scaleUp
+                        \     = ----------- * measurement
+                        \       2^scaleDown
                         \
-                        \ If a = 1, we use 96 instead of L002A / 2^a
-                        \    a = 1, we use 96 instead of L002A / 2^a
+                        \ We then store this as the next entry in scaledMeasures
+                        \
+                        \ Note that b and c are always in the range 3 to 7, so
+                        \ they look up the values we stored in scaleRange above
 
  AND #%00000111         \ Set X = bits 0-2 of A
- TAX                    \       = %aaa
-                        \       = a
+ TAX                    \       = %ccc
+                        \       = c
 
- LDA L5FF8,X            \ Set T = X-th L5FF8
- STA T                  \       = L002A / 2^X
-                        \       = L002A / 2^a
-                        \
-                        \ or 3 if X = 0, 96 if X = 1
+ LDA scaleRange-2,X     \ Set T = entry X-2 in scaleRange
+ STA T                  \       = scaleUp / 2^X-2
+                        \       = scaleUp / 2^c-2
 
- LDA objectLookup0,Y    \ Set U = Y-th objectLookup0
+ LDA objMeasurements,Y  \ Set A to the Y-th object measurement
  STA U
 
  LSR A                  \ Set X = bits 3-5 of A
@@ -9186,42 +9239,54 @@ ENDIF
  AND #%00000111
  TAX
 
- LDA L5FF8,X            \ Set A = X-th L5FF8 + T
- CLC                    \       = L002A / 2^X + L002A / 2^a
- ADC T                  \       = L002A / 2^b + L002A / 2^a
+ LDA scaleRange-2,X     \ Set A = entry X-2 in scaleRange + T
+ CLC                    \       = scaleUp / 2^X-2 + scaleUp / 2^c-2
+ ADC T                  \       = scaleUp / 2^b-2 + scaleUp / 2^c-2
 
  BIT U                  \ If bit 6 of U is clear, jump to prep3
  BVC prep3
 
  CLC                    \ If bit 6 of U is set:
- ADC L5FF8+3            \
-                        \   A = A + L5FF8+3
-                        \     = A + L002A >> 1
-                        \     = A + L002A / 2
+ ADC scaleRange+1       \
+                        \   A = A + scaleRange+1
+                        \     = A + scaleUp / 2
 
  JMP prep3              \ Jump to prep3
 
 .prep2
 
-                        \ If we get here, bit 7 of the Y-th objectLookup0 is
+                        \ If we get here, bit 7 of the Y-th objMeasurements is
                         \ clear, so we do the following calculation, where
-                        \ A = %00000aaa:
+                        \ A is %00000ccc:
                         \
-                        \   A = L002A * (1 / 2^a)
+                        \   A = scaleUp / 2^c-2
+                        \       ---------------
+                        \         2^scaleDown
+                        \
+                        \     = scaleUp * 1/2^c-2
                         \       -----------------
-                        \            2^L002B
+                        \          2^scaleDown
                         \
-                        \ so we can store this in the next entry in L5EF8
+                        \     =   scaleUp
+                        \       ----------- * 1/2^c-2
+                        \       2^scaleDown
+                        \
+                        \         scaleUp
+                        \     = ----------- * measurement
+                        \       2^scaleDown
+                        \
+                        \ We then store this as the next entry in scaledMeasures
 
- TAX                    \ Set A = A-th L5FF8
- LDA L5FF8,X            \       = L002A / 2^a
+ TAX                    \ Set A = entry c-2 in scaleRange
+ LDA scaleRange-2,X     \       = scaleUp / 2^c-2
 
 .prep3
 
- LDX L002B              \ If L002B = 0, jump to prep5
- BEQ prep5
+ LDX scaleDown          \ If scaleDown = 0 then the scale factor is 2^scaleDown
+ BEQ prep5              \ = 2^0 = 1, so jump to prep5 to skip the division
 
-                        \ We now shift A right by X places
+                        \ We now shift A right by X places, which is the same as
+                        \ dividing by 2^X = 2^scaleDown
 
 .prep4
 
@@ -9233,23 +9298,29 @@ ENDIF
                         \ and the C flag contains the last bit shifted out from
                         \ bit 0 of A
 
- ADC #0                 \ Set A = A + C (rounding?)
+ ADC #0                 \ Set A = A + C to round the result of the division to
+                        \ the nearest integer
 
 .prep5
 
  LDX W                  \ Set X to W, the index into the tables we are building
 
- STA L5EF8,X            \ Store A in the X-th byte of L5EF8
+ STA scaledMeasures,X   \ Store A in the X-th byte of scaledMeasures
 
  EOR #&FF               \ Set A = ~A
 
- BPL prep6              \ If bit 7 of A is not clear, i.e. it was set before the
-                        \ EOR, jump to prep6 to return from the subroutine with
-                        \ the C flag set
+ BPL prep6              \ If bit 7 of A is clear, i.e. it was set before the
+                        \ EOR, then the result of the scaling was >= 128, which
+                        \ is an overflow of the scaling
+                        \
+                        \ If the scaling overflows, then the object is too big
+                        \ to be drawn, so we jump to prep6 to return from the
+                        \ subroutine with the C flag set, so we do not draw this
+                        \ object and ignore all the values calculated here
 
- CLC                    \ Store -A in the X-th byte of L5F00
+ CLC                    \ Store -A in the X-th byte of scaledMeasures+8
  ADC #1
- STA L5F00,X
+ STA scaledMeasures+8,X
 
  INC W                  \ Increment the index counter
 
@@ -9258,13 +9329,14 @@ ENDIF
  CPY II                 \ Loop back until Y has looped through QQ to II - 1
  BNE prep1
 
- CLC                    \ Clear the C flag
+ CLC                    \ Clear the C flag to indicate a successful scaling
 
  RTS                    \ Return from the subroutine
 
 .prep6
 
- SEC                    \ Set the C flag
+ SEC                    \ Set the C flag to indicate that scaling overflowed and
+                        \ the object should not be drawn
 
  RTS                    \ Return from the subroutine
 
@@ -9305,7 +9377,7 @@ ENDIF
 
  LDX objectLookup1,Y    \ Set X to objectLookup1 for this object entry
 
- LDA L5EF8,X            \ Set A to the X-th L5EF8 entry
+ LDA scaledMeasures,X   \ Set A to the X-th scaledMeasures entry
 
  CLC                    \ Set A = A + L0036
  ADC L0036
@@ -9321,7 +9393,7 @@ ENDIF
  STA N
 
  LDX objectLookup2,Y
- LDA L5EF8,X
+ LDA scaledMeasures,X
 
  CLC
  ADC L0036
@@ -9342,11 +9414,11 @@ ENDIF
  STA L0047
 
  LDX objectLookup3,Y
- LDA L5EF8,X
+ LDA scaledMeasures,X
  STA M
 
  LDX objectLookup4,Y
- LDA L5EF8,X
+ LDA scaledMeasures,X
  STA SS
 
  LDA objectLookup5,Y
@@ -9406,7 +9478,7 @@ ENDIF
  STY objectEntry
 
  LDX objectLookup3,Y
- LDA L5EF8,X
+ LDA scaledMeasures,X
  STA SS
 
  LDA objectLookup4,Y
@@ -9418,7 +9490,7 @@ ENDIF
  LDY objectEntry        \ Set Y to the object entry
 
  LDX objectLookup1,Y
- LDA L5EF8,X
+ LDA scaledMeasures,X
  STA SS
 
  LDA objectLookup5,Y    \ Set TT to objectLookup5 for this object entry
@@ -9766,10 +9838,10 @@ ENDIF
  BCC P22C5
  ROR A
  STA V
- STY L002B
+ STY scaleDown
  TAY
  LDA L6180,Y
- STA L002A
+ STA scaleUp
  LDA QQ
  STA T
  LDA TT
@@ -10399,13 +10471,13 @@ ENDIF
 
 .C2589
 
- LDA L002B
+ LDA scaleDown
  SEC
  SBC L3076,Y
  TAY
  LDA #0
  STA U
- LDA L002A
+ LDA scaleUp
  DEY
  BEQ C25A9
  BPL C25A3
@@ -11480,11 +11552,11 @@ ENDIF
  SBC #1
  BMI C2AA6
  STA L03B0,Y
- LDA L002B
+ LDA scaleDown
  SEC
  SBC #9
  TAX
- LDA L002A
+ LDA scaleUp
  DEX
  BEQ C2A99
  BPL C2A95
@@ -11599,6 +11671,10 @@ ENDIF
 \
 \ This routine is used to draw road signs and cars.
 \
+\ Arguments:
+\
+\   X                   Driver number (0 to 23)
+\
 \ ******************************************************************************
 
 .DrawRoadSigns2
@@ -11635,7 +11711,7 @@ ENDIF
  LDA L03B0,X
  STA L0036
  LDA L03C8,X
- STA L002A
+ STA scaleUp
  JSR DrawObject
 
 .C2B0B
@@ -14214,55 +14290,57 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Entries contain indexes into the scaledMeasures table. n + 8 points to the
+\ negative value of n (as scaledMeasures+8 is filled with the negative of
+\ scaledMeasures).
 \
 \ ******************************************************************************
 
 .objectLookup1
 
- EQUB 15                \ Object type  0
- EQUB 15
- EQUB 14
- EQUB 14
+ EQUB 7 + 8             \ Object type  0
+ EQUB 7 + 8
+ EQUB 6 + 8
+ EQUB 6 + 8
+ EQUB 5 + 8
 
- EQUB 13                \ Object type  1
- EQUB 5
+ EQUB 5                 \ Object type  1
  EQUB 6
- EQUB 15
+ EQUB 7 + 8
  EQUB 4
 
- EQUB 14                \ Object type  2
+ EQUB 6 + 8             \ Object type  2
  EQUB 0
- EQUB 13
- EQUB 15
- EQUB 15
+ EQUB 5 + 8
+ EQUB 7 + 8
+ EQUB 7 + 8
 
  EQUB 2                 \ Object type  3
  EQUB 3
  EQUB 4
- EQUB 9
+ EQUB 1 + 8
 
  EQUB 6                 \ Object type  4
- EQUB 15
- EQUB 14
+ EQUB 7 + 8
+ EQUB 6 + 8
  EQUB 0
- EQUB 13
+ EQUB 5 + 8
  EQUB 7
  EQUB 4
 
- EQUB 10                \ Object type  5
+ EQUB 2 + 8             \ Object type  5
 
  EQUB 0                 \ Object type  6
 
  EQUB 1                 \ Object type  7
- EQUB 12
- EQUB 12
+ EQUB 4 + 8
+ EQUB 4 + 8
 
  EQUB 2                 \ Object type  8
  EQUB 1
 
  EQUB 1                 \ Object type  9
- EQUB 10
+ EQUB 2 + 8
 
  EQUB 3                 \ Object type 10
  EQUB 4
@@ -14377,59 +14455,59 @@ ENDIF
 
 .objectLookup2
 
- EQUB 14                \ Object type  0
- EQUB 14
- EQUB 11
- EQUB 11
+ EQUB 6 + 8             \ Object type  0
+ EQUB 6 + 8
+ EQUB 3 + 8
+ EQUB 3 + 8
+ EQUB 3 + 8
 
- EQUB 11                \ Object type  1
- EQUB 6
- EQUB 15
- EQUB 13
+ EQUB 6                 \ Object type  1
+ EQUB 7 + 8
+ EQUB 5 + 8
  EQUB 5
 
- EQUB 13                \ Object type  2
+ EQUB 5 + 8             \ Object type  2
  EQUB 7
- EQUB 11
- EQUB 14
- EQUB 14
+ EQUB 3 + 8
+ EQUB 6 + 8
+ EQUB 6 + 8
 
  EQUB 3                 \ Object type  3
  EQUB 4
- EQUB 9
- EQUB 8
+ EQUB 1 + 8
+ EQUB 0 + 8
 
- EQUB 15                \ Object type  4
- EQUB 13
- EQUB 13
+ EQUB 7 + 8             \ Object type  4
+ EQUB 5 + 8
+ EQUB 5 + 8
  EQUB 7
- EQUB 9
- EQUB 13
+ EQUB 1 + 8
+ EQUB 5 + 8
  EQUB 6
 
- EQUB 9                 \ Object type  5
+ EQUB 1 + 8             \ Object type  5
 
  EQUB 2                 \ Object type  6
 
- EQUB 12                \ Object type  7
- EQUB 10
- EQUB 10
+ EQUB 4 + 8             \ Object type  7
+ EQUB 2 + 8
+ EQUB 2 + 8
 
- EQUB 8                 \ Object type  8
+ EQUB 0 + 8             \ Object type  8
  EQUB 2
 
- EQUB 10                \ Object type  9
- EQUB 8
+ EQUB 2 + 8             \ Object type  9
+ EQUB 0 + 8
 
  EQUB 4                 \ Object type 10
- EQUB 10
+ EQUB 2 + 8
  EQUB 3
 
  EQUB 3                 \ Object type 11
- EQUB 10
+ EQUB 2 + 8
 
  EQUB 3                 \ Object type 12
- EQUB 10
+ EQUB 2 + 8
 
 \ ******************************************************************************
 \
@@ -14511,58 +14589,58 @@ ENDIF
 
 .objectLookup3
 
- EQUB 9                 \ Object type  0
+ EQUB 1 + 8             \ Object type  0
  EQUB 2
- EQUB 8
+ EQUB 0 + 8
  EQUB 4
+ EQUB 2 + 8
 
- EQUB 10                \ Object type  1
- EQUB 13
- EQUB 11
- EQUB 9
- EQUB 14
+ EQUB 5 + 8             \ Object type  1
+ EQUB 3 + 8
+ EQUB 1 + 8
+ EQUB 6 + 8
 
- EQUB 8                 \ Object type  2
+ EQUB 0 + 8             \ Object type  2
  EQUB 4
- EQUB 8
- EQUB 9
+ EQUB 0 + 8
+ EQUB 1 + 8
  EQUB 2
 
- EQUB 8                 \ Object type  3
- EQUB 8
- EQUB 13
- EQUB 13
+ EQUB 0 + 8             \ Object type  3
+ EQUB 0 + 8
+ EQUB 5 + 8
+ EQUB 5 + 8
 
- EQUB 12                \ Object type  4
- EQUB 11
- EQUB 8
+ EQUB 4 + 8             \ Object type  4
+ EQUB 3 + 8
+ EQUB 0 + 8
  EQUB 2
- EQUB 8
- EQUB 15
- EQUB 10
+ EQUB 0 + 8
+ EQUB 7 + 8
+ EQUB 2 + 8
 
- EQUB 8                 \ Object type  5
+ EQUB 0 + 8             \ Object type  5
 
- EQUB 9                 \ Object type  6
+ EQUB 1 + 8             \ Object type  6
 
- EQUB 8                 \ Object type  7
- EQUB 9
+ EQUB 0 + 8             \ Object type  7
+ EQUB 1 + 8
  EQUB 3
 
- EQUB 11                \ Object type  8
- EQUB 11
+ EQUB 3 + 8             \ Object type  8
+ EQUB 3 + 8
 
- EQUB 8                 \ Object type  9
- EQUB 11
+ EQUB 0 + 8             \ Object type  9
+ EQUB 3 + 8
 
- EQUB 8                 \ Object type 10
- EQUB 8
+ EQUB 0 + 8             \ Object type 10
+ EQUB 0 + 8
  EQUB 1
 
- EQUB 8                 \ Object type 11
- EQUB 8
+ EQUB 0 + 8             \ Object type 11
+ EQUB 0 + 8
 
- EQUB 9                 \ Object type 12
+ EQUB 1 + 8             \ Object type 12
  EQUB 1
 
 \ ******************************************************************************
@@ -14668,21 +14746,21 @@ ENDIF
 
 .objectLookup4
 
- EQUB 10                \ Object type  0
+ EQUB 2 + 8             \ Object type  0
  EQUB 1
- EQUB 12
+ EQUB 4 + 8
  EQUB 0
+ EQUB 2
 
- EQUB 2                 \ Object type  1
- EQUB 5
+ EQUB 5                 \ Object type  1
  EQUB 3
  EQUB 1
  EQUB 6
 
- EQUB 12                \ Object type  2
- EQUB 9
+ EQUB 4 + 8             \ Object type  2
+ EQUB 1 + 8
  EQUB 0
- EQUB 10
+ EQUB 2 + 8
  EQUB 1
 
  EQUB 0                 \ Object type  3
@@ -14692,8 +14770,8 @@ ENDIF
 
  EQUB 4                 \ Object type  4
  EQUB 3
- EQUB 10
- EQUB 9
+ EQUB 2 + 8
+ EQUB 1 + 8
  EQUB 0
  EQUB 7
  EQUB 2
@@ -14703,7 +14781,7 @@ ENDIF
  EQUB 1                 \ Object type  6
 
  EQUB 0                 \ Object type  7
- EQUB 11
+ EQUB 3 + 8
  EQUB 1
 
  EQUB 3                 \ Object type  8
@@ -14713,11 +14791,11 @@ ENDIF
  EQUB 3
 
  EQUB 0                 \ Object type 10
- EQUB 9
+ EQUB 1 + 8
  EQUB 0
 
  EQUB 1                 \ Object type 11
- EQUB 9
+ EQUB 1 + 8
 
  EQUB 0                 \ Object type 12
  EQUB 0
@@ -16394,7 +16472,7 @@ NEXT
  EQUB 9
  EQUB 7
  EQUB 0
- EQUB 11
+ EQUB 3 + 8
  EQUB 7
 
 \ ******************************************************************************
@@ -16762,18 +16840,19 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: lookupIndex0
+\       Name: measureIndex
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Index of an object's measurements in the objMeasurements table
 \
 \ ------------------------------------------------------------------------------
 \
-\ Convert object type into index range for objectLookup0 table.
+\ Given an object type, this table contains the index range for the object's
+\ measurements in the objMeasurements table.
 \
 \ ******************************************************************************
 
-.lookupIndex0
+.measureIndex
 
  EQUB 0                 \ Object type  0 =  0 to  7
  EQUB 8                 \ Object type  1 =  8 to 15
@@ -18581,101 +18660,234 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: objectLookup0
+\       Name: objMeasurements
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Each object's measurements, in a scalable format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This table contains object measurements, in a format that supports quick and
+\ easy scaling (see the ScaleObject routine).
+\
+\ Each object has a number of entries, one for each measurement. Each entry is
+\ in one of these binary formats:
+\
+\   %00000ccc
+\   %1abbbccc
+\
+\ where a = %a, b = %bbb and c = %ccc.
+\
+\ The value represented by %00000ccc is:
+\
+\       1
+\   ---------
+\   2^(c - 2)
+\
+\ and the value represented by %1abbbccc is:
+\
+\   a         1             1
+\   -  +  ---------  +  ---------
+\   2     2^(b - 2)     2^(c - 2)
+\
+\ In both cases, the result is a multiple of 1/32, so each of these entries
+\ represents a fraction of the form n/32.
+\
+\ The ScaleObject routine takes these entries for a specific object and scales
+\ each of them by multiplying by the following:
+\
+\     scaleUp
+\   -----------
+\   2^scaleDown
+\
+\ The resulting values are stored in the scaledMeasures table, with one entry
+\ for each measurement in this table.
 \
 \ ******************************************************************************
 
-.objectLookup0
+.objMeasurements
 
- EQUB %10011100         \  0 = 1 0 011 100    a = 4, b = 3, c = 0
- EQUB %11101110         \      1 1 101 110    a = 6, b = 5, c = 1
- EQUB %10011110         \      1 0 011 110    a = 6, b = 3, c = 0
- EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
- EQUB %00000011         \      0 0 000 011    a = 3
- EQUB %00000100         \      0 0 000 100    a = 4
- EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
- EQUB %00000101         \      0 0 000 101    a = 5
+                        \ Object type 0 = 24, 22, 18, 17, 16, 8, 5, 4
 
- EQUB %10011101         \  1 = 1 0 011 101    a = 5, b = 3, c = 0
- EQUB %10100101         \      1 0 100 101    a = 5, b = 4, c = 0
- EQUB %10100111         \      1 0 100 111    a = 7, b = 4, c = 0
- EQUB %00000100         \      0 0 000 100    a = 4
- EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
- EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
- EQUB %00000110         \      0 0 000 110    a = 6
- EQUB %00000111         \      0 0 000 111    a = 7
+ EQUB %10011100         \ 1 0 011 100    c = 0   b = 3   a = 4
+                        \                0/2   + 1/2^1 + 1/2^2      = 24/32
+ EQUB %11101110         \ 1 1 101 110    c = 1   b = 5   a = 6
+                        \                1/2   + 1/2^3 + 1/2^4      = 22/32
+ EQUB %10011110         \ 1 0 011 110    c = 0   b = 3   a = 6
+                        \                0/2   + 1/2^1 + 1/2^4      = 18/32
+ EQUB %10011111         \ 1 0 011 111    c = 0   b = 3   a = 7
+                        \                0/2   + 1/2^1 + 1/2^5      = 17/32
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %00000100         \ 0 0 000 100    c = 4
+                        \                1/2^2                      =  8/32
+ EQUB %10101111         \ 1 0 101 111    c = 0   b = 5   a = 7
+                        \                0/2   + 1/2^3 + 1/2^5      =  5/32
+ EQUB %00000101         \ 0 0 000 101    c = 5
+                        \                1/2^3                      =  4/32
 
- EQUB %11100110         \  2 = 1 1 100 110    a = 6, b = 4, c = 1
- EQUB %10011100         \      1 0 011 100    a = 4, b = 3, c = 0
- EQUB %10011110         \      1 0 011 110    a = 6, b = 3, c = 0
- EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
- EQUB %00000011         \      0 0 000 011    a = 3
- EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
- EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
- EQUB %00000110         \      0 0 000 110    a = 6
+                        \ Object type 1 = 20, 12, 9, 8, 6, 5, 2, 1
 
- EQUB %00000011         \  3 = 0 0 000 011    a = 3
- EQUB %10100110         \      1 0 100 110    a = 6, b = 4, c = 0
- EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
- EQUB %00000101         \      0 0 000 101    a = 5
- EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
- EQUB %00000111         \      0 0 000 111    a = 7
+ EQUB %10011101         \ 1 0 011 101    c = 0   b = 3   a = 5
+                        \                0/2   + 1/2^1 + 1/2^3      = 20/32
+ EQUB %10100101         \ 1 0 100 101    c = 0   b = 4   a = 5
+                        \                0/2   + 1/2^2 + 1/2^3      = 12/32
+ EQUB %10100111         \ 1 0 100 111    c = 0   b = 4   a = 7
+                        \                0/2   + 1/2^2 + 1/2^5      =  9/32
+ EQUB %00000100         \ 0 0 000 100    c = 4
+                        \                1/2^2                      =  8/32
+ EQUB %10101110         \ 1 0 101 110    c = 0   b = 5   a = 6
+                        \                0/2   + 1/2^3 + 1/2^4      =  6/32
+ EQUB %10101111         \ 1 0 101 111    c = 0   b = 5   a = 7
+                        \                0/2   + 1/2^3 + 1/2^5      =  5/32
+ EQUB %00000110         \ 0 0 000 110    c = 6
+                        \                1/2^4                      =  2/32
+ EQUB %00000111         \ 0 0 000 111    c = 7
+                        \                1/2^5                      =  1/32
 
- EQUB %11100110         \  4 = 1 1 100 110    a = 6, b = 4, c = 1
- EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
- EQUB %00000011         \      0 0 000 011    a = 3
- EQUB %10100101         \      1 0 100 101    a = 5, b = 4, c = 0
- EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
- EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
- EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
- EQUB %00000111         \      0 0 000 111    a = 7
+                        \ Object type 2 = 26, 24, 18, 17, 16, 5, 3, 2
 
- EQUB %11100110         \  5 = 1 1 100 110    a = 6, b = 4, c = 1
- EQUB %10011111         \      1 0 011 111    a = 7, b = 3, c = 0
- EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+ EQUB %11100110         \ 1 1 100 110    c = 1   b = 4   a = 6
+                        \                1/2   + 1/2^2 + 1/2^4      = 26/32
+ EQUB %10011100         \ 1 0 011 100    c = 0   b = 3   a = 4
+                        \                0/2   + 1/2^1 + 1/2^2      = 24/32
+ EQUB %10011110         \ 1 0 011 110    c = 0   b = 3   a = 6
+                        \                0/2   + 1/2^1 + 1/2^4      = 18/32
+ EQUB %10011111         \ 1 0 011 111    c = 0   b = 3   a = 7
+                        \                0/2   + 1/2^1 + 1/2^5      = 17/32
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %10101111         \ 1 0 101 111    c = 0   b = 5   a = 7
+                        \                0/2   + 1/2^3 + 1/2^5      =  5/32
+ EQUB %10110111         \ 1 0 110 111    c = 0   b = 6   a = 7
+                        \                0/2   + 1/2^4 + 1/2^5      =  3/32
+ EQUB %00000110         \ 0 0 000 110    c = 6
+                        \                1/2^4                      =  2/32
 
- EQUB %00000011         \  6 = 0 0 000 011    a = 3
- EQUB %10100110         \      1 0 100 110    a = 6, b = 4, c = 0
- EQUB %00000111         \      0 0 000 111    a = 7
+                        \ Object type 3 = 16, 10, 6, 4, 3, 1
 
- EQUB %11100101         \  7 = 1 1 100 101    a = 5, b = 4, c = 1
- EQUB %10011101         \      1 0 011 101    a = 5, b = 3, c = 0
- EQUB %10011110         \      1 0 011 110    a = 6, b = 3, c = 0
- EQUB %00000011         \      0 0 000 011    a = 3
- EQUB %00000100         \      0 0 000 100    a = 4
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %10100110         \ 1 0 100 110    c = 0   b = 4   a = 6
+                        \                0/2   + 1/2^2 + 1/2^4      = 10/32
+ EQUB %10101110         \ 1 0 101 110    c = 0   b = 5   a = 6
+                        \                0/2   + 1/2^3 + 1/2^4      =  6/32
+ EQUB %00000101         \ 0 0 000 101    c = 5
+                        \                1/2^3                      =  4/32
+ EQUB %10110111         \ 1 0 110 111    c = 0   b = 6   a = 7
+                        \                0/2   + 1/2^4 + 1/2^5      =  3/32
+ EQUB %00000111         \ 0 0 000 111    c = 7
+                        \                1/2^5                      =  1/32
 
- EQUB %10011110         \  8 = 1 0 011 110    a = 6, b = 3, c = 0
- EQUB %00000011         \      0 0 000 011    a = 3
- EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
- EQUB %00000110         \      0 0 000 110    a = 6
+                        \ Object type 4 = 26, 17, 16, 12, 6, 5, 3, 1
 
- EQUB %00000011         \  9 = 0 0 000 011    a = 3
- EQUB %10100101         \      1 0 100 101    a = 5, b = 4, c = 0
- EQUB %10100110         \      1 0 100 110    a = 6, b = 4, c = 0
- EQUB %10110111         \      1 0 110 111    a = 7, b = 6, c = 0
+ EQUB %11100110         \ 1 1 100 110    c = 1   b = 4   a = 6
+                        \                1/2   + 1/2^2 + 1/2^4      = 26/32
+ EQUB %10011111         \ 1 0 011 111    c = 0   b = 3   a = 7
+                        \                0/2   + 1/2^1 + 1/2^5      = 17/32
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %10100101         \ 1 0 100 101    c = 0   b = 4   a = 5
+                        \                0/2   + 1/2^2 + 1/2^3      = 12/32
+ EQUB %10101110         \ 1 0 101 110    c = 0   b = 5   a = 6
+                        \                0/2   + 1/2^3 + 1/2^4      =  6/32
+ EQUB %10101111         \ 1 0 101 111    c = 0   b = 5   a = 7
+                        \                0/2   + 1/2^3 + 1/2^5      =  5/32
+ EQUB %10110111         \ 1 0 110 111    c = 0   b = 6   a = 7
+                        \                0/2   + 1/2^4 + 1/2^5      =  3/32
+ EQUB %00000111         \ 0 0 000 111    c = 7
+                        \                1/2^5                      =  1/32
 
- EQUB %10100110         \ 10 = 1 0 100 110    a = 6, b = 4, c = 0
- EQUB %10100111         \      1 0 100 111    a = 7, b = 4, c = 0
- EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
- EQUB %00000101         \      0 0 000 101    a = 5
- EQUB %00000111         \      0 0 000 111    a = 7
+                        \ Object type 5 = 26, 17, 3
 
- EQUB %10100110         \ 11 = 1 0 100 110    a = 6, b = 4, c = 0
- EQUB %00000100         \      0 0 000 100    a = 4
- EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
- EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+ EQUB %11100110         \ 1 1 100 110    c = 1   b = 4   a = 6
+                        \                1/2   + 1/2^2 + 1/2^4      = 26/32
+ EQUB %10011111         \ 1 0 011 111    c = 0   b = 3   a = 7
+                        \                0/2   + 1/2^1 + 1/2^5      = 17/32
+ EQUB %10110111         \ 1 0 110 111    c = 0   b = 6   a = 7
+                        \                0/2   + 1/2^4 + 1/2^5      =  3/32
 
- EQUB %10100110         \ 12 = 1 0 100 110    a = 6, b = 4, c = 0
- EQUB %00000100         \      0 0 000 100    a = 4
- EQUB %10101110         \      1 0 101 110    a = 6, b = 5, c = 0
- EQUB %10101111         \      1 0 101 111    a = 7, b = 5, c = 0
+                        \ Object type 6 = 16, 10, 1
+
+
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %10100110         \ 1 0 100 110    c = 0   b = 4   a = 6
+                        \                0/2   + 1/2^2 + 1/2^4      = 10/32
+ EQUB %00000111         \ 0 0 000 111    c = 7
+                        \                1/2^5                      =  1/32
+
+                        \ Object type 7 = 28, 20, 18, 16, 8
+
+
+ EQUB %11100101         \ 1 1 100 101    c = 1   b = 4   a = 5
+                        \                1/2   + 1/2^2 + 1/2^3      = 28/32
+ EQUB %10011101         \ 1 0 011 101    c = 0   b = 3   a = 5
+                        \                0/2   + 1/2^1 + 1/2^3      = 20/32
+ EQUB %10011110         \ 1 0 011 110    c = 0   b = 3   a = 6
+                        \                0/2   + 1/2^1 + 1/2^4      = 18/32
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %00000100         \ 0 0 000 100    c = 4
+                        \                1/2^2                      =  8/32
+
+                        \ Object type 8 = 18, 16, 3
+
+ EQUB %10011110         \ 1 0 011 110    c = 0   b = 3   a = 6
+                        \                0/2   + 1/2^1 + 1/2^4      = 18/32
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %10110111         \ 1 0 110 111    c = 0   b = 6   a = 7
+                        \                0/2   + 1/2^4 + 1/2^5      =  3/32
+ EQUB %00000110         \ 0 0 000 110    c = 6
+                        \                1/2^4                      =  2/32
+
+                        \ Object type 9 = 16, 12, 10, 3
+
+ EQUB %00000011         \ 0 0 000 011    c = 3
+                        \                1/2^1                      = 16/32
+ EQUB %10100101         \ 1 0 100 101    c = 0   b = 4   a = 5
+                        \                0/2   + 1/2^2 + 1/2^3      = 12/32
+ EQUB %10100110         \ 1 0 100 110    c = 0   b = 4   a = 6
+                        \                0/2   + 1/2^2 + 1/2^4      = 10/32
+ EQUB %10110111         \ 1 0 110 111    c = 0   b = 6   a = 7
+                        \                0/2   + 1/2^4 + 1/2^5      =  3/32
+
+                        \ Object type 10 = 10, 9, 6, 4, 1
+
+ EQUB %10100110         \ 1 0 100 110    c = 0   b = 4   a = 6
+                        \                0/2   + 1/2^2 + 1/2^4      = 10/32
+ EQUB %10100111         \ 1 0 100 111    c = 0   b = 4   a = 7
+                        \                0/2   + 1/2^2 + 1/2^5      =  9/32
+ EQUB %10101110         \ 1 0 101 110    c = 0   b = 5   a = 6
+                        \                0/2   + 1/2^3 + 1/2^4      =  6/32
+ EQUB %00000101         \ 0 0 000 101    c = 5
+                        \                1/2^3                      =  4/32
+ EQUB %00000111         \ 0 0 000 111    c = 7
+                        \                1/2^5                      =  1/32
+
+                        \ Object type 11 = 10, 8, 6, 5
+
+ EQUB %10100110         \ 1 0 100 110    c = 0   b = 4   a = 6
+                        \                0/2   + 1/2^2 + 1/2^4      = 10/32
+ EQUB %00000100         \ 0 0 000 100    c = 4
+                        \                1/2^2                      =  8/32
+ EQUB %10101110         \ 1 0 101 110    c = 0   b = 5   a = 6
+                        \                0/2   + 1/2^3 + 1/2^4      =  6/32
+ EQUB %10101111         \ 1 0 101 111    c = 0   b = 5   a = 7
+                        \                0/2   + 1/2^3 + 1/2^5      =  5/32
+
+                        \ Object type 12 = 10, 8, 6, 5
+
+ EQUB %10100110         \ 1 0 100 110    c = 0   b = 4   a = 6
+                        \                0/2   + 1/2^2 + 1/2^4      = 10/32
+ EQUB %00000100         \ 0 0 000 100    c = 4
+                        \                1/2^2                      =  8/32
+ EQUB %10101110         \ 1 0 101 110    c = 0   b = 5   a = 6
+                        \                0/2   + 1/2^3 + 1/2^4      =  6/32
+
+ EQUB %10101111         \ 1 0 101 111    c = 0   b = 5   c = 7
+                        \                0/2   + 1/2^3 + 1/2^5      =  5/32
 
 \ ******************************************************************************
 \
@@ -23974,7 +24186,20 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5EF8
+\       Name: scaledMeasures
+\       Type: Variable
+\   Category: Graphics
+\    Summary: Storage for an object's scaled measurements
+\
+\ ******************************************************************************
+
+.scaledMeasures
+
+ SKIP 16
+
+\ ******************************************************************************
+\
+\       Name: L5F08
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -23985,26 +24210,9 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5EF8
+.L5F08
 
- SKIP 8
-
-\ ******************************************************************************
-\
-\       Name: L5F00
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5F00
-
- SKIP 32
+ SKIP 24
 
 \ ******************************************************************************
 \
@@ -24278,22 +24486,18 @@ ORG &5E40
  EQUB &F0, &70, &30, &10, &FF, &77, &33, &11, &FF, &7F, &3F, &1F
  EQUB &FF, &F7, &F3, &F1
 
+ EQUB &03, &60
+
 \ ******************************************************************************
 \
-\       Name: L5FF8
+\       Name: scaleRange
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Storage for scale factors when scaling objects
 \
 \ ******************************************************************************
 
-.L5FF8
-
- EQUB &03, &60
+.scaleRange
 
 IF _ACORNSOFT
 
