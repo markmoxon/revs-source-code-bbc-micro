@@ -7001,8 +7001,8 @@ ENDIF
  AND #%00100000         \ two instructions
  BEQ corn2
 
- LDA #%00001111         \ Set the third colourByte to four pixels of colour 1
- STA colourByte+2
+ LDA #%00001111         \ Set logical colour 2 in the colour palette to physical
+ STA colourPalette+2    \ colour 1 (red in the track view)
 
 .corn2
 
@@ -7074,8 +7074,9 @@ ENDIF
 
 .corn6
 
- LDA #%11110000         \ Set the third colourByte to four pixels of colour 2,
- STA colourByte+2       \ which sets it back to the default value
+ LDA #%11110000         \ Set logical colour 2 in the colour palette to physical
+ STA colourPalette+2    \ colour 1 (white in the track view), which sets it back
+                        \ to the default value
 
  LDY temp1              \ Set Y to the loop counter that we stored at the start
                         \ of the loop
@@ -7309,20 +7310,22 @@ ENDIF
  LDX H                  \ Set G = H
  STX G
 
- AND #%00000011         \ Set H to the colourByte2 byte given in bits 0-1 of A
+ AND #3                 \ Set X to bits 0-1 of A
  TAX
- LDA colourByte2,X
+
+ LDA objectPalette,X    \ Set H to logical colour X from the object palette
  STA H
 
  LDA UU                 \ Set K = UU
  STA K
 
- LDA TT                 \ Set V to the colourByte2 byte given in bits 2-3 of A
+ LDA TT                 \ Set X to bits 2-3 of A
  AND #%00001100
  LSR A
  LSR A
  TAX
- LDA colourByte2,X
+
+ LDA objectPalette,X    \ Set V to logical colour X from the object palette
  STA V
 
  LDA #0                 \ Set P = 0, for use as the low byte of (Q P), in which
@@ -7503,10 +7506,11 @@ ENDIF
  AND #1
  BEQ draw12
 
- LDA TT                 \ Set V to the colourByte2 byte given in bits 0-1 of TT
+ LDA TT                 \ Set X to bits 0-1 of TT
  AND #%00000011
  TAX
- LDA colourByte2,X
+
+ LDA objectPalette,X    \ Set V to logical colour X from the object palette
  STA V
 
 .draw12
@@ -8445,7 +8449,8 @@ IF _ACORNSOFT
  LDA horizonLine
  JSR gcol17
 
- LDA colourByte+1
+ LDA colourPalette+1    \ Set A to logical colour 1 from the colour palette
+
  RTS
 
 .gcol1
@@ -8494,17 +8499,21 @@ IF _ACORNSOFT
  LDA trackLineColour,Y
  AND #3
  TAX
- LDA colourByte,X
+
+ LDA colourPalette,X    \ Set A to logical colour X from the colour palette
+
  RTS
 
 .gcol5
 
- LDA colourByte
+ LDA colourPalette      \ Set A to logical colour 0 from the colour palette
+
  RTS
 
 .gcol6
 
- LDA colourByte+3
+ LDA colourPalette+3    \ Set A to logical colour 3 from the colour palette
+
  RTS
 
 .gcol7
@@ -8560,7 +8569,9 @@ IF _ACORNSOFT
 
  AND #3
  TAX
- LDA colourByte,X
+
+ LDA colourPalette,X    \ Set A to logical colour X from the colour palette
+
  RTS
 
 .gcol15
@@ -8619,7 +8630,8 @@ IF _SUPERIOR
  BCC scol1
  BEQ scol1
 
- LDA colourByte+1
+ LDA colourPalette+1    \ Set A to logical colour 1 from the colour palette
+
  RTS
 
 .scol1
@@ -8639,12 +8651,14 @@ IF _SUPERIOR
 
 .scol2
 
- LDA colourByte
+ LDA colourPalette      \ Set A to logical colour 0 from the colour palette
+
  RTS
 
 .scol3
 
- LDA colourByte+3
+ LDA colourPalette+3    \ Set A to logical colour 3 from the colour palette
+
  RTS
 
 .scol4
@@ -8672,7 +8686,9 @@ IF _SUPERIOR
 
  AND #3
  TAX
- LDA colourByte,X
+
+ LDA colourPalette,X    \ Set A to logical colour X from the colour palette
+
  RTS
 
 ENDIF
@@ -8986,20 +9002,21 @@ ENDIF
 
  STX T                  \ Store the driver number in T
 
- LDX #3                 \ We start by copying the four pixel bytes from
-                        \ colourByte to colourByte2, so set up a counter in X
+ LDX #3                 \ We start by copying the four bytes from colourPalette
+                        \ to objectPalette, so set up a counter in X
 
 .dobj1
 
- LDA colourByte,X       \ Copy the X-th byte of colourByte to the X-th byte of
- STA colourByte2,X      \ colourByte2
+ LDA colourPalette,X    \ Copy the X-th byte of colourPalette to the X-th byte of
+ STA objectPalette,X    \ objectPalette
 
  DEX                    \ Decrement the loop counter
 
  BPL dobj1              \ Loop back until we have copied all four bytes
 
- LDA #%11110000         \ Set the third colourByte to four pixels of colour 2,
- STA colourByte+2       \ which sets it back to the default value
+ LDA #%11110000         \ Set logical colour 2 in the colour palette to physical
+ STA colourPalette+2    \ colour 1 (white in the track view), which sets it back
+                        \ to the default value
 
                         \ We now set the palette differently, depending on the
                         \ driver number in X:
@@ -9009,7 +9026,7 @@ ENDIF
                         \   * 20-22 = set colour 1 to the number of the driver
                         \             in front, mod 3
                         \
-                        \   * 23 = use the palette from colourByte
+                        \   * 23 = use the palette from colourPalette
 
  LDA T                  \ Set A = T, so A contains the driver number
 
@@ -9028,8 +9045,8 @@ ENDIF
  AND #3                 \ Set X = A mod 3
  TAX
 
- LDA colourByte,X       \ Set the second byte of colourByte2 to the X-th byte of
- STA colourByte2+1      \ colourByte
+ LDA colourPalette,X    \ Set logical colour 1 in the object palette to logical
+ STA objectPalette+1    \ colour X from the colour palette
 
 .dobj3
 
@@ -9078,7 +9095,7 @@ ENDIF
  LDA measureIndex+1,X   \ Set II to the index of the last objMeasurements entry
  STA II                 \ for object type X (so the last entry is index II - 1)
 
- LDA lookupIndex15,X    \ Set QQ to the index of the first entry in the object
+ LDA objectIndex,X      \ Set QQ to the index of the first entry in the object
  STA MM                 \ lookup tables for object type X
 
  JSR ScaleObject        \ Scale the object's measurements by the scaleUp and
@@ -9353,7 +9370,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   MM                  (from lookupIndex15 table)
+\   MM                  (from objectIndex table)
 \
 \ ******************************************************************************
 
@@ -9367,7 +9384,7 @@ ENDIF
 
 .drob1
 
- LDA colourByte         \ Set H = colourByte for colour 0
+ LDA colourPalette      \ Set H to logical colour 0 from the colour palette
  STA H
 
  LDA #0                 \ Set L0048 = 0
@@ -11974,19 +11991,25 @@ ENDIF
 .P2C13
 
  LDA L5FD0,Y
- STA colourByte2,X
+ STA objectPalette,X
+
  AND L33FC,X
  STA L629C,X
+
  INY
  INX
+
  CPX #4
  BNE P2C13
+
  LDA L0027
  ASL A
  ASL A
  ASL A
  STA T
- LDA colourByte2
+
+ LDA objectPalette		\ Set A to logical colour 0 from the object palette
+
  LSR A
  LSR A
  LSR A
@@ -11994,18 +12017,23 @@ ENDIF
  ORA T
  ORA #&40
  STA L0034
- LDA colourByte2
+
+ LDA objectPalette		\ Set A to logical colour 0 from the object palette
+
  BNE C2C44
+
  LDA #&55
- STA colourByte2
+ STA objectPalette
 
 .C2C44
 
  STA JJ
- LDA colourByte2+3
+
+ LDA objectPalette+3    \ Set A to logical colour 3 from the object palette
+
  LSR A
  AND #1
- BIT colourByte2+3
+ BIT objectPalette+3
  BPL C2C53
  ORA #2
 
@@ -12057,7 +12085,9 @@ ENDIF
  LDA SS
  CMP TT
  BCC C2CEF
- LDA colourByte2
+
+ LDA objectPalette		\ Set A to logical colour 0 from the object palette
+
  CMP #&FF
  BEQ C2CB4
  LDA L0033
@@ -12640,7 +12670,8 @@ ENDIF
  STA &7000,Y
  LDA (R),Y
  BNE C2F63
- LDA colourByte2,X
+
+ LDA objectPalette,X    \ Set A to logical colour X from the object palette
 
 .C2F58
 
@@ -12724,7 +12755,8 @@ ENDIF
  STA &7000,Y
  LDA (P),Y
  BNE C2FA5
- LDA colourByte2,X
+
+ LDA objectPalette,X    \ Set A to logical colour X from the object palette
 
 .C2F9A
 
@@ -15476,14 +15508,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: colourByte
+\       Name: colourPalette
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Mode 5 bytes containing four pixels of each colour
+\    Summary: The main colour palette that maps logical colours 0 to 3 to
+\             physical colours
 \
 \ ******************************************************************************
 
-.colourByte
+.colourPalette
 
  EQUB %00000000         \ Four pixels of colour 0
  EQUB %00001111         \ Four pixels of colour 1
@@ -16810,19 +16843,21 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: lookupIndex15
+\       Name: objectIndex
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Index of an object's data in the objectLookup1 to objectLookup5
+\             table
 \
 \ ------------------------------------------------------------------------------
 \
-\ Convert object type into index range for objectLookup1, objectLookup2,
-\ objectLookup3, objectLookup4, objectLookup5 tables.
+\ Given an object type, this table contains the index range for the object's
+\ data in the objectLookup1, objectLookup2, objectLookup3, objectLookup4 and
+\ objectLookup5 tables.
 \
 \ ******************************************************************************
 
-.lookupIndex15
+.objectIndex
 
  EQUB 0                 \ Object type  0 =  0 to  4
  EQUB 5                 \ Object type  1 =  5 to  8
@@ -24441,7 +24476,8 @@ ORG &5E40
 \ ------------------------------------------------------------------------------
 \
 \ Bits 0 and 1 give the starting colour (i.e. the background colour) of each
-\ track line. This value is used to look up the actual colour from colourByte.
+\ track line. This value is a logical colour and the physical colour is looked
+\ up from the colourPalette table.
 \
 \ ******************************************************************************
 
@@ -24739,18 +24775,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: colourByte2
+\       Name: objectPalette
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The object colour palette that maps logical colours 0 to 3 to
+\             physical colours
 \
 \ ******************************************************************************
 
-.colourByte2
+.objectPalette
 
  EQUB 0, 0, 0, 0
 
@@ -28219,7 +28252,7 @@ ORG &7B00
  AND #%00000011         \ the X-th entry in trackLineColour (bits 0 to 2)
  TAY
 
- LDA colourByte,Y       \ Set A to the pixel byte for four pixels in colour Y
+ LDA colourPalette,Y    \ Set A to logical colour Y from the colour palette,
                         \ to use as the first byte on the line
 
                         \ Fall through into DrawTrackBytes to draw the pixel
