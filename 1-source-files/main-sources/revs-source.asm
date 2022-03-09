@@ -7281,7 +7281,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   SS                  From scaledMeasures using index objectLookup4 / 3 / 1
+\   SS                  Scaled objectLookup4 / 3 / 1 for this object entry
 \
 \   TT                  From objectLookup4 / 5
 \
@@ -7291,7 +7291,7 @@ ENDIF
 \
 \   H                   Colour byte
 \
-\   A                   Same as TT
+\   A                   0 or same as TT
 \
 \   M                   From scaledMeasures using index objectLookup3
 \
@@ -7300,6 +7300,12 @@ ENDIF
 \   NN                  
 \
 \   L0047               
+\
+\   L0048               
+\
+\   N                   
+\
+\   H                   
 \
 \ ******************************************************************************
 
@@ -9370,7 +9376,8 @@ ENDIF
 \
 \ Arguments:
 \
-\   MM                  (from objectIndex table)
+\   MM                  The index of this object's first entry in the various
+\                       object tables
 \
 \ ******************************************************************************
 
@@ -9392,58 +9399,63 @@ ENDIF
 
  STA KK                 \ Set KK = 0
 
- LDX objectLookup1,Y    \ Set X to objectLookup1 for this object entry
-
- LDA scaledMeasures,X   \ Set A to the X-th scaledMeasures entry
+ LDX objectLookup1,Y    \ Set A to this object entry's scaled objectLookup1
+ LDA scaledMeasures,X
 
  CLC                    \ Set A = A + L0036
  ADC L0036
 
  BMI drob9              \ If A is negative, jump to drob9
 
- CMP #80
+ CMP #80                \ If A >= 80, set A = 79
  BCC drob2
  LDA #79
 
 .drob2
 
- STA N
+ STA N                  \ Store A in N
 
- LDX objectLookup2,Y
+ LDX objectLookup2,Y    \ Set A to this object entry's scaled objectLookup2
  LDA scaledMeasures,X
 
- CLC
+ CLC                    \ Set A = A + L0036
  ADC L0036
- BMI drob3
- CMP L62FD
+
+ BMI drob3              \ If A is negative, jump to drob3 to skip the following
+                        \ and set A = L62FD
+
+ CMP L62FD              \ If A >= L62FD, jump to drob4 to skip the following
  BCS drob4
 
 .drob3
 
- LDA L62FD
+                        \ If we get here then A is negative or A < L62FD
+
+ LDA L62FD              \ Set A = L62FD
  NOP
  NOP
 
 .drob4
 
- CMP N
+ CMP N                  \ If A >= N, jump to drob9
  BCS drob9
- STA L0047
 
- LDX objectLookup3,Y
+ STA L0047              \ Set L0047 = A
+
+ LDX objectLookup3,Y    \ Set M to this object entry's scaled objectLookup3
  LDA scaledMeasures,X
  STA M
 
- LDX objectLookup4,Y
+ LDX objectLookup4,Y    \ Set SS to this object entry's scaled objectLookup4
  LDA scaledMeasures,X
  STA SS
 
- LDA objectLookup5,Y
+ LDA objectLookup5,Y    \ Set A to this object entry's objectLookup5
  STA TT
 
  STY objectEntry        \ Store the object entry in objectEntry
 
- LDY #1
+ LDY #1                 \ Draw start of object line
  JSR DrawObjectLine
 
 .drob5
@@ -9451,7 +9463,7 @@ ENDIF
  BIT TT                 \ If bit 7 of TT is set, jump to drob10
  BMI drob10
 
- LDA #0
+ LDA #0                 \ Draw end of object line
  LDY #2
  JSR DrawObjectLine
 
@@ -9472,17 +9484,22 @@ ENDIF
 
 .drob8
 
- AND #&40
- BNE drob7
- INY
+ AND #%01000000         \ If bit 6 of A is set, i.e. 64 + x, jump to drob7 to
+ BNE drob7              \ return from the subroutine
+
+ INY                    \ Increment the object entry in Y
 
 .drob9
 
- LDA objectLookup5,Y
- BMI drob8
- AND #&40
- BNE drob7
- BEQ drob6
+ LDA objectLookup5,Y    \ Set A to this object entry's objectLookup5
+
+ BMI drob8              \ If bit 7 of A is set, i.e. 128 + x, jump to drob8
+
+ AND #%01000000         \ If bit 6 of A is set, i.e. 64 + x, jump to drob7 to
+ BNE drob7              \ return from the subroutine
+
+ BEQ drob6              \ Jump to drob6 (this BEQ is effectively a JMP as we
+                        \ just passed through a BNE)
 
 .drob10
 
@@ -9494,11 +9511,11 @@ ENDIF
  INY                    \ Increment the object entry
  STY objectEntry
 
- LDX objectLookup3,Y
+ LDX objectLookup3,Y    \ Set SS to this object entry's scaled objectLookup3
  LDA scaledMeasures,X
  STA SS
 
- LDA objectLookup4,Y
+ LDA objectLookup4,Y    \ Set TT to this object entry's objectLookup4
  STA TT
 
  LDY #0
@@ -9506,11 +9523,11 @@ ENDIF
 
  LDY objectEntry        \ Set Y to the object entry
 
- LDX objectLookup1,Y
+ LDX objectLookup1,Y    \ Set SS to this object entry's scaled objectLookup1
  LDA scaledMeasures,X
  STA SS
 
- LDA objectLookup5,Y    \ Set TT to objectLookup5 for this object entry
+ LDA objectLookup5,Y    \ Set TT to this object entry's objectLookup1
  STA TT
 
  LDY #0
