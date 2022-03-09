@@ -380,19 +380,19 @@ ORG &0000
 
  SKIP 1                 \ The type of object to draw (0 to 12)
                         \
-                        \   * 0 = blank road sign
-                        \   * 1 = start line road sign
+                        \   * 0 = 
+                        \   * 1 = 
                         \   * 2 = 
-                        \   * 3 = right-turn chicane road sign
-                        \   * 4 = right turn road sign
-                        \   * 5 = left turn road sign
+                        \   * 3 = 
+                        \   * 4 = 
+                        \   * 5 = 
                         \   * 6 = corner marker
-                        \   * 7 = 
-                        \   * 8 = 
-                        \   * 9 = 
-                        \   * 10 = 
-                        \   * 11 = 
-                        \   * 12 = 
+                        \   * 7 = blank road sign
+                        \   * 8 = start line road sign
+                        \   * 9 = second object for the following signs
+                        \   * 10 = right-turn chicane road sign
+                        \   * 11 = right turn road sign
+                        \   * 12 = left turn road sign
 
 .var15Lo
 
