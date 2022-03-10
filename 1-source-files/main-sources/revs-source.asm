@@ -237,9 +237,10 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.objectEntry
+.objectIndex
 
- SKIP 0                 \ The current entry within the object tables
+ SKIP 0                 \ The index of the current object part's data as we work
+                        \ our way through an object's constituent parts
 
 .rowCounter
 
@@ -309,16 +310,16 @@ ORG &0000
 .scaleUp
 
  SKIP 1                 \ The nominator scale factor for scaling object
-                        \ measurements (i.e. scale up)
+                        \ dimensions (i.e. scale up)
                         \
-                        \ The measurements are multiplied by scaleUp
+                        \ The dimensions are multiplied by scaleUp
 
 .scaleDown
 
  SKIP 1                 \ The denominator scale factor for scaling object
-                        \ measurements (i.e. scale down)
+                        \ dimensions (i.e. scale down)
                         \
-                        \ The measurements are divided by 2^scaleDown
+                        \ The dimensions are divided by 2^scaleDown
 
 .L002C
 
@@ -7272,7 +7273,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectLine (Part 1 of )
+\       Name: DrawObjectEdge (Part 1 of )
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
@@ -7281,9 +7282,9 @@ ENDIF
 \
 \ Arguments:
 \
-\   SS                  Scaled objectLookup4 / 3 / 1 for this object entry
+\   SS                  Scaled objectRight / 3 / 1 for this object part
 \
-\   TT                  From objectLookup4 / 5
+\   TT                  From objectRight / 5
 \
 \   UU                  
 \
@@ -7293,7 +7294,7 @@ ENDIF
 \
 \   A                   0 or same as TT
 \
-\   M                   From scaledMeasures using index objectLookup3
+\   M                   From scaleDimension using index objectLeft
 \
 \   LL                  
 \
@@ -7309,7 +7310,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.DrawObjectLine
+.DrawObjectEdge
 
  STY J                  \ Set J = Y
 
@@ -7416,7 +7417,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectLine (Part 2 of )
+\       Name: DrawObjectEdge (Part 2 of )
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
@@ -9056,8 +9057,8 @@ ENDIF
 
 .dobj3
 
- LDX #0                 \ Set scaleDown = 0, so object measurements are not
- STX scaleDown          \ scaled down (as 2^scaleDown = 2^0 = 1)
+ LDX #0                 \ Set scaleDown = 0, so object dimension are not scaled
+ STX scaleDown          \ down (as 2^scaleDown = 2^0 = 1)
 
  LDA scaleUp            \ Set A = scaleUp
 
@@ -9077,7 +9078,7 @@ ENDIF
  ASL A
  STA scaleUp
 
- LDA #2                 \ Set scaleDown = 2, so object measurements are scaled
+ LDA #2                 \ Set scaleDown = 2, so object dimensions are scaled
  STA scaleDown          \ down by 2^scaleDown = 2^2 = 4
 
 .dobj5
@@ -9095,25 +9096,25 @@ ENDIF
  STX thisObjectType     \ Store X in thisObjectType so we can check it again
                         \ below
 
- LDA measureIndex,X     \ Set QQ to the index of the first objMeasurements entry
+ LDA dimensionIndex,X   \ Set QQ to the index of the first objDimensions entry
  STA QQ                 \ for object type X
 
- LDA measureIndex+1,X   \ Set II to the index of the last objMeasurements entry
+ LDA dimensionIndex+1,X \ Set II to the index of the last objDimensions entry
  STA II                 \ for object type X (so the last entry is index II - 1)
 
- LDA objectIndex,X      \ Set QQ to the index of the first entry in the object
- STA MM                 \ lookup tables for object type X
+ LDA objectIndexes,X    \ Set QQ to the index of the first entry in the object
+ STA MM                 \ data tables for object type X
 
- JSR ScaleObject        \ Scale the object's measurements by the scaleUp and
+ JSR ScaleObject        \ Scale the object's dimensions by the scaleUp and
                         \ scaleDown factors, storing the results in the
-                        \ scaledMeasures table
+                        \ scaleDimension table
 
  BCS dobj7              \ If the call to ScaleObject set the C flag then the
                         \ scaling process overflowed, in which case we do not
                         \ draw the object, so jump to dobj7 to return from the
                         \ subroutine
 
- JSR DrawObjectLines    \ Draw the scaled object
+ JSR DrawObjectEdges    \ Draw the edges for the scaled object
 
  LDX objectType         \ Set X to the type object to draw
 
@@ -9137,7 +9138,7 @@ ENDIF
 \       Name: ScaleObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Scale an object's measurements by the scale factors in scaleUp and
+\    Summary: Scale an object's dimensions by the scale factors in scaleUp and
 \             scaleDown
 \
 \ ------------------------------------------------------------------------------
@@ -9145,23 +9146,22 @@ ENDIF
 \ This routine is used when drawing objects such as road signs, corner markers
 \ and cars.
 \
-\ It takes the values from the objMeasurements table, which contain an object's
-\ measurements, and scales them according to the values of scaleUp and
-\ scaleDown. As the various measurements are used to construct each object,
-\ this routine effectively scales the whole object according to the two scale
-\ factors.
+\ It takes the values from the objDimensions table, which contain an object's
+\ dimensions, and scales them according to the values of scaleUp and scaleDown.
+\ As the various dimensions are used to construct each object, this routine
+\ effectively scales the whole object according to the two scale factors.
 \
 \ The value in scaleUp is the numerator of the scale factor, which scales the
-\ measurements up, so bigger values of scaleUp give bigger objects.
+\ dimensions up, so bigger values of scaleUp give bigger objects.
 \
 \ The value in scaleDown is the denominator of the scale factor, which scales
-\ the measurements down, so bigger values of scaleDown give smaller objects.
+\ the dimensions down, so bigger values of scaleDown give smaller objects.
 \
 \ Arguments:
 \
-\   QQ                  Index of the first objMeasurements entry for this object
+\   QQ                  Index of the first objDimensions entry for this object
 \
-\   II                  Index of the last objMeasurements entry for this object
+\   II                  Index of the last objDimensions entry for this object
 \                       (where the last entry is index II - 1)
 \
 \   scaleUp             Numerator scale factor
@@ -9172,14 +9172,14 @@ ENDIF
 \
 \   C flag              Denotes whether the scaling was successful:
 \
-\                         * Clear if we manage to scale all measurements
+\                         * Clear if we manage to scale all dimensions
 \
-\                         * Set if the scaling of any measurements overflows,
+\                         * Set if the scaling of any dimensions overflows,
 \                           in which case we do not draw the object
 \
-\   scaledMeasures      Filled with the scaled measurements
+\   scaleDimension      Filled with the scaled dimensions
 \
-\   scaledMeasures+8    Filler with the scaled measurements, but negated
+\   scaleDimension+8    Filler with the scaled dimensions, but negated
 \
 \ ******************************************************************************
 
@@ -9205,24 +9205,24 @@ ENDIF
 
                         \ So scaleRange + n contains scaleUp / 2^n
 
- LDY QQ                 \ We now loop through the objMeasurements table from
+ LDY QQ                 \ We now loop through the objDimensions table from
                         \ entry QQ to entry II - 1, so set a loop counter in Y
                         \ to act as an index
 
  LDX #0                 \ Set W = 0, to be used as an index as we populate the
- STX W                  \ scaledMeasures table, incrementing by one byte for
+ STX W                  \ scaleDimension table, incrementing by one byte for
                         \ each loop
 
 .prep1
 
- LDA objMeasurements,Y  \ Set A to the Y-th object measurement
+ LDA objDimensions,Y    \ Set A to the Y-th object dimension
 
  BPL prep2              \ If bit 7 of A is clear, jump to prep2 to do the
                         \ calculation that only uses bits 0-2 of A
 
                         \ If we get here, bit 7 of A is set, so now we do the
                         \ following calculation, where the value of A from the
-                        \ objMeasurements table is %1abbbccc:
+                        \ objDimensions table is %1abbbccc:
                         \
                         \   A = a * scaleUp/2 + scaleUp/2^b-2 + scaleUp/2^c-2
                         \       ---------------------------------------------
@@ -9237,10 +9237,10 @@ ENDIF
                         \       2^scaleDown
                         \
                         \         scaleUp
-                        \     = ----------- * measurement
+                        \     = ----------- * dimension
                         \       2^scaleDown
                         \
-                        \ We then store this as the next entry in scaledMeasures
+                        \ We then store this as the next entry in scaleDimension
                         \
                         \ Note that b and c are always in the range 3 to 7, so
                         \ they look up the values we stored in scaleRange above
@@ -9253,7 +9253,7 @@ ENDIF
  STA T                  \       = scaleUp / 2^X-2
                         \       = scaleUp / 2^c-2
 
- LDA objMeasurements,Y  \ Set A to the Y-th object measurement
+ LDA objDimensions,Y    \ Set A to the Y-th object dimension
  STA U
 
  LSR A                  \ Set X = bits 3-5 of A
@@ -9278,7 +9278,7 @@ ENDIF
 
 .prep2
 
-                        \ If we get here, bit 7 of the Y-th objMeasurements is
+                        \ If we get here, bit 7 of the Y-th objDimensions is
                         \ clear, so we do the following calculation, where
                         \ A is %00000ccc:
                         \
@@ -9295,10 +9295,10 @@ ENDIF
                         \       2^scaleDown
                         \
                         \         scaleUp
-                        \     = ----------- * measurement
+                        \     = ----------- * dimension
                         \       2^scaleDown
                         \
-                        \ We then store this as the next entry in scaledMeasures
+                        \ We then store this as the next entry in scaleDimension
 
  TAX                    \ Set A = entry c-2 in scaleRange
  LDA scaleRange-2,X     \       = scaleUp / 2^c-2
@@ -9328,7 +9328,7 @@ ENDIF
 
  LDX W                  \ Set X to W, the index into the tables we are building
 
- STA scaledMeasures,X   \ Store A in the X-th byte of scaledMeasures
+ STA scaleDimension,X   \ Store A in the X-th byte of scaleDimension
 
  EOR #&FF               \ Set A = ~A
 
@@ -9341,9 +9341,9 @@ ENDIF
                         \ subroutine with the C flag set, so we do not draw this
                         \ object and ignore all the values calculated here
 
- CLC                    \ Store -A in the X-th byte of scaledMeasures+8
+ CLC                    \ Store -A in the X-th byte of scaleDimension+8
  ADC #1
- STA scaledMeasures+8,X
+ STA scaleDimension+8,X
 
  INC W                  \ Increment the index counter
 
@@ -9365,29 +9365,32 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectLines
+\       Name: DrawObjectEdges
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is used to draw road signs, corner markers and cars.
+\ This routine is used to draw road signs, corner markers and cars. They are
+\ drawn as edges - specifically the left and right edges - into the screen
+\ buffer in the dash data blocks.
 \
 \ Arguments:
 \
-\   MM                  The index of this object's first entry in the various
-\                       object tables
+\   MM                  The index of this object's first bit of data in the
+\                       various object data tables (i.e. the index of the data
+\                       for the object's first part)
 \
 \ ******************************************************************************
 
-.DrawObjectLines
+.DrawObjectEdges
 
- LDY MM                 \ Set Y to the index of this object's first entry in the
-                        \ various object tables
+ LDY MM                 \ Set Y to the index of this object's first bit of data
+                        \ in the various object data tables
 
-                        \ We now work our way through the entries for this
-                        \ object, with the entry index in Y and objectEntry
+                        \ We now work our way through the data for this object,
+                        \ with the index in Y and objectIndex
 
 .drob1
 
@@ -9399,8 +9402,8 @@ ENDIF
 
  STA KK                 \ Set KK = 0
 
- LDX objectLookup1,Y    \ Set A to this object entry's scaled objectLookup1
- LDA scaledMeasures,X
+ LDX objectTop,Y        \ Set A to the scaled dimension of the top of this
+ LDA scaleDimension,X   \ object part
 
  CLC                    \ Set A = A + L0036
  ADC L0036
@@ -9415,8 +9418,8 @@ ENDIF
 
  STA N                  \ Store A in N
 
- LDX objectLookup2,Y    \ Set A to this object entry's scaled objectLookup2
- LDA scaledMeasures,X
+ LDX objectBottom,Y     \ Set A to the scaled dimension of the bottom of this
+ LDA scaleDimension,X   \ object part
 
  CLC                    \ Set A = A + L0036
  ADC L0036
@@ -9442,21 +9445,22 @@ ENDIF
 
  STA L0047              \ Set L0047 = A
 
- LDX objectLookup3,Y    \ Set M to this object entry's scaled objectLookup3
- LDA scaledMeasures,X
+ LDX objectLeft,Y       \ Set M to the scaled dimension of the left of this
+ LDA scaleDimension,X   \ object part
  STA M
 
- LDX objectLookup4,Y    \ Set SS to this object entry's scaled objectLookup4
- LDA scaledMeasures,X
+ LDX objectRight,Y      \ Set SS to the scaled dimension of the right of this
+ LDA scaleDimension,X   \ object part
  STA SS
 
- LDA objectLookup5,Y    \ Set A to this object entry's objectLookup5
+ LDA objectColour,Y     \ Set A to the colour data for this object part
  STA TT
 
- STY objectEntry        \ Store the object entry in objectEntry
+ STY objectIndex        \ Store the current index into the object data in
+                        \ objectIndex
 
  LDY #1                 \ Draw start of object line
- JSR DrawObjectLine
+ JSR DrawObjectEdge
 
 .drob5
 
@@ -9465,18 +9469,19 @@ ENDIF
 
  LDA #0                 \ Draw end of object line
  LDY #2
- JSR DrawObjectLine
+ JSR DrawObjectEdge
 
  BIT TT                 \ If bit 6 of TT is set, jump to drob7 to return from
  BVS drob7              \ the subroutine
 
- LDY objectEntry        \ Set Y to the object entry
+ LDY objectIndex        \ Set Y to the index into the object data
 
 .drob6
 
- INY                    \ Increment the object entry in Y
+ INY                    \ Increment the index to point to the data for the next
+                        \ object part
 
- JMP drob1              \ Loop back to drob1 to process the next object entry
+ JMP drob1              \ Loop back to drob1 to process the next object part
 
 .drob7
 
@@ -9487,11 +9492,12 @@ ENDIF
  AND #%01000000         \ If bit 6 of A is set, i.e. 64 + x, jump to drob7 to
  BNE drob7              \ return from the subroutine
 
- INY                    \ Increment the object entry in Y
+ INY                    \ Increment the index to point to the data for the next
+                        \ object part
 
 .drob9
 
- LDA objectLookup5,Y    \ Set A to this object entry's objectLookup5
+ LDA objectColour,Y     \ Set A to the colour data for this object part
 
  BMI drob8              \ If bit 7 of A is set, i.e. 128 + x, jump to drob8
 
@@ -9503,35 +9509,35 @@ ENDIF
 
 .drob10
 
-                        \ If we get here then objectLookup5 for this object
-                        \ entry has bit 7 set
+                        \ If we get here then the colour data for this object
+                        \ part has bit 7 set
 
- LDY objectEntry        \ Set Y to the object entry
+ LDY objectIndex        \ Set Y to the index into the object data
 
- INY                    \ Increment the object entry
- STY objectEntry
+ INY                    \ Increment the index to point to the next bit of object
+ STY objectIndex        \ data
 
- LDX objectLookup3,Y    \ Set SS to this object entry's scaled objectLookup3
- LDA scaledMeasures,X
+ LDX objectLeft,Y       \ Set M to the scaled data from objectLeft for this
+ LDA scaleDimension,X   \ object part
  STA SS
 
- LDA objectLookup4,Y    \ Set TT to this object entry's objectLookup4
- STA TT
+ LDA objectRight,Y      \ Set TT to the data from objectRight for this
+ STA TT                 \ object part
 
  LDY #0
- JSR DrawObjectLine
+ JSR DrawObjectEdge
 
- LDY objectEntry        \ Set Y to the object entry
+ LDY objectIndex        \ Set Y to the index into the object data
 
- LDX objectLookup1,Y    \ Set SS to this object entry's scaled objectLookup1
- LDA scaledMeasures,X
+ LDX objectTop,Y        \ Set SS to the scaled data from objectTop for this
+ LDA scaleDimension,X   \ object part
  STA SS
 
- LDA objectLookup5,Y    \ Set TT to this object entry's objectLookup1
- STA TT
+ LDA objectColour,Y     \ Set TT to the data from objectColour for this
+ STA TT                 \ object part
 
  LDY #0
- JSR DrawObjectLine
+ JSR DrawObjectEdge
 
  JMP drob5              \ Loop back to drob5
 
@@ -11874,7 +11880,7 @@ ENDIF
  LDA L5F20,Y
  STA RR
  STX L0045
- STY objectEntry
+ STY objectIndex
  PLP
  BCS C2BCA
  BIT GG
@@ -12059,7 +12065,7 @@ ENDIF
  ORA #&80
  ORA T
  STA L0033
- LDA objectEntry
+ LDA objectIndex
  CLC
  ADC #1
  CMP L004B
@@ -12179,7 +12185,7 @@ ENDIF
 .C2D08
 
  LDX L0045
- LDY objectEntry
+ LDY objectIndex
  RTS
 
  LDA L0053
@@ -14332,20 +14338,20 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: objectLookup1
+\       Name: objectTop
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ Entries contain indexes into the scaledMeasures table. n + 8 points to the
-\ negative value of n (as scaledMeasures+8 is filled with the negative of
-\ scaledMeasures).
+\ Entries contain indexes into the scaleDimension table. n + 8 points to the
+\ negative value of n (as scaleDimension+8 is filled with the negative of
+\ scaleDimension).
 \
 \ ******************************************************************************
 
-.objectLookup1
+.objectTop
 
  EQUB 7 + 8             \ Object type  0
  EQUB 7 + 8
@@ -14491,7 +14497,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: objectLookup2
+\       Name: objectBottom
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
@@ -14502,7 +14508,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.objectLookup2
+.objectBottom
 
  EQUB 6 + 8             \ Object type  0
  EQUB 6 + 8
@@ -14625,7 +14631,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: objectLookup3
+\       Name: objectLeft
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14636,7 +14642,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.objectLookup3
+.objectLeft
 
  EQUB 1 + 8             \ Object type  0
  EQUB 2
@@ -14782,7 +14788,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: objectLookup4
+\       Name: objectRight
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14793,7 +14799,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.objectLookup4
+.objectRight
 
  EQUB 2 + 8             \ Object type  0
  EQUB 1
@@ -14953,7 +14959,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: objectLookup5
+\       Name: objectColour
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -14964,7 +14970,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.objectLookup5
+.objectColour
 
  EQUB 10                \ Object type  0
  EQUB 10
@@ -16860,21 +16866,20 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: objectIndex
+\       Name: objectIndexes
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Index of an object's data in the objectLookup1 to objectLookup5
-\             table
+\    Summary: Index range of an object's data in the object data tables
 \
 \ ------------------------------------------------------------------------------
 \
 \ Given an object type, this table contains the index range for the object's
-\ data in the objectLookup1, objectLookup2, objectLookup3, objectLookup4 and
-\ objectLookup5 tables.
+\ data in the objectTop, objectBottom, objectLeft, objectRight and objectColour
+\ tables.
 \
 \ ******************************************************************************
 
-.objectIndex
+.objectIndexes
 
  EQUB 0                 \ Object type  0 =  0 to  4
  EQUB 5                 \ Object type  1 =  5 to  8
@@ -16892,19 +16897,19 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: measureIndex
+\       Name: dimensionIndex
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Index of an object's measurements in the objMeasurements table
+\    Summary: Index of an object's dimensions in the objDimensions table
 \
 \ ------------------------------------------------------------------------------
 \
 \ Given an object type, this table contains the index range for the object's
-\ measurements in the objMeasurements table.
+\ dimensions in the objDimensions table.
 \
 \ ******************************************************************************
 
-.measureIndex
+.dimensionIndex
 
  EQUB 0                 \ Object type  0 =  0 to  7
  EQUB 8                 \ Object type  1 =  8 to 15
@@ -18712,18 +18717,20 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: objMeasurements
+\       Name: objDimensions
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Each object's measurements, in a scalable format
+\    Summary: The dimensions used to construct each object, in a scalable format
 \
 \ ------------------------------------------------------------------------------
 \
-\ This table contains object measurements, in a format that supports quick and
-\ easy scaling (see the ScaleObject routine).
+\ This table contains object dimensions, in a format that supports quick and
+\ easy scaling (see the ScaleObject routine). An object's dimensions are all the
+\ different measurements that are used to build that object.
 \
-\ Each object has a number of entries, one for each measurement. Each entry is
-\ in one of these binary formats:
+\ Each object has a number of entries in this table, one for each dimension, in
+\ decreasing size of dimension (so the largest dimensions come first). Each
+\ dimension is in one of these binary formats:
 \
 \   %00000ccc
 \   %1abbbccc
@@ -18745,19 +18752,19 @@ NEXT
 \ In both cases, the result is a multiple of 1/32, so each of these entries
 \ represents a fraction of the form n/32.
 \
-\ The ScaleObject routine takes these entries for a specific object and scales
+\ The ScaleObject routine takes the dimensions for a specific object and scales
 \ each of them by multiplying by the following:
 \
 \     scaleUp
 \   -----------
 \   2^scaleDown
 \
-\ The resulting values are stored in the scaledMeasures table, with one entry
-\ for each measurement in this table.
+\ The resulting values are stored in the scaleDimension table, with one entry
+\ for each dimension in this table.
 \
 \ ******************************************************************************
 
-.objMeasurements
+.objDimensions
 
                         \ Object type 0 = 24, 22, 18, 17, 16, 8, 5, 4
 
@@ -24238,14 +24245,14 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: scaledMeasures
+\       Name: scaleDimension
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Storage for an object's scaled measurements
+\    Summary: Storage for an object's scaled dimensions
 \
 \ ******************************************************************************
 
-.scaledMeasures
+.scaleDimension
 
  SKIP 16
 
