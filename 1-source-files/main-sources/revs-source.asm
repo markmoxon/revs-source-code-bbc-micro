@@ -9159,11 +9159,10 @@ ENDIF
 \ and cars.
 \
 \ It takes the values from the objectScaffold table, which contain an object's
-\ scaffold (i.e. all the essential measurements and dimensions that we need to
-\ build the object), and scales them according to the values of scaleUp and
-\ scaleDown.
+\ scaffold (i.e. all the essential measurements that we need to build the
+\ object), and scales them according to the values of scaleUp and scaleDown.
 \
-\ As the scaffold measurements are used when drawing an object, this routine
+\ As only scaffold measurements are used when drawing an object, this routine
 \ scales the whole object, according to the two scale factors.
 \
 \ The value in scaleUp is the numerator of the scale factor, which scales the
@@ -14357,7 +14356,7 @@ ENDIF
 \       Name: objectTop
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Measurement for the top of each object part
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14516,11 +14515,13 @@ ENDIF
 \       Name: objectBottom
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Measurement for the bottom of each object part
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Entries contain indexes into the scaledScaffold table. n + 8 points to the
+\ negative value of n (as scaledScaffold+8 is filled with the negative of
+\ scaledScaffold).
 \
 \ ******************************************************************************
 
@@ -14649,12 +14650,14 @@ ENDIF
 \
 \       Name: objectLeft
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Measurement for the left of each object part
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Entries contain indexes into the scaledScaffold table. n + 8 points to the
+\ negative value of n (as scaledScaffold+8 is filled with the negative of
+\ scaledScaffold).
 \
 \ ******************************************************************************
 
@@ -14806,12 +14809,14 @@ ENDIF
 \
 \       Name: objectRight
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Measurement for the right of each object part
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Entries contain indexes into the scaledScaffold table. n + 8 points to the
+\ negative value of n (as scaledScaffold+8 is filled with the negative of
+\ scaledScaffold).
 \
 \ ******************************************************************************
 
@@ -14977,12 +14982,8 @@ ENDIF
 \
 \       Name: objectColour
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Data for the colour of each object part
 \
 \ ******************************************************************************
 
@@ -18743,10 +18744,10 @@ NEXT
 \ This table contains an object's scaffold, in a format that supports quick and
 \ easy scaling (see the ScaleObject routine).
 \
-\ Each object has its own set of scaffold, which contains all the essential
-\ measurements and dimensions that we need to build that part of the object. The
-\ object is constructed using only measurements from the scaffold, so if we want
-\ to scale the object, we just scale the scaffold.
+\ Each object has its own scaffold, which contains all the measurements that we
+\ need to build that object. The object is constructed using only measurements
+\ from the scaffold, so if we want to scale the object, we can just scale the
+\ scaffold.
 \
 \ Each object has a number of entries in this table, one for each scaffold
 \ measurement, in decreasing order of size (so the largest measurements come
