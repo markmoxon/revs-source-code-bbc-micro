@@ -309,17 +309,17 @@ ORG &0000
 
 .scaleUp
 
- SKIP 1                 \ The nominator scale factor for scaling object
-                        \ dimensions (i.e. scale up)
+ SKIP 1                 \ The nominator scale factor for scaling an object
+                        \ scaffold (i.e. scale up)
                         \
-                        \ The dimensions are multiplied by scaleUp
+                        \ The scaffold is multiplied by scaleUp
 
 .scaleDown
 
- SKIP 1                 \ The denominator scale factor for scaling object
-                        \ dimensions (i.e. scale down)
+ SKIP 1                 \ The denominator scale factor for scaling an object
+                        \ scaffold (i.e. scale down)
                         \
-                        \ The dimensions are divided by 2^scaleDown
+                        \ The scaffold is divided by 2^scaleDown
 
 .L002C
 
@@ -7282,29 +7282,41 @@ ENDIF
 \
 \ Arguments:
 \
-\   SS                  Scaled objectRight / 3 / 1 for this object part
+\   N                   Top track line
 \
-\   TT                  From objectRight / 5
+\   L0047               Bottom track line
 \
-\   UU                  
+\   M                   Left edge (as a scaled scaffold measurement)
 \
-\   Y                   1, 2, 0
+\   SS                  Right edge (as a scaled scaffold measurement)
+\
+\   TT                  Colour data
+\
+\                         * Bits 0-1 = 
+\
+\                         * Bits 2-3 = 
+\
+\                         * Bit 4 = 
+\
+\   A                   Same as TT for all edges except right, when it's 0
+\
+\   Y                   Edge type:
+\
+\                         * 0 = edge when colour data has bit 7 set (drob10)
+\
+\                         * 1 = left edge
+\
+\                         * 2 = right edge
 \
 \   H                   Colour byte
 \
-\   A                   0 or same as TT
-\
-\   M                   From scaleDimension using index objectLeft
+\   UU                  
 \
 \   LL                  
 \
 \   NN                  
 \
-\   L0047               
-\
 \   L0048               
-\
-\   N                   
 \
 \   H                   
 \
@@ -9057,8 +9069,8 @@ ENDIF
 
 .dobj3
 
- LDX #0                 \ Set scaleDown = 0, so object dimension are not scaled
- STX scaleDown          \ down (as 2^scaleDown = 2^0 = 1)
+ LDX #0                 \ Set scaleDown = 0, so the object's scaffold is not
+ STX scaleDown          \ scaled down (as 2^scaleDown = 2^0 = 1)
 
  LDA scaleUp            \ Set A = scaleUp
 
@@ -9078,7 +9090,7 @@ ENDIF
  ASL A
  STA scaleUp
 
- LDA #2                 \ Set scaleDown = 2, so object dimensions are scaled
+ LDA #2                 \ Set scaleDown = 2, so the object's scaffold is scaled
  STA scaleDown          \ down by 2^scaleDown = 2^2 = 4
 
 .dobj5
@@ -9096,18 +9108,18 @@ ENDIF
  STX thisObjectType     \ Store X in thisObjectType so we can check it again
                         \ below
 
- LDA dimensionIndex,X   \ Set QQ to the index of the first objDimensions entry
- STA QQ                 \ for object type X
+ LDA scaffoldIndex,X    \ Set QQ to the index of the first objectScaffold
+ STA QQ                 \ entry for object type X
 
- LDA dimensionIndex+1,X \ Set II to the index of the last objDimensions entry
+ LDA scaffoldIndex+1,X  \ Set II to the index of the last objectScaffold entry
  STA II                 \ for object type X (so the last entry is index II - 1)
 
  LDA objectIndexes,X    \ Set QQ to the index of the first entry in the object
  STA MM                 \ data tables for object type X
 
- JSR ScaleObject        \ Scale the object's dimensions by the scaleUp and
+ JSR ScaleObject        \ Scale the object's scaffold by the scaleUp and
                         \ scaleDown factors, storing the results in the
-                        \ scaleDimension table
+                        \ scaledScaffold table
 
  BCS dobj7              \ If the call to ScaleObject set the C flag then the
                         \ scaling process overflowed, in which case we do not
@@ -9138,7 +9150,7 @@ ENDIF
 \       Name: ScaleObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Scale an object's dimensions by the scale factors in scaleUp and
+\    Summary: Scale an object's scaffold by the scale factors in scaleUp and
 \             scaleDown
 \
 \ ------------------------------------------------------------------------------
@@ -9146,22 +9158,25 @@ ENDIF
 \ This routine is used when drawing objects such as road signs, corner markers
 \ and cars.
 \
-\ It takes the values from the objDimensions table, which contain an object's
-\ dimensions, and scales them according to the values of scaleUp and scaleDown.
-\ As the various dimensions are used to construct each object, this routine
-\ effectively scales the whole object according to the two scale factors.
+\ It takes the values from the objectScaffold table, which contain an object's
+\ scaffold (i.e. all the essential measurements and dimensions that we need to
+\ build the object), and scales them according to the values of scaleUp and
+\ scaleDown.
+\
+\ As the scaffold measurements are used when drawing an object, this routine
+\ scales the whole object, according to the two scale factors.
 \
 \ The value in scaleUp is the numerator of the scale factor, which scales the
-\ dimensions up, so bigger values of scaleUp give bigger objects.
+\ scaffold up, so bigger values of scaleUp give bigger objects.
 \
 \ The value in scaleDown is the denominator of the scale factor, which scales
-\ the dimensions down, so bigger values of scaleDown give smaller objects.
+\ the scaffold down, so bigger values of scaleDown give smaller objects.
 \
 \ Arguments:
 \
-\   QQ                  Index of the first objDimensions entry for this object
+\   QQ                  Index of the first objectScaffold entry for this object
 \
-\   II                  Index of the last objDimensions entry for this object
+\   II                  Index of the last objectScaffold entry for this object
 \                       (where the last entry is index II - 1)
 \
 \   scaleUp             Numerator scale factor
@@ -9172,14 +9187,15 @@ ENDIF
 \
 \   C flag              Denotes whether the scaling was successful:
 \
-\                         * Clear if we manage to scale all dimensions
+\                         * Clear if we manage to scale the scaffold
 \
-\                         * Set if the scaling of any dimensions overflows,
-\                           in which case we do not draw the object
+\                         * Set if the scaling of any individual scaffold
+\                           measurements overflows, in which case we do not draw
+\                           the object
 \
-\   scaleDimension      Filled with the scaled dimensions
+\   scaledScaffold      The scaled scaffold
 \
-\   scaleDimension+8    Filler with the scaled dimensions, but negated
+\   scaledScaffold+8    The scaled scaffold, with each measurement negated
 \
 \ ******************************************************************************
 
@@ -9205,24 +9221,24 @@ ENDIF
 
                         \ So scaleRange + n contains scaleUp / 2^n
 
- LDY QQ                 \ We now loop through the objDimensions table from
+ LDY QQ                 \ We now loop through the objectScaffold table from
                         \ entry QQ to entry II - 1, so set a loop counter in Y
                         \ to act as an index
 
  LDX #0                 \ Set W = 0, to be used as an index as we populate the
- STX W                  \ scaleDimension table, incrementing by one byte for
+ STX W                  \ scaledScaffold table, incrementing by one byte for
                         \ each loop
 
 .prep1
 
- LDA objDimensions,Y    \ Set A to the Y-th object dimension
+ LDA objectScaffold,Y   \ Set A to the Y-th scaffold measurement
 
  BPL prep2              \ If bit 7 of A is clear, jump to prep2 to do the
                         \ calculation that only uses bits 0-2 of A
 
                         \ If we get here, bit 7 of A is set, so now we do the
                         \ following calculation, where the value of A from the
-                        \ objDimensions table is %1abbbccc:
+                        \ objectScaffold table is %1abbbccc:
                         \
                         \   A = a * scaleUp/2 + scaleUp/2^b-2 + scaleUp/2^c-2
                         \       ---------------------------------------------
@@ -9237,10 +9253,10 @@ ENDIF
                         \       2^scaleDown
                         \
                         \         scaleUp
-                        \     = ----------- * dimension
+                        \     = ----------- * scaffold
                         \       2^scaleDown
                         \
-                        \ We then store this as the next entry in scaleDimension
+                        \ We then store this as the next entry in scaledScaffold
                         \
                         \ Note that b and c are always in the range 3 to 7, so
                         \ they look up the values we stored in scaleRange above
@@ -9253,7 +9269,7 @@ ENDIF
  STA T                  \       = scaleUp / 2^X-2
                         \       = scaleUp / 2^c-2
 
- LDA objDimensions,Y    \ Set A to the Y-th object dimension
+ LDA objectScaffold,Y  \ Set A to the Y-th scaffold measurement
  STA U
 
  LSR A                  \ Set X = bits 3-5 of A
@@ -9278,7 +9294,7 @@ ENDIF
 
 .prep2
 
-                        \ If we get here, bit 7 of the Y-th objDimensions is
+                        \ If we get here, bit 7 of the Y-th objectScaffold is
                         \ clear, so we do the following calculation, where
                         \ A is %00000ccc:
                         \
@@ -9295,10 +9311,10 @@ ENDIF
                         \       2^scaleDown
                         \
                         \         scaleUp
-                        \     = ----------- * dimension
+                        \     = ----------- * scaffold
                         \       2^scaleDown
                         \
-                        \ We then store this as the next entry in scaleDimension
+                        \ We then store this as the next entry in scaledScaffold
 
  TAX                    \ Set A = entry c-2 in scaleRange
  LDA scaleRange-2,X     \       = scaleUp / 2^c-2
@@ -9328,7 +9344,7 @@ ENDIF
 
  LDX W                  \ Set X to W, the index into the tables we are building
 
- STA scaleDimension,X   \ Store A in the X-th byte of scaleDimension
+ STA scaledScaffold,X   \ Store A in the X-th byte of scaledScaffold
 
  EOR #&FF               \ Set A = ~A
 
@@ -9341,9 +9357,9 @@ ENDIF
                         \ subroutine with the C flag set, so we do not draw this
                         \ object and ignore all the values calculated here
 
- CLC                    \ Store -A in the X-th byte of scaleDimension+8
+ CLC                    \ Store -A in the X-th byte of scaledScaffold+8
  ADC #1
- STA scaleDimension+8,X
+ STA scaledScaffold+8,X
 
  INC W                  \ Increment the index counter
 
@@ -9402,8 +9418,8 @@ ENDIF
 
  STA KK                 \ Set KK = 0
 
- LDX objectTop,Y        \ Set A to the scaled dimension of the top of this
- LDA scaleDimension,X   \ object part
+ LDX objectTop,Y        \ Set A to the scaled scaffold for the top of this part
+ LDA scaledScaffold,X   \ of the object
 
  CLC                    \ Set A = A + L0036
  ADC L0036
@@ -9418,8 +9434,8 @@ ENDIF
 
  STA N                  \ Store A in N
 
- LDX objectBottom,Y     \ Set A to the scaled dimension of the bottom of this
- LDA scaleDimension,X   \ object part
+ LDX objectBottom,Y     \ Set A to the scaled scaffold for the bottom of this
+ LDA scaledScaffold,X   \ part of the object
 
  CLC                    \ Set A = A + L0036
  ADC L0036
@@ -9445,12 +9461,12 @@ ENDIF
 
  STA L0047              \ Set L0047 = A
 
- LDX objectLeft,Y       \ Set M to the scaled dimension of the left of this
- LDA scaleDimension,X   \ object part
+ LDX objectLeft,Y       \ Set M to the scaled scaffold for the left of this
+ LDA scaledScaffold,X   \ part of the object
  STA M
 
- LDX objectRight,Y      \ Set SS to the scaled dimension of the right of this
- LDA scaleDimension,X   \ object part
+ LDX objectRight,Y      \ Set SS to the scaled scaffold for the right of this
+ LDA scaledScaffold,X   \ part of the object
  STA SS
 
  LDA objectColour,Y     \ Set A to the colour data for this object part
@@ -9518,7 +9534,7 @@ ENDIF
  STY objectIndex        \ data
 
  LDX objectLeft,Y       \ Set M to the scaled data from objectLeft for this
- LDA scaleDimension,X   \ object part
+ LDA scaledScaffold,X   \ object part
  STA SS
 
  LDA objectRight,Y      \ Set TT to the data from objectRight for this
@@ -9530,7 +9546,7 @@ ENDIF
  LDY objectIndex        \ Set Y to the index into the object data
 
  LDX objectTop,Y        \ Set SS to the scaled data from objectTop for this
- LDA scaleDimension,X   \ object part
+ LDA scaledScaffold,X   \ object part
  STA SS
 
  LDA objectColour,Y     \ Set TT to the data from objectColour for this
@@ -14345,9 +14361,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Entries contain indexes into the scaleDimension table. n + 8 points to the
-\ negative value of n (as scaleDimension+8 is filled with the negative of
-\ scaleDimension).
+\ Entries contain indexes into the scaledScaffold table. n + 8 points to the
+\ negative value of n (as scaledScaffold+8 is filled with the negative of
+\ scaledScaffold).
 \
 \ ******************************************************************************
 
@@ -16897,19 +16913,19 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: dimensionIndex
+\       Name: scaffoldIndex
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Index of an object's dimensions in the objDimensions table
+\    Summary: Index of an object's scaffold in the objectScaffold table
 \
 \ ------------------------------------------------------------------------------
 \
 \ Given an object type, this table contains the index range for the object's
-\ dimensions in the objDimensions table.
+\ scaffold in the objectScaffold table.
 \
 \ ******************************************************************************
 
-.dimensionIndex
+.scaffoldIndex
 
  EQUB 0                 \ Object type  0 =  0 to  7
  EQUB 8                 \ Object type  1 =  8 to 15
@@ -18717,20 +18733,24 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: objDimensions
+\       Name: objectScaffold
 \       Type: Variable
 \   Category: Graphics
-\    Summary: The dimensions used to construct each object, in a scalable format
+\    Summary: The scaffold used to construct each object, in a scalable format
 \
 \ ------------------------------------------------------------------------------
 \
-\ This table contains object dimensions, in a format that supports quick and
-\ easy scaling (see the ScaleObject routine). An object's dimensions are all the
-\ different measurements that are used to build that object.
+\ This table contains an object's scaffold, in a format that supports quick and
+\ easy scaling (see the ScaleObject routine).
 \
-\ Each object has a number of entries in this table, one for each dimension, in
-\ decreasing size of dimension (so the largest dimensions come first). Each
-\ dimension is in one of these binary formats:
+\ Each object has its own set of scaffold, which contains all the essential
+\ measurements and dimensions that we need to build that part of the object. The
+\ object is constructed using only measurements from the scaffold, so if we want
+\ to scale the object, we just scale the scaffold.
+\
+\ Each object has a number of entries in this table, one for each scaffold
+\ measurement, in decreasing order of size (so the largest measurements come
+\ first). Each scaffold measurement is in one of these binary formats:
 \
 \   %00000ccc
 \   %1abbbccc
@@ -18752,19 +18772,20 @@ NEXT
 \ In both cases, the result is a multiple of 1/32, so each of these entries
 \ represents a fraction of the form n/32.
 \
-\ The ScaleObject routine takes the dimensions for a specific object and scales
-\ each of them by multiplying by the following:
+\ The ScaleObject routine takes the scaffold for a specific object and scales it
+\ by multiplying each scaffold measurement by the following:
 \
 \     scaleUp
 \   -----------
 \   2^scaleDown
 \
-\ The resulting values are stored in the scaleDimension table, with one entry
-\ for each dimension in this table.
+\ The resulting values are stored in the scaledScaffold table, which uses the
+\ same structure as the object's section in the objectScaffold table, but
+\ contains the scaled scaffold to use when drawing the scaled object.
 \
 \ ******************************************************************************
 
-.objDimensions
+.objectScaffold
 
                         \ Object type 0 = 24, 22, 18, 17, 16, 8, 5, 4
 
@@ -24245,14 +24266,14 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: scaleDimension
+\       Name: scaledScaffold
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Storage for an object's scaled dimensions
+\    Summary: Storage for an object's scaled scaffold
 \
 \ ******************************************************************************
 
-.scaleDimension
+.scaledScaffold
 
  SKIP 16
 
