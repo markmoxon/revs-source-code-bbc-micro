@@ -377,9 +377,12 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0036
+.yObject
 
- SKIP 1                 \ 
+ SKIP 1                 \ The y-coordinate of the centre of the current object
+                        \
+                        \ In terms of track lines, so 80 is the top of the track
+                        \ view and 0 is the bottom of the track view
 
 .objectType
 
@@ -492,9 +495,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0047
+.bottomTrackLine
 
- SKIP 1                 \ 
+ SKIP 1                 \ The bottom track line for the current object part
 
 .L0048
 
@@ -766,9 +769,17 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
+.leftEdge
+
+ SKIP 0                 \ Left edge the current object part
+
 .M
 
  SKIP 1                 \ Temporary storage, used in a number of places
+
+.topTrackLine
+
+ SKIP 0                 \ The top track line for the current object part
 
 .N
 
@@ -789,6 +800,10 @@ ORG &0000
 .SS
 
  SKIP 1                 \ Temporary storage, used in a number of places
+
+.colourData
+
+ SKIP 0                 \ Colour data for the current object part
 
 .TT
 
@@ -7045,8 +7060,8 @@ ENDIF
  ADC #80
  STA L0035
 
- LDA L5F20,X            \ Set L0036 = X-th value from L5F20
- STA L0036
+ LDA L5F20,X            \ Set yObject = X-th value from L5F20
+ STA yObject
 
  LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
                         \ two places
@@ -7280,21 +7295,22 @@ ENDIF
 \       Name: DrawObjectEdge (Part 1 of )
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw the specified edge of an object part
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   N                   Top track line
+\   topTrackLine        Top track line of the edge (0 to 79)
 \
-\   L0047               Bottom track line
+\   bottomTrackLine     Bottom track line of the edge (0 to 79)
+\                       topTrackLine > bottomTrackLine
 \
 \   M                   Left edge (as a scaled scaffold measurement)
 \
 \   SS                  Right edge (as a scaled scaffold measurement)
 \
-\   TT                  Colour data
+\   colourData          Colour data
 \
 \                         * Bits 0-1 = 
 \
@@ -7302,17 +7318,22 @@ ENDIF
 \
 \                         * Bit 4 = 
 \
-\   A                   Same as TT for all edges except right, when it's 0
+\   A                   Same as colourData for all edges except right edge,
+\                       when it's 0
+\
+\                         * 0 = sets H to colour 0
+\
+\                         * Non-zero = sets H to bits 0-1 of A
 \
 \   Y                   Edge type:
 \
-\                         * 0 = edge when colour data has bit 7 set (drob10)
+\                         * 0 = second or third edge in a four-edge object part
 \
 \                         * 1 = left edge
 \
 \                         * 2 = right edge
 \
-\   H                   Colour byte
+\   H                   Physical colour 0 from the colourPalette palette
 \
 \   UU                  
 \
@@ -7320,9 +7341,9 @@ ENDIF
 \
 \   NN                  
 \
-\   L0048               
+\   L0048               0 on first call, gets shifted to non-zero below
 \
-\   H                   
+\   KK                  0 on first call
 \
 \ ******************************************************************************
 
@@ -7330,8 +7351,8 @@ ENDIF
 
  STY J                  \ Set J = Y
 
- LDX H                  \ Set G = H
- STX G
+ LDX H                  \ Set G = H, so G is the physical colour 0 from the
+ STX G                  \ colourPalette palette
 
  AND #3                 \ Set X to bits 0-1 of A
  TAX
@@ -7342,7 +7363,7 @@ ENDIF
  LDA UU                 \ Set K = UU
  STA K
 
- LDA TT                 \ Set X to bits 2-3 of A
+ LDA colourData         \ Set X to bits 2-3 of colourData
  AND #%00001100
  LSR A
  LSR A
@@ -7488,7 +7509,7 @@ ENDIF
 
 .draw8
 
- LDA L0047              \ Set A = L0047
+ LDA bottomTrackLine    \ Set A = bottomTrackLine
 
  CMP dashDataOffset,X   \ If A >= the dash data offset for our dash data block,
  BCS draw9              \ then A is pointing to dash data, so jump to draw9 to
@@ -7502,13 +7523,13 @@ ENDIF
 
  STA RR                 \ Set RR = A
 
- CMP N                  \ If A < N, jump to draw11
+ CMP topTrackLine       \ If A < topTrackLine, jump to draw11
  BCC draw11
 
  CPY #1                 \ If Y <> 1, jump to draw29 via draw10
  BNE draw10
 
-                        \ If we get here then A >= N and Y = 1
+                        \ If we get here then A >= topTrackLine and Y = 1
 
  RTS                    \ Return from the subroutine
 
@@ -7518,7 +7539,7 @@ ENDIF
 
 .draw11
 
- LDA TT                 \ If bit 4 of TT is clear, jump to draw12
+ LDA colourData         \ If bit 4 of colourData is clear, jump to draw12
  AND #%00010000
  BEQ draw12
 
@@ -7529,7 +7550,7 @@ ENDIF
  AND #1
  BEQ draw12
 
- LDA TT                 \ Set X to bits 0-1 of TT
+ LDA colourData         \ Set X to bits 0-1 of colourData
  AND #%00000011
  TAX
 
@@ -7547,11 +7568,11 @@ ENDIF
  STA V
  CPY #1
  BCS draw16
- LDA vergePixels,X
+ LDA leftEdgePixels,X
  AND G
  STA T
  LDA H
- AND L33FC,X
+ AND rightEdgePixels,X
  ORA T
  AND yLookupLo+8,X
  ORA V
@@ -7583,14 +7604,14 @@ ENDIF
 
 .draw15
 
- LDY N
+ LDY topTrackLine
 
  JMP EdgeLoop
 
 .draw16
 
  BNE draw18
- LDA vergePixels,X
+ LDA leftEdgePixels,X
  STA L
  EOR #&FF
  AND H
@@ -7640,7 +7661,7 @@ IF _ACORNSOFT
  LDA #&AA
  STA (P),Y
 
- LDY N
+ LDY topTrackLine
  JMP draw24
 
 .draw21
@@ -7711,7 +7732,7 @@ ELIF _SUPERIOR
  LDA #0
  STA KK
 
- LDY N
+ LDY topTrackLine
  JMP sraw6
 
 .sraw1
@@ -7818,7 +7839,8 @@ ENDIF
 \
 \   RR                  Dash data offset for block UU
 \
-\   N                   Starting byte in dash data block
+\   topTrackLine        Top track line number, i.e. the number of the start byte
+\                       in the dash data block
 \
 \ Other entry points:
 \
@@ -7917,13 +7939,13 @@ IF _ACORNSOFT
  LDA #&AA               \ Store &AA in this byte, so it can act as a marker for
  STA (P),Y              \ when we work our way through the data below
 
- LDY N                  \ Set Y to the starting byte number in N, so we work
-                        \ from byte N within the data block, moving down in
-                        \ memory until we reach the marker
+ LDY topTrackLine       \ Set Y to the number of the top track line, so we work
+                        \ down from this byte within the data block, moving down
+                        \ in memory until we reach the marker
                         \
                         \ So we are working down the screen, going backwards in
-                        \ memory from byte N to the marker that we just placed
-                        \ at the start of the dash data
+                        \ memory from byte topTrackLine to the marker that we
+                        \ just placed at the start of the dash data
 
  JMP edge4
 
@@ -8042,7 +8064,7 @@ ENDIF
 \
 \   RR                  Dash data offset for block UU
 \
-\   N                   Starting byte in dash data block
+\   topTrackLine        Starting byte in dash data block
 \
 \ Other entry points:
 \
@@ -8120,7 +8142,7 @@ IF _SUPERIOR
  STA P                  \ Set P = A, to store the low byte of the result in P,
                         \ giving the result we wanted in (Q P)
 
- LDY N
+ LDY topTrackLine
  JMP sedg9
 
 .sedg1
@@ -8235,7 +8257,7 @@ ENDIF
 
  STX UU                 \ Store the loop counter in UU
 
- STY N                  \ Set N to the offset of the start byte
+ STY topTrackLine       \ Set topTrackLine to the offset of the start byte
 
  LDA dashDataOffset,X   \ Set RR = the dash data offset for block X
  STA RR
@@ -8372,7 +8394,7 @@ ENDIF
  SEC
  SBC N
  STA T
- ADC L0047
+ ADC bottomTrackLine
  STA VV
  LDA UU
  STA U
@@ -8407,7 +8429,7 @@ ENDIF
  DEY
  DEY
  STY U
- CMP L0047
+ CMP bottomTrackLine
  BCC C1E84
  ADC T
  TAY
@@ -9128,13 +9150,16 @@ ENDIF
  LDA scaleUp            \ Set A = scaleUp
 
  CMP L62FC              \ If A >= L62FC, jump to dobj4 to skip the following
- BCS dobj4              \ instruction and set L62FD to 0
+ BCS dobj4              \ instruction and set lowestTrackLine to 0 (so the whole
+                        \ object is drawn)
 
- LDX horizonLine        \ Set X to the track line number of the horizon
+ LDX horizonLine        \ Set X to the track line number of the horizon, so the
+                        \ parts of the object below this line do not get drawn
 
 .dobj4
 
- STX L62FD              \ Set L62FD = X (so it is either 0 or horizonLine)
+ STX lowestTrackLine    \ Set lowestTrackLine = X, so the object gets cut off at
+                        \ the horizon line when scaleUp < L62FC
 
  CMP #64                \ If A >= 64, i.e. scaleUp >= 64, jump to dobj5 to skip
  BCS dobj5              \ the following
@@ -9473,108 +9498,151 @@ ENDIF
 \
 \ Arguments:
 \
-\   MM                  The index of this object's first bit of data in the
-\                       various object data tables (i.e. the index of the data
-\                       for the object's first part)
+\   MM                  The index of the first entry in the object data tables
+\                       for this this object (i.e. the index of the data for the
+\                       object's first part)
+\
+\   yObject             The object's y-coordinate (for the centre of the object)
+\                       in terms of track lines, so 80 is the top of the track
+\                       view and 0 is the bottom of the track view
+\
+\   lowestTrackLine     Hide any part of the object that's below the specified
+\                       track line (typically used to stop an object from being
+\                       drawn below the horizon)
+\
+\                         * 0 = draw the whole object
+\
+\                         * Non-zero = only draw the part of the object that's
+\                                      above this track line
 \
 \ ******************************************************************************
 
 .DrawObjectEdges
 
- LDY MM                 \ Set Y to the index of this object's first bit of data
-                        \ in the various object data tables
+ LDY MM                 \ Set Y to the index of this object data in the object
+                        \ data tables
 
                         \ We now work our way through the data for this object,
-                        \ with the index in Y and objectIndex
+                        \ drawing one part at a time, using Y and objectIndex
+                        \ as the loop counter as we loop through each part
+                        \
+                        \ Note that most object parts are defined by one set of
+                        \ object data, so they correspond to two edges (left and
+                        \ right), but object types 2 and 4 contain four-edge
+                        \ object parts, which are defined by two sets of data,
+                        \ and therefore two loop iterations
 
 .drob1
 
- LDA colourPalette      \ Set H to logical colour 0 from the colour palette
- STA H
+ LDA colourPalette      \ Set H to the physical colour that's mapped to logical
+ STA H                  \ colour 0 in the standard colour palette
 
- LDA #0                 \ Set L0048 = 0
+ LDA #0                 \ Set L0048 = 0 to pass to DrawObjectEdge below ???
  STA L0048
 
- STA KK                 \ Set KK = 0
+ STA KK                 \ Set KK = 0 to pass to DrawObjectEdge below ???
 
  LDX objectTop,Y        \ Set A to the scaled scaffold for the top of this part
  LDA scaledScaffold,X   \ of the object
 
- CLC                    \ Set A = A + L0036
- ADC L0036
+ CLC                    \ Set A = A + yObject
+ ADC yObject            \
+                        \ so A is now the track line of the top of the object
 
- BMI drob9              \ If A is negative, jump to drob9
+ BMI drob9              \ If A > 128, then the top of this object part is well
+                        \ above the track view, so jump to drob9 to move on to
+                        \ the next object part as this one doesn't fit on-screen
 
- CMP #80                \ If A >= 80, set A = 79
- BCC drob2
+ CMP #80                \ If A >= 80, set A = 79, as the maximum track line at
+ BCC drob2              \ the very top of the track view is 79
  LDA #79
 
 .drob2
 
- STA N                  \ Store A in N as the top track line
+ STA topTrackLine       \ Store A in N as the number of the top track line, to
+                        \ send to DrawObjectEdge below
 
  LDX objectBottom,Y     \ Set A to the scaled scaffold for the bottom of this
  LDA scaledScaffold,X   \ part of the object
 
- CLC                    \ Set A = A + L0036
- ADC L0036
+ CLC                    \ Set A = A + yObject
+ ADC yObject            \
+                        \ so A is now the track line of the bottom of the object
 
- BMI drob3              \ If A is negative, jump to drob3 to skip the following
-                        \ and set A = L62FD
+ BMI drob3              \ If A < 0, then the bottom of this object part is lower
+                        \ than the bottom of the track view, so jump to drob3 to
+                        \ set A = lowestTrackLine, so we only draw the object
+                        \ down to the lowest line allowed
 
- CMP L62FD              \ If A >= L62FD, jump to drob4 to skip the following
- BCS drob4
+ CMP lowestTrackLine    \ If A >= lowestTrackLine, jump to drob4 to skip the
+ BCS drob4              \ following
 
 .drob3
 
-                        \ If we get here then A is negative or A < L62FD
+                        \ If we get here then either the bottom track line in A
+                        \ is negative or A < lowestTrackLine, both of which are
+                        \ below the lowest level that we want to draw, so we
+                        \ cut off the bottom of the object to fit
 
- LDA L62FD              \ Set A = L62FD
- NOP
- NOP
+ LDA lowestTrackLine    \ Set A = lowestTrackLine, so the minimum track line
+ NOP                    \ number is set to lowestTrackLine and we only draw the
+ NOP                    \ objectdown to the lowest line allowed
 
 .drob4
 
- CMP N                  \ If A >= N, jump to drob9
- BCS drob9
+ CMP topTrackLine       \ If A >= N, then the bottom track line for this object
+ BCS drob9              \ in A is higher than the top track line in N, so jump
+                        \ to drob9 to move on to the next object part as there
+                        \ is nothing to draw for this part
 
- STA L0047              \ Set L0047 = A as the bottom track line
+                        \ We now set up the parameters to pass to DrawObjectEdge
+                        \ below, to draw the left and right edges
 
- LDX objectLeft,Y       \ Set M to the scaled scaffold for the left of this
+ STA bottomTrackLine    \ Set bottomTrackLine = A as the bottom track line
+
+ LDX objectLeft,Y       \ Set M to the scaled scaffold for the left edge of this
  LDA scaledScaffold,X   \ part of the object
  STA M
 
- LDX objectRight,Y      \ Set SS to the scaled scaffold for the right of this
- LDA scaledScaffold,X   \ part of the object
+ LDX objectRight,Y      \ Set SS to the scaled scaffold for the right edge of
+ LDA scaledScaffold,X   \ this part of the object
  STA SS
 
  LDA objectColour,Y     \ Set A to the colour data for this object part
- STA TT
+
+ STA colourData         \ Set colourData to the colour data for this object part
 
  STY objectIndex        \ Store the current index into the object data in
                         \ objectIndex
 
- LDY #1                 \ Draw start of object line
+ LDY #1                 \ Draw the left edge of this object part
  JSR DrawObjectEdge
 
 .drob5
 
- BIT TT                 \ If bit 7 of TT is set, jump to drob10
- BMI drob10
+ BIT colourData         \ If bit 7 is set in the colour data for this object
+ BMI drob10             \ part, then this is a four-edge object part, so
+                        \ jump to drob10 to draw the extra two edges before
+                        \ returning here (with bit 7 of colourData clear) to
+                        \ draw the fourth edge
 
- LDA #0                 \ Draw end of object line
- LDY #2
+ LDA #0                 \ Set A = 0 to send to DrawObjectEdge ???
+
+ LDY #2                 \ Draw the right edge of this object part
  JSR DrawObjectEdge
 
- BIT TT                 \ If bit 6 of TT is set, jump to drob7 to return from
- BVS drob7              \ the subroutine
+ BIT colourData         \ If bit 6 is set in the colour data for this object
+ BVS drob7              \ part, then this indicates that this is the last part
+                        \ of this object, so jump to drob7 to return from the
+                        \ subroutine as we have now drawn the whole object
 
- LDY objectIndex        \ Set Y to the index into the object data
+ LDY objectIndex        \ Otherwise we need to move on to the next part, so set
+                        \ Y to the loop counter
 
 .drob6
 
- INY                    \ Increment the index to point to the data for the next
-                        \ object part
+ INY                    \ Increment the loop counter to point to the data for
+                        \ the next object part
 
  JMP drob1              \ Loop back to drob1 to process the next object part
 
@@ -9584,42 +9652,65 @@ ENDIF
 
 .drob8
 
- AND #%01000000         \ If bit 6 of A is set, i.e. 64 + x, jump to drob7 to
- BNE drob7              \ return from the subroutine
+                        \ We get here when we come across data that forms the
+                        \ second and third stages of a four-edge object part,
+                        \ so we now need to skip that data as we have already
+                        \ processed it
 
- INY                    \ Increment the index to point to the data for the next
-                        \ object part
+ AND #%01000000         \ If bit 6 of A is set, i.e. 64 + x, jump to drob7 to
+ BNE drob7              \ return from the subroutine, as we have just drawn the
+                        \ last part of the object we wanted to draw
+
+ INY                    \ Increment the loop counter to point to the data for
+                        \ the next object part
 
 .drob9
 
  LDA objectColour,Y     \ Set A to the colour data for this object part
 
- BMI drob8              \ If bit 7 of A is set, i.e. 128 + x, jump to drob8
+ BMI drob8              \ If bit 7 of A is set, i.e. 128 + x, jump to drob8 to
+                        \ skip this bit of data and move on to the next, as this
+                        \ contains the data for the second and third edges of a
+                        \ four-edge object part, and this will already have
+                        \ been processed in drob10
 
  AND #%01000000         \ If bit 6 of A is set, i.e. 64 + x, jump to drob7 to
- BNE drob7              \ return from the subroutine
+ BNE drob7              \ return from the subroutine, as we have just drawn the
+                        \ last part of the object we wanted to draw
 
- BEQ drob6              \ Jump to drob6 (this BEQ is effectively a JMP as we
-                        \ just passed through a BNE)
+ BEQ drob6              \ Jump to drob6 to move on to the next object part (this
+                        \ BEQ is effectively a JMP as we just passed through a
+                        \ BNE)
 
 .drob10
 
                         \ If we get here then the colour data for this object
-                        \ part has bit 7 set
+                        \ part has bit 7 set, so this is a four-edge object
+                        \ part and we need to draw the second and third edges
+                        \
+                        \ The second and third edges are defined in the next bit
+                        \ of object data, as follows:
+                        \
+                        \   * Second edge: SS (right edge)  = objectLeft
+                        \                  colourData       = objectRight
+                        \
+                        \   * Third edge:  SS (right edge)  = objectTop
+                        \                  colourData       = objectColour
 
- LDY objectIndex        \ Set Y to the index into the object data
+ LDY objectIndex        \ Set Y to the loop counter
 
- INY                    \ Increment the index to point to the next bit of object
- STY objectIndex        \ data
+ INY                    \ Increment the loop counter to point to the next bit of
+ STY objectIndex        \ object data (which contains the data for the second
+                        \ and third edges)
 
- LDX objectLeft,Y       \ Set M to the scaled data from objectLeft for this
+ LDX objectLeft,Y       \ Set SS to the scaled data from objectLeft for this
  LDA scaledScaffold,X   \ object part
  STA SS
 
- LDA objectRight,Y      \ Set TT to the data from objectRight for this
- STA TT                 \ object part
+ LDA objectRight,Y      \ Set colourData to the data from objectRight for this
+ STA colourData         \ object part
 
- LDY #0
+ LDY #0                 \ Draw the second edge of the four-edge object part
  JSR DrawObjectEdge
 
  LDY objectIndex        \ Set Y to the index into the object data
@@ -9628,13 +9719,15 @@ ENDIF
  LDA scaledScaffold,X   \ object part
  STA SS
 
- LDA objectColour,Y     \ Set TT to the data from objectColour for this
- STA TT                 \ object part
+ LDA objectColour,Y     \ Set colourData to the data from objectColour for this
+ STA colourData         \ object part
 
- LDY #0
+ LDY #0                 \ Draw the third edge of the four-edge object part
  JSR DrawObjectEdge
 
- JMP drob5              \ Loop back to drob5
+ JMP drob5              \ Loop back to drob5 to draw the fourth edge, with
+                        \ colourData set to the colour data from the third edge,
+                        \ which does not have bit 7 set
 
 \ ******************************************************************************
 \
@@ -11844,7 +11937,7 @@ ENDIF
  ADC #&50
  STA L0035
  LDA L03B0,X
- STA L0036
+ STA yObject
  LDA L03C8,X
  STA scaleUp
  JSR DrawObject
@@ -12111,7 +12204,7 @@ ENDIF
  LDA L5FD0,Y
  STA objectPalette,X
 
- AND L33FC,X
+ AND rightEdgePixels,X
  STA L629C,X
 
  INY
@@ -12828,7 +12921,7 @@ ENDIF
 
 .C2F72
 
- AND vergePixels,X
+ AND leftEdgePixels,X
  ORA L629C,X
  BNE C2F58
  LDA #&55
@@ -12910,7 +13003,7 @@ ENDIF
 
 .C2FB4
 
- AND vergePixels,X
+ AND leftEdgePixels,X
  ORA L629C,X
  BNE C2F9A
  LDA #&55
@@ -13943,7 +14036,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: vergePixels
+\       Name: leftEdgePixels
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
@@ -13954,7 +14047,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.vergePixels
+.leftEdgePixels
 
  EQUB %00000000
  EQUB %10001000
@@ -14051,9 +14144,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L33FC
+\       Name: rightEdgePixels
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -14062,9 +14155,12 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L33FC
+.rightEdgePixels
 
- EQUB &FF, &77, &33, &11
+ EQUB %11111111
+ EQUB %01110111
+ EQUB %00110011
+ EQUB %00010001
 
 \ ******************************************************************************
 \
@@ -25923,7 +26019,7 @@ ENDIF
 \
 \       Name: L62FC
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -25938,18 +26034,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62FD
+\       Name: lowestTrackLine
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Used to prevent objects from being drawn below the horizon line
 \
 \ ******************************************************************************
 
-.L62FD
+.lowestTrackLine
 
  EQUB 0
 
