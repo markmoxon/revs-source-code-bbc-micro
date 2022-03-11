@@ -287,9 +287,13 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0025
+.directionFacing
 
- SKIP 1                 \ 
+ SKIP 1                 \ The direction that our car is facing
+                        \
+                        \   * Bit 7 clear = facing forwards
+                        \
+                        \   * Bit 7 set = facing backwards
 
 .L0026
 
@@ -4140,7 +4144,7 @@ ORG &0B00
 .C1200
 
  LDA var13Hi,X
- EOR L0025
+ EOR directionFacing
  STA var14Hi
  RTS
 
@@ -4279,7 +4283,7 @@ ORG &0B00
 
 .C1274
 
- LDA L0025
+ LDA directionFacing
  BMI C1284
  LDY L06FF
  JSR sub_C122D
@@ -4461,7 +4465,7 @@ ORG &0B00
 
  STA L0024
  LDX #&17
- LDA L0025
+ LDA directionFacing
  BMI C1326
  LDA trackData+&6FA
  LSR A
@@ -4629,7 +4633,7 @@ ORG &0B00
 
 .sub_C13E0
 
- LDA L0025
+ LDA directionFacing
  BMI C13F0
  LDY L0002
  INY
@@ -4721,9 +4725,9 @@ ORG &0B00
 
 .sub_C1420
 
- LDA L0025
+ LDA directionFacing
  EOR #&80
- STA L0025
+ STA directionFacing
  JSR sub_C13DA
  STX L0042
 
@@ -4751,7 +4755,7 @@ ORG &0B00
 
  LDX currentPlayer
  ROR A
- EOR L0025
+ EOR directionFacing
  BMI C143E
  JSR sub_C147C
  RTS
@@ -4801,7 +4805,7 @@ ORG &0B00
 
 .C1465
 
- LDA L0025
+ LDA directionFacing
  BEQ C147B
  LDX #2
 
@@ -7002,7 +7006,7 @@ ENDIF
  AND #%00100000         \ two instructions
  BEQ corn2
 
- LDA #%00001111         \ Set logical colour 2 in the colour palette to physical
+ LDA #%00001111         \ Map logical colour 2 in the colour palette to physical
  STA colourPalette+2    \ colour 1 (red in the track view)
 
 .corn2
@@ -7075,7 +7079,7 @@ ENDIF
 
 .corn6
 
- LDA #%11110000         \ Set logical colour 2 in the colour palette to physical
+ LDA #%11110000         \ Map logical colour 2 in the colour palette to physical
  STA colourPalette+2    \ colour 1 (white in the track view), which sets it back
                         \ to the default value
 
@@ -8747,8 +8751,8 @@ IF _SUPERIOR
 .AssistSteering
 
  JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
-                        \ L0025, and update the Computer Assisted Steering (CAS)
-                        \ indicator on the dashboard
+                        \ directionFacing, and update the Computer Assisted
+                        \ Steering (CAS) indicator on the dashboard
 
  BNE asst2              \ If CAS is enabled, jump to asst2 to skip the following
                         \ instruction, otherwise we jump to keys11
@@ -8759,8 +8763,9 @@ IF _SUPERIOR
 
 .asst2
 
- BCS asst1              \ If bit 7 of L0025 is set, jump to asst1 to jump to
-                        \ keys11 in the ProcessDrivingKeys routine
+ BCS asst1              \ If bit 7 of directionFacing is set, then our car is
+                        \ facing backwards, so jump to asst1 to jump to keys11
+                        \ in the ProcessDrivingKeys routine
 
  CMP #5                 \ If A >= 5, jump to asst4
  BCS asst4
@@ -8770,12 +8775,14 @@ IF _SUPERIOR
 .AssistSteeringKeys
 
  JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
-                        \ L0025, and update the CAS indicator on the dashboard
+                        \ directionFacing, and update the CAS indicator on the
+                        \ dashboard
 
  BEQ asst3              \ If CAS is not enabled, jump to asst3 to set A and jump
                         \ to keys10 in the ProcessDrivingKeys routine
 
- BCS asst3              \ If bit 7 of L0025 is set, jump to asst3
+ BCS asst3              \ If bit 7 of directionFacing is set, then our car is
+                        \ facing backwards, so jump to asst3
 
  LDA V                  \ If V is non-zero, jump to asst5
  BNE asst5
@@ -9001,19 +9008,43 @@ ENDIF
 \       Name: DrawObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw an object, such as a road sign or car
+\    Summary: Draw an object of a specific type
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is used to draw road signs, corner markers and cars.
+\ This routine is used to draw objects such as road signs, corner markers and
+\ cars.
 \
 \ Arguments:
 \
 \   objectType          The type of object to draw (0 to 12)
 \
-\   X                   Driver number (0 to 23)
-\
 \   scaleUp             The scale factor for this object
+\
+\   colourPalette       The colour palette to use for drawing the object
+\
+\   X                   Driver number:
+\
+\                         * 0-19 = map logical colour 1 according to the driver
+\                                  number in X:
+\
+\                           * Drivers 0, 4,  8, 12, 16 map to colour 0 (black)
+\
+\                           * Drivers 1, 5,  9, 13, 17 map to colour 1 (red)
+\
+\                           * Drivers 2, 6, 10, 14, 18 map to colour 2 (white)
+\
+\                           * Drivers 2, 7, 11, 15, 19 map to colour 3 (green)
+\
+\                         * 20-22 = map logical colour 1 according to the number
+\                                   of the driver in front of us (using the same
+\                                   logic as above)
+\
+\                         * 23 = stick with the palette in colourPalette
+\
+\ Returns:
+\
+\   colourPalette       Gets reset back to the default palette
 \
 \ ******************************************************************************
 
@@ -9021,50 +9052,72 @@ ENDIF
 
  STX T                  \ Store the driver number in T
 
- LDX #3                 \ We start by copying the four bytes from colourPalette
-                        \ to objectPalette, so set up a counter in X
+                        \ We start by copying the four bytes from the standard
+                        \ colour palette in colourPalette to the object colour
+                        \ palette in objectPalette, as we use the latter to draw
+                        \ the object
+
+ LDX #3                 \ Set up a counter in X for copying the four palette
+                        \ bytes
 
 .dobj1
 
- LDA colourPalette,X    \ Copy the X-th byte of colourPalette to the X-th byte of
- STA objectPalette,X    \ objectPalette
+ LDA colourPalette,X    \ Copy the X-th byte of colourPalette to the X-th byte
+ STA objectPalette,X    \ of objectPalette
 
  DEX                    \ Decrement the loop counter
 
  BPL dobj1              \ Loop back until we have copied all four bytes
 
- LDA #%11110000         \ Set logical colour 2 in the colour palette to physical
+ LDA #%11110000         \ Map logical colour 2 in the colour palette to physical
  STA colourPalette+2    \ colour 1 (white in the track view), which sets it back
                         \ to the default value
+                        \
+                        \ This only has an effect when we call DrawObject from
+                        \ DrawCornerMarkers, which changes the value of colour 2
+                        \ in colourPalette (all other calls to DrawObject leave
+                        \ the colour palette alone)
 
                         \ We now set the palette differently, depending on the
-                        \ driver number in X:
+                        \ driver number in A:
                         \
-                        \   * 0-19 = set colour 1 to colour A mod 3
+                        \   * 0-19 = map logical colour 1 to physical colour
+                        \            A mod 4
                         \
-                        \   * 20-22 = set colour 1 to the number of the driver
-                        \             in front, mod 3
+                        \   * 20-22 = map logical colour 1 to physical colour
+                        \             (number of the driver in front) mod 4
                         \
-                        \   * 23 = use the palette from colourPalette
+                        \   * 23 = don't change the palette, i.e use the palette
+                        \          from colourPalette
 
  LDA T                  \ Set A = T, so A contains the driver number
 
  CMP #23                \ If A = 23, jump to dobj3 to skip the following palette
  BEQ dobj3              \ changes
 
- CMP #20                \ If A < 20, jump to dobj2
- BCC dobj2
+ CMP #20                \ If A < 20, jump to dobj2 to map logical colour 1 to
+ BCC dobj2              \ physical colour A mod 4, in other words:
+                        \
+                        \   * Drivers 0, 4,  8, 12, 16 map to colour 0 (black)
+                        \   * Drivers 1, 5,  9, 13, 17 map to colour 1 (red)
+                        \   * Drivers 2, 6, 10, 14, 18 map to colour 2 (white)
+                        \   * Drivers 2, 7, 11, 15, 19 map to colour 3 (green)
+
+                        \ If we get here then A = 21 or 22, so we map logical
+                        \ colour 1 to the number of the driver in front of us,
+                        \ mod 4
 
  LDX positionAhead      \ Set X to the position of the driver in front of us
 
- LDA driversInOrder,X   \ Set A the number of the driver in front of us
+ LDA driversInOrder,X   \ Set A the number of the driver in front of us, so we
+                        \ map logical colour 1 to physical colour A mod 4
 
 .dobj2
 
- AND #3                 \ Set X = A mod 3
+ AND #3                 \ Set X = A mod 4
  TAX
 
- LDA colourPalette,X    \ Set logical colour 1 in the object palette to logical
+ LDA colourPalette,X    \ Map logical colour 1 in the object palette to logical
  STA objectPalette+1    \ colour X from the colour palette
 
 .dobj3
@@ -9086,36 +9139,58 @@ ENDIF
  CMP #64                \ If A >= 64, i.e. scaleUp >= 64, jump to dobj5 to skip
  BCS dobj5              \ the following
 
- ASL A                  \ Set scaleUp = A << 2
- ASL A
+                        \ Otherwise we can alter the values of scaleUp and
+                        \ scaleDown to be more accurate but without fear of
+                        \ overflow, by multiplying both scale factors by 4
+                        \ (as we know 4 * scaleUp is < 256)
+
+ ASL A                  \ Set scaleUp = A * 4
+ ASL A                  \             = scaleUp * 4
  STA scaleUp
 
  LDA #2                 \ Set scaleDown = 2, so the object's scaffold is scaled
  STA scaleDown          \ down by 2^scaleDown = 2^2 = 4
+                        \
+                        \ So the overall scaling of the scaffold is the same,
+                        \ but we retain more accuracy
 
 .dobj5
 
- LDX objectType         \ Set X to the type object to draw
+ LDX objectType         \ Set X to the type of object we're going to draw
+
+                        \ If the object type is 10, 11 or 12, then it's one of
+                        \ the turn signs (chicane, left or right turn), so we
+                        \ draw this as two objects, starting with a blank white
+                        \ sign (object type 9) and then the sign contents
+                        \ (object 10, 11 or 12)
+                        \
+                        \ We only draw the sign contents if our car is facing
+                        \ forwards, so the back of the sign is blank
 
  CPX #10                \ If X < 10, jump to dobj6 to skip the following
  BCC dobj6              \ instruction
 
- LDX #9                 \ Set X = 9, so we do the following with X = 9 and then
-                        \ again with X = objectType
+ LDX #9                 \ Set X = 9, so we first draw an object of type 9 for
+                        \ the blank white sign, before drawing another object of
+                        \ type objectType
 
 .dobj6
 
- STX thisObjectType     \ Store X in thisObjectType so we can check it again
-                        \ below
+ STX thisObjectType     \ Store X in thisObjectType, so we can check it again
+                        \ below in case we need to draw two objects
 
- LDA scaffoldIndex,X    \ Set QQ to the index of the first objectScaffold
- STA QQ                 \ entry for object type X
+ LDA scaffoldIndex,X    \ Set QQ to the index of the first scaffold entry in
+ STA QQ                 \ objectScaffold for object type X
 
- LDA scaffoldIndex+1,X  \ Set II to the index of the last objectScaffold entry
- STA II                 \ for object type X (so the last entry is index II - 1)
+ LDA scaffoldIndex+1,X  \ Set II to the index of the first scaffold entry in
+ STA II                 \ objectScaffold for object type X + 1 (so the last
+                        \ entry for object type X will be index II - 1)
 
  LDA objectIndexes,X    \ Set QQ to the index of the first entry in the object
- STA MM                 \ data tables for object type X
+ STA MM                 \ data tables for object type X (so MM will point to the
+                        \ first entry for this object in the objectTop,
+                        \ objectBottom, objectLeft, objectRight and objectColour
+                        \ tables)
 
  JSR ScaleObject        \ Scale the object's scaffold by the scaleUp and
                         \ scaleDown factors, storing the results in the
@@ -9126,20 +9201,25 @@ ENDIF
                         \ draw the object, so jump to dobj7 to return from the
                         \ subroutine
 
- JSR DrawObjectEdges    \ Draw the edges for the scaled object
+ JSR DrawObjectEdges    \ Draw the scaled object in the screen buffer by drawing
+                        \ all the object's edges
 
- LDX objectType         \ Set X to the type object to draw
+ LDX objectType         \ Set X to the type of object we are drawing, in case we
+                        \ need to draw a second object
 
  LDA thisObjectType     \ If the object we just drew is not an object of type 9,
- CMP #9                 \ then this is not a multi-part object, so jump to dobj7
- BNE dobj7              \ to return from the subroutine
+ CMP #9                 \ then this is not a two-part road sign object, so jump
+ BNE dobj7              \ to dobj7 to return from the subroutine
 
-                        \ Otherwise we just drew an object of type 9, as part of
-                        \ a multi-part object of type objectType, so now we draw
-                        \ the second part
+                        \ Otherwise we just drew an object of type 9, for the
+                        \ blank white sign, so now we draw a second object for
+                        \ the sign's contents, but only if our car is facing
+                        \ forwards (if we are facing backwards, then we see the
+                        \ back of the sign, which is blank)
 
- LDA L0025              \ If bit 7 of L0025 is clear, loop back to draw the
- BPL dobj6              \ object of type objectType
+ LDA directionFacing    \ If bit 7 of directionFacing is clear, then our car is
+ BPL dobj6              \ facing fowards, so loop back to draw the contents of
+                        \ the sign in object type objectType
 
 .dobj7
 
@@ -9431,7 +9511,7 @@ ENDIF
 
 .drob2
 
- STA N                  \ Store A in N
+ STA N                  \ Store A in N as the top track line
 
  LDX objectBottom,Y     \ Set A to the scaled scaffold for the bottom of this
  LDA scaledScaffold,X   \ part of the object
@@ -9458,7 +9538,7 @@ ENDIF
  CMP N                  \ If A >= N, jump to drob9
  BCS drob9
 
- STA L0047              \ Set L0047 = A
+ STA L0047              \ Set L0047 = A as the bottom track line
 
  LDX objectLeft,Y       \ Set M to the scaled scaffold for the left of this
  LDA scaledScaffold,X   \ part of the object
@@ -9986,7 +10066,7 @@ ENDIF
  ASL A
  ASL A
  ASL A
- BIT L0025
+ BIT directionFacing
  BPL C234F
  STA T
  LDA L06FF
@@ -10021,7 +10101,7 @@ ENDIF
 
  JSR sub_C2145
  LDY L0042
- BIT L0025
+ BIT directionFacing
  BPL C2374
  TYA
  EOR #&28
@@ -10324,7 +10404,7 @@ ENDIF
 
  ASL A
  CMP #&80
- EOR L0025
+ EOR directionFacing
  BPL C24D6
  BCC C24CE
  EOR #&7F
@@ -10463,7 +10543,7 @@ ENDIF
 .sub_C254A
 
  LDX L0024
- EOR L0025
+ EOR directionFacing
  BPL C255A
  TXA
  CLC
@@ -10558,7 +10638,7 @@ ENDIF
  LDA L0049
  LSR A
  ROR A
- EOR L0025
+ EOR directionFacing
  BPL C25C0
  LDA #0
  SEC
@@ -10721,7 +10801,7 @@ ENDIF
 
 .P2659
 
- BIT L0025
+ BIT directionFacing
  BPL C2663
 
  JSR GetPositionBehind  \ Set X to the number of the position behind position X
@@ -11316,7 +11396,7 @@ ENDIF
  SEC
  JSR sub_C27AB
  BCS C2911
- EOR L0025
+ EOR directionFacing
  BMI C2911
  LDA T
 
@@ -19312,7 +19392,7 @@ NEXT
 
  STA U
  LDA trackData+&200,Y
- EOR L0025
+ EOR directionFacing
  PHP
  LDA trackData+&200,Y
 
@@ -19369,7 +19449,7 @@ NEXT
 .C4647
 
  LDX currentPlayer
- BIT L0025
+ BIT directionFacing
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -26419,7 +26499,8 @@ ENDIF
 \
 \   A                   A is unchanged
 \
-\   C flag              Set to bit 7 of L0025
+\   C flag              Set to bit 7 of directionFacing (clear if our car is
+\                       facing forwards, set if we are facing backwards)
 \
 \ ******************************************************************************
 
@@ -26451,8 +26532,8 @@ IF _SUPERIOR
  LSR A                  \ Set assistLeft1 = 0 or %00010000
  STA assistLeft1
 
- LDA L0025              \ Set the C flag to bit 7 of L0025
- ROL A
+ LDA directionFacing    \ Set the C flag to bit 7 of directionFacing, which we
+ ROL A                  \ return from the subroutine
 
  PLA                    \ Restore the value of A that we put on the stack above
 
