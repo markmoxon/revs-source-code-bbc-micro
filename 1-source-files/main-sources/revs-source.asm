@@ -373,9 +373,9 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0035
+.xObject
 
- SKIP 1                 \ 
+ SKIP 1                 \ The x-coordinate of the centre of the current object
 
 .yObject
 
@@ -7056,9 +7056,9 @@ ENDIF
  ASL V
  ROL A
 
- CLC                    \ Set L0035 = A + 80
+ CLC                    \ Set xObject = A + 80
  ADC #80
- STA L0035
+ STA xObject
 
  LDA L5F20,X            \ Set yObject = X-th value from L5F20
  STA yObject
@@ -7304,19 +7304,24 @@ ENDIF
 \   topTrackLine        Top track line of the edge (0 to 79)
 \
 \   bottomTrackLine     Bottom track line of the edge (0 to 79)
-\                       topTrackLine > bottomTrackLine
+\                       bottomTrackLine < topTrackLine
 \
 \   M                   Left edge (as a scaled scaffold measurement)
 \
 \   SS                  Right edge (as a scaled scaffold measurement)
 \
+\   xObject             The x-coordinate of the centre of the object
+\
 \   colourData          Colour data
 \
-\                         * Bits 0-1 = 
+\                         * Bits 0-1 = used for colour V if bit 4 is set, and we
+\                           are either drawing a left edge in the left half of
+\                           the screen, or a right edge in the right half of the
+\                           screen
 \
-\                         * Bits 2-3 = 
+\                         * Bits 2-3 = used for colour V, unless bit 4 is set
 \
-\                         * Bit 4 = 
+\                         * Bit 4 = if set, then set colour V as described above
 \
 \   A                   Same as colourData for all edges except right edge,
 \                       when it's 0
@@ -7328,6 +7333,7 @@ ENDIF
 \   Y                   Edge type:
 \
 \                         * 0 = second or third edge in a four-edge object part
+\                               (a "middle edge")
 \
 \                         * 1 = left edge
 \
@@ -7335,11 +7341,17 @@ ENDIF
 \
 \   H                   Physical colour 0 from the colourPalette palette
 \
-\   UU                  
+\   UU                  The value of UU from the end of the previous call to
+\                       DrawObjectEdge (i.e. the dash data block number after
+\                       the previous call)
 \
-\   LL                  
+\   NN                  The value of xObject + rightEdge / 2 from the end of the
+\                       previous call to DrawObjectEdge (i.e. the pixel
+\                       x-coordinate of the right edge in the previous call)
 \
-\   NN                  
+\   LL                  The value of NN / 4 from the end of the previous call to
+\                       DrawObjectEdge (i.e. the character column of the right
+\                       edge in the previous call)
 \
 \   L0048               0 on first call, gets shifted to non-zero below
 \
@@ -7349,9 +7361,9 @@ ENDIF
 
 .DrawObjectEdge
 
- STY J                  \ Set J = Y
+ STY J                  \ Set J to the edge type in Y, so we can check it later
 
- LDX H                  \ Set G = H, so G is the physical colour 0 from the
+ LDX H                  \ Set G = H, so G is now the physical colour 0 from the
  STX G                  \ colourPalette palette
 
  AND #3                 \ Set X to bits 0-1 of A
@@ -7360,8 +7372,8 @@ ENDIF
  LDA objectPalette,X    \ Set H to logical colour X from the object palette
  STA H
 
- LDA UU                 \ Set K = UU
- STA K
+ LDA UU                 \ Set K to the value of UU that's left over from the
+ STA K                  \ previous call to DrawObjectEdge
 
  LDA colourData         \ Set X to bits 2-3 of colourData
  AND #%00001100
@@ -7376,12 +7388,26 @@ ENDIF
  STA P                  \ we are going to build the address we need to draw into
                         \ in the dash data
 
+                        \ We now set M and UU according to the edge type:
+                        \
+                        \   * Left edge, set M = xObject + leftEdge / 2
+                        \                    UU = M / 4
+                        \
+                        \   * Middle or right edge, set M = NN
+                        \                               UU = LL
+
  CPY #1                 \ If Y <> 1, jump to draw3
  BNE draw3
 
-                        \ If we get here then Y = 1
+                        \ If we get here then Y = 1, so we are drawing the left
+                        \ edge
 
- LDA M                  \ Set A = M
+ LDA M                  \ Set A to the scaled scaffold measurement for the left
+                        \ edge, which was passed to the routine in M (let's call
+                        \ it leftEdge)
+
+                        \ We now set A = A / 2, retaining the sign in A and
+                        \ rounding towards zero
 
  BPL draw1              \ If A is positive, jump to draw1
 
@@ -7399,19 +7425,20 @@ ENDIF
 
 .draw2
 
- CLC                    \ Set M = A + L0035
- ADC L0035              \       = M / 2 + L0035
+ CLC                    \ Set M = A + xObject
+ ADC xObject            \       = leftEdge / 2 + xObject
  STA M
 
  LSR A                  \ Set UU = A / 4
- LSR A                  \        = (M / 2 + L0035) / 4
+ LSR A                  \        = M / 4
  STA UU
 
  JMP draw4              \ Jump to draw4
 
 .draw3
 
-                        \ We jump here if Y <> 1
+                        \ We jump here if Y <> 1, i.e. Y = 0 or 2, so we are
+                        \ either drawing a middle edge or the right edge
 
  LDA LL                 \ Set UU = LL
  STA UU
@@ -7424,9 +7451,18 @@ ENDIF
 
 .draw4
 
-                        \ If we get here then Y = 0 or 1
+                        \ We have now set M and UU according to the edge type, so
+                        \ now we set NN and LL as follows:
+                        \
+                        \   NN = xObject + rightEdge / 2
+                        \   LL = NN / 4
 
- LDA SS                 \ Set A = SS
+ LDA SS                 \ Set A to the scaled scaffold measurement for the right
+                        \ edge, which was passed to the routine in SS (let's
+                        \ call it rightEdge)
+
+                        \ We now set A = A / 2, retaining the sign in A and
+                        \ rounding towards zero
 
  BPL draw5              \ If A is positive, jump to draw5
 
@@ -7444,13 +7480,38 @@ ENDIF
 
 .draw6
 
- CLC                    \ Set NN = A + L0035
- ADC L0035              \        = SS / 2 + L0035
+ CLC                    \ Set NN = A + xObject
+ ADC xObject            \        = rightEdge / 2 + xObject
  STA NN
 
  LSR A                  \ Set LL = A / 4
- LSR A                  \        = (SS / 2 + L0035) / 4
+ LSR A                  \        = NN / 4
  STA LL
+
+                        \ By this point we have:
+                        \
+                        \   * Left edge, set M = xObject + leftEdge / 2
+                        \                    UU = M / 4
+                        \
+                        \   * Middle or right edge, set M = NN
+                        \                               UU = LL
+                        \
+                        \ and we also have the following:
+                        \
+                        \   NN = xObject + rightEdge / 2
+                        \   LL = NN / 4
+                        \
+                        \ So:
+                        \
+                        \   * M contains the pixel x-coordinate of the edge to
+                        \     draw
+                        \
+                        \   * UU contains the dash data block number for the
+                        \     edge (as each dash data block takes is four pixels
+                        \     wide)
+                        \
+                        \   * NN and LL contain the pixel x-coordinate and dash
+                        \     data block number of the right edge
 
 \ ******************************************************************************
 \
@@ -7463,10 +7524,13 @@ ENDIF
 
 .draw7
 
- LDA UU                 \ Set A = UU
+ LDA UU                 \ Set A to the dash data block number for the edge to
+                        \ draw, which we stored in UU in part 1
 
- CMP #20                \ If UU >= 20, set bit 0 of T, otherwise clear it
- ROL T
+ CMP #20                \ If UU >= 20, set bit 0 of T, otherwise clear it, so
+ ROL T                  \ bit 0 of T is clear if the edge is in the left half
+                        \ of the screen, and set if the edge is in the right
+                        \ half
 
  LSR A                  \ Set (A P) = (A P) >> 1
  ROR P                  \           = (UU 0) >> 1
@@ -7502,10 +7566,12 @@ ENDIF
  LDX UU                 \ Set X to the dash data block number in UU
 
  CPX #40                \ If UU < 40 then UU is a valid dash data block number
- BCC draw8              \ in the range 0 to 29, so jump to draw8
+ BCC draw8              \ in the range 0 to 39, so jump to draw8 to keep going
 
- JMP draw32             \ Otherwise UU is not a valid dash data block number, so
-                        \ jump to draw32
+ JMP draw32             \ Otherwise UU is not a valid dash data block number and
+                        \ is off the right edge of the screen, so jump to draw32
+                        \ to draw the object all the way to the right edge of
+                        \ the screen
 
 .draw8
 
@@ -7517,38 +7583,75 @@ ENDIF
 
  LDA dashDataOffset,X   \ Set A to the dash data offset for our dash data block,
                         \ so it points to the first byte of the block's dash
-                        \ data
+                        \ data (i.e. the lowest byte of the dash data block
+                        \ on-screen)
 
 .draw9
 
- STA RR                 \ Set RR = A
+ STA RR                 \ Set RR = A, so RR contains the bottom track line of
+                        \ the edge we want to draw
 
- CMP topTrackLine       \ If A < topTrackLine, jump to draw11
- BCC draw11
+ CMP topTrackLine       \ If A < topTrackLine, then the track lines are the
+ BCC draw11             \ right way around, so jump to draw11 to keep going in
+                        \ part 3
 
- CPY #1                 \ If Y <> 1, jump to draw29 via draw10
- BNE draw10
+ CPY #1                 \ If Y <> 1, then we are drawing either a middle or
+ BNE draw10             \ right edge, so jump to draw29 via draw10 to check
+                        \ whether we need to draw any more of the object
 
-                        \ If we get here then A >= topTrackLine and Y = 1
+                        \ If we get here then A >= topTrackLine and Y = 1, so
+                        \ we are drawing the left edge and the bottom track line
+                        \ is higher than the top track line, which means there
+                        \ is nothing to draw, so we return from the subroutine
 
  RTS                    \ Return from the subroutine
 
 .draw10
 
- JMP draw29             \ Jump to draw29
+ JMP draw29             \ Jump to draw29 to check whether we need to draw any
+                        \ more of the object, as we are drawing either a middle
+                        \ or right edge, but there is nothing to draw
+
+\ ******************************************************************************
+\
+\       Name: DrawObjectEdge (Part 3 of )
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ******************************************************************************
 
 .draw11
 
- LDA colourData         \ If bit 4 of colourData is clear, jump to draw12
- AND #%00010000
+ LDA colourData         \ If bit 4 of colourData is clear, jump to draw12 to
+ AND #%00010000         \ keep the colour we set in V at the start of part 1
  BEQ draw12
 
- TYA                    \ If Y = 0, jump to draw12
- BEQ draw12
+ TYA                    \ If Y = 0, then we are drawing a middle edge, so jump
+ BEQ draw12             \ to draw12 to keep the colour we set in V at the start
+                        \ of part 1
 
- EOR T                  \ If bit 0 of Y = bit 0 of T, jump to draw12
+ EOR T                  \ Set A = bit 0 of Y EOR bit 0 of T
  AND #1
- BEQ draw12
+
+ BEQ draw12             \ If A = 0, then one of the following is true:
+                        \
+                        \   * Y = 2 (%10) and bit 0 of T = 0, in which case we
+                        \     are drawing a right edge in the left half of the
+                        \     screen
+                        \
+                        \   * Y = 1 (%01) and bit 0 of T = 1, in which case we
+                        \     are drawing a left edge in the right half of the
+                        \     screen
+                        \
+                        \ In either case, jump to draw12 to keep the colour we
+                        \ set in V at the start of part 1
+
+                        \ If we get here then bit 4 of colourData is set, and we
+                        \ are either drawing a left edge in the left half of the
+                        \ screen, or a right edge in the right half of the
+                        \ screen, so we set V to the logical colour in bits 0-1
+                        \ of colourData
 
  LDA colourData         \ Set X to bits 0-1 of colourData
  AND #%00000011
@@ -7559,32 +7662,51 @@ ENDIF
 
 .draw12
 
- LDA M
- AND #%00000011
- TAX
- LDA yLookupLo+8,X
- EOR #&FF
- AND V
- STA V
- CPY #1
- BCS draw16
+ LDA M                  \ Set A to M, which contains the pixel x-coordinate of
+                        \ the edge to draw
+
+ AND #3                 \ Set X = A mod 4, which is the number of the pixel
+ TAX                    \ within the four-pixel byte
+
+ LDA yLookupLo+8,X      \ Set A to the X-th bit mask from yLookupLo+8, which is
+                        \ a pixel byte with the X-th pixel clear
+
+ EOR #&FF               \ Invert A so it contains a pixel byte with only the
+                        \ X-th pixel set
+
+ AND V                  \ Apply the bit mask to the colour in V, so V now
+ STA V                  \ contains a pixel byte with the X-th pixel set to
+                        \ colour V
+
+ CPY #1                 \ If Y >= 1, then we are drawing a left or right edge,
+ BCS draw16             \ so jump to draw16
+
+                        \ if we get here then we are drawing a middle edge as
+                        \ part of a four-edge object part
+
  LDA leftEdgePixels,X
  AND G
  STA T
+
  LDA H
  AND rightEdgePixels,X
  ORA T
  AND yLookupLo+8,X
  ORA V
  STA I
+
  LDA L0048
  BEQ draw13
+
  LDA #0
  STA L0048
+
  LDA KK
  STA L
+
  EOR #&FF
  AND I
+
  JMP draw17
 
 .draw13
@@ -7592,6 +7714,7 @@ ENDIF
  LDX UU
  CPX LL
  BNE draw14
+
  LDA I
  STA H
  JMP draw29
@@ -7600,6 +7723,7 @@ ENDIF
 
  LDA I
  BNE draw15
+
  LDA #&55
 
 .draw15
@@ -7609,6 +7733,9 @@ ENDIF
  JMP EdgeLoop
 
 .draw16
+
+                        \ If we get here then we are drawing either a right or
+                        \ left edge
 
  BNE draw18
  LDA leftEdgePixels,X
@@ -7704,7 +7831,17 @@ IF _ACORNSOFT
 
 .draw27
 
- LDX &3000,Y
+ LDX &3000,Y            \ 
+                        \
+                        \ Gets modified at the start of part 2 as follows:
+                        \
+                        \   LDX &3000,Y -> LDX #(Q P),Y
+                        \
+                        \ In other words, we have modified the instruction to
+                        \ load the Y-th byte from the dash data block address
+                        \ for the edge we are drawing, i.e. load the Y-th byte
+                        \ of dash data block UU
+
  BEQ draw26
  TXA
 
@@ -7720,11 +7857,12 @@ IF _ACORNSOFT
  LDA W
  STA (P),Y
 
- LDX J
- CPX #1
- BEQ draw31
- INC UU
- JSR DrawEdge
+ LDX J                  \ If the edge type in J = 1, then we are drawing the
+ CPX #1                 \ left edge, so jump to draw31 to return from the
+ BEQ draw31             \ subroutine
+
+ INC UU                 \ Otherwise draw the edge in the next dash data block to
+ JSR DrawEdge           \ the right
  DEC UU
 
 ELIF _SUPERIOR
@@ -7780,19 +7918,28 @@ ELIF _SUPERIOR
 
 ENDIF
 
+\ ******************************************************************************
+\
+\       Name: DrawObjectEdge (Part 4 of )
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ******************************************************************************
+
 .draw29
 
  LDA K                  \ If K < 40, jump to draw30 to skip the following
  CMP #40                \ instruction
  BCC draw30
 
- LDA #&FF               \ K >= 40, so set K = -1
- STA K
+ LDA #&FF               \ K >= 40, so set K = -1, so the following subtraction
+ STA K                  \ becomes A = UU - -1 - 1 = UU
 
 .draw30
 
- LDA UU                 \ Set A = UU - K
- CLC
+ LDA UU                 \ Set A = UU - K - (1 - C)
+ CLC                    \       = UU - K - 1
  SBC K
 
  BEQ draw31             \ If A <= 0, jump to draw31 to return from the
@@ -7800,7 +7947,7 @@ ENDIF
 
  TAX                    \ Set X = A
 
- JSR sub_C1E38          \ ???
+ JSR sub_C1E38          \ ??? Some kind of fill or blanking routine?
 
 .draw31
 
@@ -7810,16 +7957,22 @@ ENDIF
 
                         \ We jump here if the block number in UU is >= 40
 
- LDY J                  \ If J = 1, jump to draw31 to return from the
- CPY #1                 \ subroutine
- BEQ draw31
+ LDY J                  \ If the edge type in J = 1, then we are drawing the
+ CPY #1                 \ left edge, so jump to draw31 to return from the
+ BEQ draw31             \ subroutine as the left edge is past the right edge
+                        \ of the screen
 
- LDA K                  \ If K >= 40, jump to draw31 to return from the
- CMP #&28               \ subroutine
- BCS draw31
+ LDA K                  \ If K >= 40, then the dash data block number from the
+ CMP #40                \ previous call to DrawObjectEdge is also past the right
+ BCS draw31             \ edge of the screen, so jump to draw31 to return from
+                        \ the subroutine
 
- LDA #40                \ Set UU = 40
- STA UU
+                        \ Otherwise we are drawing a middle or right edge and
+                        \ the previous call to DrawObjectEdge was on-screen, so
+                        \ we may need to fill to the right of the previous edge
+
+ LDA #40                \ Set UU = 40 to use in the calculation at draw30 above,
+ STA UU                 \ which decides whether to call sub_C1E38
 
  BNE draw30             \ Jump to draw30 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -7835,9 +7988,9 @@ ENDIF
 \
 \ Arguments:
 \
-\   UU                  Dash data block number
+\   UU                  The dash data block number to draw in
 \
-\   RR                  Dash data offset for block UU
+\   RR                  The dash data offset for block UU
 \
 \   topTrackLine        Top track line number, i.e. the number of the start byte
 \                       in the dash data block
@@ -7846,8 +7999,6 @@ ENDIF
 \
 \   DrawEdge-9          Modify the routine before running, as shown in the
 \                       first few comments below
-\
-\   EdgeLoop
 \
 \ ******************************************************************************
 
@@ -8036,17 +8187,6 @@ IF _ACORNSOFT
 
  RTS
 
-.edge13
-
- STA (P),Y
- DEY
-
-.EdgeLoop
-
- CPY RR
- BNE edge13
- JMP draw29
-
 ENDIF
 
 \ ******************************************************************************
@@ -8070,8 +8210,6 @@ ENDIF
 \
 \   DrawEdge-9          Modify the routine before running, as shown in the
 \                       first few comments below
-\
-\   EdgeLoop
 \
 \ ******************************************************************************
 
@@ -8214,7 +8352,22 @@ IF _SUPERIOR
 
  RTS
 
-.sedg11
+ENDIF
+
+\ ******************************************************************************
+\
+\       Name: EdgeLoop
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.edlp1
 
  STA (P),Y
  DEY
@@ -8222,10 +8375,8 @@ IF _SUPERIOR
 .EdgeLoop
 
  CPY RR
- BNE sedg11
+ BNE edlp1
  JMP draw29
-
-ENDIF
 
 \ ******************************************************************************
 \
@@ -11934,8 +12085,8 @@ ENDIF
  ASL T
  ROL A
  CLC
- ADC #&50
- STA L0035
+ ADC #80
+ STA xObject
  LDA L03B0,X
  STA yObject
  LDA L03C8,X
@@ -18023,7 +18174,7 @@ ENDIF
 \
 \ For character rows 8 to 15, the table is reused, as these locations would
 \ point to the blue sky, and we don't draw in the sky as it contains working
-\ game code. Instead, the lookup table at yLookupLo+8 contains bitmasks for use
+\ game code. Instead, the lookup table at yLookupLo+8 contains bit masks for use
 \ in the line-drawing routine at DrawDashboardLine.
 \
 \ ******************************************************************************
@@ -23351,7 +23502,7 @@ ENDIF
                         \ get the starting pixel to pass to DrawDashboardLine
 
  LDA #%100              \ Set H = %100, so the DrawDashboardLine looks up values
- STA H                  \ from the second half of the pixelByte and yLookup+8
+ STA H                  \ from the second half of the pixelByte and yLookupLo+8
                         \ tables (so the line is drawn on black rather than
                         \ white)
 
@@ -23646,8 +23797,8 @@ ENDIF
 \                         * A value from wheelPixels when drawing the steering
 \                           wheel line (38 to 53)
 \
-\   H                   The starting index to use in the pixelByte and yLookup+8
-\                       lookup tables:
+\   H                   The starting index to use in the pixelByte and
+\                       yLookupLo+8 lookup tables:
 \
 \                         * %000 when drawing the rev counter hand, so the line
 \                           gets drawn in white
@@ -23863,9 +24014,9 @@ ENDIF
                         \ (0 to 3) of the pixel to draw, plus 4 if this is the
                         \ steering wheel (4 to 7)
 
- AND yLookupLo+8,X      \ Apply the bit mask from yLookup+8, so this clears the
-                        \ X-th pixel in the pixel row (the table contains the
-                        \ same bytes in 0 to 3 as in 0 to 7)
+ AND yLookupLo+8,X      \ Apply the bit mask from yLookupLo+8, so this clears
+                        \ the X-th pixel in the pixel row (the table contains
+                        \ the same bytes in 0 to 3 as in 0 to 7)
 
  ORA pixelByte,X        \ OR with a pixel byte with pixel X set, so this sets
                         \ the X-th pixel to colour 2 (white) if X is 0 to 3, or
