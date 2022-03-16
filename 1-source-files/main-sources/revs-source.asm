@@ -13190,6 +13190,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Index of the mask and pixel bytes for the tyre edges on a specific
 \             track line
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13971,6 +13972,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixels along the left edge of the dashboard
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14079,6 +14081,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixels along the right edge of the dashboard
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14604,6 +14607,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixels along the edge of the left tyre
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14763,6 +14767,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixels along the edge of the right tyre
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14899,6 +14904,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixel mask for the edge of the left tyre
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15058,6 +15064,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixel mask for the edge of the right tyre
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15660,6 +15667,7 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Pixel mask for the left edge of the dashboard
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15816,6 +15824,7 @@ ENDIF
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Pixel mask for the right edge of the dashboard
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28370,6 +28379,7 @@ ORG &7B00
 \   Category: Graphics
 \    Summary: Revert all the code modifications made by the DrawTrackView
 \             routine
+\  Deep dive: Drawing around the dashboard
 \
 \ ******************************************************************************
 
@@ -28426,6 +28436,7 @@ ORG &7B00
 \   Category: Graphics
 \    Summary: Draw the top part of the track view using the data in the dash
 \             data blocks
+\  Deep dive: Drawing around the dashboard
 \
 \ ******************************************************************************
 
@@ -28459,6 +28470,7 @@ ORG &7B00
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw a pixel line across the screen in the track view
+\  Deep dive: Drawing around the dashboard
 \
 \ ******************************************************************************
 
@@ -28601,6 +28613,7 @@ ENDMACRO
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the pixel bytes that make up the track view (0 to 15)
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28643,6 +28656,7 @@ ENDMACRO
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the part of the track view that fits around the dashboard
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28679,7 +28693,7 @@ ENDMACRO
 
  LDY staDrawByte,X      \ Set Y to the X-th entry in staDrawByte, which contains
                         \ the low byte of the address of the STA (P),Y
-                        \ instruction in the DRAW_STRIPE macro given in the
+                        \ instruction in the DRAW_BYTE macro given in the
                         \ table
 
  CPY view3+1            \ If the instruction at view3 has already been modified
@@ -28699,7 +28713,7 @@ ENDMACRO
  STY view4+1            \ Modify the instruction at view4 to change the low byte
                         \ of the address to the X-th entry in staDrawByte, so
                         \ the instruction at view4 changes the STA (P),Y
-                        \ instruction to an RTS in the DRAW_STRIPE macro given
+                        \ instruction to an RTS in the DRAW_BYTE macro given
                         \ in staDrawByte
 
  STY view3+1            \ Modify the instruction at view3 to change the low byte
@@ -28717,7 +28731,7 @@ ENDMACRO
 
  LDY ldaDrawByte,X      \ Set Y to the X-th entry in ldaDrawByte, which contains
                         \ the low byte of the LDA #0 instruction in the specific
-                        \ DRAW_STRIPE macro, as given in the table
+                        \ DRAW_BYTE macro, as given in the table
 
  STY view6+1            \ Modify the instruction at view6 to change the low byte
                         \ of the address to the X-th entry in ldaDrawByte, so
@@ -28782,6 +28796,7 @@ ENDMACRO
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the pixel bytes that make up the track view (16 to 39)
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28835,6 +28850,8 @@ ENDMACRO
  DEX                    \ Decrement the dash data pointer in X to move on to the
                         \ next pixel line
 
+                        \ Fall through into DrawTrackLine to draw the next line
+
 \ ******************************************************************************
 \
 \       Name: DrawTrackLine (Part 1 of 2)
@@ -28842,6 +28859,7 @@ ENDMACRO
 \   Category: Graphics
 \    Summary: Draw a pixel line across the screen in the track view, broken up
 \             into bytes
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28904,7 +28922,8 @@ ENDMACRO
 \       Name: DrawTrackBytes (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Return from the subroutine
+\  Deep dive: Drawing around the dashboard
 \
 \ ******************************************************************************
 
@@ -28919,6 +28938,7 @@ ENDMACRO
 \   Category: Graphics
 \    Summary: Draw the part of the track view that fits around the dashboard and
 \             tyres
+\  Deep dive: Drawing around the dashboard
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28943,7 +28963,7 @@ ENDMACRO
 
  LDY staDrawByte,X      \ Set Y to the X-th entry in staDrawByte, which contains
                         \ the low byte of the address of the STA (P),Y
-                        \ instruction in the DRAW_STRIPE macro given in the
+                        \ instruction in the DRAW_BYTE macro given in the
                         \ table
 
  CPY view8+1            \ If the instruction at view8 has already been modified
@@ -28963,7 +28983,7 @@ ENDMACRO
  STY view9+1            \ Modify the instruction at view9 to change the low byte
                         \ of the address to the X-th entry in staDrawByte, so
                         \ the instruction at view9 changes the STA (P),Y
-                        \ instruction to an RTS in the DRAW_STRIPE macro given
+                        \ instruction to an RTS in the DRAW_BYTE macro given
                         \ in staDrawByte
 
  STY view8+1            \ Modify the instruction at view8 to change the low byte
@@ -29117,7 +29137,7 @@ ENDMACRO
 
  LDY staDrawByteTyre,X  \ Set Y to the X-th entry in staDrawByteTyre, which
                         \ contains the low byte of the address of the STA (P),Y
-                        \ instruction in the DRAW_STRIPE macro given in the
+                        \ instruction in the DRAW_BYTE macro given in the
                         \ table
 
  CPY view14+1           \ If the instruction at view14 has already been modified
@@ -29137,13 +29157,13 @@ ENDMACRO
  STY view15+1           \ Modify the instruction at view15 to change the low
                         \ byte of the address to the X-th entry in
                         \ staDrawByteTyre, so the instruction at view15 changes
-                        \ the STA (P),Y instruction to an RTS in the DRAW_STRIPE
+                        \ the STA (P),Y instruction to an RTS in the DRAW_BYTE
                         \ macro given in staDrawByteTyre
 
  STY view14+1           \ Modify the instruction at view14 to change the low
                         \ byte of the address to the X-th entry in
                         \ staDrawByteTyre, so the instruction at view14 changes
-                        \ the STA (P),Y instruction to an RTS in the DRAW_STRIPE
+                        \ the STA (P),Y instruction to an RTS in the DRAW_BYTE
                         \ macro given in staDrawByteTyre
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
@@ -29158,7 +29178,7 @@ ENDMACRO
 
  LDY ldaDrawByte,X      \ Set Y to the X-th entry in ldaDrawByte, which contains
                         \ the low byte of the LDA #0 instruction in the specific
-                        \ DRAW_STRIPE macro, as given in the table
+                        \ DRAW_BYTE macro, as given in the table
 
  STY view17+1           \ Modify the instruction at view17 to change the low
                         \ byte of the address to the X-th entry in ldaDrawByte,
