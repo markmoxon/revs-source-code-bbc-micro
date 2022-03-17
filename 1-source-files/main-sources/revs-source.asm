@@ -499,9 +499,17 @@ ORG &0000
 
  SKIP 1                 \ The bottom track line for the current object part
 
-.L0048
+.startEdge
 
- SKIP 1                 \ 
+ SKIP 1                 \ Determines whether we are drawing an edge at the start
+                        \ of a fill, i.e. a left edge, or the third edge in a
+                        \ four-edge object part
+                        \
+                        \   * 0 = this edge is at the start of a fill (i.e. left
+                        \         or third edge)
+                        \
+                        \   * Non-zero = this edge is at the end of a fill
+                        \     (i.e. right, second or fourth edge)
 
 .L0049
 
@@ -769,9 +777,10 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
-.leftEdge
+.thisEdge
 
- SKIP 0                 \ Left edge the current object part
+ SKIP 0                 \ The current edge that we are drawing as part of an
+                        \ object part
 
 .M
 
@@ -793,9 +802,18 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
+.blockOffset
+
+ SKIP 0                 \ The dash data offset for the current edge
+
 .RR
 
  SKIP 1                 \ Temporary storage, used in a number of places
+
+.nextEdge
+
+ SKIP 0                 \ The next edge that we are drawing as part of an
+                        \ object part (where applicable)
 
 .SS
 
@@ -808,6 +826,10 @@ ORG &0000
 .TT
 
  SKIP 1                 \ Temporary storage, used in a number of places
+
+.blockNumber
+
+ SKIP 0                 \ The dash data block number for the current edge
 
 .UU
 
@@ -841,6 +863,10 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
+.nextBlockNumber
+
+ SKIP 0                 \ The dash data block number for the next edge
+
 .LL
 
  SKIP 1                 \ Temporary storage, used in a number of places
@@ -848,6 +874,10 @@ ORG &0000
 .MM
 
  SKIP 1                 \ Temporary storage, used in a number of places
+
+.nextEdgeCoord
+
+ SKIP 0                 \ The x-coordinate for the next edge
 
 .NN
 
@@ -7292,7 +7322,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectEdge (Part 1 of )
+\       Name: DrawObjectEdge (Part 1 of 5)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the specified edge of an object part
@@ -7306,9 +7336,9 @@ ENDIF
 \   bottomTrackLine     Bottom track line of the edge (0 to 79)
 \                       bottomTrackLine < topTrackLine
 \
-\   M                   Left edge (as a scaled scaffold measurement)
+\   thisEdge            This edge (as a scaled scaffold measurement)
 \
-\   SS                  Right edge (as a scaled scaffold measurement)
+\   nextEdge            The next edge (as a scaled scaffold measurement)
 \
 \   xObject             The x-coordinate of the centre of the object
 \
@@ -7323,12 +7353,7 @@ ENDIF
 \
 \                         * Bit 4 = if set, then set colour V as described above
 \
-\   A                   Same as colourData for all edges except right edge,
-\                       when it's 0
-\
-\                         * 0 = sets H to colour 0
-\
-\                         * Non-zero = sets H to bits 0-1 of A
+\   A                   Set H = bits 0-1 of A
 \
 \   Y                   Edge type:
 \
@@ -7339,23 +7364,55 @@ ENDIF
 \
 \                         * 2 = right edge
 \
-\   H                   Physical colour 0 from the colourPalette palette
+\   H                   The fill colour of the object on first call (for the
+\                       left edge), gets set to the pixel byte of the edge
+\                       that's drawn
 \
-\   UU                  The value of UU from the end of the previous call to
-\                       DrawObjectEdge (i.e. the dash data block number after
-\                       the previous call)
+\   blockNumber         For middle or right edges only: the dash data block
+\                       number of the previous edge drawn by DrawObjectEdge
 \
-\   NN                  The value of xObject + rightEdge / 2 from the end of the
-\                       previous call to DrawObjectEdge (i.e. the pixel
-\                       x-coordinate of the right edge in the previous call)
+\   nextEdgeCoord       For middle or right edges only: the pixel x-coordinate
+\                       of the edge to draw (as returned by the previous call to
+\                       DrawObjectEdge)
 \
-\   LL                  The value of NN / 4 from the end of the previous call to
-\                       DrawObjectEdge (i.e. the character column of the right
-\                       edge in the previous call)
+\   nextBlockNumber     For middle or right edges only: the data block number of
+\                       the edge to draw (returned by the previous call to
+\                       DrawObjectEdge)
 \
-\   L0048               0 on first call, gets shifted to non-zero below
+\   startEdge           Determines whether this edge is the start of a filled
+\                       object:
 \
-\   KK                  0 on first call
+\                         * 0 = this edge forms the start of a filled object
+\                               part
+\
+\                         * Non-zero = this edge does not form the start of a
+\                                      filled object part
+\
+\   KK                  For middle or right edges only: the left edge pixel mask
+\                       of the edge that was drawn previously (as returned by
+\                       the previous call to DrawObjectEdge)
+\
+\ Returns:
+\
+\   blockNumber         The dash data block number that was drawn into
+\
+\   H                   The pixel byte of the edge that was drawn, so for edges
+\                       that start a fill, this contains the colour behind the
+\                       left edge of the object
+\
+\   KK                  The left edge pixel mask of the edge that was drawn
+\
+\   nextEdgeCoord       The pixel x-coordinate for the next edge
+\
+\   nextBlockNumber     The dash data block number for the next edge
+\
+\   startEdge           The correct setting for the next edge:
+\
+\                         * 0 if we just drew a second edge in a four-edge
+\                           object part, so the third edge is the start of a
+\                           fill (i.e. fill between the third and fourth edges)
+\
+\                         * Non-zero (bit 7 is set) otherwise
 \
 \ ******************************************************************************
 
@@ -7363,17 +7420,17 @@ ENDIF
 
  STY J                  \ Set J to the edge type in Y, so we can check it later
 
- LDX H                  \ Set G = H, so G is now the physical colour 0 from the
- STX G                  \ colourPalette palette
+ LDX H                  \ Set G = H, so G is now the pixel byte of the edge that
+ STX G                  \ was drawn on the previous call to DrawObjectEdge
 
- AND #3                 \ Set X to bits 0-1 of A
- TAX
+ AND #3                 \ Set X to bits 0-1 of A, which is the logical number of
+ TAX                    \ the fill colour of the object
 
- LDA objectPalette,X    \ Set H to logical colour X from the object palette
- STA H
+ LDA objectPalette,X    \ Set H to logical colour X from the object palette, as
+ STA H                  \ the physical colour of the object's fill
 
- LDA UU                 \ Set K to the value of UU that's left over from the
- STA K                  \ previous call to DrawObjectEdge
+ LDA blockNumber        \ Set K to the dash data block number that's left over
+ STA K                  \ from the previous call to DrawObjectEdge
 
  LDA colourData         \ Set X to bits 2-3 of colourData
  AND #%00001100
@@ -7381,20 +7438,23 @@ ENDIF
  LSR A
  TAX
 
- LDA objectPalette,X    \ Set V to logical colour X from the object palette
- STA V
+ LDA objectPalette,X    \ Set V to logical colour X from the object palette, to
+ STA V                  \ use as the draw colour for the edge
 
  LDA #0                 \ Set P = 0, for use as the low byte of (Q P), in which
  STA P                  \ we are going to build the address we need to draw into
                         \ in the dash data
 
-                        \ We now set M and UU according to the edge type:
+                        \ We now set thisEdge and blockNumber according to the
+                        \ edge type:
                         \
-                        \   * Left edge, set M = xObject + leftEdge / 2
-                        \                    UU = M / 4
+                        \   * Left edge, set:
+                        \       thisEdge = xObject + thisEdge / 2
+                        \       blockNumber = thisEdge / 4
                         \
-                        \   * Middle or right edge, set M = NN
-                        \                               UU = LL
+                        \   * Middle or right edge, set:
+                        \       thisEdge = nextEdgeCoord
+                        \       blockNumber = blockNumberForNext
 
  CPY #1                 \ If Y <> 1, jump to draw3
  BNE draw3
@@ -7402,9 +7462,8 @@ ENDIF
                         \ If we get here then Y = 1, so we are drawing the left
                         \ edge
 
- LDA M                  \ Set A to the scaled scaffold measurement for the left
-                        \ edge, which was passed to the routine in M (let's call
-                        \ it leftEdge)
+ LDA thisEdge           \ Set A to the scaled scaffold measurement for the left
+                        \ edge, which was passed to the routine in thisEdge
 
                         \ We now set A = A / 2, retaining the sign in A and
                         \ rounding towards zero
@@ -7425,13 +7484,13 @@ ENDIF
 
 .draw2
 
- CLC                    \ Set M = A + xObject
- ADC xObject            \       = leftEdge / 2 + xObject
- STA M
+ CLC                    \ Set thisEdge = A + xObject
+ ADC xObject            \              = thisEdge / 2 + xObject
+ STA thisEdge
 
- LSR A                  \ Set UU = A / 4
- LSR A                  \        = M / 4
- STA UU
+ LSR A                  \ Set blockNumber = A / 4
+ LSR A                  \        = thisEdge / 4
+ STA blockNumber
 
  JMP draw4              \ Jump to draw4
 
@@ -7440,26 +7499,26 @@ ENDIF
                         \ We jump here if Y <> 1, i.e. Y = 0 or 2, so we are
                         \ either drawing a middle edge or the right edge
 
- LDA LL                 \ Set UU = LL
- STA UU
+ LDA nextBlockNumber    \ Set blockNumber = blockNumberForNext
+ STA blockNumber
 
- LDA NN                 \ Set M = NN
- STA M
+ LDA nextEdgeCoord      \ Set thisEdge = nextEdgeCoord
+ STA thisEdge
 
  CPY #0                 \ If Y <> 0, jump to draw7
  BNE draw7
 
 .draw4
 
-                        \ We have now set M and UU according to the edge type, so
-                        \ now we set NN and LL as follows:
+                        \ We have now set thisEdge and blockNumber according to
+                        \ the edge type, so now we set nextEdgeCoord and
+                        \ nextBlockNumber as follows:
                         \
-                        \   NN = xObject + rightEdge / 2
-                        \   LL = NN / 4
+                        \   nextEdgeCoord = xObject + nextEdge / 2
+                        \   nextBlockNumber = nextEdgeCoord / 4
 
- LDA SS                 \ Set A to the scaled scaffold measurement for the right
-                        \ edge, which was passed to the routine in SS (let's
-                        \ call it rightEdge)
+ LDA nextEdge           \ Set A to the scaled scaffold measurement for the next
+                        \ edge
 
                         \ We now set A = A / 2, retaining the sign in A and
                         \ rounding towards zero
@@ -7480,62 +7539,65 @@ ENDIF
 
 .draw6
 
- CLC                    \ Set NN = A + xObject
- ADC xObject            \        = rightEdge / 2 + xObject
- STA NN
+ CLC                    \ Set nextEdgeCoord = A + xObject
+ ADC xObject            \        = nextEdge / 2 + xObject
+ STA nextEdgeCoord
 
- LSR A                  \ Set LL = A / 4
- LSR A                  \        = NN / 4
- STA LL
+ LSR A                  \ Set nextBlockNumber = A / 4
+ LSR A                  \        = nextEdgeCoord / 4
+ STA nextBlockNumber
 
                         \ By this point we have:
                         \
-                        \   * Left edge, set M = xObject + leftEdge / 2
-                        \                    UU = M / 4
+                        \   * Left edge:
+                        \       thisEdge = xObject + thisEdge / 2
+                        \       blockNumber = thisEdge / 4
                         \
-                        \   * Middle or right edge, set M = NN
-                        \                               UU = LL
+                        \   * Middle or right edge:
+                        \       thisEdge = nextEdgeCoord
+                        \       blockNumber = blockNumberForNext
                         \
                         \ and we also have the following:
                         \
-                        \   NN = xObject + rightEdge / 2
-                        \   LL = NN / 4
+                        \   nextEdgeCoord = xObject + nextEdge / 2
+                        \   nextBlockNumber = nextEdgeCoord / 4
                         \
                         \ So:
                         \
-                        \   * M contains the pixel x-coordinate of the edge to
-                        \     draw
+                        \   * thisEdge contains the pixel x-coordinate of the
+                        \     edge to draw
                         \
-                        \   * UU contains the dash data block number for the
-                        \     edge (as each dash data block takes is four pixels
-                        \     wide)
+                        \   * blockNumber contains the dash data block number
+                        \     for the edge to draw (as each dash data block is
+                        \     four pixels wide)
                         \
-                        \   * NN and LL contain the pixel x-coordinate and dash
-                        \     data block number of the right edge
+                        \   * nextEdgeCoord and nextBlockNumber contain the pixel
+                        \     x-coordinate and dash data block number of the
+                        \     next edge
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectEdge (Part 2 of )
+\       Name: DrawObjectEdge (Part 2 of 5)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Calculate the screen address for the edge to draw
 \
 \ ******************************************************************************
 
 .draw7
 
- LDA UU                 \ Set A to the dash data block number for the edge to
-                        \ draw, which we stored in UU in part 1
+ LDA blockNumber        \ Set A to the dash data block number for the edge to
+                        \ draw, which we stored in blockNumber in part 1
 
- CMP #20                \ If UU >= 20, set bit 0 of T, otherwise clear it, so
- ROL T                  \ bit 0 of T is clear if the edge is in the left half
-                        \ of the screen, and set if the edge is in the right
-                        \ half
+ CMP #20                \ If blockNumber >= 20, set bit 0 of T, otherwise clear
+ ROL T                  \ it, so bit 0 of T is clear if the edge is in the left
+                        \ half of the screen, and set if the edge is in the
+                        \ right half
 
  LSR A                  \ Set (A P) = (A P) >> 1
- ROR P                  \           = (UU 0) >> 1
-                        \           = UU * 128
-                        \           = UU * &80
+ ROR P                  \           = (blockNumber 0) >> 1
+                        \           = blockNumber * 128
+                        \           = blockNumber * &80
 
  CLC                    \ Set (Q P) = (A P) + dashData
  ADC #HI(dashData)      \
@@ -7544,9 +7606,9 @@ ENDIF
 
                         \ So we now have:
                         \
-                        \   (Q P) = dashData + UU * &80
+                        \   (Q P) = dashData + blockNumber * &80
                         \
-                        \ which is the start address of dash data block UU,
+                        \ which is the start address of the dash data block,
                         \ because the dash data blocks occur every &80 bytes
                         \ from dashData
 
@@ -7559,23 +7621,28 @@ IF _ACORNSOFT
                         \ This is pseudo-code, but it means we have modified the
                         \ instruction to load the Y-th byte from the dash data
                         \ block address we just calculated, i.e. load the Y-th
-                        \ byte of dash data block UU
+                        \ byte of the dash data block for the edge to draw
 
 ENDIF
 
- LDX UU                 \ Set X to the dash data block number in UU
+ LDX blockNumber        \ Set X to the dash data block number for the edge to
+                        \ draw
 
- CPX #40                \ If UU < 40 then UU is a valid dash data block number
- BCC draw8              \ in the range 0 to 39, so jump to draw8 to keep going
+ CPX #40                \ If blockNumber < 40 then blockNumber is a valid dash
+ BCC draw8              \ data block number in the range 0 to 39, so jump to
+                        \ draw8 to keep going
 
- JMP draw32             \ Otherwise UU is not a valid dash data block number and
-                        \ is off the right edge of the screen, so jump to draw32
-                        \ to draw the object all the way to the right edge of
-                        \ the screen
+ JMP draw32             \ Otherwise blockNumber is not a valid dash data block
+                        \ number and is off the right edge of the screen, so
+                        \ jump to draw32 to draw the object all the way to the
+                        \ right edge of the screen
 
 .draw8
 
- LDA bottomTrackLine    \ Set A = bottomTrackLine
+ LDA bottomTrackLine    \ Set A = bottomTrackLine, which is the number of the
+                        \ track line at the bottom of the object, which is the
+                        \ same as the offset into the dash data block for the
+                        \ bottom edge
 
  CMP dashDataOffset,X   \ If A >= the dash data offset for our dash data block,
  BCS draw9              \ then A is pointing to dash data, so jump to draw9 to
@@ -7588,8 +7655,9 @@ ENDIF
 
 .draw9
 
- STA RR                 \ Set RR = A, so RR contains the bottom track line of
-                        \ the edge we want to draw
+ STA blockOffset        \ Set blockOffset = A, so blockOffset contains the dash
+                        \ data block offset for the bottom track line of the
+                        \ edge we want to draw
 
  CMP topTrackLine       \ If A < topTrackLine, then the track lines are the
  BCC draw11             \ right way around, so jump to draw11 to keep going in
@@ -7614,10 +7682,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectEdge (Part 3 of )
+\       Name: DrawObjectEdge (Part 3 of 5)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Create a pixel byte for the edge to draw
 \
 \ ******************************************************************************
 
@@ -7662,44 +7730,52 @@ ENDIF
 
 .draw12
 
- LDA M                  \ Set A to M, which contains the pixel x-coordinate of
-                        \ the edge to draw
+ LDA thisEdge           \ Set A to thisEdge, which we updated in part 1 to
+                        \ contain the pixel x-coordinate of the edge to draw
 
  AND #3                 \ Set X = A mod 4, which is the number of the pixel
- TAX                    \ within the four-pixel byte
+ TAX                    \ within the four-pixel byte (i.e. 0 to 3, left to
+                        \ right)
 
- LDA yLookupLo+8,X      \ Set A to the X-th bit mask from yLookupLo+8, which is
-                        \ a pixel byte with the X-th pixel clear
+ LDA yLookupLo+8,X      \ Set A to the X-th pixel mask from yLookupLo+8, which
+                        \ is a pixel byte with the X-th pixel clear
 
  EOR #&FF               \ Invert A so it contains a pixel byte with only the
                         \ X-th pixel set
 
- AND V                  \ Apply the bit mask to the colour in V, so V now
+ AND V                  \ Apply the pixel mask to the colour in V, so V now
  STA V                  \ contains a pixel byte with the X-th pixel set to
                         \ colour V
 
  CPY #1                 \ If Y >= 1, then we are drawing a left or right edge,
  BCS draw16             \ so jump to draw16
 
-                        \ if we get here then we are drawing a middle edge as
+                        \ If we get here then we are drawing a middle edge as
                         \ part of a four-edge object part
 
- LDA leftEdgePixels,X
+ LDA leftEdgePixels,X   \ Set A to the X-th pixel mask from leftEdgePixels,
+                        \ which is a pixel byte with the first X bits set, so
+                        \ that's all the pixels to the left of the X-th pixel
+
  AND G
  STA T
 
  LDA H
- AND rightEdgePixels,X
+ AND middleEdgePixels,X
  ORA T
  AND yLookupLo+8,X
  ORA V
  STA I
 
- LDA L0048
- BEQ draw13
+ LDA startEdge          \ If startEdge = 0 then this edge is at the start of a
+ BEQ draw13             \ fill, so it must be the third edge of a four-edge
+                        \ object part, so jump to draw13
 
- LDA #0
- STA L0048
+                        \ If we get here then we are drawing the second edge of
+                        \ a four-edge object part, which is like a right edge
+
+ LDA #0                 \ Set startEdge = 0, ready for the next call to
+ STA startEdge          \ DrawObjectEdge (so for the third edge, startEdge = 0)
 
  LDA KK
  STA L
@@ -7711,13 +7787,18 @@ ENDIF
 
 .draw13
 
- LDX UU
- CPX LL
- BNE draw14
+                        \ If we get here then we are drawing the third edge of a
+                        \ four-edge object part, which is like a left edge
 
- LDA I
+ LDX blockNumber        \ If blockNumber <> nextBlockNumber, then the next edge
+ CPX nextBlockNumber    \ isn't in the same dash data block (i.e. in the same
+ BNE draw14             \ column), so jump to draw14 to draw this edge
+
+ LDA I                  \ Set H = I
  STA H
- JMP draw29
+
+ JMP draw29             \ Jump to draw29 to check whether we need to draw any
+                        \ more of the object
 
 .draw14
 
@@ -7730,66 +7811,139 @@ ENDIF
 
  LDY topTrackLine
 
- JMP EdgeLoop
+ JMP EdgeLoop           \ ??? and jump to draw29
 
 .draw16
 
-                        \ If we get here then we are drawing either a right or
-                        \ left edge
+                        \ If we get here then we are drawing either a left or
+                        \ right edge, and Y is 1 or 2 respectively
 
- BNE draw18
- LDA leftEdgePixels,X
- STA L
- EOR #&FF
- AND H
- AND yLookupLo+8,X
- ORA V
+ BNE draw18             \ We did a CPY #1 before jumping here, so this jumps to
+                        \ draw18 if Y <> 1, i.e. Y = 2, so we jump to draw18 if
+                        \ we are drawing a right edge
+
+                        \ If we get here then we are drawing a left edge, so we
+                        \ now calculate the pixel byte for the left edge
+
+ LDA leftEdgePixels,X   \ Set A to the X-th pixel mask from leftEdgePixels,
+                        \ which is a pixel byte with the first X bits set, so
+                        \ that's all the pixels to the left of the X-th pixel -
+                        \ in other words, with all the pixels outside of the
+                        \ object set
+
+ STA L                  \ Store the pixel mask in L so we can retrieve it later
+
+ EOR #&FF               \ Invert A so it contains a pixel byte with the X-th
+                        \ pixel set, plus all the pixels to the right - in other
+                        \ words, with the edge and the inside of the object set
+
+ AND H                  \ Set the objext pixels to colour H, which we set above
+                        \ to the fill colour of the object
+
+ AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
+                        \ clears the X-th pixel in the pixel byte
+
+ ORA V                  \ V contains a pixel byte with the X-th pixel set to
+                        \ colour V, so this sets the X-th pixel in A to colour V
 
 .draw17
 
- LDX UU
- CPX LL
- BNE draw19
- STA H
- LDA L
- STA KK
- ROR L0048
- RTS
+                        \ If we get here then we are either drawing a left edge,
+                        \ or we jumped here and we are drawing the second edge
+                        \ of a four-edge object part
+
+ LDX blockNumber        \ If blockNumber <> nextBlockNumber, then the next edge
+ CPX nextBlockNumber    \ isn't in the same dash data block (i.e. in the same
+ BNE draw19             \ column), so jump to draw19 to draw this edge
+
+                        \ If we get here then the C flag is set, as the above
+                        \ comparison was blockNumber = nextBlockNumber
+
+ STA H                  \ Set H to the pixel byte in A, ready for the next call
+                        \ to DrawObjectEdge
+
+ LDA L                  \ Set KK to the left edge pixel mask in L, ready for the
+ STA KK                 \ next call to DrawObjectEdge
+
+ ROR startEdge          \ Set bit 7 of startEdge, so it is non-zero for the next
+                        \ call to DrawObjectEdge, to indicate that the next edge
+                        \ is not at the start of a fill
+
+ RTS                    \ Return from the subroutine
 
 .draw18
 
- LDA KK
- ORA L39D0,X
- STA L
- EOR #&FF
- AND G
- AND yLookupLo+8,X
- ORA V
+                        \ If we get here then we are drawing a right edge, so we
+                        \ now calculate the pixel byte for the right edge
+
+ LDA KK                 \ Set A to the left edge pixel mask of the previous edge
+                        \ that was drawn, which is a pixel byte with the all the
+                        \ pixels to the left of the previous edge set
+
+ ORA rightEdgePixels,X  \ Set all the pixels to the right of the X-th pixel, so
+                        \ A now contains a pixel byte with pixels set to the
+                        \ left of the previous edge, and to the right of this
+                        \ edge
+
+ STA L                  \ Store the pixel mask in L so we can retrieve it later
+
+ EOR #&FF               \ Invert A so it contains a pixel byte with the central
+                        \ pixels set
+
+ AND G                  \ Set the central pixels to colour G, which we set above
+                        \ to the pixel byte of the previous edge that was drawn
+
+ AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
+                        \ clears the X-th pixel in the pixel byte
+
+ ORA V                  \ V contains a pixel byte with the X-th pixel set to
+                        \ colour V, so this sets the X-th pixel in A to colour V
+
+\ ******************************************************************************
+\
+\       Name: DrawObjectEdge (Part 4 of 5)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ******************************************************************************
 
 .draw19
 
- STA I
+ STA I                  \ Store the pixel byte for the edge to draw in I
 
 IF _ACORNSOFT
 
- BNE draw20
- LDA #&55
+ BNE draw20             \ If the pixel byte is non-zero, jump to draw20 to skip
+                        \ the following instruction
+
+ LDA #&55               \ Set A = &55 to use as the value of WW below
 
 .draw20
 
- STA &87
+ STA WW                 \ Set WW to the pixel byte (or &55 if the pixel byte is
+                        \ zero)
 
- LDA #0
+ LDA #0                 \ Set KK = 0
  STA KK
 
- LDY RR
- LDA (P),Y
+ LDY blockOffset        \ Set W to the current screen buffer byte at the bottom
+ LDA (P),Y              \ of the edge that we want to draw
  STA W
- LDA #&AA
- STA (P),Y
 
- LDY topTrackLine
- JMP draw24
+ LDA #&AA               \ Replace the byte at the bottom of the edge with &AA,
+ STA (P),Y              \ to use as a marker
+
+ LDY topTrackLine       \ Set Y = topTrackLine, which is the number of the
+                        \ track line at the top of the object, which is the
+                        \ same as the offset into the dash data block for the
+                        \ top edge
+
+ JMP draw24             \ Jump into the following loop at the entry point draw24
+                        \ with Y set to the offset of the top of the edge we
+                        \ want to draw, a marker of &AA in the bottom track line
+                        \ of the edge, and the original byte that was in the
+                        \ marker's location in W
 
 .draw21
 
@@ -7813,8 +7967,8 @@ IF _ACORNSOFT
 
 .draw24
 
- LDA (P),Y
- BNE draw28
+ LDA (P),Y              \ If the current byte in the screen buffer is non-zero,
+ BNE draw28             \ jump to draw28
 
 .draw25
 
@@ -7822,6 +7976,7 @@ IF _ACORNSOFT
  AND &7D
  ORA &7A
  BNE draw26
+
  LDA #&55
 
 .draw26
@@ -7840,19 +7995,22 @@ IF _ACORNSOFT
                         \ In other words, we have modified the instruction to
                         \ load the Y-th byte from the dash data block address
                         \ for the edge we are drawing, i.e. load the Y-th byte
-                        \ of dash data block UU
+                        \ of dash data block blockNumber
 
  BEQ draw26
  TXA
 
 .draw28
 
- CMP #&AA
- BNE draw21
+ CMP #&AA               \ If this is not the marker for the bottom of the edge,
+ BNE draw21             \ loop back to draw21
+
+                        \ If we get here then we have reached the bottom of the
+                        \ edge
 
  LDA #0
  STA (P),Y
- CPY RR
+ CPY blockOffset
  BNE draw25
  LDA W
  STA (P),Y
@@ -7861,9 +8019,9 @@ IF _ACORNSOFT
  CPX #1                 \ left edge, so jump to draw31 to return from the
  BEQ draw31             \ subroutine
 
- INC UU                 \ Otherwise draw the edge in the next dash data block to
+ INC blockNumber        \ Otherwise draw the edge in the next dash data block to
  JSR DrawEdge           \ the right
- DEC UU
+ DEC blockNumber
 
 ELIF _SUPERIOR
 
@@ -7906,21 +8064,21 @@ ELIF _SUPERIOR
 
 .sraw6
 
- CPY RR
+ CPY blockOffset
  BNE sraw1
 
  LDX J
  CPX #1
  BEQ draw31
- INC UU
+ INC blockNumber
  JSR DrawEdgeS
- DEC UU
+ DEC blockNumber
 
 ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawObjectEdge (Part 4 of )
+\       Name: DrawObjectEdge (Part 5 of 5)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
@@ -7934,12 +8092,12 @@ ENDIF
  BCC draw30
 
  LDA #&FF               \ K >= 40, so set K = -1, so the following subtraction
- STA K                  \ becomes A = UU - -1 - 1 = UU
+ STA K                  \ becomes A = blockNumber - -1 - 1 = blockNumber
 
 .draw30
 
- LDA UU                 \ Set A = UU - K - (1 - C)
- CLC                    \       = UU - K - 1
+ LDA blockNumber        \ Set A = blockNumber - K - (1 - C)
+ CLC                    \       = blockNumber - K - 1
  SBC K
 
  BEQ draw31             \ If A <= 0, jump to draw31 to return from the
@@ -7955,7 +8113,8 @@ ENDIF
 
 .draw32
 
-                        \ We jump here if the block number in UU is >= 40
+                        \ We jump here if the block number in blockNumber
+                        \ is >= 40
 
  LDY J                  \ If the edge type in J = 1, then we are drawing the
  CPY #1                 \ left edge, so jump to draw31 to return from the
@@ -7971,8 +8130,8 @@ ENDIF
                         \ the previous call to DrawObjectEdge was on-screen, so
                         \ we may need to fill to the right of the previous edge
 
- LDA #40                \ Set UU = 40 to use in the calculation at draw30 above,
- STA UU                 \ which decides whether to call sub_C1E38
+ LDA #40                \ Set blockNumber = 40 to use in the calculation at
+ STA blockNumber        \ draw30 above, which decides whether to call sub_C1E38
 
  BNE draw30             \ Jump to draw30 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -7988,9 +8147,9 @@ ENDIF
 \
 \ Arguments:
 \
-\   UU                  The dash data block number to draw in
+\   blockNumber         The dash data block number to draw in
 \
-\   RR                  The dash data offset for block UU
+\   blockOffset         The dash data offset for the bottom of the edge to draw
 \
 \   topTrackLine        Top track line number, i.e. the number of the start byte
 \                       in the dash data block
@@ -8024,7 +8183,7 @@ IF _ACORNSOFT
 
 .DrawEdge
 
- LDA UU                 \ Set A to the dash data block number in UU
+ LDA blockNumber        \ Set A to the dash data block number in blockNumber
 
  CMP #40                \ If A >= 40 then this is not a valid dash data block
  BCS edge12             \ number, so jump to edge12 to return from the
@@ -8080,9 +8239,10 @@ IF _ACORNSOFT
                         \ This is pseudo-code, but it means we have modified the
                         \ instruction to load the Y-th byte from the dash data
                         \ block address we just calculated, i.e. load the Y-th
-                        \ byte of dash data block A (i.e. dash data block UU)
+                        \ byte of dash data block A (i.e. dash data block
+                        \ blockNumber)
 
- LDY RR                 \ Set Y to the dash data offset for block UU
+ LDY blockOffset        \ Set Y to the dash data offset for the edge to draw
 
  LDA (P),Y              \ Set W to the byte in the dash data offset from this
  STA W                  \ block, which is the byte before the actual dash data
@@ -8178,7 +8338,7 @@ IF _ACORNSOFT
  LDA #0
  STA (P),Y
 
- CPY RR
+ CPY blockOffset
  BNE edge5
  LDA W
  STA (P),Y
@@ -8200,9 +8360,9 @@ ENDIF
 \
 \ Arguments:
 \
-\   UU                  Dash data block number
+\   blockNumber         Dash data block number
 \
-\   RR                  Dash data offset for block UU
+\   RR                  Dash data offset for block blockNumber
 \
 \   topTrackLine        Starting byte in dash data block
 \
@@ -8235,7 +8395,7 @@ IF _SUPERIOR
 
 .DrawEdgeS
 
- LDA UU                 \ Set A to the dash data block number in UU
+ LDA blockNumber        \ Set A to the dash data block number in blockNumber
 
  CMP #40                \ If A >= 40 then this is not a valid dash data block
  BCS sedg10             \ number, so jump to sedg10 to return from the
@@ -8345,7 +8505,7 @@ IF _SUPERIOR
 
 .sedg9
 
- CPY RR
+ CPY blockOffset
  BNE sedg4
 
 .sedg10
@@ -8374,7 +8534,7 @@ ENDIF
 
 .EdgeLoop
 
- CPY RR
+ CPY blockOffset
  BNE edlp1
  JMP draw29
 
@@ -8402,16 +8562,16 @@ ENDIF
 .sub_C1DEF
 
  STA L0042              \ Set L0042 = A, so in the following, the loop counter
-                        \ in UU loops from X to A - 1
+                        \ in blockNumber loops from X to A - 1
 
 .C1DF1
 
- STX UU                 \ Store the loop counter in UU
+ STX blockNumber        \ Store the loop counter in blockNumber
 
  STY topTrackLine       \ Set topTrackLine to the offset of the start byte
 
- LDA dashDataOffset,X   \ Set RR = the dash data offset for block X
- STA RR
+ LDA dashDataOffset,X   \ Set blockOffset = the dash data offset for block X
+ STA blockOffset
 
  LDX #LO(R)             \ Set X so the call to DrawEdge-9 modifies the DrawEdge
                         \ routine to draw to (S R) instead of (Q P)
@@ -8436,7 +8596,7 @@ IF _ACORNSOFT
                         \ DrawEdge routine back to storing &55 as the value
                         \ for colour 0
 
- INC UU                 \ Increment the loop counter in UU
+ INC blockNumber        \ Increment the loop counter in blockNumber
 
  JSR DrawEdge-9
 
@@ -8460,13 +8620,13 @@ ELIF _SUPERIOR
                         \ DrawEdge routine back to storing &55 as the value
                         \ for colour 0
 
- INC UU                 \ Increment the loop counter in UU
+ INC blockNumber        \ Increment the loop counter in blockNumber
 
  JSR DrawEdgeS-9
 
 ENDIF
 
- LDX UU                 \ Fetch the loop counter from UU into X
+ LDX blockNumber        \ Fetch the loop counter from blockNumber into X
 
  CPX L0042              \ If X <> L0042, loop back
  BNE C1DF1
@@ -8547,7 +8707,7 @@ ENDIF
  STA T
  ADC bottomTrackLine
  STA VV
- LDA UU
+ LDA blockNumber
  STA U
  CLC
  ADC #&5F
@@ -8654,7 +8814,7 @@ IF _ACORNSOFT
  LDA #0
  STA T
 
- LDA UU
+ LDA blockNumber
  CMP L05A4,Y
  ROL T
  CMP L0650,Y
@@ -8735,7 +8895,7 @@ IF _ACORNSOFT
  BNE gcol11
  LDA L0650,Y
  BMI gcol10
- CMP UU
+ CMP blockNumber
  DEY
  BCS gcol9
  INY
@@ -8790,7 +8950,7 @@ IF _ACORNSOFT
 
  CPY V
  BCS gcol19
- CPY RR
+ CPY blockOffset
  BCC gcol19
  LDA (P),Y
  BNE gcol19
@@ -8832,7 +8992,7 @@ IF _SUPERIOR
 
 .scol1
 
- LDA UU
+ LDA blockNumber
  CMP L0554,Y
  BCS scol3
  CMP L0600,Y
@@ -9688,10 +9848,13 @@ ENDIF
  LDA colourPalette      \ Set H to the physical colour that's mapped to logical
  STA H                  \ colour 0 in the standard colour palette
 
- LDA #0                 \ Set L0048 = 0 to pass to DrawObjectEdge below ???
- STA L0048
+ LDA #0                 \ Set startEdge = 0 to pass to DrawObjectEdge below, to
+ STA startEdge          \ indicate that the first edge we draw is a starting
+                        \ edge (i.e. the start of a horizontal line)
 
- STA KK                 \ Set KK = 0 to pass to DrawObjectEdge below ???
+ STA KK                 \ Set KK = 0 to pass to DrawObjectEdge below, so this is
+                        \ initialised in case we skip drawing the left edge,
+                        \ which would otherwise set KK to the relevant value
 
  LDX objectTop,Y        \ Set A to the scaled scaffold for the top of this part
  LDA scaledScaffold,X   \ of the object
@@ -9751,13 +9914,13 @@ ENDIF
 
  STA bottomTrackLine    \ Set bottomTrackLine = A as the bottom track line
 
- LDX objectLeft,Y       \ Set M to the scaled scaffold for the left edge of this
- LDA scaledScaffold,X   \ part of the object
- STA M
+ LDX objectLeft,Y       \ Set thisEdge to the scaled scaffold for the left edge
+ LDA scaledScaffold,X   \ of this part of the object, to pass to DrawObjectEdge
+ STA thisEdge
 
- LDX objectRight,Y      \ Set SS to the scaled scaffold for the right edge of
- LDA scaledScaffold,X   \ this part of the object
- STA SS
+ LDX objectRight,Y      \ Set nextEdge to the scaled scaffold for the right
+ LDA scaledScaffold,X   \ edge of this part of the object, to pass to
+ STA nextEdge           \ DrawObjectEdge
 
  LDA objectColour,Y     \ Set A to the colour data for this object part
 
@@ -9842,11 +10005,11 @@ ENDIF
                         \ The second and third edges are defined in the next bit
                         \ of object data, as follows:
                         \
-                        \   * Second edge: SS (right edge)  = objectLeft
-                        \                  colourData       = objectRight
+                        \   * Second edge: nextEdge   = objectLeft
+                        \                  colourData = objectRight
                         \
-                        \   * Third edge:  SS (right edge)  = objectTop
-                        \                  colourData       = objectColour
+                        \   * Third edge:  nextEdge   = objectTop
+                        \                  colourData = objectColour
 
  LDY objectIndex        \ Set Y to the loop counter
 
@@ -9854,24 +10017,24 @@ ENDIF
  STY objectIndex        \ object data (which contains the data for the second
                         \ and third edges)
 
- LDX objectLeft,Y       \ Set SS to the scaled data from objectLeft for this
- LDA scaledScaffold,X   \ object part
- STA SS
+ LDX objectLeft,Y       \ Set nextEdge to the scaled data from objectLeft for
+ LDA scaledScaffold,X   \ this object part, to pass to DrawObjectEdge
+ STA nextEdge
 
  LDA objectRight,Y      \ Set colourData to the data from objectRight for this
- STA colourData         \ object part
+ STA colourData         \ object part, to pass to DrawObjectEdge
 
  LDY #0                 \ Draw the second edge of the four-edge object part
  JSR DrawObjectEdge
 
  LDY objectIndex        \ Set Y to the index into the object data
 
- LDX objectTop,Y        \ Set SS to the scaled data from objectTop for this
- LDA scaledScaffold,X   \ object part
- STA SS
+ LDX objectTop,Y        \ Set nextEdge to the scaled data from objectTop for
+ LDA scaledScaffold,X   \ this object part, to pass to DrawObjectEdge
+ STA nextEdge
 
  LDA objectColour,Y     \ Set colourData to the data from objectColour for this
- STA colourData         \ object part
+ STA colourData         \ object part, to pass to DrawObjectEdge
 
  LDY #0                 \ Draw the third edge of the four-edge object part
  JSR DrawObjectEdge
@@ -12355,7 +12518,7 @@ ENDIF
  LDA L5FD0,Y
  STA objectPalette,X
 
- AND rightEdgePixels,X
+ AND middleEdgePixels,X
  STA L629C,X
 
  INY
@@ -12370,7 +12533,7 @@ ENDIF
  ASL A
  STA T
 
- LDA objectPalette		\ Set A to logical colour 0 from the object palette
+ LDA objectPalette      \ Set A to logical colour 0 from the object palette
 
  LSR A
  LSR A
@@ -12380,7 +12543,7 @@ ENDIF
  ORA #&40
  STA L0034
 
- LDA objectPalette		\ Set A to logical colour 0 from the object palette
+ LDA objectPalette      \ Set A to logical colour 0 from the object palette
 
  BNE C2C44
 
@@ -12448,7 +12611,7 @@ ENDIF
  CMP TT
  BCC C2CEF
 
- LDA objectPalette		\ Set A to logical colour 0 from the object palette
+ LDA objectPalette      \ Set A to logical colour 0 from the object palette
 
  CMP #&FF
  BEQ C2CB4
@@ -14298,7 +14461,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: rightEdgePixels
+\       Name: middleEdgePixels
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
@@ -14309,7 +14472,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.rightEdgePixels
+.middleEdgePixels
 
  EQUB %11111111
  EQUB %01110111
@@ -16166,9 +16329,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L39D0
+\       Name: rightEdgePixels
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -16177,9 +16340,12 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L39D0
+.rightEdgePixels
 
- EQUB &77, &33, &11, &00
+ EQUB %01110111
+ EQUB %00110011
+ EQUB %00010001
+ EQUB %00000000
 
 \ ******************************************************************************
 \
@@ -18174,8 +18340,8 @@ ENDIF
 \
 \ For character rows 8 to 15, the table is reused, as these locations would
 \ point to the blue sky, and we don't draw in the sky as it contains working
-\ game code. Instead, the lookup table at yLookupLo+8 contains bit masks for use
-\ in the line-drawing routine at DrawDashboardLine.
+\ game code. Instead, the lookup table at yLookupLo+8 contains pixel masks for
+\ use in the line-drawing routine at DrawDashboardLine.
 \
 \ ******************************************************************************
 
@@ -19248,7 +19414,7 @@ NEXT
  EQUB %00000100         \ 0 0 000 100    c = 4
                         \                1/2^2                      =  8/32
 
-                        \ Object type 8 = 18, 16, 3
+                        \ Object type 8 = 18, 16, 3, 2
 
  EQUB %10011110         \ 1 0 011 110    c = 0   b = 3   a = 6
                         \                0/2   + 1/2^1 + 1/2^4      = 18/32
@@ -24014,9 +24180,9 @@ ENDIF
                         \ (0 to 3) of the pixel to draw, plus 4 if this is the
                         \ steering wheel (4 to 7)
 
- AND yLookupLo+8,X      \ Apply the bit mask from yLookupLo+8, so this clears
-                        \ the X-th pixel in the pixel row (the table contains
-                        \ the same bytes in 0 to 3 as in 0 to 7)
+ AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
+                        \ clears the X-th pixel in the pixel row (the table
+                        \ contains the same bytes in 0 to 3 as in 0 to 7)
 
  ORA pixelByte,X        \ OR with a pixel byte with pixel X set, so this sets
                         \ the X-th pixel to colour 2 (white) if X is 0 to 3, or
