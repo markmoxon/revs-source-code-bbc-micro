@@ -745,6 +745,10 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
+.edgePixel
+
+ SKIP 0                 \ The current edge, as a one-pixel byte
+
 .V
 
  SKIP 1                 \ Temporary storage, used in a number of places
@@ -753,17 +757,17 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
-.edgePixelByte
+.fillColour
 
- SKIP 0                 \ The pixel byte for the previous edge
+ SKIP 0                 \ The object's fill colour
 
 .G
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
-.fillColour
+.edgePixelByte
 
- SKIP 0                 \ The fill colour for the object we are drawing
+ SKIP 0                 \ The edge pixel byte for the edge we are drawing
 
 .H
 
@@ -7363,17 +7367,19 @@ ENDIF
 \
 \   colourData          Colour data:
 \
-\                         * Bits 0-1 = used for colour V if bit 4 is set, and we
-\                           are either drawing a left edge in the left half of
-\                           the screen, or a right edge in the right half of the
-\                           screen
+\                         * Bits 0-1 = used for the edge colour if bit 4 is set,
+\                           and we are either drawing a left edge in the left
+\                           half of the screen, or a right edge in the right
+\                           half of the screen (i.e. an outside edge)
 \
-\                         * Bits 2-3 = used for colour V, unless bit 4 is set
+\                         * Bits 2-3 = used for the edge colour, unless bit 4 is
+\                           set
 \
-\                         * Bit 4 = if set, then set colour V as described above
+\                         * Bit 4 = if set, then set the edge colour as
+\                           described above
 \
 \   A                   For left edges only: bits 0-1 contain the fill colour of
-\                       the object
+\                       the object ???
 \
 \   Y                   Edge type:
 \
@@ -7384,7 +7390,7 @@ ENDIF
 \
 \                         * 2 = right edge
 \
-\   H                   For middle or right edges: the pixel byte of the
+\   edgePixelByte       For middle or right edges: the pixel byte of the
 \                       previous edge drawn by DrawObjectEdge
 \
 \   blockNumber         For middle or right edges only: the dash data block
@@ -7415,7 +7421,7 @@ ENDIF
 \
 \   blockNumber         The dash data block number that was drawn into
 \
-\   H                   The pixel byte of the edge that was drawn
+\   edgePixelByte       The pixel byte of the edge that was drawn
 \
 \   edgePixelMask       The pixel mask of the edge that was drawn
 \
@@ -7437,15 +7443,15 @@ ENDIF
 
  STY J                  \ Set J to the edge type in Y, so we can check it later
 
- LDX H                  \ Set edgePixelByte = H, so edgePixelByte is now the
- STX edgePixelByte      \ pixel byte of the edge that was drawn on the previous
-                        \ call to DrawObjectEdge
+ LDX edgePixelByte      \ Set fillColour = edgePixelByte, so fillColour is now
+ STX fillColour         \ the pixel byte of the edge that was drawn on the
+                        \ previous call to DrawObjectEdge
 
  AND #3                 \ Set X to bits 0-1 of A, which is the logical number of
  TAX                    \ the fill colour of the object
 
- LDA objectPalette,X    \ Set fillColour to logical colour X from the object
- STA fillColour         \ palette, as the physical colour of the object's fill
+ LDA objectPalette,X    \ Set edgePixelByte to logical colour X from the object
+ STA edgePixelByte      \ palette, as a four-pixel byte of the colour in A ???
 
  LDA blockNumber        \ Set prevBlockNumber to the dash data block number
  STA prevBlockNumber    \ that was left over from the previous call to
@@ -7457,8 +7463,8 @@ ENDIF
  LSR A
  TAX
 
- LDA objectPalette,X    \ Set V to logical colour X from the object palette, to
- STA V                  \ use as the draw colour for the edge
+ LDA objectPalette,X    \ Set edgePixel to logical colour X from the object
+ STA edgePixel          \ palette, to use as the draw colour for the edge
 
  LDA #0                 \ Set P = 0, for use as the low byte of (Q P), in which
  STA P                  \ we are going to build the address we need to draw into
@@ -7508,7 +7514,7 @@ ENDIF
  STA thisEdge
 
  LSR A                  \ Set blockNumber = A / 4
- LSR A                  \        = thisEdge / 4
+ LSR A                  \                 = thisEdge / 4
  STA blockNumber
 
  JMP draw4              \ Jump to draw4
@@ -7518,7 +7524,7 @@ ENDIF
                         \ We jump here if Y <> 1, i.e. Y = 0 or 2, so we are
                         \ either drawing a middle edge or the right edge
 
- LDA nextBlockNumber    \ Set blockNumber = blockNumberForNext
+ LDA nextBlockNumber    \ Set blockNumber = nextBlockNumber
  STA blockNumber
 
  LDA nextEdgeCoord      \ Set thisEdge = nextEdgeCoord
@@ -7534,6 +7540,7 @@ ENDIF
                         \ nextBlockNumber as follows:
                         \
                         \   nextEdgeCoord = xObject + nextEdge / 2
+                        \
                         \   nextBlockNumber = nextEdgeCoord / 4
 
  LDA nextEdge           \ Set A to the scaled scaffold measurement for the next
@@ -7712,11 +7719,11 @@ ENDIF
 .draw11
 
  LDA colourData         \ If bit 4 of colourData is clear, jump to draw12 to
- AND #%00010000         \ keep the colour we set in V at the start of part 1
+ AND #%00010000         \ keep the edge colour we set at the start of part 1
  BEQ draw12
 
  TYA                    \ If Y = 0, then we are drawing a middle edge, so jump
- BEQ draw12             \ to draw12 to keep the colour we set in V at the start
+ BEQ draw12             \ to draw12 to keep the edge colour we set at the start
                         \ of part 1
 
  EOR T                  \ Set A = bit 0 of Y EOR bit 0 of T
@@ -7733,20 +7740,20 @@ ENDIF
                         \     screen
                         \
                         \ In either case, jump to draw12 to keep the colour we
-                        \ set in V at the start of part 1
+                        \ set in edgePixel at the start of part 1
 
                         \ If we get here then bit 4 of colourData is set, and we
                         \ are either drawing a left edge in the left half of the
                         \ screen, or a right edge in the right half of the
-                        \ screen, so we set V to the logical colour in bits 0-1
-                        \ of colourData
+                        \ screen, so we set the edge colour to the logical
+                        \ colour in bits 0-1 of colourData
 
  LDA colourData         \ Set X to bits 0-1 of colourData
  AND #%00000011
  TAX
 
- LDA objectPalette,X    \ Set V to logical colour X from the object palette
- STA V
+ LDA objectPalette,X    \ Set the edge colour to logical colour X from the
+ STA edgePixel          \ object palette
 
 .draw12
 
@@ -7763,9 +7770,9 @@ ENDIF
  EOR #&FF               \ Invert A so it contains a pixel byte with only the
                         \ X-th pixel set
 
- AND V                  \ Apply the pixel mask to the colour in V, so V now
- STA V                  \ contains a pixel byte with the X-th pixel set to
-                        \ colour V
+ AND edgePixel          \ Apply the pixel mask to the edge colour in edgePixel,
+ STA edgePixel          \ so edgePixel now contains a pixel byte with the X-th
+                        \ pixel set to the edge colour
 
  CPY #1                 \ If Y >= 1, then we are drawing a left or right edge,
  BCS draw16             \ so jump to draw16
@@ -7777,14 +7784,20 @@ ENDIF
                         \ which is a pixel byte with the first X bits set, so
                         \ that's all the pixels to the left of the X-th pixel
 
- AND edgePixelByte
+ AND fillColour
  STA T
 
- LDA fillColour
+ LDA edgePixelByte
  AND middleEdgePixels,X
  ORA T
- AND yLookupLo+8,X
- ORA V
+
+ AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
+                        \ clears the X-th pixel in the pixel byte
+
+ ORA edgePixel          \ edgePixel contains a pixel byte with the X-th pixel
+                        \ set to the edge colour, so this sets the X-th pixel in
+                        \ A (i.e. the edge) to the edge colour
+
  STA I
 
  LDA startEdge          \ If startEdge = 0 then this edge is at the start of a
@@ -7814,8 +7827,8 @@ ENDIF
  CPX nextBlockNumber    \ isn't in the same dash data block (i.e. in the same
  BNE draw14             \ column), so jump to draw14 to draw this edge
 
- LDA I                  \ Set fillColour = I
- STA fillColour
+ LDA I                  \ Set edgePixelByte = I
+ STA edgePixelByte
 
  JMP draw29             \ Jump to draw29 to check whether we need to draw any
                         \ more of the object
@@ -7857,14 +7870,15 @@ ENDIF
                         \ pixel set, plus all the pixels to the right - in other
                         \ words, with the edge and the inside of the object set
 
- AND fillColour         \ Set the object pixels to colour fillColour, which we
-                        \ set above to the fill colour of the object
+ AND edgePixelByte      \ Set the object pixels to edgePixelByte, which we
+                        \ set above to the fill colour of the object ???
 
  AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
                         \ clears the X-th pixel in the pixel byte
 
- ORA V                  \ V contains a pixel byte with the X-th pixel set to
-                        \ colour V, so this sets the X-th pixel in A to colour V
+ ORA edgePixel          \ edgePixel contains a pixel byte with the X-th pixel
+                        \ set to the edge colour, so this sets the X-th pixel in
+                        \ A (i.e. the edge) to the edge colour
 
 .draw17
 
@@ -7879,8 +7893,8 @@ ENDIF
                         \ If we get here then the C flag is set, as the above
                         \ comparison was blockNumber = nextBlockNumber
 
- STA H                  \ Set H to the pixel byte in A, ready for the next call
-                        \ to DrawObjectEdge
+ STA edgePixelByte      \ Set edgePixelByte to the pixel byte in A, ready for
+                        \ the next call to DrawObjectEdge
 
  LDA L                  \ Set edgePixelMask to the left edge pixel mask in L,
  STA edgePixelMask      \ ready for the next call to DrawObjectEdge
@@ -7910,15 +7924,16 @@ ENDIF
  EOR #&FF               \ Invert A so it contains a pixel byte with the central
                         \ pixels set
 
- AND edgePixelByte      \ Set the central pixels to colour edgePixelByte, which
+ AND fillColour         \ Set the central pixels to colour fillColour, which
                         \ we set above to the pixel byte of the previous edge
                         \ that was drawn
 
  AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
                         \ clears the X-th pixel in the pixel byte
 
- ORA V                  \ V contains a pixel byte with the X-th pixel set to
-                        \ colour V, so this sets the X-th pixel in A to colour V
+ ORA edgePixel          \ edgePixel contains a pixel byte with the X-th pixel
+                        \ set to the edge colour, so this sets the X-th pixel in
+                        \ A (i.e. the edge) to the edge colour
 
 \ ******************************************************************************
 \
@@ -8173,13 +8188,18 @@ ELIF _SUPERIOR
  CPY blockOffset
  BNE sraw1
 
- LDX J
- CPX #1
- BEQ draw31
+ LDX J                  \ If the edge type in J = 1, then we have just drawn the
+ CPX #1                 \ left edge, so jump to draw31 to return from the
+ BEQ draw31             \ subroutine as we are done drawing
 
- INC blockNumber
- JSR FillAfterObjectS
- DEC blockNumber
+                        \ If we get here then we have just drawn a middle or
+                        \ right edge, so we need to reset the colour to the
+                        \ right of the edge we just drew, so the background
+                        \ colour is restored after the object
+
+ INC blockNumber        \ Fill the column to the right of the object, so the
+ JSR FillAfterObjectS   \ correct background colour is shown to the right of the
+ DEC blockNumber        \ object part
 
 ENDIF
 
@@ -8771,7 +8791,8 @@ ENDIF
  STA blockOffset
 
  LDX #LO(R)             \ Set X so the call to GetTyreDashEdge modifies the
-                        \ FillAfterObject routine to draw to (S R) instead of (Q P)
+                        \ FillAfterObject routine to draw to (S R) instead of
+                        \ (Q P)
 
 IF _ACORNSOFT
 
@@ -8779,8 +8800,8 @@ IF _ACORNSOFT
                         \ the FillAfterObject routine at edge11 to BNE edge1
 
  LDA #0                 \ Set A = 0, so the call to GetTyreDashEdge modifies the
-                        \ FillAfterObject routine to store 0 as the value for colour
-                        \ 0
+                        \ FillAfterObject routine to store 0 as the value for
+                        \ colour 0
 
  JSR GetTyreDashEdge
 
@@ -8788,7 +8809,8 @@ IF _ACORNSOFT
                         \ FillAfterObject routine back to drawing to (Q P)
 
  LDY #&E7               \ Set Y = &E7 so the call to GetTyreDashEdge modifies
-                        \ the FillAfterObject routine at edge11 back to BNE edge3
+                        \ the FillAfterObject routine at edge11 back to BNE
+                        \ edge3
 
  LDA #&55               \ Set A = &55, so the call to GetTyreDashEdge modifies
                         \ the FillAfterObject routine back to storing &55 as the
@@ -8813,11 +8835,12 @@ ELIF _SUPERIOR
                         \ FillAfterObjectS routine at back to drawing to (Q P)
 
  LDY #&09               \ Set Y = &09 so the call to GetTyreDashEdgeS modifies
-                        \ the FillAfterObjectS routine at sedg5 back to BNE edge8
+                        \ the FillAfterObjectS routine at sedg5 back to BNE
+                        \ edge8
 
  LDA #&55               \ Set A = &55, so the call to GetTyreDashEdgeS modifies
-                        \ the FillAfterObjectS routine back to storing &55 as the
-                        \ valuefor colour 0
+                        \ the FillAfterObjectS routine back to storing &55 as
+                        \ the value for colour 0
 
  INC blockNumber        \ Increment the loop counter in blockNumber
 
@@ -8896,97 +8919,173 @@ ENDIF
 \
 \   blockNumber         The block number of the second edge
 \
-\   edgePixelByte       The pixel byte to fill the object with
+\   fillColour          The pixel byte to fill the object with
+\
+\   topTrackLine        Top track line of the object (higher value, 0 to 79)
+\
+\   bottomTrackLine     Bottom track line of the object (lower value, 0 to 79)
 \
 \ ******************************************************************************
 
 .FillInsideObject
 
- LDA edgePixelByte
- BNE C1E3E
- LDA #&55
+ LDA fillColour         \ Set A to the byte we want to fill the object with
 
-.C1E3E
+ BNE fill1              \ If it is non-zero, jump to fill1 to skip the following
+                        \ instruction
 
- STA V
- LDA #&7F
+ LDA #&55               \ The fill byte is zero, i.e. colour 0 (black), so set
+                        \ A = &55, which is the value we use to represent
+                        \ colour 0 (black) in the screen buffer
+
+.fill1
+
+ STA V                  \ Store A in V, so V contains the correct fill byte for
+                        \ the screen buffer
+
+ LDA #&7F               \ Set T = &7F - topTrackLine
  SEC
- SBC N
+ SBC topTrackLine
  STA T
- ADC bottomTrackLine
- STA VV
- LDA blockNumber
- STA U
- CLC
- ADC #&5F
- LSR A
- STA Q
- STA S
- LDA #0
- ROR A
- SEC
- SBC T
- STA P
- EOR #&80
- STA R
- BPL C1E67
+
+ ADC bottomTrackLine    \ Set VV = T + bottomTrackLine
+ STA VV                 \        = &7F - topTrackLine + bottomTrackLine
+                        \        = &7F - (topTrackLine - bottomTrackLine)
+
+                        \ We now calculate the start address of dash data block
+                        \ blockNumber - 1, which will be at:
+                        \
+                        \   dashData + &80 * (blockNumber - 1)
+                        \
+                        \ because the dash data blocks occur every &80 bytes
+                        \ from dashData
+                        \
+                        \ As per the comments in FillAfterObject, this is the
+                        \ same as:
+                        \
+                        \   ((HI(dashData) << 1 + blockNumber - 1) << 8) >> 1
+
+ LDA blockNumber        \ Set A = blockNumber
+
+ STA U                  \ Set U = blockNumber
+
+ CLC                    \ Set A = A - 1 + HI(dashData) << 1
+ ADC #HI(dashData)<<1-1 \
+                        \ so our 16-bit number is (A 0), and we want to shift
+                        \ right by one place
+
+ LSR A                  \ Shift (A 0) right by 1, shifting bit 0 of A into the
+                        \ C flag
+
+ STA Q                  \ Set Q = A, to store the high byte of the result in Q
+
+ STA S                  \ Set S = A, to store the high byte of the result in S
+
+ LDA #0                 \ Shift the C flag into bit 7 of A, so A now contains
+ ROR A                  \ the low byte of our result
+
+ SEC                    \ Set A = A - T
+ SBC T                  \       = A - (&7F - topTrackLine)
+                        \       = A - &7F + topTrackLine
+                        \       = A - &80 + topTrackLine + 1
+                        \
+                        \ And set the C flag depending on the subtraction
+
+ STA P                  \ Set P = A, to store the low byte of the result in P,
+                        \ giving the result we wanted in (Q P):
+                        \
+                        \   (Q P) = address of dash data block blockNumber - 1
+                        \           - &80 + topTrackLine + 1
+                        \
+                        \         = address of dash data block blockNumber - 2
+                        \           + topTrackLine + 1
+                        \
+                        \ i.e. the address of ???
+
+ EOR #&80               \ Set (S R) = (Q P) - &80
+ STA R                  \
+                        \ starting with the low bytes
+                        \
+                        \ We can do the subtraction more efficiently by using
+                        \ EOR to flip between &xx00 and &xx80, as the dash data
+                        \ blocks always start at these addresses
+
+ BPL fill2              \ We then decrement the high byte, but only if the EOR
+ DEC S                  \ set the low byte to &80 rather than &00 (if we just
+                        \ set it to the latter, the BPL will skip the DEC)
+
+.fill2
+
+ BCS fill4              \ If the subtraction above didn't underflow, jump to
+                        \ fill4 to skip the next two instructions
+
+.fill3
+
+ DEC Q                  \ Decrement the high bytes in (Q P) and (S R)
  DEC S
 
-.C1E67
+.fill4
 
- BCS C1E6D
+ LDY U                  \ Set Y to the block number in U, which started out as
+                        \ the block number of the second edge and goes down by 2
+                        \ on each loop iteration
 
-.C1E69
-
- DEC Q
- DEC S
-
-.C1E6D
-
- LDY U
  LDA L3F4F,Y
- DEY
- DEY
+
+ DEY                    \ Set U = Y - 2
+ DEY                    \       = U - 2
  STY U
- CMP bottomTrackLine
- BCC C1E84
- ADC T
+
+ CMP bottomTrackLine    \ If A < bottomTrackLine, jump to fill5
+ BCC fill5
+
+ ADC T                  \ Set Y = A + T + 1
  TAY
- BPL C1E86
- CPX #2
- BCS C1E93
- RTS
 
-.C1E84
+ BPL fill6              \ If Y < &80, jump to fill6
 
- LDY VV
+ CPX #2                 \ If X >= 2, jump to fill8
+ BCS fill8
 
-.C1E86
+ RTS                    \ Return from the subroutine
 
- LDA V
- CPX #2
- BCC C1E98
+.fill5
 
-.P1E8C
+ LDY VV                 \ Set Y = VV
+                        \       = T + bottomTrackLine
 
- STA (P),Y
- STA (R),Y
+.fill6
+
+ LDA V                  \ Set A to the byte we want to fill with
+
+ CPX #2                 \ If X < 2, jump to fill9 to fill just one block
+ BCC fill9
+
+.fill7
+
+ STA (P),Y              \ Fill (Q P) and (S R) with A from the Y-th byte to 
+ STA (R),Y              \ the &7F-th byte
  INY
- BPL P1E8C
+ BPL fill7
 
-.C1E93
+.fill8
 
- DEX
- DEX
- BNE C1E69
- RTS
+ DEX                    \ Set X = X - 2
+ DEX                    \
+                        \ to move left by two blocks
 
-.C1E98
+ BNE fill3              \ If we haven't filled all the blocks, jump to fill3 to
+                        \ fill the next two blocks to the left
 
- STA (P),Y
- INY
- BPL C1E98
- RTS
+ RTS                    \ Return from the subroutine
+
+.fill9
+
+ STA (P),Y              \ Fill (Q P) with A from the Y-th byte to the &7F-th
+ INY                    \ byte
+ BPL fill9
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -10061,9 +10160,9 @@ ENDIF
 
 .drob1
 
- LDA colourPalette      \ Set H to the physical colour that's mapped to logical
- STA H                  \ colour 0 in the standard colour palette, to pass to
-                        \ DrawObjectEdge below
+ LDA colourPalette      \ Set edgePixelByte to the physical colour that's mapped
+ STA edgePixelByte      \ to logical colour 0 in the standard colour palette, to
+                        \ pass to DrawObjectEdge below
 
  LDA #0                 \ Set startEdge = 0 to pass to DrawObjectEdge below, to
  STA startEdge          \ indicate that the first edge we draw is a starting
@@ -15736,17 +15835,17 @@ ENDIF
 
  EQUB 8 + 64            \ Object type  5
 
- EQUB 18 + 64           \ Object type  6
+ EQUB 2 + 16 + 64       \ Object type  6
 
  EQUB 8                 \ Object type  7
- EQUB 17
- EQUB 17 + 64
+ EQUB 1 + 16
+ EQUB 1 + 16 + 64
 
  EQUB 0                 \ Object type  8
  EQUB 8 + 64
 
  EQUB 10                \ Object type  9
- EQUB 18 + 64
+ EQUB 2 + 16 + 64
 
  EQUB 0                 \ Object type 10
  EQUB 0
