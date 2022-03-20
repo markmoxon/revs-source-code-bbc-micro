@@ -499,17 +499,10 @@ ORG &0000
 
  SKIP 1                 \ The bottom track line for the current object part
 
-.startEdge
+.prevEdgeInByte
 
- SKIP 1                 \ Determines whether we are drawing an edge at the start
-                        \ of a fill, i.e. a left edge, or the third edge in a
-                        \ four-edge object part
-                        \
-                        \   * 0 = this edge is at the start of a fill (i.e. left
-                        \         or third edge)
-                        \
-                        \   * Non-zero = this edge is at the end of a fill
-                        \     (i.e. right, second or fourth edge)
+ SKIP 1                 \ Determines whether we are drawing two edges within the
+                        \ same pixel byte in DrawObjectEdge
 
 .L0049
 
@@ -765,9 +758,10 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage, used in a number of places
 
-.edgePixelByte
+.prevPixelByte
 
- SKIP 0                 \ The edge pixel byte for the edge we are drawing
+ SKIP 0                 \ The pixel byte for the edge we are drawing from the
+                        \ previous call to DrawObjectEdge
 
 .H
 
@@ -7363,57 +7357,67 @@ ENDIF
 \
 \   nextEdge            The next edge (as a scaled scaffold measurement)
 \
-\   xObject             The x-coordinate of the centre of the object
+\   xObject             The pixel x-coordinate of the centre of the object
 \
 \   colourData          Colour data:
 \
-\                         * Bits 0-1 = used for the edge colour if bit 4 is set,
-\                           and we are either drawing a left edge in the left
-\                           half of the screen, or a right edge in the right
-\                           half of the screen (i.e. an outside edge)
+\                         * Bits 0-1 = logical fill colour
 \
-\                         * Bits 2-3 = used for the edge colour, unless bit 4 is
-\                           set
+\                         * Bits 2-3 = logical edge colour
 \
-\                         * Bit 4 = if set, then set the edge colour as
-\                           described above
+\                         * Bit 4 = if set and this is a left or right edge,
+\                           then use the fill colour instead of the edge colour
+\                           if this is an outside edge (i.e. a left edge in the
+\                           left half of the screen, or a right edge in the
+\                           right half of the screen), so the edge is
+\                           effectively hidden
 \
-\   A                   For left edges only: bits 0-1 contain the fill colour of
-\                       the object ???
+\   A                   The fill colour to the right of the edge: ???
+\
+\                         * For left edges: bits 0-1 contain the fill colour
+\
+\                         * For right edges: contains 0
+\
+\                         * For extra edges: bits 0-1 contain ???
 \
 \   Y                   Edge type:
 \
-\                         * 0 = second or third edge in a four-edge object part
-\                               (a "middle edge")
+\                         * 0 = third or fourth edge in a four-edge object part
+\                               (an "extra edge")
 \
 \                         * 1 = left edge
 \
 \                         * 2 = right edge
 \
-\   edgePixelByte       For middle or right edges: the pixel byte of the
-\                       previous edge drawn by DrawObjectEdge
+\   prevPixelByte       The fill colour to the left of the edge
 \
-\   blockNumber         For middle or right edges only: the dash data block
+\                       If this is a second call to DrawObjectEdge and we need
+\                       to draw this edge in the same pixel byte as the previous
+\                       edge, this contains the pixel byte from the previous
+\                       call with the first edge already drawn
+\
+\   blockNumber         For extra or right edges only: the dash data block
 \                       number of the previous edge drawn by DrawObjectEdge
 \
-\   nextEdgeCoord       For middle or right edges only: the pixel x-coordinate
+\   nextEdgeCoord       For extra or right edges only: the pixel x-coordinate
 \                       of the edge to draw (as returned by the previous call to
 \                       DrawObjectEdge)
 \
-\   nextBlockNumber     For middle or right edges only: the data block number of
+\   nextBlockNumber     For extra or right edges only: the data block number of
 \                       the edge to draw (returned by the previous call to
 \                       DrawObjectEdge)
 \
-\   startEdge           Determines whether this edge is the start of a filled
-\                       object:
+\   prevEdgeInByte      Determines whether we have already inserted the previous
+\                       edge into the pixel byte we are building
 \
-\                         * 0 = this edge forms the start of a filled object
-\                               part
+\                         * 0 = there is no other edge in the pixel byte we are
+\                               building
 \
-\                         * Non-zero = this edge does not form the start of a
-\                                      filled object part
+\                         * Non-zero = the previous edge is already in the pixel
+\                                      byte we are building, and the current
+\                                      edge needs to go in the same byte
 \
-\   edgePixelMask       For middle or right edges only: the pixel mask of the
+\   edgePixelMask       For extra or right edges only: the pixel mask of the
 \                       edge that was drawn previously (as returned by the
 \                       previous call to DrawObjectEdge)
 \
@@ -7421,7 +7425,15 @@ ENDIF
 \
 \   blockNumber         The dash data block number that was drawn into
 \
-\   edgePixelByte       The pixel byte of the edge that was drawn
+\   prevPixelByte       The fill colour to the left of the edge we just drew:
+\
+\                         * If we just successfully drew an edge and drew the
+\                           result on-screen, this contains the fill colour of
+\                           the object
+\
+\                         * If we created a pixel byte but the next edge needs
+\                           to be drawn in the same byte, this contains the
+\                           pixel byte from this call
 \
 \   edgePixelMask       The pixel mask of the edge that was drawn
 \
@@ -7429,42 +7441,52 @@ ENDIF
 \
 \   nextBlockNumber     The dash data block number for the next edge
 \
-\   startEdge           The correct setting for the next edge:
+\   prevEdgeInByte      The correct setting for the next edge:
 \
-\                         * 0 if we just drew a second edge in a four-edge
-\                           object part, so the third edge is the start of a
-\                           fill (i.e. fill between the third and fourth edges)
+\                         * 0 if the next edge is not in the same byte as the
+\                           one we just drew
 \
-\                         * Non-zero (bit 7 is set) otherwise
+\                         * Non-zero (bit 7 is set) if the next edge is in the
+\                           same byte as the one we just drew (in which case the
+\                           screen has not been updated, and the next call to
+\                           DrawObjectEdge needs to insert the next edge into
+\                           the pixel byte in prevPixelByte, using the pixel
+\                           mask in edgePixelMask
 \
 \ ******************************************************************************
 
 .DrawObjectEdge
 
- STY J                  \ Set J to the edge type in Y, so we can check it later
+ STY J                  \ Set J to the edge type in Y, so we can fetch it later
 
- LDX edgePixelByte      \ Set fillColour = edgePixelByte, so fillColour is now
- STX fillColour         \ the pixel byte of the edge that was drawn on the
-                        \ previous call to DrawObjectEdge
+ LDX prevPixelByte      \ Set fillColour = prevPixelByte, so fillColour is now
+ STX fillColour         \ either the fill colour of the object part, or this
+                        \ this edge needs to be in the same byte as the previous
+                        \ edge, and this is the pixel byte from the previous
+                        \ call
 
- AND #3                 \ Set X to bits 0-1 of A, which is the logical number of
- TAX                    \ the fill colour of the object
+ AND #3                 \ Set X to bits 0-1 of A, which contains the logical
+ TAX                    \ colour of the object's fill colour
 
- LDA objectPalette,X    \ Set edgePixelByte to logical colour X from the object
- STA edgePixelByte      \ palette, as a four-pixel byte of the colour in A ???
+ LDA objectPalette,X    \ Set prevPixelByte to logical colour X from the object
+ STA prevPixelByte      \ palette, so we start with a four-pixel byte of the
+                        \ fill colour in A (we will transform this into the
+                        \ pixel byte containing the edge over the course of this
+                        \ routine)
 
- LDA blockNumber        \ Set prevBlockNumber to the dash data block number
- STA prevBlockNumber    \ that was left over from the previous call to
-                        \ DrawObjectEdge
+ LDA blockNumber        \ Set prevBlockNumber to the dash data block number that
+ STA prevBlockNumber    \ was left over from the previous call to DrawObjectEdge
+                        \ so we can use it if this isn't a left edge
 
- LDA colourData         \ Set X to bits 2-3 of colourData
- AND #%00001100
+ LDA colourData         \ Set X to bits 2-3 of colourData, which contains the
+ AND #%00001100         \ logical colour of the edge we want to draw
  LSR A
  LSR A
  TAX
 
  LDA objectPalette,X    \ Set edgePixel to logical colour X from the object
- STA edgePixel          \ palette, to use as the draw colour for the edge
+ STA edgePixel          \ palette, which we will mask later to contain just the
+                        \ single pixel required to draw the edge
 
  LDA #0                 \ Set P = 0, for use as the low byte of (Q P), in which
  STA P                  \ we are going to build the address we need to draw into
@@ -7474,10 +7496,12 @@ ENDIF
                         \ edge type:
                         \
                         \   * Left edge, set:
+                        \
                         \       thisEdge = xObject + thisEdge / 2
                         \       blockNumber = thisEdge / 4
                         \
-                        \   * Middle or right edge, set:
+                        \   * Right or extra edge, set:
+                        \
                         \       thisEdge = nextEdgeCoord
                         \       blockNumber = blockNumberForNext
 
@@ -7522,7 +7546,7 @@ ENDIF
 .draw3
 
                         \ We jump here if Y <> 1, i.e. Y = 0 or 2, so we are
-                        \ either drawing a middle edge or the right edge
+                        \ either drawing an extra edge or the right edge
 
  LDA nextBlockNumber    \ Set blockNumber = nextBlockNumber
  STA blockNumber
@@ -7576,10 +7600,12 @@ ENDIF
                         \ By this point we have:
                         \
                         \   * Left edge:
+                        \
                         \       thisEdge = xObject + thisEdge / 2
                         \       blockNumber = thisEdge / 4
                         \
-                        \   * Middle or right edge:
+                        \   * Right or extra edge, set:
+                        \
                         \       thisEdge = nextEdgeCoord
                         \       blockNumber = blockNumberForNext
                         \
@@ -7590,6 +7616,21 @@ ENDIF
                         \
                         \ So we have:
                         \
+                        \   * fillColour contains the fill colour of the object,
+                        \     or if the previous edge is within the same pixel
+                        \     byte and we are now drawing the next edge, it
+                        \     contains the pixel byte from the previous call,
+                        \     which contains the previous edge
+                        \
+                        \   * prevPixelByte contains the fill colour, or (if we
+                        \     need to draw this edge in the same pixel byte as
+                        \     the previous edge), it contains the pixel byte
+                        \     from the previous call
+                        \
+                        \   * edgePixel contains a four-pixel byte in the edge
+                        \     colour passed in bits 2-3 of colourData, which we
+                        \     will mask later to a single pixel
+                        \
                         \   * thisEdge contains the pixel x-coordinate of the
                         \     edge to draw
                         \
@@ -7599,8 +7640,8 @@ ENDIF
                         \
                         \   * nextEdgeCoord and nextBlockNumber contain the
                         \     pixel x-coordinate and dash data block number of
-                        \     the next edge, ready for the next call to
-                        \     DrawObjectEdge
+                        \     the next edge, ready to be used in the next call
+                        \     to DrawObjectEdge
 
 \ ******************************************************************************
 \
@@ -7661,15 +7702,15 @@ ENDIF
 
  JMP draw32             \ Otherwise blockNumber is not a valid dash data block
                         \ number and is off the right edge of the screen, so
-                        \ jump to draw32 to draw the object all the way to the
-                        \ right edge of the screen
+                        \ jump to draw32 to work out whether we need to fill
+                        \ the object all the way to the right edge of the screen
 
 .draw8
 
  LDA bottomTrackLine    \ Set A = bottomTrackLine, which is the number of the
-                        \ track line at the bottom of the object, which is the
-                        \ same as the offset into the dash data block for the
-                        \ bottom edge
+                        \ track line at the bottom of the object, and which is
+                        \ the same as the offset into the dash data block for
+                        \ the bottom edge
 
  CMP dashDataOffset,X   \ If A >= the dash data offset for our dash data block,
  BCS draw9              \ then A is pointing to dash data, so jump to draw9 to
@@ -7690,9 +7731,10 @@ ENDIF
  BCC draw11             \ right way around, so jump to draw11 to keep going in
                         \ part 3
 
- CPY #1                 \ If Y <> 1, then we are drawing either a middle or
- BNE draw10             \ right edge, so jump to draw29 via draw10 to check
-                        \ whether we need to draw any more of the object
+ CPY #1                 \ If Y <> 1, then we are drawing either a right edge or
+ BNE draw10             \ an extra edge, so jump to draw29 via draw10 to check
+                        \ whether we need to fill to the left of this edge, and
+                        \ then move on to the next edge
 
                         \ If we get here then A >= topTrackLine and Y = 1, so
                         \ we are drawing the left edge and the bottom track line
@@ -7703,9 +7745,8 @@ ENDIF
 
 .draw10
 
- JMP draw29             \ Jump to draw29 to check whether we need to draw any
-                        \ more of the object, as we are drawing either a middle
-                        \ or right edge, but there is nothing to draw
+ JMP draw29             \ Jump to draw29 to check whether we need to fill to the
+                        \ left of this edge, and then move on to the next edge
 
 \ ******************************************************************************
 \
@@ -7722,9 +7763,17 @@ ENDIF
  AND #%00010000         \ keep the edge colour we set at the start of part 1
  BEQ draw12
 
- TYA                    \ If Y = 0, then we are drawing a middle edge, so jump
+ TYA                    \ If Y = 0, then we are drawing an extra edge, so jump
  BEQ draw12             \ to draw12 to keep the edge colour we set at the start
                         \ of part 1
+
+                        \ Otherwise bit 4 of colourData is set and this is a
+                        \ left or right edge, which means we use the fill colour
+                        \ instead of the edge colour, but only if this is an
+                        \ outside edge (i.e. a left edge in the left half of the
+                        \ screen, or a right edge in the right half of the
+                        \ screen), so the edge is effectively hidden by merging
+                        \ it into the object's fill
 
  EOR T                  \ Set A = bit 0 of Y EOR bit 0 of T
  AND #1
@@ -7740,29 +7789,29 @@ ENDIF
                         \     screen
                         \
                         \ In either case, jump to draw12 to keep the colour we
-                        \ set in edgePixel at the start of part 1
+                        \ set in edgePixel at the start of part 1, as this is
+                        \ not an outside edge
 
                         \ If we get here then bit 4 of colourData is set, and we
-                        \ are either drawing a left edge in the left half of the
-                        \ screen, or a right edge in the right half of the
-                        \ screen, so we set the edge colour to the logical
-                        \ colour in bits 0-1 of colourData
+                        \ are drawing a left or right edge as an outside edge,
+                        \ so we set the edge colour to the logical colour in
+                        \ bits 0-1 of colourData, i.e. the fill colour
 
- LDA colourData         \ Set X to bits 0-1 of colourData
- AND #%00000011
+ LDA colourData         \ Set X to bits 0-1 of colourData, which contains the
+ AND #%00000011         \ fill colour of the object part we are drawing
  TAX
 
- LDA objectPalette,X    \ Set the edge colour to logical colour X from the
- STA edgePixel          \ object palette
+ LDA objectPalette,X    \ Set edgePixel to the fill colour, so the edge merges
+ STA edgePixel          \ into the object's background
 
 .draw12
 
- LDA thisEdge           \ Set A to thisEdge, which we updated in part 1 to
-                        \ contain the pixel x-coordinate of the edge to draw
+ LDA thisEdge           \ Set A to thisEdge, which we set in part 1 to the
+                        \ pixel x-coordinate of the edge to draw
 
- AND #3                 \ Set X = A mod 4, which is the number of the pixel
- TAX                    \ within the four-pixel byte (i.e. 0 to 3, left to
-                        \ right)
+ AND #3                 \ Set X = A mod 4, which is the number of the pixel of
+ TAX                    \ the edge we want to draw within the four-pixel byte
+                        \ (i.e. 0 to 3, left to right)
 
  LDA yLookupLo+8,X      \ Set A to the X-th pixel mask from yLookupLo+8, which
                         \ is a pixel byte with the X-th pixel clear
@@ -7771,24 +7820,25 @@ ENDIF
                         \ X-th pixel set
 
  AND edgePixel          \ Apply the pixel mask to the edge colour in edgePixel,
- STA edgePixel          \ so edgePixel now contains a pixel byte with the X-th
-                        \ pixel set to the edge colour
+ STA edgePixel          \ so edgePixel now contains a pixel byte with only the
+                        \ X-th pixel set, and that pixel is set to the edge
+                        \ colour
 
  CPY #1                 \ If Y >= 1, then we are drawing a left or right edge,
  BCS draw16             \ so jump to draw16
 
-                        \ If we get here then we are drawing a middle edge as
-                        \ part of a four-edge object part
+                        \ If we get here then we are drawing one of the extra
+                        \ edges as part of a four-edge object part
 
- LDA leftEdgePixels,X   \ Set A to the X-th pixel mask from leftEdgePixels,
-                        \ which is a pixel byte with the first X bits set, so
-                        \ that's all the pixels to the left of the X-th pixel
+ LDA pixelsToLeft,X     \ Set A to the X-th pixel mask from pixelsToLeft, which
+                        \ is a pixel byte with all the pixels set to the left of
+                        \ the X-th pixel
 
  AND fillColour
  STA T
 
- LDA edgePixelByte
- AND middleEdgePixels,X
+ LDA prevPixelByte
+ AND pixelsEdgeRight,X
  ORA T
 
  AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
@@ -7800,15 +7850,15 @@ ENDIF
 
  STA I
 
- LDA startEdge          \ If startEdge = 0 then this edge is at the start of a
- BEQ draw13             \ fill, so it must be the third edge of a four-edge
-                        \ object part, so jump to draw13
+ LDA prevEdgeInByte     \ If prevEdgeInByte = 0 then this edge is the first one
+ BEQ draw13             \ in this byte, so jump to draw13
 
-                        \ If we get here then we are drawing the second edge of
-                        \ a four-edge object part, which is like a right edge
+                        \ If we get here then we are sharing this pixel byte with
+                        \ the previous edge
 
- LDA #0                 \ Set startEdge = 0, ready for the next call to
- STA startEdge          \ DrawObjectEdge (so for the third edge, startEdge = 0)
+ LDA #0                 \ Set prevEdgeInByte = 0, to reset it for the next call
+ STA prevEdgeInByte     \ to DrawObjectEdge (as we can't have three edges in one
+                        \ byte)
 
  LDA edgePixelMask      \ Set L to the pixel mask for the previous edge
  STA L
@@ -7820,15 +7870,20 @@ ENDIF
 
 .draw13
 
-                        \ If we get here then we are drawing the third edge of a
-                        \ four-edge object part, which is like a left edge
+                        \ If we get here then we are not sharing this pixel byte
+                        \ with the previous edge
 
  LDX blockNumber        \ If blockNumber <> nextBlockNumber, then the next edge
  CPX nextBlockNumber    \ isn't in the same dash data block (i.e. in the same
  BNE draw14             \ column), so jump to draw14 to draw this edge
 
- LDA I                  \ Set edgePixelByte = I
- STA edgePixelByte
+                        \ Otherwise the next edge is in the same byte as this
+                        \ one, so we need to return from the subroutine via
+                        \ draw29 (i.e. first check whether we need to fill to
+                        \ the left of this edge, and then return)
+
+ LDA I                  \ Set prevPixelByte = I so the next call to the routine
+ STA prevPixelByte      \ can access the pixel byte
 
  JMP draw29             \ Jump to draw29 to check whether we need to draw any
                         \ more of the object
@@ -7855,78 +7910,120 @@ ENDIF
                         \ draw18 if Y <> 1, i.e. Y = 2, so we jump to draw18 if
                         \ we are drawing a right edge
 
-                        \ If we get here then we are drawing a left edge, so we
-                        \ now calculate the pixel byte for the left edge
+                        \ If we get here then we are drawing a left edge in
+                        \ pixel X within the pixel byte, so we now calculate the
+                        \ pixel byte for the left edge
 
- LDA leftEdgePixels,X   \ Set A to the X-th pixel mask from leftEdgePixels,
-                        \ which is a pixel byte with the first X bits set, so
-                        \ that's all the pixels to the left of the X-th pixel -
-                        \ in other words, with all the pixels outside of the
-                        \ object set
+ LDA pixelsToLeft,X     \ Set A to the X-th pixel mask from pixelsToLeft, which
+                        \ is a pixel byte with all the pixels set to the left of
+                        \ the X-th pixel - in other words, with all the pixels
+                        \ outside of the object (to the left of the left edge)
+                        \ set
 
- STA L                  \ Store the pixel mask in L so we can retrieve it later
+ STA L                  \ Store this pixel mask in L so we can use it in part 4,
+                        \ so L contains a pixel mask containing the pixels to
+                        \ the left of the left edge
 
  EOR #&FF               \ Invert A so it contains a pixel byte with the X-th
                         \ pixel set, plus all the pixels to the right - in other
                         \ words, with the edge and the inside of the object set
 
- AND edgePixelByte      \ Set the object pixels to edgePixelByte, which we
-                        \ set above to the fill colour of the object ???
+ AND prevPixelByte      \ Set the object pixels to prevPixelByte, which contains
+                        \ the fill colour for the object (as at this point we
+                        \ won't be sharing a pixel byte with the previous edge,
+                        \ as there is no previous edge)
 
  AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
                         \ clears the X-th pixel in the pixel byte
 
- ORA edgePixel          \ edgePixel contains a pixel byte with the X-th pixel
-                        \ set to the edge colour, so this sets the X-th pixel in
-                        \ A (i.e. the edge) to the edge colour
+ ORA edgePixel          \ We set up edgePixel above to contain a single pixel
+                        \ for the edge in position X, set to the edge colour,
+                        \ so this sets the X-th pixel in A to the edge colour,
+                        \ so the pixel byte in A now contains the edge itself
 
 .draw17
 
                         \ If we get here then we are either drawing a left edge,
-                        \ or we jumped here and we are drawing the second edge
-                        \ of a four-edge object part
+                        \ or we this is a four-edge object part and we are
+                        \ sharing this pixel byte with the previous edge
 
  LDX blockNumber        \ If blockNumber <> nextBlockNumber, then the next edge
  CPX nextBlockNumber    \ isn't in the same dash data block (i.e. in the same
- BNE draw19             \ column), so jump to draw19 to draw this edge
+ BNE draw19             \ column) as this one, so jump to draw19 to draw this
+                        \ edge
 
-                        \ If we get here then the C flag is set, as the above
-                        \ comparison was blockNumber = nextBlockNumber
+                        \ If we get here then:
+                        \
+                        \   * The next edge is in the same pixel byte as the
+                        \     edge we are currently drawing, so we don't draw
+                        \     this byte yet, but instead return from the routine
+                        \     so the next call to DrawObjectEdge can pick up the
+                        \     baton and insert the next edge into the byte we
+                        \     just created
+                        \
+                        \   * The C flag is set, as the above comparison was
+                        \     blockNumber = nextBlockNumber
 
- STA edgePixelByte      \ Set edgePixelByte to the pixel byte in A, ready for
-                        \ the next call to DrawObjectEdge
+ STA prevPixelByte      \ Set prevPixelByte to the pixel byte in A, ready for
+                        \ the next call to DrawObjectEdge to pick it up
 
  LDA L                  \ Set edgePixelMask to the left edge pixel mask in L,
- STA edgePixelMask      \ ready for the next call to DrawObjectEdge
+ STA edgePixelMask      \ which contains the pixels to the right of the right
+                        \ edge, or ??? if this is an extra edge, to pass to the
+                        \ next call to DrawObjectEdge
 
- ROR startEdge          \ Set bit 7 of startEdge, so it is non-zero for the next
-                        \ call to DrawObjectEdge, to indicate that the next edge
-                        \ is not at the start of a fill
+ ROR prevEdgeInByte     \ Set bit 7 of prevEdgeInByte, so it is non-zero for the
+                        \ next call to DrawObjectEdge, to indicate that the next
+                        \ edge needs to be inserted into the pixel byte that we
+                        \ just built, alongside the current edge
 
  RTS                    \ Return from the subroutine
 
 .draw18
 
-                        \ If we get here then we are drawing a right edge, so we
-                        \ now calculate the pixel byte for the right edge
+                        \ If we get here then we are drawing a right edge in
+                        \ pixel X within the pixel byte, so we now calculate the
+                        \ pixel byte for the right edge
+                        \
+                        \ This routine draws the right edge in the pixel byte,
+                        \ making sure we keep any previous edge that's already
+                        \ drawn in the same pixel byte
 
- LDA edgePixelMask      \ Set A to the left edge pixel mask of the previous edge
-                        \ that was drawn, which is a pixel byte with the all the
-                        \ pixels to the left of the previous edge set
+ LDA edgePixelMask      \ Set A to the edge pixel mask of the previous edge,
+                        \ which will:
+                        \
+                        \   * Be empty if the previous edge was already drawn
+                        \     and we do not need to share this pixel byte with
+                        \     the previous edge
+                        \
+                        \   * Contain set pixels for the previous edge if both
+                        \     this edge and the previous edge need to share the
+                        \     same pixel byte
 
- ORA rightEdgePixels,X  \ Set all the pixels to the right of the X-th pixel, so
+ ORA pixelsToRight,X    \ The pixelsToRight table contains pixel bytes with all
+                        \ the pixels set to the right of the X-th pixel, so this
+                        \ sets all the pixels to the right of the X-th pixel
+
                         \ A now contains a pixel byte with pixels set to the
-                        \ left of the previous edge, and to the right of this
+                        \ right of this edge, and if the previous edge is in the
+                        \ same byte, pixels are also set to the left of that
                         \ edge
 
- STA L                  \ Store the pixel mask in L so we can retrieve it later
+ STA L                  \ Store this pixel mask in L so we can use it in part 4,
+                        \ so L contains a pixel mask containing the pixels to
+                        \ the right of the right edge (and the left of the
+                        \ previous edge, if it's in the same byte)
 
- EOR #&FF               \ Invert A so it contains a pixel byte with the central
-                        \ pixels set
+ EOR #&FF               \ Invert A so it contains the pixels of this edge, plus
+                        \ the previous edge if this was drawn in the same byte
 
- AND fillColour         \ Set the central pixels to colour fillColour, which
-                        \ we set above to the pixel byte of the previous edge
-                        \ that was drawn
+ AND fillColour         \ Set these pixels to fillColour, which is either the
+                        \ fill colour of the object (if there is just this edge
+                        \ in the pixel byte), or it's the pixel byte of the
+                        \ previous edge (if we have both edges in the same byte)
+                        \
+                        \ In either case, this fills the pixel byte with the
+                        \ correct contents
 
  AND yLookupLo+8,X      \ Apply the X-th pixel mask from yLookupLo+8, so this
                         \ clears the X-th pixel in the pixel byte
@@ -7934,6 +8031,10 @@ ENDIF
  ORA edgePixel          \ edgePixel contains a pixel byte with the X-th pixel
                         \ set to the edge colour, so this sets the X-th pixel in
                         \ A (i.e. the edge) to the edge colour
+
+                        \ So we now have a pixel byte in A that contains this
+                        \ edge in the correct colour, and if this pixel byte
+                        \ also contains the previous edge, that's in there too
 
 \ ******************************************************************************
 \
@@ -7949,12 +8050,14 @@ ENDIF
                         \ By this point, we have the following:
                         \
                         \   * A contains the pixel byte we need to use to draw
-                        \     the edge
+                        \     this edge (incorporating the previous edge if it's
+                        \     close enough to to be in the same pixel byte
                         \
-                        \   * L contains the pixel mask for the edge, with set
-                        \     bits for any background pixels (i.e. those not
-                        \     associated with the edge), and clear pixels for
-                        \     the edge itself
+                        \   * L contains a pixel mask containing set pixels for
+                        \     those to the left of the left edge, or to the
+                        \     right of the right edge, or to the left and right
+                        \     of a two-edge pixel byte, or ??? if this is an
+                        \     extra edge
                         \
                         \   * (Q P) contains the address of the dash data block
                         \     containing the edge we want to draw
@@ -8134,7 +8237,7 @@ IF _ACORNSOFT
  CPX #1                 \ left edge, so jump to draw31 to return from the
  BEQ draw31             \ subroutine as we are done drawing
 
-                        \ If we get here then we have just drawn a middle or
+                        \ If we get here then we have just drawn an extra or
                         \ right edge, so we need to reset the colour to the
                         \ right of the edge we just drew, so the background
                         \ colour is restored after the object
@@ -8192,7 +8295,7 @@ ELIF _SUPERIOR
  CPX #1                 \ left edge, so jump to draw31 to return from the
  BEQ draw31             \ subroutine as we are done drawing
 
-                        \ If we get here then we have just drawn a middle or
+                        \ If we get here then we have just drawn an extra or
                         \ right edge, so we need to reset the colour to the
                         \ right of the edge we just drew, so the background
                         \ colour is restored after the object
@@ -8271,25 +8374,31 @@ ENDIF
 .draw32
 
                         \ We jump here if the block number in blockNumber
-                        \ is >= 40
+                        \ is >= 40, which means we the edge we are trying to
+                        \ draw is off the right of the screen, so now we need
+                        \ to work out whether we need to fill the object up to
+                        \ the edge of the screen
 
  LDY J                  \ If the edge type in J = 1, then we are drawing the
  CPY #1                 \ left edge, so jump to draw31 to return from the
- BEQ draw31             \ subroutine as the left edge is past the right edge
-                        \ of the screen
+ BEQ draw31             \ subroutine as the whole object part is off-screen
 
  LDA prevBlockNumber    \ If prevBlockNumber >= 40, then the dash data block
  CMP #40                \ number from the previous call to DrawObjectEdge is
  BCS draw31             \ also past the right edge of the screen, so jump to
-                        \ draw31 to return from the subroutine
+                        \ draw31 to return from the subroutine as the whole
+                        \ part between this edge and the previous edge is
+                        \ off-screen
 
-                        \ Otherwise we are drawing a middle or right edge and
-                        \ the previous call to DrawObjectEdge was on-screen, so
-                        \ we may need to fill to the right of the previous edge
+                        \ Otherwise we are drawing a right edge or an extra edge
+                        \ and the previous call to DrawObjectEdge was on-screen,
+                        \ so we need to fill between the previous edge and the
+                        \ right edge of the screen
 
- LDA #40                \ Set blockNumber = 40 to use in the calculation at
- STA blockNumber        \ draw30 above, which decides whether to call
-                        \ FillInsideObject
+ LDA #40                \ Set blockNumber = 40 to represent the block beyond the
+ STA blockNumber        \ right edge of the screen in the calculation at draw30,
+                        \ which works out whether to call FillInsideObject to
+                        \ fill from the previous edge to this block number
 
  BNE draw30             \ Jump to draw30 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -10160,13 +10269,14 @@ ENDIF
 
 .drob1
 
- LDA colourPalette      \ Set edgePixelByte to the physical colour that's mapped
- STA edgePixelByte      \ to logical colour 0 in the standard colour palette, to
-                        \ pass to DrawObjectEdge below
+ LDA colourPalette      \ Set prevPixelByte to the physical colour that's mapped
+ STA prevPixelByte      \ to logical colour 0 in the standard colour palette, to
+                        \ pass as the previous pixel byte to DrawObjectEdge
+                        \ below
 
- LDA #0                 \ Set startEdge = 0 to pass to DrawObjectEdge below, to
- STA startEdge          \ indicate that the first edge we draw is a starting
-                        \ edge (i.e. the start of a horizontal line)
+ LDA #0                 \ Set prevEdgeInByte = 0 to indicate that the first edge
+ STA prevEdgeInByte     \ does not need to share a pixel byte with the previous
+                        \ edge
 
  STA edgePixelMask      \ Set edgePixelMask = 0 to pass to DrawObjectEdge below
 
@@ -12835,7 +12945,7 @@ ENDIF
  LDA L5FD0,Y
  STA objectPalette,X
 
- AND middleEdgePixels,X
+ AND pixelsEdgeRight,X
  STA L629C,X
 
  INY
@@ -13552,7 +13662,7 @@ ENDIF
 
 .C2F72
 
- AND leftEdgePixels,X
+ AND pixelsToLeft,X
  ORA L629C,X
  BNE C2F58
  LDA #&55
@@ -13634,7 +13744,7 @@ ENDIF
 
 .C2FB4
 
- AND leftEdgePixels,X
+ AND pixelsToLeft,X
  ORA L629C,X
  BNE C2F9A
  LDA #&55
@@ -14669,18 +14779,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: leftEdgePixels
+\       Name: pixelsToLeft
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Pixel byte with all the pixels to the left of position X set
 \
 \ ******************************************************************************
 
-.leftEdgePixels
+.pixelsToLeft
 
  EQUB %00000000
  EQUB %10001000
@@ -14778,18 +14884,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: middleEdgePixels
+\       Name: pixelsEdgeRight
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Pixel byte with all the pixels to the right of position X set,
+\             plus pixel X
 \
 \ ******************************************************************************
 
-.middleEdgePixels
+.pixelsEdgeRight
 
  EQUB %11111111
  EQUB %01110111
@@ -16646,18 +16749,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: rightEdgePixels
+\       Name: pixelsToRight
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Pixel byte with all the pixels to the right of position X set
 \
 \ ******************************************************************************
 
-.rightEdgePixels
+.pixelsToRight
 
  EQUB %01110111
  EQUB %00110011
