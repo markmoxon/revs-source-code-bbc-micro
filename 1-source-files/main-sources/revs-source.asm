@@ -8540,7 +8540,8 @@ ENDIF
 \       Name: GetTyreDashEdge
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Copy the pixel bytes along the tyre and dashboard edges so they
+\             can be feathered
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8578,7 +8579,8 @@ IF _ACORNSOFT
                         \
                         \   LDA #&55 -> LDA #&55            when A = &55
 
-                        \ Fall through into FillAfterObject
+                        \ Fall through into FillAfterObject to copy the edge
+                        \ data to the location specified in (S R)
 
 ENDIF
 
@@ -8587,7 +8589,7 @@ ENDIF
 \       Name: FillAfterObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Fill the block to the right of an object
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8682,18 +8684,27 @@ IF _ACORNSOFT
                         \ memory from byte topTrackLine to the marker that we
                         \ just placed at the start of the dash data
 
- JMP edge4
+ JMP edge4              \ Jump into the following loop at the entry point edge4
+                        \ to draw the fill from the top byte to the bottom byte
 
 .edge1
 
- CMP #&55
- BNE edge2
+                        \ This part of the loop, between edge1 and edge5, is
+                        \ only used by the GetTyreDashEdge routine, which
+                        \ modifies the loop to copy pixels instead of filling
+                        \ them
 
- LDA #0
+ CMP #&55               \ If the current byte is &55, then this represents black
+ BNE edge2              \ (colour 0), so set A = 0 so it's the correct pixel
+ LDA #0                 \ byte for the current buffer contents
 
 .edge2
 
- STA (R),Y
+ STA (R),Y              \ Store the pixel byte we fetched from the screen buffer
+                        \ in the Y-th byte of (S R), which copies the byte from
+                        \ the screen buffer into the address set up in the
+                        \ CopyTyreDashEdges routine (i.e. this copies the edges
+                        \ into tyreRightEdge or dashRightEdge)
 
 .edge3
 
@@ -8704,7 +8715,9 @@ IF _ACORNSOFT
 
  LDA (P),Y              \ Fetch the Y-th byte from the dash data block
 
- BNE edge10
+ BNE edge10             \ If the current byte in the screen buffer is non-zero,
+                        \ then it is not empty, so jump to edge10 to move on to
+                        \ the next byte, as we only need to fill empty bytes
 
 .edge5
 
@@ -8715,8 +8728,8 @@ IF _ACORNSOFT
 
 .edge6
 
- LDA #&55               \ Set A = &55, which indicates a switch to colour 0
-                        \ (black)
+ LDA #&55               \ Set A = &55, which is the value we use to represent
+                        \ colour 0 (black) in the screen buffer
                         \
                         \ Gets modified by the GetTyreDashEdge routine:
                         \
@@ -8728,7 +8741,9 @@ IF _ACORNSOFT
 
 .edge7
 
- STA (P),Y              \
+ STA (P),Y              \ Draw the resulting pixel byte into the screen buffer
+                        \ by writing it to the Y-th byte of the relevant dash
+                        \ data block
                         \
                         \ Gets modified by the GetTyreDashEdge routine:
                         \
@@ -8745,17 +8760,38 @@ IF _ACORNSOFT
 
 .edge9
 
- LDX &3000,Y
- BEQ edge7
- TXA
+ LDX &3000,Y            \ Set X to the Y-th byte in the screen buffer, which is
+                        \ the next byte down the screen after the one we just
+                        \ draw
+                        \
+                        \ Gets modified at the start of part 2 as follows:
+                        \
+                        \   LDX &3000,Y -> LDX #(Q P),Y
+                        \
+                        \ In other words, we have modified the instruction to
+                        \ load the Y-th byte from the dash data block address
+                        \ for the edge we are drawing, i.e. load the Y-th byte
+                        \ of dash data block blockNumber
+
+
+ BEQ edge7              \ If the next byte down the screen is zero, then loop
+                        \ back to edge7 to draw the edge in this byte as well,
+                        \ so we keep drawing the edge downwards while the
+                        \ existing contents of the screen buffer are empty
+
+ TXA                    \ The next byte down the screen is non-zero, so copy the
+                        \ value into A
 
 .edge10
 
- CMP #&AA
+ CMP #&AA               \ Check to see if the next byte is the marker for the
+                        \ bottom of the edge
 
 .edge11
 
- BNE edge3              \ 
+ BNE edge3              \ If this is not the marker for the bottom of the edge,
+                        \ loop back to edge3 to draw the next pixel byte over
+                        \ the top of this non-empty byte in the screen buffer
                         \
                         \ Gets modified by the GetTyreDashEdge routine:
                         \
@@ -8765,17 +8801,27 @@ IF _ACORNSOFT
                         \   * BNE edge3 when GetTyreDashEdge is called with
                         \               Y = &E7
 
- LDA #0
- STA (P),Y
+ LDA #0                 \ Overwrite the &AA value with 0, though this appears to
+ STA (P),Y              \ have no effect, as if we loop back to edge5 in the
+                        \ following conditional, this value will be overwritten,
+                        \ and if we fall through to the LDA W below, it will
+                        \ be overwritten there
 
- CPY blockOffset
- BNE edge5
- LDA W
- STA (P),Y
+ CPY blockOffset        \ If Y <> blockOffset then this can't be our marker, as
+ BNE edge5              \ the marker is on line blockOffset, so jump back to
+                        \ edge5 to merge this byte with the correct background
+                        \ colour
+
+                        \ If we get here then we have reached our marker at the
+                        \ bottom of the edge
+
+ LDA W                  \ Restore the entry in the dash data block that we
+ STA (P),Y              \ overwrote with the marker, whose original contents we
+                        \ stored in W
 
 .edge12
 
- RTS
+ RTS                    \ Return from the subroutine
 
 ENDIF
 
@@ -8784,7 +8830,8 @@ ENDIF
 \       Name: GetTyreDashEdgeS
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Copy the pixel bytes along the tyre and dashboard edges so they
+\             can be feathered
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8822,6 +8869,9 @@ IF _SUPERIOR
                         \
                         \   LDA #&55 -> LDA #&55            when A = &55
 
+                        \ Fall through into FillAfterObjectS to copy the edge
+                        \ data to the location specified in (S R)
+
 ENDIF
 
 \ ******************************************************************************
@@ -8829,17 +8879,19 @@ ENDIF
 \       Name: FillAfterObjectS
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Fill the block to the right of an object
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   blockNumber         Dash data block number
+\   blockNumber         The dash data block number to draw in (i.e. the block
+\                       to the right of the object)
 \
 \   blockOffset         The dash data offset for the bottom of the edge to draw
 \
-\   topTrackLine        Starting byte in dash data block
+\   topTrackLine        Top track line number, i.e. the number of the start byte
+\                       in the dash data block
 \
 \ ******************************************************************************
 
@@ -8892,33 +8944,54 @@ IF _SUPERIOR
  STA P                  \ Set P = A, to store the low byte of the result in P,
                         \ giving the result we wanted in (Q P)
 
- LDY topTrackLine
- JMP sedg9
+ LDY topTrackLine       \ Set Y to the number of the top track line, so we work
+                        \ down from this byte within the data block, moving down
+                        \ in memory until we reach the marker
+                        \
+                        \ So we are working down the screen, going backwards in
+                        \ memory from byte topTrackLine to the marker that we
+                        \ just placed at the start of the dash data
+
+ JMP sedg9              \ Jump into the following loop at the entry point sedg9
+                        \ to draw the fill from the top byte to the bottom byte
 
 .sedg1
 
- CMP #&55
- BNE sedg2
- LDA #0
+                        \ This part of the loop, between segd1 and segd5, is
+                        \ only used by the GetTyreDashEdgeS routine, which
+                        \ modifies the loop to copy pixels instead of filling
+                        \ them
+
+ CMP #&55               \ If the current byte is &55, then this represents black
+ BNE sedg2              \ (colour 0), so set A = 0 so it's the correct pixel
+ LDA #0                 \ byte for the current buffer contents
 
 .sedg2
 
- STA (R),Y
+ STA (R),Y              \ Store the pixel byte we fetched from the screen buffer
+                        \ in the Y-th byte of (S R), which copies the byte from
+                        \ the screen buffer into the address set up in the
+                        \ CopyTyreDashEdges routine (i.e. this copies the edges
+                        \ into tyreRightEdge or dashRightEdge)
 
 .sedg3
 
- DEY
+ DEY                    \ Decrement the track line counter in Y to move down to
+                        \ the next pixel line on-screen
 
- CPY blockOffset
- BEQ sedg10
+ CPY blockOffset        \ If Y = blockOffset then we have reached the bottom of
+ BEQ sedg10             \ the objec, so jump back to sedg10 to return from the
+                        \ subroutine
 
 .sedg4
 
- LDA (P),Y
+ LDA (P),Y              \ Fetch the current byte from the screen buffer
 
 .sedg5
 
- BNE sedg8              \ 
+ BNE sedg8              \ If the current byte in the screen buffer is non-zero,
+                        \ then it is not empty, so jump to sedg8 to move on to
+                        \ the next byte, as we only need to fill empty bytes
                         \
                         \ Gets modified by the GetTyreDashEdge routine:
                         \
@@ -8929,13 +9002,18 @@ IF _SUPERIOR
                         \               Y = &09
 
 
- JSR GetColourS
- BNE sedg7
+ JSR GetColourS         \ The current byte in the screen buffer is zero, which
+                        \ means it should inherit the colour of the byte to the
+                        \ left, so call GetColourS to work out what this byte's
+                        \ colour would be on-screen, and put it into A
+
+ BNE sedg7              \ If the result is non-zero, then jump to sedg7 to skip
+                        \ the following instruction
 
 .sedg6
 
- LDA #&55               \ Set A = &55, which indicates a switch to colour 0
-                        \ (black)
+ LDA #&55               \ Set A = &55, which is the value we use to represent
+                        \ colour 0 (black) in the screen buffer
                         \
                         \ Gets modified by the GetTyreDashEdge routine:
                         \
@@ -8947,7 +9025,9 @@ IF _SUPERIOR
 
 .sedg7
 
- STA (P),Y              \
+ STA (P),Y              \ Draw the resulting pixel byte into the screen buffer
+                        \ by writing it to the Y-th byte of the relevant dash
+                        \ data block
                         \
                         \ Gets modified by the GetTyreDashEdge routine:
                         \
@@ -8959,16 +9039,21 @@ IF _SUPERIOR
 
 .sedg8
 
- DEY
+ DEY                    \ Decrement the track line counter in Y to move down to
+                        \ the next pixel line on-screen
 
 .sedg9
 
- CPY blockOffset
- BNE sedg4
+                        \ This is the entry point for the loop, which is between
+                        \ sedg4 and the loop's end logic in the next instruction
+
+ CPY blockOffset        \ If Y <> blockOffset then we haven't reached the bottom
+ BNE sedg4              \ of the object yet, so jump back to sedg4 to fill the
+                        \ next byte down
 
 .sedg10
 
- RTS
+ RTS                    \ Return from the subroutine
 
 ENDIF
 
@@ -9172,10 +9257,11 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The number of blocks inside the object that we need to
-\                       fill
+\   X                   The number of bash data blocks inside the object that we
+\                       need to fill
 \
-\   blockNumber         The block number of the edge to fill up to
+\   blockNumber         The block number of the edge to fill up to (i.e. we fill
+\                       to the left of this block number)
 \
 \   leftOfEdge          The pixel byte to fill the object with
 \
@@ -9218,17 +9304,37 @@ ENDIF
                         \ because the dash data blocks occur every &80 bytes
                         \ from dashData
                         \
-                        \ As per the comments in FillAfterObject, this is the
-                        \ same as:
+                        \ We do this using the following simplification, where
+                        \ A = (blockNumber - 1)
+                        \
+                        \     dashData + &80 * A
+                        \   = dashData + 256 / 2 * A
+                        \   = HI(dashData) << 8 + LO(dashData) + A << 7
+                        \
+                        \ LO(dashData) happens to be zero (as dashData = &3000),
+                        \ so we can keep going:
+                        \
+                        \   = HI(dashData) << 8 + A << 7
+                        \   = (HI(dashData) << 1 + A) << 7
+                        \   = ((HI(dashData) << 1 + A) << 8) >> 1
+                        \
+                        \ In other words, if we build a 16-bit number with the
+                        \ high byte set to HI(dashData) << 1 + A, and then shift
+                        \ the whole thing right by one place, we have our result
+                        \
+                        \ So this is the same as:
                         \
                         \   ((HI(dashData) << 1 + blockNumber - 1) << 8) >> 1
+                        \
+                        \ We do this below, storing the 16-bit number in (Q A)
 
  LDA blockNumber        \ Set A = blockNumber
 
  STA U                  \ Set U = blockNumber
 
  CLC                    \ Set A = A - 1 + HI(dashData) << 1
- ADC #HI(dashData)<<1-1 \
+ ADC #HI(dashData)<<1-1 \       = blockNumber - 1 + HI(dashData) << 1
+                        \
                         \ so our 16-bit number is (A 0), and we want to shift
                         \ right by one place
 
@@ -9242,23 +9348,26 @@ ENDIF
  LDA #0                 \ Shift the C flag into bit 7 of A, so A now contains
  ROR A                  \ the low byte of our result
 
- SEC                    \ Set A = A - T
- SBC T                  \       = A - (&7F - topTrackLine)
-                        \       = A - &7F + topTrackLine
-                        \       = A - &80 + topTrackLine + 1
-                        \
-                        \ And set the C flag depending on the subtraction
+                        \ We now have our result in (Q A), which contains the
+                        \ start address of dash data block blockNumber - 1
 
- STA P                  \ Set P = A, to store the low byte of the result in P,
-                        \ giving the result we wanted in (Q P):
+                        \ We now use this to calculate the address of the top
+                        \ track line of the object in blockNumber - 2
+
+ SEC                    \ Set (Q A) = (Q A) - T
+ SBC T                  \           = (Q A) - (&7F - topTrackLine)
+                        \           = (Q A) - &7F + topTrackLine
+                        \           = (Q A) - &80 + topTrackLine + 1
                         \
-                        \   (Q P) = address of dash data block blockNumber - 1
-                        \           - &80 + topTrackLine + 1
+                        \ As each dash data block is spaced out by &80 bytes,
+                        \ (Q A) - &80 contains the start address of dash data
+                        \ block blockNumber - 2, so the above calculation sets
+                        \ (Q A) to the address of the top track line of the
+                        \ object in blockNumber - 2
                         \
-                        \         = address of dash data block blockNumber - 2
-                        \           + topTrackLine + 1
-                        \
-                        \ i.e. the address of ???
+                        \ We also set the C flag depending on the subtraction
+
+ STA P                  \ Set (Q P) = (Q A)
 
  EOR #&80               \ Set (S R) = (Q P) - &80
  STA R                  \
@@ -9279,38 +9388,49 @@ ENDIF
 
 .fill3
 
- DEC Q                  \ Decrement the high bytes in (Q P) and (S R)
- DEC S
+ DEC Q                  \ Otherwise decrement the high bytes in (Q P) and (S R)
+ DEC S                  \ as the low byte subtraction underflowed
 
 .fill4
 
- LDY U                  \ Set Y to the block number in U, which started out as
-                        \ the block number of the second edge and goes down by 2
-                        \ on each loop iteration
+                        \ By this point, (Q P) points to the top track line of
+                        \ the object in blockNumber - 2, and (S R) points to the
+                        \ same track line in blockNumber - 3
 
- LDA L3F4F,Y
+                        \ We now enter a loop to fill the object, either one or
+                        \ two blocks at a time
+
+ LDY U                  \ Set Y to the block number in U, which starts out as
+                        \ blockNumber and goes down by 2 on each loop iteration
+
+ LDA fillDataOffset-1,Y \ Set A to entry Y - 1 from fillDataOffset, which gives
+                        \ us the offset of the bottom line of block Y - 1,
+                        \ i.e. blockNumber - 1, adjusted to ensure that filling
+                        \ works properly
 
  DEY                    \ Set U = Y - 2
  DEY                    \       = U - 2
  STY U
 
- CMP bottomTrackLine    \ If A < bottomTrackLine, jump to fill5
- BCC fill5
+ CMP bottomTrackLine    \ If A < bottomTrackLine, jump to fill5 to do the fill
+ BCC fill5              \ from the bottom of the block
 
  ADC T                  \ Set Y = A + T + 1
- TAY
+ TAY                    \       = bottom line + &7F - topTrackLine + 1
+                        \       = bottom line + &80 - topTrackLine
 
- BPL fill6              \ If Y < &80, jump to fill6
+ BPL fill6              \ If Y < &80, jump to fill6 to do the fill from track
+                        \ line Y and up
 
- CPX #2                 \ If X >= 2, jump to fill8
- BCS fill8
+ CPX #2                 \ If X >= 2, jump to fill8 to move on to the next two
+ BCS fill8              \ blocks to the left
 
  RTS                    \ Return from the subroutine
 
 .fill5
 
  LDY VV                 \ Set Y = VV
-                        \       = T + bottomTrackLine
+                        \       = &7F - (topTrackLine - bottomTrackLine)
 
 .fill6
 
@@ -18812,30 +18932,92 @@ ENDIF
 
 .dashData30
 
- SKIP 63
+ SKIP 64
 
 \ ******************************************************************************
 \
-\       Name: L3F4F
+\       Name: fillDataOffset
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Dash data offsets, tweaked to give bottom line values that are
+\             compatible with the process of filling blocks to the left
 \
 \ ------------------------------------------------------------------------------
 \
-\ The first byte gets copied to screen memory along with dashData30.
+\ Contains dash data offsets that are skewed so that dash data blocks whose left
+\ neighbours start lower down the screen than they do (i.e. they have a smaller
+\ offset) contain the left neighbour's offset rather than their own.
+\
+\ This ensures that when filling blocks to the left of the current block, the
+\ value of the bottom line (i.e. the offset) is set to the bottom of the column
+\ being filled, rather than the smaller column to its right.
 \
 \ ******************************************************************************
 
-.L3F4F
+.fillDataOffset
 
- EQUB &00
+ EQUB dashData0  - (dashData + &80 *  0) - 1    \ These match dashDataOffset
+ EQUB dashData1  - (dashData + &80 *  1) - 1
+ EQUB dashData2  - (dashData + &80 *  2) - 1
+ EQUB dashData3  - (dashData + &80 *  3) - 1
+ EQUB dashData4  - (dashData + &80 *  4) - 1
+ EQUB dashData5  - (dashData + &80 *  5) - 1
+ EQUB dashData6  - (dashData + &80 *  6) - 1
 
- EQUB &1B, &1B, &1B, &15, &03, &02, &02, &02, &06, &0B, &0F
- EQUB &13, &17, &1B, &26, &2B, &2B, &2B, &2B, &2B, &2B, &2B, &2B
- EQUS &2B, &2B, &2B, &26
- EQUB &1B, &17, &13, &0F, &0B, &06, &02, &02, &02, &03, &15, &1B
- EQUB &1B, &1B, &20, &20, &20, &42, &65, &68, &69
+ EQUB dashData6  - (dashData + &80 *  6) - 1    \ dashData6 repeated, as block 7
+                                                \ is smaller than block 6
+
+ EQUB dashData7  - (dashData + &80 *  7) - 1    \ These are out by one, so the
+ EQUB dashData8  - (dashData + &80 *  8) - 1    \ X-th entry is the offset for
+ EQUB dashData9  - (dashData + &80 *  9) - 1    \ block X - 1
+ EQUB dashData10 - (dashData + &80 * 10) - 1
+ EQUB dashData11 - (dashData + &80 * 11) - 1
+ EQUB dashData12 - (dashData + &80 * 12) - 1
+ EQUB dashData13 - (dashData + &80 * 13) - 1
+ EQUB dashData14 - (dashData + &80 * 14) - 1
+ EQUB dashData15 - (dashData + &80 * 15) - 1
+ EQUB dashData16 - (dashData + &80 * 16) - 1
+ EQUB dashData17 - (dashData + &80 * 17) - 1
+ EQUB dashData18 - (dashData + &80 * 18) - 1
+ EQUB dashData19 - (dashData + &80 * 19) - 1
+ EQUB dashData20 - (dashData + &80 * 20) - 1
+ EQUB dashData21 - (dashData + &80 * 21) - 1
+ EQUB dashData22 - (dashData + &80 * 22) - 1
+ EQUB dashData23 - (dashData + &80 * 23) - 1
+ EQUB dashData24 - (dashData + &80 * 24) - 1
+
+                                                \ dashData25 skipped as block 26
+                                                \ is larger than block 25
+
+ EQUB dashData26 - (dashData + &80 * 26) - 1    \ These match dashDataOffset
+ EQUB dashData27 - (dashData + &80 * 27) - 1
+ EQUB dashData28 - (dashData + &80 * 28) - 1
+ EQUB dashData29 - (dashData + &80 * 29) - 1
+ EQUB dashData30 - (dashData + &80 * 30) - 1
+ EQUB dashData31 - (dashData + &80 * 31) - 1
+ EQUB dashData32 - (dashData + &80 * 32) - 1
+ EQUB dashData33 - (dashData + &80 * 33) - 1
+ EQUB dashData34 - (dashData + &80 * 34) - 1
+
+ EQUB dashData34 - (dashData + &80 * 34) - 1    \ dashData34 repeated, as block
+                                                \ 35 is smaller than block 34
+
+ EQUB dashData35 - (dashData + &80 * 35) - 1    \ These are out by one, so the
+ EQUB dashData36 - (dashData + &80 * 36) - 1    \ X-th entry is the offset for
+                                                \ block X - 1
+
+                                                \ dashData37 skipped as block 38
+                                                \ is larger than block 37
+
+ EQUB dashData38 - (dashData + &80 * 38) - 1    \ These match dashDataOffset
+ EQUB dashData39 - (dashData + &80 * 39) - 1
+
+ EQUB dashData40 - (dashData + &80 * 40) - 1    \ Not used for the screen buffer
+
+ EQUB &20, &20          \ These bytes appear to be unused
+ EQUB &20, &42
+ EQUB &65, &68
+ EQUB &69
 
 \ ******************************************************************************
 \
