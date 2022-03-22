@@ -289,20 +289,22 @@ ORG CODE%
 
 \ trackData+&6D0 = &59D0
 \
-\ Next 24 bytes are copied to L5FB0
+\ These 24 bytes are copied to L5FB0
 \ Bit 0 -> bit 7 of result
 \ Bit 1 clear -> result is scaled by U
 \ See sub_C44C6
 
  EQUB &14, &33, &72, &3B, &18, &33, &15, &15
- EQUB &15, &3C, &18, &30, &33, &39, &38, &14, &14, &14, &37, &20
- EQUB &59, &2B, &54, &14, &14, &67
+ EQUB &15, &3C, &18, &30, &33, &39, &38, &14
+ EQUB &14, &14, &37, &20, &59, &2B, &54, &14
+
+ EQUB &14, &67
 
 \ trackData+&6EA = &59EA
-\ Road sign positions and types
-\ Bits 0-2     Object type of road sign (add 7 to get object type)
+\ Positions and types for 16 road signs
+\ Bits 0-2 = Object type of road sign (add 7 to get object type)
 \ Bits 3-7 = Index into track data at trackData+&001, trackData+&601
-\ maybe marker position along track?
+\            maybe marker position along track?
 \ Road sign 0 at position 23 is the sign we see when the track loads
 
  EQUB %00000011         \ 00000 011     Object type 3 + 7 = 10 at position  0
@@ -323,30 +325,25 @@ ORG CODE%
  EQUB %10111000         \ 10111 000     Object type 0 + 7 =  7 at position 23
 
 \ trackData+&6FA = &59FA
+\ Bits 3-7 contain the number of bytes at trackData+&6D0 (24) that we copy to L5FB0
+\ Is this the number of track positions?
 
- EQUB &C0
+ EQUB 24 << 3
 
 \ trackData+&6FB = &59FB
 
  EQUB &FF
 
-\ trackData+&6FC = &59FC
+\ trackData+&6FC = &59FC (low)
+\ trackData+&6FD = &59FD (high)
 
- EQUB &00
+ EQUW &0400
 
-\ trackData+&6FD = &59FD
+\ trackData+&6FE = &59FE (low)
+\ trackData+&6FF = &59FF (high)
+\ 24 bytes in (var18Hi var18Lo) are initialised to &034B
 
- EQUB &04
-
-\ trackData+&6FE = &59FE
-\ 24 bytes in (var18Hi var18Lo) are initialised to &034B (this is the low byte)
-
- EQUB &4B
-
-\ trackData+&6FF = &59FF
-\ 24 bytes in (var18Hi var18Lo) are initialised to &034B (this is the high byte)
-
- EQUB &03
+ EQUW &034B
 
 \ trackData+&700 = &5A00
 \ Race class adjuster: seconds
@@ -369,12 +366,24 @@ ORG CODE%
 \ trackData+&706 = &5A06
 \ Called "ratios" in car performance hack
 
- EQUB &67, &00, &67, &42, &35, &2E, &2A
+ EQUB 103               \ Reverse
+ EQUB 0                 \ Neutral
+ EQUB 103               \ First gear
+ EQUB 66                \ Second gear
+ EQUB 53                \ Third gear
+ EQUB 46                \ Fourth gear
+ EQUB 42                \ Fifth gear
 
 \ trackData+&70D = &5A0D
 \ Called "powers" in car performance hack
 
- EQUB &A1, &00, &A1, &68, &52, &48, &41
+ EQUB 161               \ Reverse
+ EQUB 0                 \ Neutral
+ EQUB 161               \ First gear
+ EQUB 104               \ Second gear
+ EQUB 82                \ Third gear
+ EQUB 72                \ Fourth gear
+ EQUB 65                \ Fifth gear
 
 \ trackData+&714 = &5A14
 
@@ -383,10 +392,12 @@ ORG CODE%
  EQUB 152               \ Base speed for Professional
 
 \ trackData+&717 = &5A17
+\ The starting position of the player during a practice or qualifying lap
 
  EQUB 4
 
 \ trackData+&718 = &5A18
+\ Passed to sub_C109B in A by ResetVariables for a practice or qualifying lap
 
  EQUB 40
 
@@ -398,8 +409,14 @@ ORG CODE%
  EQUB 24
 
 \ trackData+&71A = &5A1A
+\ Used to initialise the value of L0046 in sub_C5052
 
- EQUB &00, &73, &6F, &31, &00, &8C, &00, &00
+ EQUB 0
+
+ EQUB &73, &6F          \ These bytes appear to be unused
+ EQUB &31, &00
+ EQUB &8C, &00
+ EQUB &00
 
 .CallTrackHook
 
