@@ -570,9 +570,9 @@ ORG &0000
 
  SKIP 1                 \ Temporary storage
 
-.L0057
+.markersToDraw
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of corner markers to draw
 
 .gearChangeKey
 
@@ -3807,8 +3807,6 @@ ORG &0B00
 
  BPL P10A3              \ Loop back until we have processed all 20 drivers
 
-                        \ At this point X = -1
-
  LDA var18Lo            \ If var18 is non-zero, jump back to P10A1 to repeat
  ORA var18Hi            \ the above loop
  BNE P10A1
@@ -3821,7 +3819,7 @@ ORG &0B00
 
                         \ We now do an outer loop of G from -1 to 19, with an
                         \ inner loop X = G to 19, with a further inner loop of
-                        \ W = V to 0
+                        \ W = V to 0, starting the loop at C10CF
 
 .C10B7
 
@@ -3852,11 +3850,14 @@ ORG &0B00
 
 .C10CF
 
+                        \ This is where we join the loop with G = -1, so the
+                        \ following increments G to 0
+
  INC G                  \ Increment G
 
  LDX G                  \ Set X = G, so the inner loop does G to 19
 
- CPX #20                \ Loop back until we have done G = -1 to 19
+ CPX #20                \ Loop back until we have done G = 0 to 19
  BCC C10B7
 
                         \ Loop until sub_C27AB returns C flag clear and A = 32
@@ -4395,9 +4396,9 @@ ORG &0B00
 .P12A2
 
  LDA var24Lo,X
- STA var28Lo,X
+ STA var24Lo+1,X
  LDA var24Hi,X
- STA var28Hi,X
+ STA var24Hi+1,X
  LDA L5F20,X
  STA L5F20+1,X
  CPX #&28
@@ -6270,14 +6271,14 @@ ENDIF
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
- LDA trackData+&718     \ Set A to trackData+&718, which is &28 for the
+ LDA trackData+&718     \ Set A to trackData+&718, which is 40 for the
                         \ Silverstone track
 
 .rese4
 
                         \ By this point, A = 1 if this is a race, or the value
                         \ of trackData+&718 if this is practice or qualifying
-                        \ (&28 for Silverstone)
+                        \ (40 for Silverstone)
 
  JSR sub_C109B          \ ???
 
@@ -7053,34 +7054,39 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   markersToDraw       The number of corner markers to draw - 1
 \
 \ ******************************************************************************
 
 .DrawCornerMarkers
 
- LDY #0                 \ Set Y as a loop counter, counting up
+ LDY #0                 \ We work our way through the markers we need to draw,
+                        \ using Y as the marker number, counting up from 0 to
+                        \ markersToDraw - 1
 
 .corn1
 
- CPY L0057              \ If Y = L0057, jump to corn7 to zero L0057 and return
- BEQ corn7              \ from the subroutine
+ CPY markersToDraw      \ If Y = markersToDraw, then we have drawn all the
+ BEQ corn7              \ markers, so jump to corn7 to reset markersToDraw to
+                        \ zero and return from the subroutine
 
- LDX L62B4,Y            \ Set X = the Y-th value from L62B4
+ LDX L62B4,Y            \ Set X = L62B4 for marker Y
 
- STY temp1              \ Store the loop counter in temp1, so we can retrieve it
-                        \ at the end of the loop
+ STY temp1              \ Store the marker number in temp1, so we can retrieve
+                        \ it at the end of the loop
 
- LDA L6299,Y            \ If bit 5 of the Y-th L6299 is zero, skip the following
- AND #%00100000         \ two instructions
- BEQ corn2
+ LDA L6299,Y            \ If bit 5 of L6299 for marker Y is clear, then the
+ AND #%00100000         \ marker is white, so skip the following two
+ BEQ corn2              \ instructions
 
  LDA #%00001111         \ Map logical colour 2 in the colour palette to physical
  STA colourPalette+2    \ colour 1 (red in the track view)
 
 .corn2
 
- LDA var27Hi,Y          \ Set (U A) = Y-th value from var27
+ LDA var27Hi,Y          \ Set (U A) = (var27Hi var27Lo) for marker Y
  STA U
  LDA var27Lo,Y
 
@@ -7105,14 +7111,17 @@ ENDIF
 
 .corn3
 
+                        \ If we get here then A < 24 or A >= -24
+
  ASL V                  \ Set (A V) = (A V) << 2
- ROL A
- ASL V
+ ROL A                  \
+ ASL V                  \ so A < 96 or A >= -96
  ROL A
 
  CLC                    \ Set xObject = A + 80
- ADC #80
- STA xObject
+ ADC #80                \
+ STA xObject            \ where 80 is the x-coordinate of the middle of the
+                        \ screen (as the screen is 160 pixels wide)
 
  LDA L5F20,X            \ Set yObject = X-th value from L5F20
  STA yObject
@@ -7141,10 +7150,10 @@ ENDIF
 
  STA scaleUp            \ Set scaleUp = |U|
 
- LDA #6                 \ Set objectType = 6
- STA objectType
+ LDA #6                 \ Set objectType = 6, the object type for a corner
+ STA objectType         \ marker
 
- JSR DrawObject
+ JSR DrawObject         \ Draw the corner marker
 
 .corn6
 
@@ -7152,17 +7161,17 @@ ENDIF
  STA colourPalette+2    \ colour 1 (white in the track view), which sets it back
                         \ to the default value
 
- LDY temp1              \ Set Y to the loop counter that we stored at the start
-                        \ of the loop
+ LDY temp1              \ Set Y to the marker counter that we stored in temp1 at
+                        \ the start of the loop
 
- INY                    \ Increment the loop counter
+ INY                    \ Increment the marker counter to draw the next loop
 
  JMP corn1              \ Loop back to corn1
 
 .corn7
 
- LDA #0                 \ Set L0057 = 0
- STA L0057
+ LDA #0                 \ Reset markersToDraw to zero as we have drawn all the
+ STA markersToDraw      \ corner markers
 
  RTS                    \ Return from the subroutine
 
@@ -11543,11 +11552,16 @@ ENDIF
  JSR sub_C2285
  BCS C2469
  LDX L0014
- LDA L0057
- STA temp1
+
+ LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
+ STA temp1              \ after the call to sub_C2565 (so the call doesn't
+                        \ change the value of markersToDraw)
+
  JSR sub_C2565
- LDA temp1
- STA L0057
+
+ LDA temp1              \ Retrieve the value of markersToDraw that we stored
+ STA markersToDraw      \ in temp1
+
  INC L0012
 
 .C2469
@@ -11570,7 +11584,7 @@ ENDIF
 
  CMP #&14
  BCC C2490
- LDA L5E8F,Y
+ LDA var24Hi-1,Y
  BPL C2489
  EOR #&FF
 
@@ -11887,35 +11901,46 @@ ENDIF
 .C25C0
 
  LDY L0012
- LDA var24Lo,Y
- CLC
- ADC T
+
+ LDA var24Lo,Y          \ Set (var25Hi var25Lo) = (var24Hi var24Lo) + (U T)
+ CLC                    \
+ ADC T                  \ starting with the low bytes
  STA var25Lo,Y
- LDA var24Hi,Y
+
+ LDA var24Hi,Y          \ And then the high bytes
  ADC U
  STA var25Hi,Y
+
  LDA W
- AND #&18
+ AND #%00011000
  BEQ C25FD
- LDY L0057
- CPY #3
+
+ LDY markersToDraw      \ Set Y to the number of markers we have to draw
+
+ CPY #3                 \ If Y >= 3, jump to C25FD to skip the following
  BCS C25FD
- LDA L0012
+
+ LDA L0012              \ Set L62B4 for the Y-th marker to L0012
  STA L62B4,Y
- LDA W
+
+ LDA W                  \ Set L6299 for the Y-th marker to W
  STA L6299,Y
- AND #1
- BEQ C25F1
- LSR U
+
+ AND #1                 \ If bit 0 of W is clear, jump to C25F1 to skip the
+ BEQ C25F1              \ following instruction
+
+ LSR U                  \ Set (U T) = (U T) >> 1
  ROR T
 
 .C25F1
 
- LDA T
+ LDA T                  \ Set (var27Hi var27Lo) for the Y-th marker to (U T)
  STA var27Lo,Y
  LDA U
  STA var27Hi,Y
- INC L0057
+
+ INC markersToDraw      \ Increment markersToDraw, as we have just added a new
+                        \ marker to draw
 
 .C25FD
 
@@ -11960,7 +11985,7 @@ ENDIF
  LDX #22                \ We are about to process 23 bytes at L018C, so set a
                         \ loop counter in X
 
-.P2621
+.hide1
 
  LDA L018C,X            \ Set bit 7 in the X-th byte of L018C to set car X to
  ORA #%10000000         \ hidden
@@ -11968,7 +11993,7 @@ ENDIF
 
  DEX                    \ Decrement the loop counter
 
- BPL P2621              \ Loop back until we have hidden all 23 cars
+ BPL hide1              \ Loop back until we have hidden all 23 cars
 
  RTS                    \ Return from the subroutine
 
@@ -20395,7 +20420,7 @@ NEXT
  TAY
 
                         \ Now we copy the 24 bytes between trackData+&6D0 and
-                        \ trackData+&6FC to L5FB0, processing each byte as we go
+                        \ trackData+&6E8 to L5FB0, processing each byte as we go
                         \ (i.e. taking the input and storing the result):
                         \
                         \   * Bit 7 of the result = bit 0 of the input
@@ -25471,24 +25496,7 @@ ORG &5E40
 
 .var24Lo
 
- SKIP 1
-
-\ ******************************************************************************
-\
-\       Name: var28Lo
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.var28Lo
-
- SKIP 15
+ SKIP 16
 
 \ ******************************************************************************
 \
@@ -25505,24 +25513,7 @@ ORG &5E40
 
 .var25Lo
 
- SKIP 63
-
-\ ******************************************************************************
-\
-\       Name: L5E8F
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5E8F
-
- SKIP 1
+ SKIP 64
 
 \ ******************************************************************************
 \
@@ -25539,24 +25530,7 @@ ORG &5E40
 
 .var24Hi
 
- SKIP 1
-
-\ ******************************************************************************
-\
-\       Name: var28Hi
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.var28Hi
-
- SKIP 15
+ SKIP 16
 
 \ ******************************************************************************
 \
@@ -26183,12 +26157,14 @@ ENDIF
 \
 \       Name: L6299
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Something to do with corner markers.
+\
+\ If bit 5 is set, the marker is red, otherwise it is white.
 \
 \ ******************************************************************************
 
@@ -26421,12 +26397,13 @@ ENDIF
 \
 \       Name: L62B4
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Something to do with corner markers. The value is used as an offset into the
+\ var24Lo and var24Hi tables.
 \
 \ ******************************************************************************
 
@@ -26438,12 +26415,12 @@ ENDIF
 \
 \       Name: var27Lo
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Something to do with corner markers.
 \
 \ ******************************************************************************
 
@@ -26455,12 +26432,12 @@ ENDIF
 \
 \       Name: var27Hi
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Something to do with corner markers.
 \
 \ ******************************************************************************
 
