@@ -469,7 +469,11 @@ ORG &0000
                         \
                         \ Scheme 8: Even rows: 131 on 132 (yellow on blue)
                         \           Odd rows:  129 on 135 (red on white)
- 
+
+.temp2
+
+ SKIP 0                 \ Temporary storage
+
 .L0042
 
  SKIP 1                 \ 
@@ -1073,13 +1077,15 @@ ORG &0380
                         \
                         \ Lines 0 to 2 are not used
 
-.L0554
+.rightGrassStart
 
- SKIP 80                \ 
+ SKIP 80                \ For each track line, the block number where the grass
+                        \ starts to the right of the track
 
-.L05A4
+.leftVergeStart
 
- SKIP 80                \ 
+ SKIP 80                \ For each track line, the block number where the left
+                        \ track verge starts
 
 .configStop
 
@@ -1158,13 +1164,15 @@ ORG &0380
 
  SKIP 1                 \ This byte appears to be unused
 
-.L0600
+.rightVergeStart
 
- SKIP 80                \ 
+ SKIP 80                \ For each track line, the block number where the right
+                        \ track verge starts
 
-.L0650
+.leftTrackStart
 
- SKIP 80                \ 
+ SKIP 80                \ For each track line, the block number where the track
+                        \ starts (i.e. the left edge of the black track)
 
 .driverTenths
 
@@ -3224,8 +3232,8 @@ ORG &0B00
 
 .shif4
 
- JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
-                        \ trackLineColour
+ JSR ResetTrackLines    \ Reset the blocks at leftVergeStart, leftTrackStart,
+                        \ rightVergeStart, rightGrassStart and trackLineColour
 
  LDX #&A6               \ Scan the keyboard to see if DELETE is being pressed
  JSR ScanKeyboard
@@ -4037,7 +4045,7 @@ ORG &0B00
 
  STA L006D              \ Set L006D = 0
 
- JSR SetL018CBit7       \ Set bit 7 of all driver's L018C entries
+ JSR HideAllCars        \ Set all the cars to
 
  LDX currentPlayer      \ Clear the current player's best lap time if this is an
  JSR ClearBestLapTime   \ incomplete race
@@ -4391,7 +4399,7 @@ ORG &0B00
  LDA var24Hi,X
  STA var28Hi,X
  LDA L5F20,X
- STA L5F21,X
+ STA L5F20+1,X
  CPX #&28
  BNE C12BA
  LDX #5
@@ -5807,8 +5815,8 @@ ENDIF
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR ResetTrackLines    \ Reset the blocks at L05A4, L0554, L0600, L0650 and
-                        \ trackLineColour
+ JSR ResetTrackLines    \ Reset the blocks at leftVergeStart, leftTrackStart,
+                        \ rightVergeStart, rightGrassStart and trackLineColour
 
  JSR DrawTrack          \ Draw the track into the screen buffer
 
@@ -5829,7 +5837,9 @@ ENDIF
 
  JSR CopyTyreDashEdges  \ Copy the pixels from the edges of the left tyre and
                         \ right dashboard so they can be used when drawing the
-                        \ track view around the tyres and dashboard
+                        \ track view around the tyres and dashboard, and fill
+                        \ the blocks to the right of the edges with the
+                        \ appropriate content
 
  JSR UpdateMirrors      \ Update the view in the wing mirrors
 
@@ -6687,7 +6697,7 @@ ENDIF
  BCS C1980
  BIT V
  BPL C1965
- CMP L5F21,X
+ CMP L5F20+1,X
  BEQ C19A5
 
 .C1965
@@ -6791,10 +6801,10 @@ ENDIF
  LDA var29Hi,Y          \ Modify the following instruction at mod_C2F4E and 
  STA mod_C2F4E+2        \ mod_C2F90, depending on the value of Y:
  STA mod_C2F90+2        \
- LDA var29Lo,Y          \   * 0 = STA &7000,Y -> STA L05A4,Y
- STA mod_C2F4E+1        \   * 1 = STA &7000,Y -> STA L0650,Y
- STA mod_C2F90+1        \   * 2 = STA &7000,Y -> STA L0600,Y
-                        \   * 3 = STA &7000,Y -> STA L0554,Y
+ LDA var29Lo,Y          \   * 0 = STA &7000,Y -> STA leftVergeStart,Y
+ STA mod_C2F4E+1        \   * 1 = STA &7000,Y -> STA leftTrackStart,Y
+ STA mod_C2F90+1        \   * 2 = STA &7000,Y -> STA rightVergeStart,Y
+                        \   * 3 = STA &7000,Y -> STA rightGrassStart,Y
 
  LDX L004F
  LDY L004C
@@ -6813,7 +6823,7 @@ ENDIF
  CMP L0050
  BCC C19F8
  BNE C19FD
- LDA L5EDF,Y
+ LDA L5EE0-1,Y
  AND #3
  BNE C1A10
  STY L0050
@@ -6829,7 +6839,7 @@ ENDIF
 
 .C19FD
 
- LDA L5EDF,Y
+ LDA L5EE0-1,Y
  AND #3
  BNE C1A10
  LDA L0027
@@ -6881,7 +6891,7 @@ ENDIF
 .C1A30
 
  STA L0050
- LDA #0
+ LDA #LO(L0400)
  STA R
  STA MM
  LDY L0012
@@ -6913,7 +6923,7 @@ ENDIF
 
  STA L0050
  LDX L0051
- LDA #&50
+ LDA #LO(L0450)
  LDY L0015
  JSR sub_C193E
  LDA #&1C
@@ -6990,7 +7000,7 @@ ENDIF
 
 .P1AD8
 
- LDA L5EE1,X
+ LDA L5EE0+1,X
  BPL C1AE4
  INX
  INC U
@@ -8549,11 +8559,11 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   
+\   X                   Sets the destination address for the copy
 \
-\   Y                   
+\   Y                   Alters the routine flow to either fill or copy
 \
-\   A                   
+\   A                   The value to use when copying black pixel bytes
 \
 \ ******************************************************************************
 
@@ -8721,7 +8731,10 @@ IF _ACORNSOFT
 
 .edge5
 
- JSR GetColour          \ Fetch the relevant colour into A
+ JSR GetColour          \ The current byte in the screen buffer is zero, which
+                        \ means it should inherit the colour of the byte to the
+                        \ left, so call GetColour to work out what this byte's
+                        \ colour would be on-screen, and put it into A
 
  BNE edge7              \ If the colour byte is non-zero, skip the following
                         \ instruction
@@ -8839,11 +8852,11 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   
+\   X                   Sets the destination address for the copy
 \
-\   Y                   
+\   Y                   Alters the routine flow to either fill or copy
 \
-\   A                   
+\   A                   The value to use when copying black pixel bytes
 \
 \ ******************************************************************************
 
@@ -9104,27 +9117,31 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Fetch the pixel bytes from along the edge of the dashboard or tyre
+\             and fill the block to the right of the edge appropriately
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The number of the leftmost dash data block to draw
+\   X                   The number of the leftmost dash data block to copy
 \
 \   A                   The number of the dash data block after the last block
-\                       to draw (so the last block to draw is A - 1)
+\                       to copy (so the last block to draw is A - 1)
 \
 \   Y                   Start at this byte in the dash data, so we work down the
 \                       screen from track line Y
+\
+\   (S R)               The address of the table into which we copy the pixel
+\                       bytes from the specified edge
 \
 \ ******************************************************************************
 
 .GetTyreDashEdges
 
- STA L0042              \ Set L0042 = A, so in the following, the loop counter
-                        \ in blockNumber loops from X to A - 1
+ STA temp2              \ Set temp2 = A, so in the following, the loop counter
+                        \ in blockNumber loops from X to temp2 - 1 (i.e. A - 1)
 
-.C1DF1
+.gedg1
 
  STX blockNumber        \ Store the loop counter in blockNumber
 
@@ -9140,13 +9157,17 @@ ENDIF
 IF _ACORNSOFT
 
  LDY #&DF               \ Set Y = &DF so the call to GetTyreDashEdge modifies
-                        \ the FillAfterObject routine at edge11 to BNE edge1
+                        \ the FillAfterObject routine at edge11 to BNE edge1,
+                        \ so the routine copies into (S R) instead of filling
+                        \ the screen buffer
 
  LDA #0                 \ Set A = 0, so the call to GetTyreDashEdge modifies the
                         \ FillAfterObject routine to store 0 as the value for
-                        \ colour 0
+                        \ colour 0 (instead of the &55 that the screen buffer
+                        \ uses to represent black)
 
- JSR GetTyreDashEdge
+ JSR GetTyreDashEdge    \ Modify the FillAfterObject routine and run it to copy
+                        \ the edge bytes into the table at (S R)
 
  LDX #LO(P)             \ Set X so the call to GetTyreDashEdge modifies the
                         \ FillAfterObject routine back to drawing to (Q P)
@@ -9159,42 +9180,52 @@ IF _ACORNSOFT
                         \ the FillAfterObject routine back to storing &55 as the
                         \ value for colour 0
 
- INC blockNumber        \ Increment the loop counter in blockNumber
+ INC blockNumber        \ Increment the block number
 
- JSR GetTyreDashEdge
+ JSR GetTyreDashEdge    \ Modify the FillAfterObject routine back to its default
+                        \ code and run it, which fills the block to the right of
+                        \ the dashboard or tyre edge with the appropriate
+                        \ content
 
 ELIF _SUPERIOR
 
  LDY #&EF               \ Set Y = &DF so the call to GetTyreDashEdgeS modifies
-                        \ the FillAfterObjectS routine at sedg5 to BNE C1DC5
+                        \ the FillAfterObjectS routine at sedg5 to BNE sedg1,
+                        \ so the routine copies into (S R) instead of filling
+                        \ the screen buffer
 
  LDA #0                 \ Set A = 0, so the call to GetTyreDashEdgeS modifies
                         \ theFillObject routine to store 0 as the value for
-                        \ colour 0
+                        \ colour 0 (instead of the &55 that the screen buffer
+                        \ uses to represent black)
 
- JSR GetTyreDashEdgeS
+ JSR GetTyreDashEdgeS   \ Modify the FillAfterObjectS routine and run it to copy
+                        \ the edge bytes into the table at (S R)
 
  LDX #LO(P)             \ Set X so the call to GetTyreDashEdgeS modifies the 
                         \ FillAfterObjectS routine at back to drawing to (Q P)
 
  LDY #&09               \ Set Y = &09 so the call to GetTyreDashEdgeS modifies
                         \ the FillAfterObjectS routine at sedg5 back to BNE
-                        \ edge8
+                        \ sedg8
 
  LDA #&55               \ Set A = &55, so the call to GetTyreDashEdgeS modifies
                         \ the FillAfterObjectS routine back to storing &55 as
                         \ the value for colour 0
 
- INC blockNumber        \ Increment the loop counter in blockNumber
+ INC blockNumber        \ Increment the block number
 
- JSR GetTyreDashEdgeS
+ JSR GetTyreDashEdgeS   \ Modify the FillAfterObjectS routine back to its
+                        \ default code and run it, which fills the block to the
+                        \ right of the dashboard or tyre edge with the
+                        \ appropriate content
 
 ENDIF
 
  LDX blockNumber        \ Fetch the loop counter from blockNumber into X
 
- CPX L0042              \ If X <> L0042, loop back
- BNE C1DF1
+ CPX temp2              \ If X <> temp2, loop back until we have copied from
+ BNE gedg1              \ block X to block temp2 - 1
 
  RTS                    \ Return from the subroutine
 
@@ -9204,13 +9235,14 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Fetch the pixel bytes from the right edge of the left tyre and the
-\             right edge of the dashboard
+\             right edge of the dashboard, and fill to the right of the edge
 \
 \ ------------------------------------------------------------------------------
 \
 \ This routine populates the tyreRightEdge and dashRightEdge tables with the
 \ pixel bytes along the right edge of the left tyre and the right edge of the
-\ dashboard respectively.
+\ dashboard respectively. It also fills the block to the right of the edge with
+\ the appropiate content, so the feathered edges don't fill to the right.
 \
 \ ******************************************************************************
 
@@ -9218,8 +9250,8 @@ ENDIF
 
  LDA #HI(tyreRightEdge) \ Set (S R) = tyreRightEdge
  STA S                  \
- LDA #LO(tyreRightEdge) \ so the call to GetTyreDashEdges stores the pixel data
- STA R                  \ in the tyreRightEdge table
+ LDA #LO(tyreRightEdge) \ so the call to GetTyreDashEdges copies the pixel data
+ STA R                  \ from the tyre edge into the tyreRightEdge table
 
  LDY #27                \ Start at byte 27 in the dash data, so we work down the
                         \ screen from track line 27
@@ -9228,12 +9260,13 @@ ENDIF
  LDA #6
 
  JSR GetTyreDashEdges   \ Fetch the pixel bytes from along the right edge of the
-                        \ left tyre
+                        \ left tyre and fill the block to the right of the edge
+                        \ with the appropriate content
 
  LDA #HI(dashRightEdge) \ Set (S R) = dashRightEdge
  STA S                  \
- LDA #LO(dashRightEdge) \ so the call to GetTyreDashEdges stores the pixel data
- STA R                  \ in the dashRightEdge table
+ LDA #LO(dashRightEdge) \ so the call to GetTyreDashEdges copies the pixel data
+ STA R                  \ from the dashboard edge into the dashRightEdge table
 
  LDY #43                \ Start at byte 43 in the dash data, so we work down the
                         \ screen from track line 43
@@ -9242,7 +9275,8 @@ ENDIF
  LDA #34
 
  JSR GetTyreDashEdges   \ Fetch the pixel bytes from along the right edge of the
-                        \ dashboard
+                        \ dashboard and fill the block to the right of the edge
+                        \ with the appropriate content
 
  RTS                    \ Return from the subroutine
 
@@ -9288,13 +9322,17 @@ ENDIF
                         \ the screen buffer
 
  LDA #&7F               \ Set T = &7F - topTrackLine
- SEC
- SBC topTrackLine
- STA T
+ SEC                    \
+ SBC topTrackLine       \ We subtract this value from the start addresses for
+ STA T                  \ the two dash data blocks that we are going to fill
+                        \ concurrently, and add the same value to the offset
+                        \ for the bottom line in VV (see the next instruction)
+                        \
+                        \ There must be a reason for all this shenanigans, but
+                        \ it's currently eluding me
 
  ADC bottomTrackLine    \ Set VV = T + bottomTrackLine
- STA VV                 \        = &7F - topTrackLine + bottomTrackLine
-                        \        = &7F - (topTrackLine - bottomTrackLine)
+ STA VV
 
                         \ We now calculate the start address of dash data block
                         \ blockNumber - 1, which will be at:
@@ -9351,23 +9389,13 @@ ENDIF
                         \ We now have our result in (Q A), which contains the
                         \ start address of dash data block blockNumber - 1
 
-                        \ We now use this to calculate the address of the top
-                        \ track line of the object in blockNumber - 2
+                        \ We now subtract T, though as noted above, I'm unclear
+                        \ on the reason for this (but the maths all balances out
+                        \ in the end, so ler's go with it)
 
- SEC                    \ Set (Q A) = (Q A) - T
- SBC T                  \           = (Q A) - (&7F - topTrackLine)
-                        \           = (Q A) - &7F + topTrackLine
-                        \           = (Q A) - &80 + topTrackLine + 1
-                        \
-                        \ As each dash data block is spaced out by &80 bytes,
-                        \ (Q A) - &80 contains the start address of dash data
-                        \ block blockNumber - 2, so the above calculation sets
-                        \ (Q A) to the address of the top track line of the
-                        \ object in blockNumber - 2
-                        \
-                        \ We also set the C flag depending on the subtraction
-
- STA P                  \ Set (Q P) = (Q A)
+ SEC                    \ Set (Q P) = (Q A) - T
+ SBC T                  \
+ STA P                  \ We also set the C flag depending on the subtraction
 
  EOR #&80               \ Set (S R) = (Q P) - &80
  STA R                  \
@@ -9393,12 +9421,21 @@ ENDIF
 
 .fill4
 
-                        \ By this point, (Q P) points to the top track line of
-                        \ the object in blockNumber - 2, and (S R) points to the
-                        \ same track line in blockNumber - 3
+                        \ By this point, we have:
+                        \
+                        \   * (Q P) points to the start address of dash data
+                        \     block blockNumber - 1, minus T
+                        \
+                        \   * (S R) points to the start address of dash data
+                        \     block blockNumber - 2, minus T
+                        \
+                        \ So if we fill block (Q P), we will be filling the
+                        \ block to the left of the edge, and if we fill block
+                        \ (S R), we will be filling the block further to the
+                        \ left
 
-                        \ We now enter a loop to fill the object, either one or
-                        \ two blocks at a time
+                        \ We now enter a loop to fill the object, filling either
+                        \ one or both of these blocks at a time
 
  LDY U                  \ Set Y to the block number in U, which starts out as
                         \ blockNumber and goes down by 2 on each loop iteration
@@ -9406,22 +9443,43 @@ ENDIF
  LDA fillDataOffset-1,Y \ Set A to entry Y - 1 from fillDataOffset, which gives
                         \ us the offset of the bottom line of block Y - 1,
                         \ i.e. blockNumber - 1, adjusted to ensure that filling
-                        \ works properly
+                        \ to the left works properly
 
  DEY                    \ Set U = Y - 2
  DEY                    \       = U - 2
  STY U
 
- CMP bottomTrackLine    \ If A < bottomTrackLine, jump to fill5 to do the fill
- BCC fill5              \ from the bottom of the block
+ CMP bottomTrackLine    \ If A < bottomTrackLine, then the bottom of the object
+ BCC fill5              \ is below the bottom of the block, so jump to fill5 to
+                        \ do the fill from bottomTrackLine and up
 
- ADC T                  \ Set Y = A + T + 1
- TAY                    \       = bottom line + &7F - topTrackLine + 1
-                        \       = bottom line + &80 - topTrackLine
+ ADC T                  \ Set Y = A + T + C
+ TAY                    \       = bottom line offset + T + 1
 
  BPL fill6              \ If Y < &80, jump to fill6 to do the fill from track
-                        \ line Y and up
+                        \ line Y and up, so the fill will start from address:
+                        \
+                        \   (Q P) + Y = (Q P) + A + T + 1
+                        \             = start address of (blockNumber - 1) - T
+                        \               + A + T + 1
+                        \             = start address of (blockNumber - 1)
+                        \               + A + 1
+                        \
+                        \ i.e. from track line A in blockNumber - 1
 
+                        \ If we get here then Y >= &80, which means:
+                        \
+                        \   A + T + C >= &80
+                        \
+                        \   A + &7F - topTrackLine + 1 >= &80
+                        \
+                        \   A - topTrackLine >= 0
+                        \
+                        \   A >= topTrackLine
+                        \
+                        \ so the bottom line offset is above the top track line,
+                        \ which is why we don't do the fill for these two blocks
+                        
  CPX #2                 \ If X >= 2, jump to fill8 to move on to the next two
  BCS fill8              \ blocks to the left
 
@@ -9430,21 +9488,43 @@ ENDIF
 .fill5
 
  LDY VV                 \ Set Y = VV
-                        \       = &7F - (topTrackLine - bottomTrackLine)
+                        \       = T + bottomTrackLine
+                        \
+                        \ so the fill will start from address:
+                        \
+                        \   (Q P) + Y = (Q P) + T + bottomTrackLine
+                        \             = start address of (blockNumber - 1) - T
+                        \               + T + bottomTrackLine
+                        \             = start address of (blockNumber - 1)
+                        \               + bottomTrackLine
+                        \
+                        \ i.e. from bottomTrackLine in blockNumber - 1
 
 .fill6
 
+                        \ We now do the fill, filling the relevant blocks from
+                        \ offset Y up to offset &7F, so that's:
+                        \
+                        \   * From (Q P) + Y to (Q P) + &7F
+                        \
+                        \   * And from (S R) + Y to (S R) + &7F if X >= 2
+                        \
+                        \ In the latter case we then reduce X by 2 and loop back
+                        \ to do the next two blocks
+
  LDA V                  \ Set A to the byte we want to fill with
 
- CPX #2                 \ If X < 2, jump to fill9 to fill just one block
- BCC fill9
+ CPX #2                 \ If X < 2, jump to fill9 to fill just one block and
+ BCC fill9              \ return from the subroutine
 
 .fill7
 
- STA (P),Y              \ Fill (Q P) and (S R) with A from the Y-th byte to 
- STA (R),Y              \ the &7F-th byte
- INY
- BPL fill7
+ STA (P),Y              \ Fill the Y-th byte of (Q P) and (S R) with A
+ STA (R),Y
+
+ INY                    \ Increment Y to point to the next byte down the screen
+
+ BPL fill7              \ Loop back until we have filled down to the &7F-th byte
 
 .fill8
 
@@ -9459,9 +9539,11 @@ ENDIF
 
 .fill9
 
- STA (P),Y              \ Fill (Q P) with A from the Y-th byte to the &7F-th
- INY                    \ byte
- BPL fill9
+ STA (P),Y              \ Fill the Y-th byte of (Q P) with A
+
+ INY                    \ Increment Y to point to the next byte down the screen
+
+ BPL fill9              \ Loop back until we have filled down to the &7F-th byte
 
  RTS                    \ Return from the subroutine
 
@@ -9470,17 +9552,19 @@ ENDIF
 \       Name: GetColour
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Calculate the colour of a specific pixel byte in the screen buffer
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   Y                   The track line
+\   Y                   The track line number of the pixel byte to check
+\
+\   blockNumber         The dash data block number of the pixel byte to check
 \
 \ Returns:
 \
-\   A                   The colour
+\   A                   The colour of this pixel byte in the screen buffer
 \
 \ ******************************************************************************
 
@@ -9488,15 +9572,16 @@ IF _ACORNSOFT
 
 .GetColour
 
- CPY horizonLine        \ If Y <= horizonLine, then line Y is below the horizon,
- BCC gcol1              \ so jump to gcol1 to fetch the colour
- BEQ gcol1
+ CPY horizonLine        \ If Y <= horizonLine then the byte we want to check is
+ BCC gcol1              \ below the horizon, so jump to gcol1 to work out the
+ BEQ gcol1              \ byte's colour
 
  LDA horizonLine        \ Set A to the track line number of the horizon
 
  JSR gcol17             \ Call the gcol17 subroutine below
 
- LDA colourPalette+1    \ Set A to logical colour 1 from the colour palette
+ LDA colourPalette+1    \ Otherwise the byte is in the sky, so set A to logical
+                        \ colour 1 (blue) from the colour palette
 
  RTS                    \ Return from the subroutine
 
@@ -9506,13 +9591,13 @@ IF _ACORNSOFT
  STA T
 
  LDA blockNumber
- CMP L05A4,Y
+ CMP leftVergeStart,Y
  ROL T
- CMP L0650,Y
+ CMP leftTrackStart,Y
  ROL T
- CMP L0600,Y
+ CMP rightVergeStart,Y
  ROL T
- CMP L0554,Y
+ CMP rightGrassStart,Y
  LDA T
  ROL A
  BNE gcol7
@@ -9525,7 +9610,7 @@ IF _ACORNSOFT
  BEQ gcol2
  CMP #&04
  BEQ gcol2
- LDA L0554,Y
+ LDA rightGrassStart,Y
  BPL gcol3
  BMI gcol4
 
@@ -9584,7 +9669,7 @@ IF _ACORNSOFT
 
  LDA (P),Y
  BNE gcol11
- LDA L0650,Y
+ LDA leftTrackStart,Y
  BMI gcol10
  CMP blockNumber
  DEY
@@ -9610,7 +9695,7 @@ IF _ACORNSOFT
 
 .gcol13
 
- LDA L5EDF,X
+ LDA L5EE0-1,X
 
 .gcol14
 
@@ -9619,7 +9704,7 @@ IF _ACORNSOFT
 
  LDA colourPalette,X    \ Set A to logical colour X from the colour palette
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .gcol15
 
@@ -9634,26 +9719,38 @@ IF _ACORNSOFT
 
 .gcol17
 
-                        \ This gets called as a subroutine by the above
+                        \ This part gets called as a subroutine by the above
+                        \ with:
+                        \
+                        \   * A = the track line number of the horizon
+                        \
+                        \   * Y = the track line number of the pixel byte to
+                        \         check
 
- STY V
- TAY
+ STY V                  \ Set V to the track line number in Y
+
+ TAY                    \ Set Y to the track line number in A
 
 .gcol18
 
- CPY V
- BCS gcol19
- CPY blockOffset
- BCC gcol19
- LDA (P),Y
- BNE gcol19
- LDA #&AA
+ CPY V                  \ If Y >= V, jump to gcol19 to return from the
+ BCS gcol19             \ subroutine
+
+ CPY blockOffset        \ If Y < blockOffset, jump to gcol19 to return from the
+ BCC gcol19             \ subroutine
+
+ LDA (P),Y              \ If the current byte in the screen buffer is non-zero,
+ BNE gcol19             \ then it is not empty, so jump to gcol19
+
+ LDA #&AA               \ Set the current byte to &AA ???
  STA (P),Y
 
 .gcol19
 
- LDY V
- RTS
+ LDY V                  \ Set Y to the track line number of the pixel byte to
+                        \ check
+ 
+ RTS                    \ Return from the subroutine
 
 ENDIF
 
@@ -9662,11 +9759,19 @@ ENDIF
 \       Name: GetColourS
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Calculate the colour of a specific pixel byte in the screen buffer
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   The track line number of the pixel byte to check
+\
+\   blockNumber         The dash data block number of the pixel byte to check
+\
+\ Returns:
+\
+\   A                   The colour of this pixel byte in the screen buffer
 \
 \ ******************************************************************************
 
@@ -9674,71 +9779,95 @@ IF _SUPERIOR
 
 .GetColourS
 
- CPY horizonLine
+ CPY horizonLine        \ If Y <= horizonLine then the byte we want to check is
+ BCC scol1              \ below the horizon, so jump to scol1 to work out the
+ BEQ scol1              \ byte's colour
 
- BCC scol1
- BEQ scol1
+ LDA colourPalette+1    \ Otherwise the byte is in the sky, so set A to logical
+                        \ colour 1 (blue) from the colour palette
 
- LDA colourPalette+1    \ Set A to logical colour 1 from the colour palette
-
- RTS
+ RTS                    \ Return from the subroutine
 
 .scol1
 
- LDA blockNumber
- CMP L0554,Y
- BCS scol3
- CMP L0600,Y
- BCS scol5
- CMP L0650,Y
- BCS scol2
- CMP L05A4,Y
- BCS scol4
+ LDA blockNumber        \ Set A to the block number containing the pixel byte
+                        \ that we want to check
 
- LDA trackLineColour,Y
- BCC scol7
+ CMP rightGrassStart,Y  \ If A >= rightGrassStart for this track line, then the
+ BCS scol3              \ pixel byte is in the grass to the right of the track,
+                        \ so jump to scol3 to return colour 3 (green)
+
+ CMP rightVergeStart,Y  \ If A >= rightVergeStart for this track line, then the
+ BCS scol5              \ pixel byte is on the right track verge, so jump to
+                        \ scol5 to work out its colour
+
+ CMP leftTrackStart,Y   \ If A >= leftTrackStart for this track line, then the
+ BCS scol2              \ pixel byte is on the track, so jump to scol2 to return
+                        \ colour 0 (black)
+
+ CMP leftVergeStart,Y   \ If A >= leftVergeStart for this track line, then the
+ BCS scol4              \ pixel byte is on the left track verge, so jump to
+                        \ scol4 to work out its colour
+
+ LDA trackLineColour,Y  \ If we get here then the byte is to the left of the
+                        \ left track verge, so set A to the background colour of
+                        \ this track line
+
+ BCC scol7              \ Jump to scol7 to return the pixel byte for the colour
+                        \ in A (this BCC is effectively a JMP as we just passed
+                        \ throuhg a BCS)
 
 .scol2
 
- LDA colourPalette      \ Set A to logical colour 0 from the colour palette
+ LDA colourPalette      \ Set A to logical colour 0 (black) from the colour
+                        \ palette
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .scol3
 
- LDA colourPalette+3    \ Set A to logical colour 3 from the colour palette
+ LDA colourPalette+3    \ Set A to logical colour 3 (green) from the colour
+                        \ palette
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .scol4
 
- CPY L002C
- BCS scol3
+                        \ If we get here then the pixel byte is on the left
+                        \ track verge
 
- LDA L0400,Y
- JMP scol6
+ CPY L002C              \ If the track line in Y >= L002C, jump to scol3 to
+ BCS scol3              \ return colour 3 (green)
+
+ LDA L0400,Y            \ Set A to the L0400 entry for this track line
+
+ JMP scol6              \ Jump to scol6
 
 .scol5
 
- CPY L0029
- BCS scol3
- LDA L0450,Y
+                        \ If we get here then the pixel byte is on the right
+                        \ track verge
+
+ CPY L0029              \ If the track line in Y >= L0029, jump to scol3 to
+ BCS scol3              \ return colour 3 (green)
+
+ LDA L0450,Y            \ Set A to the L0450 entry for this track line
 
 .scol6
 
- AND #&7F
+ AND #%01111111         \ Set X to bits 0-6 of A
  TAX
 
- LDA L5EDF,X
+ LDA L5EE0-1,X          \ Set A to entry X - 1 from L5EE0
 
 .scol7
 
- AND #3
+ AND #%00000011         \ Set X to bits 0-1 of A
  TAX
 
  LDA colourPalette,X    \ Set A to logical colour X from the colour palette
 
- RTS
+ RTS                    \ Return from the subroutine
 
 ENDIF
 
@@ -11696,7 +11825,7 @@ ENDIF
 
 .C2570
 
- LDA L0650+58,X
+ LDA leftTrackStart+58,X
 
 .C2573
 
@@ -11819,31 +11948,27 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: SetL018CBit7
+\       Name: HideAllCars
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Set all the cars to hidden
 \
 \ ******************************************************************************
 
-.SetL018CBit7
+.HideAllCars
 
  LDX #22                \ We are about to process 23 bytes at L018C, so set a
                         \ loop counter in X
 
 .P2621
 
- LDA L018C,X            \ Set bit 7 in the X-th byte of L018C
- ORA #%10000000
+ LDA L018C,X            \ Set bit 7 in the X-th byte of L018C to set car X to
+ ORA #%10000000         \ hidden
  STA L018C,X
 
  DEX                    \ Decrement the loop counter
 
- BPL P2621              \ Loop back until we have set bit 7 in all 23 bytes
+ BPL P2621              \ Loop back until we have hidden all 23 cars
 
  RTS                    \ Return from the subroutine
 
@@ -11898,7 +12023,7 @@ ENDIF
  STA L018C,Y
  JSR sub_C27ED
  JSR sub_C2692
- JSR SetL018CBit7
+ JSR HideAllCars
 
  JSR SetPlayerPositions \ Set the player's current position, plus the position
                         \ ahead and the position behind
@@ -13008,10 +13133,10 @@ ENDIF
 
 .var29Hi
 
- EQUB HI(L05A4)
- EQUB HI(L0650)
- EQUB HI(L0600)
- EQUB HI(L0554)
+ EQUB HI(leftVergeStart)
+ EQUB HI(leftTrackStart)
+ EQUB HI(rightVergeStart)
+ EQUB HI(rightGrassStart)
 
 \ ******************************************************************************
 \
@@ -13028,10 +13153,10 @@ ENDIF
 
 .var29Lo
 
- EQUB LO(L05A4)
- EQUB LO(L0650)
- EQUB LO(L0600)
- EQUB LO(L0554)
+ EQUB LO(leftVergeStart)
+ EQUB LO(leftTrackStart)
+ EQUB LO(rightVergeStart)
+ EQUB LO(rightGrassStart)
 
 \ ******************************************************************************
 \
@@ -25465,24 +25590,7 @@ ORG &5E40
 
 .L5EB8
 
- SKIP 39
-
-\ ******************************************************************************
-\
-\       Name: L5EDF
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5EDF
-
- SKIP 1
+ SKIP 40
 
 \ ******************************************************************************
 \
@@ -25499,24 +25607,7 @@ ORG &5E40
 
 .L5EE0
 
- SKIP 1
-
-\ ******************************************************************************
-\
-\       Name: L5EE1
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5EE1
-
- SKIP 23
+ SKIP 24
 
 \ ******************************************************************************
 \
@@ -25563,24 +25654,7 @@ ORG &5E40
 
 .L5F20
 
- SKIP 1
-
-\ ******************************************************************************
-\
-\       Name: L5F21
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5F21
-
- SKIP 23
+ SKIP 24
 
 \ ******************************************************************************
 \
@@ -29017,20 +29091,19 @@ ENDIF
 \       Name: ResetTrackLines
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Reset the lines below the horizon in the track view, in the blocks
-\             at L05A4, L0554, L0600, L0650 and trackLineColour
+\    Summary: Reset the track lines below the horizon in the track view
 \
 \ ------------------------------------------------------------------------------
 \
 \ This routine does the following:
 \
-\   * Set horizonLine+1 bytes at L0554 to &80
+\   * Set horizonLine+1 bytes at rightGrassStart to &80
 \
-\   * Set horizonLine+1 bytes at L05A4 to &80
+\   * Set horizonLine+1 bytes at leftVergeStart to &80
 \
-\   * Set horizonLine+1 bytes at L0600 to &80
+\   * Set horizonLine+1 bytes at rightVergeStart to &80
 \
-\   * Set horizonLine+1 bytes at L0650 to &80
+\   * Set horizonLine+1 bytes at leftTrackStart to &80
 \
 \   * Set 80 bytes at trackLineColour to 0
 \
@@ -29038,38 +29111,38 @@ ENDIF
 
 .ResetTrackLines
 
- LDX horizonLine        \ We start by setting horizonLine+1 bytes at L05A4,
-                        \ L0554 L0600 and L0650 to &80, so set a byte counter
-                        \ in X
+ LDX horizonLine        \ We start by setting horizonLine+1 bytes at
+                        \ leftVergeStart, rightGrassStart rightVergeStart and
+                        \ leftTrackStart to &80, so set a byte counter in X
 
  LDA #&80               \ Set A = &80 to use as our reset value
 
-.P66BA
+.resl1
 
- STA L05A4,X            \ Set the X-th byte of L05A4 to &80
+ STA leftVergeStart,X   \ Set the X-th byte of leftVergeStart to &80
 
- STA L0650,X            \ Set the X-th byte of L0650 to &80
+ STA leftTrackStart,X   \ Set the X-th byte of leftTrackStart to &80
 
- STA L0600,X            \ Set the X-th byte of L0600 to &80
+ STA rightVergeStart,X  \ Set the X-th byte of rightVergeStart to &80
 
- STA L0554,X            \ Set the X-th byte of L0554 to &80
+ STA rightGrassStart,X  \ Set the X-th byte of rightGrassStart to &80
 
  DEX                    \ Decrement the byte counter
 
- BPL P66BA              \ Loop back until we have zeroed all horizonLine+1 bytes
+ BPL resl1              \ Loop back until we have zeroed all horizonLine+1 bytes
 
  LDX #79                \ We now zero the 80 bytes at trackLineColour, so set a
                         \ byte counter in X
 
  LDA #0                 \ Set A = 0 to use as our zero value
 
-.P66CD
+.resl2
 
  STA trackLineColour,X  \ Zero the X-th byte of trackLineColour
 
  DEX                    \ Decrement the byte counter
 
- BPL P66CD              \ Loop back until we have zeroed all 80 bytes
+ BPL resl2              \ Loop back until we have zeroed all 80 bytes
 
  RTS                    \ Return from the subroutine
 
