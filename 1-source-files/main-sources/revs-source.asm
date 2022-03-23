@@ -163,13 +163,13 @@ ORG &0000
                         \
                         \ Set to 7 in ResetVariables
 
-.var14Lo
+.xPlayerLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ Low byte of the player's x-coordinate on the screen
 
-.var14Hi
+.xPlayerHi
 
- SKIP 1                 \ 
+ SKIP 1                 \ High byte of the player's x-coordinate on the screen
 
 .L000C
 
@@ -960,9 +960,16 @@ ORG &0100
 
  SKIP 20                \ 
 
-.L018C
+.carStatus
 
- SKIP 24                \ 
+ SKIP 24                \ Various status flags for each car
+                        \
+                        \   * Bits 0-3 = the car's object type
+                        \
+                        \   * Bit 6: ??? see sub_C1163, ClearBestLapTime
+                        \
+                        \   * Bit 7: 0 = car is visible
+                        \            1 = car is hidden
                         \
                         \ Set to &80 in ResetVariables
 
@@ -985,29 +992,24 @@ ORG &0100
 
 ORG &0380
 
-.var13Lo
+.xCarLo
 
- SKIP 23                \ 
+ SKIP 24                \ Low byte of each car's x-coordinate on the screen
 
-.L0397
+.xCarHi
 
- SKIP 1                 \ 
+ SKIP 24                \ High byte of each car's x-coordinate on the screen
 
-.var13Hi
+.yCar
 
- SKIP 23                \ 
+ SKIP 24                \ The y-coordinate of each of the cars on the screen
 
-.L03AF
+.scaleUpCar
 
- SKIP 1                 \ 
+ SKIP 24                \ The scaleUp factor for each of the cars
 
-.L03B0
-
- SKIP 24                \ 
-
-.L03C8
-
- SKIP 56                \ 
+ SKIP 32                \ These bytes appear to be unused ???
+                        \ (not yet added to deep dive)
 
 .L0400
 
@@ -4084,8 +4086,8 @@ ORG &0B00
 
 .C1199
 
- LDA L018C,X
- AND #&40
+ LDA carStatus,X
+ AND #%01000000
  BNE C11A7
 
  LDA numberOfLaps
@@ -4147,8 +4149,8 @@ ORG &0B00
  LDA numberOfLaps       \ Compare numberOfLaps with the player's current lap
  CMP driverLapNumber,X  \ number
 
- LDA #%11000000         \ Set bits 6 and 7 of the current player's L018C entry
- STA L018C,X
+ LDA #%11000000         \ Set bits 6 and 7 of the current player's car status
+ STA carStatus,X
 
  BCC clap1              \ If numberOfLaps < current player's current lap number,
                         \ then the player has finished the race, so skip the
@@ -4206,14 +4208,14 @@ ORG &0B00
  TAY
  LDX L0045
  JSR sub_C2937
- LDA var13Lo,X
- STA var14Lo
+ LDA xCarLo,X
+ STA xPlayerLo
 
 .C1200
 
- LDA var13Hi,X
+ LDA xCarHi,X
  EOR directionFacing
- STA var14Hi
+ STA xPlayerHi
  RTS
 
 \ ******************************************************************************
@@ -5826,10 +5828,11 @@ ENDIF
  JSR DrawBackground     \ Set the background colour for all the track lines in
                         \ the track view
 
- JSR DrawRoadSigns1
+ JSR BuildRoadSign      \ Build the road sign (if one is visible) in the slot
+                        \ for driver 23
 
- LDX #23                \ Draw the road sign (if one is visible) in the standard
- JSR DrawRoadSigns2     \ palette
+ LDX #23                \ Draw any visible road signs
+ JSR DrawCarOrSign
 
  JSR DrawCornerMarkers  \ Draw any visible corner markers
 
@@ -5848,7 +5851,7 @@ ENDIF
  JSR MoveHorizon        \ Move the position of the horizon palette switch up or
                         \ down, depending on the current track height
 
- JSR CheckForContact
+ JSR CheckForContact    \ Check for any car-on-car contact
 
  JSR CheckForCrash      \ Check to see if we have crashed into the fence, and if
                         \ so, display the fence, make the crash sound and set
@@ -6283,14 +6286,14 @@ ENDIF
 
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
                         \ L0114, L0164, (var01Hi var01Lo) and positionNumber,
-                        \ and initialise the 20-byte blocks at L018C,
+                        \ and initialise the 20-byte blocks at carStatus,
                         \ bestLapMinutes and L01A4, so set up a loop counter
                         \ in X
 
 .rese5
 
- LDA #&80               \ Set the X-th byte of L018C to &80
- STA L018C,X
+ LDA #&80               \ Set the X-th byte of carStatus to &80
+ STA carStatus,X
 
  STA bestLapMinutes,X   \ Set the X-th byte of bestLapMinutes to &80
 
@@ -7286,9 +7289,9 @@ ENDIF
 
 .C1BDF
 
- LDA var13Hi,X
+ LDA xCarHi,X
  SEC
- SBC var14Hi
+ SBC xPlayerHi
  ASL A
  ASL A
  PHP
@@ -11437,10 +11440,10 @@ ENDIF
 
  LDA II
  SEC
- SBC var14Lo
+ SBC xPlayerLo
  STA var24Lo,Y
  LDA JJ
- SBC var14Hi
+ SBC xPlayerHi
  STA var24Hi,Y
  JMP sub_C0CA5
 
@@ -11984,14 +11987,14 @@ ENDIF
 
 .HideAllCars
 
- LDX #22                \ We are about to process 23 bytes at L018C, so set a
+ LDX #22                \ We are about to process 23 car status bytes, so set a
                         \ loop counter in X
 
 .hide1
 
- LDA L018C,X            \ Set bit 7 in the X-th byte of L018C to set car X to
- ORA #%10000000         \ hidden
- STA L018C,X
+ LDA carStatus,X        \ Set bit 7 in the X-th byte of carStatus to set car X
+ ORA #%10000000         \ to hidden
+ STA carStatus,X
 
  DEX                    \ Decrement the loop counter
 
@@ -12031,7 +12034,7 @@ ENDIF
 \       Name: DrawCars
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw all the cars
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12043,13 +12046,18 @@ ENDIF
 
  LDA qualifyingTime
  BMI Delay
+
  LDX positionBehind
  LDY driversInOrder,X
- LDA L018C,Y
- AND #&7F
- STA L018C,Y
+
+ LDA carStatus,Y
+ AND #%01111111
+ STA carStatus,Y
+
  JSR sub_C27ED
+
  JSR sub_C2692
+
  JSR HideAllCars
 
  JSR SetPlayerPositions \ Set the player's current position, plus the position
@@ -12081,10 +12089,14 @@ ENDIF
  LDY L62F4
  DEY
  BPL P2659
- JSR sub_C66DF
+
+ JSR DrawCarObjects     \ Draw all the cars objects, with the closest car in
+                        \ front of us split into three objects
+
  LDX positionBehind
  JSR sub_C28F2
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12274,7 +12286,7 @@ ENDIF
 
 .C2749
 
- LDA L018C,X
+ LDA carStatus,X
  BPL C275E
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
@@ -12565,7 +12577,7 @@ ENDIF
 
  DEC V
  BPL P2883
- LDA L018C,X
+ LDA carStatus,X
  ASL A
  BCS C28E7
  BMI C28CE
@@ -12836,9 +12848,9 @@ ENDIF
  LDA L001D
  CMP positionAhead
  BNE C2A4D
- LDA L018C,X
+ LDA carStatus,X
  BMI C2A0F
- DEC L018C,X
+ DEC carStatus,X
 
 .C2A0F
 
@@ -12878,9 +12890,9 @@ ENDIF
 
  CMP #5
  BCC C2A4D
- LDA L018C,X
+ LDA carStatus,X
  BMI C2A4D
- INC L018C,X
+ INC carStatus,X
  RTS
 
 \ ******************************************************************************
@@ -12919,9 +12931,9 @@ ENDIF
  JSR sub_C2145
  LDY L0042
  LDA II
- STA var13Lo,Y
+ STA xCarLo,Y
  LDA JJ
- STA var13Hi,Y
+ STA xCarHi,Y
  JSR sub_C2AB1
  JSR sub_C2285
 
@@ -12945,7 +12957,7 @@ ENDIF
  SEC
  SBC #1
  BMI C2AA6
- STA L03B0,Y
+ STA yCar,Y
  LDA scaleDown
  SEC
  SBC #9
@@ -12970,21 +12982,21 @@ ENDIF
 
 .C2A99
 
- STA L03C8,Y
- LDA L018C,Y
- AND #&70
+ STA scaleUpCar,Y
+ LDA carStatus,Y
+ AND #%01110000
  ORA objectType
  JMP C2AAD
 
 .C2AA6
 
  LDY L0042
- LDA L018C,Y
- ORA #&80
+ LDA carStatus,Y
+ ORA #%10000000
 
 .C2AAD
 
- STA L018C,Y
+ STA carStatus,Y
  RTS
 
 \ ******************************************************************************
@@ -13037,10 +13049,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2ACB
+\       Name: DrawCarInPosition
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Draw the car in a specified race position
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13048,7 +13060,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2ACB
+.DrawCarInPosition
 
  STX L0045
  LDA driversInOrder,X
@@ -13056,10 +13068,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawRoadSigns2
+\       Name: DrawCarOrSign
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw a car or sign
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13067,28 +13079,42 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   Driver number (0 to 23)
+\   X                   The car or sign to draw:
+\
+\                         * 0-19 = Draw the car for this driver number
+\
+\                         * 20-22 = Draw one of the three parts that make up the
+\                                   car just in front of us (skewed so the car
+\                                   looks like it's steering):
+\
+\                           * 22 = front tyres
+\
+\                           * 21 = body
+\
+\                           * 20 = rear wing
+\
+\                         * 23 = Draw the road sign
 \
 \ ******************************************************************************
 
-.DrawRoadSigns2
+.DrawCarOrSign
 
- LDA L018C,X            \ Set A to this car's L018C
+ LDA carStatus,X        \ Set A to this car's status byte
 
- BMI C2B0B              \ If bit 7 is set then the car is not visible, so jump
-                        \ to C2B0B to return from the subroutine without drawing
-                        \ anything
+ BMI C2B0B              \ If bit 7 is set then the object is not visible, so
+                        \ jump to C2B0B to return from the subroutine without
+                        \ drawing anything
 
  AND #%00001111         \ Extract the object type from bits 0-3 and store it in
  STA objectType         \ objectType
 
- LDA var13Lo,X          \ Set (A T) = var13 for this car - var14
+ LDA xCarLo,X           \ Set (A T) = xCar for this car - xPlayer
  SEC                    \
- SBC var14Lo            \ starting with the low bytes
+ SBC xPlayerLo          \ starting with the low bytes
  STA T
 
- LDA var13Hi,X          \ And then the high bytes
- SBC var14Hi
+ LDA xCarHi,X           \ And then the high bytes
+ SBC xPlayerHi
 
  BPL C2AEF              \ If the result is positive, jump to C2AEF to perform a
                         \ positive comparison
@@ -13117,10 +13143,10 @@ ENDIF
  ADC #80                \             = 80 + (A T) / 256
  STA xObject
 
- LDA L03B0,X            \ Set yObject = this car's L03B0
+ LDA yCar,X             \ Set yObject = this car's y-coordinate
  STA yObject
 
- LDA L03C8,X            \ Set scaleUp = this car's L03C8
+ LDA scaleUpCar,X       \ Set scaleUp = this car's scale factor (i.e. size)
  STA scaleUp
 
  JSR DrawObject         \ Draw the car
@@ -20597,7 +20623,7 @@ NEXT
  JSR Absolute8Bit       \ Set A = |A|
 
  SEC
- SBC var14Hi
+ SBC xPlayerHi
  STA L0044
  BPL C456E
  EOR #&FF
@@ -20943,8 +20969,8 @@ ENDIF
 
 .sub_C46A1
 
- LDA var14Hi
- LDX var14Lo
+ LDA xPlayerHi
+ LDX xPlayerLo
  JSR sub_C0D01
  JSR sub_C48B9
 
@@ -21547,13 +21573,13 @@ ENDIF
  DEY
  DEX
  BPL C48F3
- LDA var14Lo
+ LDA xPlayerLo
  CLC
  ADC var03Lo
- STA var14Lo
- LDA var14Hi
+ STA xPlayerLo
+ LDA xPlayerHi
  ADC var03Hi
- STA var14Hi
+ STA xPlayerHi
  RTS
 
 \ ******************************************************************************
@@ -22415,7 +22441,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawRoadSigns1
+\       Name: BuildRoadSign
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
@@ -22426,7 +22452,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.DrawRoadSigns1
+.BuildRoadSign
 
  LDX currentPlayer
  LDY L06E8,X
@@ -22470,12 +22496,13 @@ ENDIF
 
  LDY #6
  JSR sub_C2147
- LDA II
- STA L0397
+
+ LDA II                 \ xCar for the road sign
+ STA xCarLo+23
  LDA JJ
- STA L03AF
+ STA xCarHi+23
  SEC
- SBC var14Hi
+ SBC xPlayerHi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -23669,9 +23696,9 @@ ENDIF
  BIT L62F8              \ If bit 7 of L62F8 is set, jump to C4F90 to return from
  BMI C4F90              \ the subroutine
 
- CPX #&14
+ CPX #20
  BCS C4F90
- LDA L018C,X
+ LDA carStatus,X
  ASL A
  BMI C4F90
  CPX currentPlayer
@@ -29169,18 +29196,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C66DF
+\       Name: DrawCarObjects
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Draw all the car objects, with three objects for the closest car
+\             in front of us
 \
 \ ******************************************************************************
 
-.sub_C66DF
+.DrawCarObjects
 
  LDX currentPosition    \ Set X to the player's current position
 
@@ -29189,7 +29213,7 @@ ENDIF
 
 .P66E3
 
- JSR sub_C2ACB
+ JSR DrawCarInPosition  \ Draw the car in position X
 
 .C66E6
 
@@ -29199,25 +29223,33 @@ ENDIF
  CPX positionAhead      \ Loop back to P66E3 until we have reached the position
  BNE P66E3              \ ahead of the current player
 
- LDX #22                \ Set X = 22 to loop through 22, 21 and 20
+                        \ We now draw the car that's just in front of us, which
+                        \ is made up of three objects that can be skewed to make
+                        \ it look like the car is steering
+
+ LDX #22                \ The three objects are the front tyres, body and rear
+                        \ wing, so set up a counter in X to work through 22, 21
+                        \ and 20, to pass to DrawCarOrSign in turn so they get
+                        \ drawn in that order
 
 .P66EF
 
  STX L0045              \ Store X in L0045 so it gets preserved through the call
-                        \ to DrawRoadSigns2
+                        \ to DrawCarOrSign
 
- JSR DrawRoadSigns2
+ JSR DrawCarOrSign      \ Draw the specified part of the three-object car just
+                        \ in front of us
 
- DEX                    \ Decrement X
+ DEX                    \ Decrement the object counter
 
- CPX #20                \ Loop back until we have done 22, 21 and 20
+ CPX #20                \ Loop back until we have drawn all three objects
  BCS P66EF
 
  LDX positionAhead      \ Set X to the position ahead of the current player
 
- JSR sub_C2ACB
+ JSR DrawCarInPosition  \ Draw the car in position X
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -29252,19 +29284,19 @@ ORG &7B00
 
  LDX driversInOrder,Y   \ Set X to the number of the driver behind us
 
- LDA L018C,X            \ If L018C for the driver behind us has bit 7 set, jump
- BMI upmi1              \ to upmi1 to clear the mirror (as V will be set to a
-                        \ negative value, and this will never match any values
-                        \ from mirrorSegment, as all the mirrorSegment entries
-                        \ are positive)
+ LDA carStatus,X        \ If the status byte for the car behind us has bit 7
+ BMI upmi1              \ set, then it is hidden, so jump to upmi1 to clear the
+                        \ mirror (as V will be set to a negative value, and this
+                        \ will never match any values from mirrorSegment, as all
+                        \ the mirrorSegment entries are positive)
 
                         \ We now calculate the size of the car to draw in the
                         \ mirror (in other words, the height of the block we
                         \ draw)
                         \
-                        \ We do this by taking the L03C8 for the driver behind
-                        \ and dividing by 8 to give us half the number of pixel
-                        \ lines to draw, in T
+                        \ We do this by taking the scale factor for the driver
+                        \ behind and dividing by 8 to give us half the number of
+                        \ pixel lines to draw, in T
                         \
                         \ We then calculate the upper and lower offsets within
                         \ the mirror segment, by taking the offset of the middle
@@ -29274,10 +29306,11 @@ ORG &7B00
                         \ We then pass N and TT (the latter via A) into the
                         \ DrawCarInMirror routine
 
- LDA L03C8,X            \ Set A = L03C8 for the driver behind
+ LDA scaleUpCar,X       \ Set A = the scale factor (i.e. size) for the driver
+                        \ behind
 
  LSR A                  \ Set T = A / 8
- LSR A                  \       = L03C8 / 8
+ LSR A                  \       = scaleUpCar / 8
  LSR A
  STA T
 
@@ -29291,16 +29324,16 @@ ORG &7B00
  STA N
 
                         \ Next we calculate the mirror segment that the car
-                        \ should appear in, based on the var13Hi value for the
-                        \ car, and var14Hi, storing the result in A
+                        \ should appear in, based on the xCarHi value for the
+                        \ car, and xPlayerHi, storing the result in A
                         \
                         \ This will then be matched with the values in
                         \ mirrorSegment to see which segment to update
 
- LDA var13Hi,X          \ Set A = var13Hi for the driver behind
+ LDA xCarHi,X           \ Set A = xCarHi for the driver behind
 
- SEC                    \ Set A = (A - var14Hi - 4) / 8
- SBC var14Hi            \       = (var13Hi - var14Hi - 4) / 8
+ SEC                    \ Set A = (A - xPlayerHi - 4) / 8
+ SBC xPlayerHi          \       = (xCarHi - xPlayerHi - 4) / 8
  SEC
  SBC #4
  LSR A
