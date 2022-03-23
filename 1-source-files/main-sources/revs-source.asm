@@ -251,9 +251,10 @@ ORG &0000
  SKIP 1                 \ Bit 7 is set if we are pressing SHIFT and right arrow
                         \ (which restarts the game)
 
-.L001D
+.carPosition
 
- SKIP 1                 \ 
+ SKIP 1                 \ The position of the car ahead of us that we are
+                        \ considering drawing in the DrawCars routine
 
 .L001E
 
@@ -346,7 +347,7 @@ ORG &0000
                         \
                         \ Gets added to currentPositionBCD when non-zero
                         \
-                        \ Set to the player's current position in BCD in
+                        \ Set to the current player's position in BCD in
                         \ ResetVariables
 
 .L0030
@@ -490,6 +491,11 @@ ORG &0000
 
  SKIP 0                 \ The number of the driver we just printed in the
                         \ PrintPositionName routine
+
+.driverPosition
+
+ SKIP 0                 \ The position of the car we are currently drawing in
+                        \ the DrawCarInPosition routine
 
 .L0045
 
@@ -3463,7 +3469,7 @@ ORG &0B00
  CLD                    \ Otherwise the driversInOrder list is sorted, so clear
                         \ the D flag to switch arithmetic to normal
 
- JSR SetPlayerPositions \ Set the player's current position, plus the position
+ JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
 
  RTS                    \ Return from the subroutine
@@ -3809,8 +3815,8 @@ ORG &0B00
 
  BPL P10A3              \ Loop back until we have processed all 20 drivers
 
- LDA var18Lo            \ If var18 is non-zero, jump back to P10A1 to repeat
- ORA var18Hi            \ the above loop
+ LDA var18Lo            \ If var18 for driver 0 is non-zero, jump back to P10A1
+ ORA var18Hi            \ to repeat the above loop
  BNE P10A1
 
  LDA #&FF               \ Set G = -1
@@ -4067,7 +4073,7 @@ ORG &0B00
 
  JSR sub_C2692
 
- JSR SetPlayerPositions \ Set the player's current position, plus the position
+ JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
 
  LDX #19
@@ -4146,15 +4152,15 @@ ORG &0B00
 
 .ClearBestLapTime
 
- LDA numberOfLaps       \ Compare numberOfLaps with the player's current lap
+ LDA numberOfLaps       \ Compare numberOfLaps with the current player's lap
  CMP driverLapNumber,X  \ number
 
  LDA #%11000000         \ Set bits 6 and 7 of the current player's car status
  STA carStatus,X
 
- BCC clap1              \ If numberOfLaps < current player's current lap number,
-                        \ then the player has finished the race, so skip the
-                        \ folllowing instruction
+ BCC clap1              \ If numberOfLaps < current player's lap number, then
+                        \ the player has finished the race, so skip the
+                        \ following instruction
 
  STA bestLapMinutes,X   \ The player didn't finish the race, so set the player's
                         \ bestLapMinutes to &C0, which is negative and therefore
@@ -4934,21 +4940,26 @@ ORG &0B00
 .C149B
 
  STA L0880,X
- INC var18Lo,X
- BNE C14A6
+
+ INC var18Lo,X          \ Increment (var18Hi var18Lo) for driver X, starting
+                        \ with the low byte
+
+ BNE C14A6              \ And then the high byte
  INC var18Hi,X
 
 .C14A6
 
- LDA var18Lo,X
- CMP trackData+&6FC
+ LDA var18Lo,X          \ If (var18Hi var18Lo) <> trackData(&6FD &6FC), jump to
+ CMP trackData+&6FC     \ C14C1
  BNE C14C1
  LDA var18Hi,X
  CMP trackData+&6FD
  BNE C14C1
- LDA #0
+
+ LDA #0                 \ Set (var18Hi var18Lo) = 0
  STA var18Lo,X
  STA var18Hi,X
+
  JSR sub_C4F77
 
 .C14C1
@@ -5001,10 +5012,12 @@ ORG &0B00
  BNE C1509
  DEC var18Hi,X
  BPL C1509
- LDA trackData+&6FC
+
+ LDA trackData+&6FC     \ Set (var18Hi var18Lo) = trackData(&6FD &6FC)
  STA var18Lo,X
  LDA trackData+&6FD
  STA var18Hi,X
+
  CPX currentPlayer
  BNE C14E4
  LDA driverLapNumber,X
@@ -6246,7 +6259,7 @@ ENDIF
  BPL rese3              \ Loop back until we have zeroed or copied all 24
                         \ variable bytes
 
- JSR SetPlayerPositions \ Set the player's current position in currentPosition,
+ JSR SetPlayerPositions \ Set the current player's position in currentPosition,
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
@@ -6263,13 +6276,13 @@ ENDIF
  LDX trackData+&717     \ Set A to trackData+&718, which is 4 for the
                         \ Silverstone track
 
- LDY currentPosition    \ Set Y to the player's current position
+ LDY currentPosition    \ Set Y to the current player's position
 
  JSR SwapDriverPosition \ Swap the positions of drivers in positions X and Y in
                         \ the driversInOrder table, so for Silverstone this sets
                         \ the current player's position to 4
 
- JSR SetPlayerPositions \ Set the player's current position in currentPosition,
+ JSR SetPlayerPositions \ Set the current player's position in currentPosition,
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
@@ -6384,12 +6397,12 @@ ENDIF
                         \ Token 44 includes five extra spaces at the end, though
                         \ I'm not sure why
 
- LDA currentPosition    \ Set A to the player's current position
+ LDA currentPosition    \ Set A to the current player's position
 
  JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
                         \ (BCD), adding 1 in the process
 
- STA positionChange     \ Set positionChange to the player's current position in
+ STA positionChange     \ Set positionChange to the current player's position in
                         \ BCD
 
  RTS                    \ Return from the subroutine
@@ -7052,7 +7065,7 @@ ENDIF
 \       Name: DrawCornerMarkers
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw any visible corner markers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -11313,8 +11326,10 @@ ENDIF
  ASL A
  ASL A
  ASL A
- BIT directionFacing
- BPL C234F
+
+ BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
+ BPL C234F              \ facing forwards, so jump to C234F
+
  STA T
  LDA L06FF
  CLC
@@ -11348,8 +11363,10 @@ ENDIF
 
  JSR sub_C2145
  LDY L0042
- BIT directionFacing
- BPL C2374
+
+ BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
+ BPL C2374              \ facing forwards, so jump to C2374
+
  TYA
  EOR #&28
  TAY
@@ -11987,8 +12004,9 @@ ENDIF
 
 .HideAllCars
 
- LDX #22                \ We are about to process 23 car status bytes, so set a
-                        \ loop counter in X
+ LDX #22                \ We are about to process the car status bytes for
+                        \ drivers 0 to 19, plus car objects 20 to 22 for the
+                        \ closest, three-object car, so set a loop counter in X
 
 .hide1
 
@@ -12011,7 +12029,10 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine performs T + (5 * 256) loop iterations, to create a delay.
+\ This routine performs T + (5 * 256) loop iterations, to create a delay. The
+\ value of T doesn't have much effect on the amount of delay, so it looks like
+\ this variable was chosen simply because it doesn't contain anything useful at
+\ this point.
 \
 \ ******************************************************************************
 
@@ -12034,67 +12055,86 @@ ENDIF
 \       Name: DrawCars
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw all the cars
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Draw up to five cars in front of us
 \
 \ ******************************************************************************
 
 .DrawCars
 
- LDA qualifyingTime
- BMI Delay
+ LDA qualifyingTime     \ If bit 7 of qualifyingTime is set then this is a
+ BMI Delay              \ practice lap (i.e. qualifyingTime = 255), so there are
+                        \ no other cars to draw
+                        \
+                        \ To maintain the same game speed as for races, we jump
+                        \ to Delay to pause for a while before returning from
+                        \ the subroutine using a tail call
 
- LDX positionBehind
- LDY driversInOrder,X
+ LDX positionBehind     \ Set X to the position of the driver behind us
 
- LDA carStatus,Y
- AND #%01111111
+ LDY driversInOrder,X   \ Set Y to the number of the driver in behind us
+
+ LDA carStatus,Y        \ Clear bit 7 of the car's status byte, to flag the car
+ AND #%01111111         \ behind us as being visible
  STA carStatus,Y
 
- JSR sub_C27ED
+ JSR sub_C27ED          \ ???
 
- JSR sub_C2692
+ JSR sub_C2692          \ ???
 
- JSR HideAllCars
+ JSR HideAllCars        \ Hide all the cars by setting bit 7 of each car's
+                        \ status byte
 
- JSR SetPlayerPositions \ Set the player's current position, plus the position
+ JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
 
- LDX currentPosition
- LDY #5
+ LDX currentPosition    \ Set X to the current player's position
 
-.P2659
+ LDY #5                 \ We now work our way through the five nearest cars in
+                        \ front of us, so set a loop counter in Y
 
- BIT directionFacing
- BPL C2663
+.dcar1
 
- JSR GetPositionBehind  \ Set X to the number of the position behind position X
+ BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
+ BPL dcar2              \ facing forwards, so jump to dcar2
 
- JMP C2666
+ JSR GetPositionBehind  \ We are facing backwards, so set X to the number of
+                        \ the position behind position X, to get the number of
+                        \ the car that we are looking at
 
-.C2663
+ JMP dcar3              \ Jump to dcar3 to skip the following
 
- JSR GetPositionAhead   \ Set X to the number of the position ahead of position
-                        \ X
+.dcar2
 
-.C2666
+ JSR GetPositionAhead   \ We are facing forwards, so set X to the number of the
+                        \ position ahead of position X, to get the number of
+                        \ the car that we are looking at
 
- STY L62F4
- STX L001D
- JSR sub_C28F2
- LDX L001D
- LDY L62F4
- DEY
- BPL P2659
+.dcar3
+
+ STY temp3              \ Store the loop counter in temp3 so we can retrieve it
+                        \ after the following call
+
+ STX carPosition        \ Store the position of the car we are considering in
+                        \ carPosition
+
+ JSR sub_C28F2          \ ???
+
+ LDX carPosition        \ Retrieve the position of the car that we stored in
+                        \ carPosition above
+
+ LDY temp3              \ Retrieve the value of the loop counter that we stored
+                        \ in temp3 above
+
+ DEY                    \ Decrement the loop counter
+
+ BPL dcar1              \ Loop back until we have processed five cars in front
 
  JSR DrawCarObjects     \ Draw all the cars objects, with the closest car in
                         \ front of us split into three objects
 
- LDX positionBehind
- JSR sub_C28F2
+ LDX positionBehind     \ Set X to the position of the driver behind us
+
+ JSR sub_C28F2          \ ???
 
  RTS                    \ Return from the subroutine
 
@@ -12155,25 +12195,36 @@ ENDIF
 
 .sub_C2692
 
- LDX currentPosition
+ LDX currentPosition    \ Set X to the current player's position, to use as a
+                        \ loop counter in the following as we work backwards
+                        \ through the field from this position
 
 .C2694
 
- STX W
- LDA driversInOrder,X
- STA T
+ STX W                  \ Store the position number in W, so we can retrieve it
+                        \ at the end of the loop
+
+ LDA driversInOrder,X   \ Set T to the number of the driver in position X ("this
+ STA T                  \ driver")
 
  JSR GetPositionAhead   \ Set X to the number of the position ahead of position
                         \ X
 
- LDA driversInOrder,X
- STX G
- TAY
- LDX T
- LDA #0
+ LDA driversInOrder,X   \ Set G to the number of the driver in position X, i.e.
+ STX G                  \ the number of the driver ahead of driver T ("the
+                        \ driver ahead")
+
+ TAY                    \ Set Y to the number of the driver ahead
+
+ LDX T                  \ Set X to the number of this driver
+
+ LDA #0                 \ Set N = 0, which we will use to build our flags
  STA N
- STA L0114,X
+
+ STA L0114,X            \ Set this driver's L0114 to 0
+
  JSR sub_C27A4
+
  BCS C26E6
  BPL C26E9
  CMP #&F6
@@ -12246,7 +12297,7 @@ ENDIF
  LDA T
  CMP #4
  LDA positionNumber,Y
- AND #&40
+ AND #%01000000
  BEQ C2729
  BCS C271C
  ORA #&80
@@ -12262,8 +12313,10 @@ ENDIF
 .C2729
 
  BCS C2742
- LDA #&40
+
+ LDA #%01000000
  STA N
+
  LDA L0178,Y
  CMP L0178,X
  ROR T
@@ -12295,7 +12348,7 @@ ENDIF
  AND #&1F
  BNE C278C
  LDA V
- AND #&80
+ AND #%10000000
  ORA N
  JMP C278A
 
@@ -12315,22 +12368,23 @@ ENDIF
  BCS C2786
  CMP #&3C
  BCS C277D
+
  LDA V
- AND #&80
+ AND #%10000000
  ORA N
  STA N
 
 .C277D
 
  LDA T
- AND #&80
+ AND #%10000000
  ORA SS
  STA L0114,X
 
 .C2786
 
  LDA N
- ORA #&10
+ ORA #%00010000
 
 .C278A
 
@@ -12340,23 +12394,28 @@ ENDIF
 
  LDA positionNumber,X
  LSR A
+
  LDA N
  BCS C2797
  STA positionNumber,X
 
 .C2797
 
- LDX W
+ LDX W                  \ Set X to the position that we just checked, which we
+                        \ stored in W at the start of the loop
 
- JSR GetPositionBehind  \ Set X to the number of the position behind position X
+ JSR GetPositionBehind  \ Set X to the number of the position behind position X,
+                        \ so we work backwards through the field
 
- CPX currentPosition
- BEQ C27A3
- JMP C2694
+ CPX currentPosition    \ If X = the current player's position, jump to C27A3 to
+ BEQ C27A3              \ return from the subroutine
+
+ JMP C2694              \ Otherwise jump back to C2694 to process the next
+                        \ driver in X
 
 .C27A3
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12367,15 +12426,22 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The number of this driver
+\
+\   Y                   The number of the driver ahead
 \
 \ ******************************************************************************
 
 .sub_C27A4
 
- LDA L0164,Y
- SEC
- SBC L0164,X
+ LDA L0164,Y            \ Set the C flag according to the subtraction:
+ SEC                    \
+ SBC L0164,X            \  L0164 for driver ahead - L0164 for this driver
+                        \
+                        \ so the L0164 figures act like bottom bytes in the
+                        \ subtraction at the start of the following routine
 
 \ ******************************************************************************
 \
@@ -12386,61 +12452,103 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Something to do with the difference in var18 values between two drivers.
+\
+\ Arguments:
+\
+\   X                   The number of this driver
+\
+\   Y                   The number of the driver ahead
+\
+\   C flag              
+\
+\ Returns:
+\
+\   (A T)               
+\
+\   Status flags        According to A, except for the C flag
+\
+\   C flag              
+\
+\   H                   Bit 7 is affected
 \
 \ ******************************************************************************
 
 .sub_C27AB
 
- LDA var18Lo,Y
- SBC var18Lo,X
- STA T
- LDA var18Hi,Y
+ LDA var18Lo,Y          \ Set (A T) = var18 for the driver ahead - var18 for
+ SBC var18Lo,X          \             this driver
+ STA T                  \
+                        \ starting with the low bytes
+
+ LDA var18Hi,Y          \ And then the high bytes
  SBC var18Hi,X
- PHP
- BPL C27BF
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
+ PHP                    \ Store the status register on the stack
 
+ BPL C27BF              \ If the result of the subtraction was positive, jump
+                        \ to C27BF to skip the following instruction
+
+ JSR Absolute16Bit      \ The result of the subtraction was negative, so set
+                        \ (A T) = |A T|
 
 .C27BF
 
- STA U
- SEC
- BEQ C27D8
- PLA
- EOR #&80
+ STA U                  \ Set (U T) = (A T)
+                        \           = |var18 ahead - var18 this|
+
+ SEC                    \ If the high byte of the subtraction was zero, jump to
+ BEQ C27D8              \ C27D8 with the C flag set
+
+ PLA                    \ Flip the N flag in the status register on the stack
+ EOR #%10000000         \ (as the N flag is bit 7 of the status register)
  PHP
- LDA trackData+&6FC
- SEC
- SBC T
- STA T
- LDA trackData+&6FD
+
+                        \ In the following, trackData(&6FD &6FC) = &0400 for the
+                        \ Silverstone track
+
+ LDA trackData+&6FC     \ Set (A T) = trackData(&6FD &6FC) - (U T)
+ SEC                    \           = trackData(&6FD &6FC)
+ SBC T                  \                       - |var18 ahead - var18 this|
+ STA T                  \
+                        \ starting with the high bytes
+
+ LDA trackData+&6FD     \ And then the low bytes
  SBC U
- BNE C27EA
- CLC
+
+ BNE C27EA              \ If the result is non-zero, jump to C27EA to return
+                        \ from the subroutine with the C flag set
+
+ CLC                    \ Clear the C flag
 
 .C27D8
 
- ROR H
- LDA T
- CMP #&80
+ ROR H                  \ Set bit 7 of H to the C flag
+
+ LDA T                  \ If T >= &80, jump to C27EA to return from the
+ CMP #&80               \ subroutine with the C flag set
  BCS C27EA
- PLP
+
+ PLP                    \ Retrieve the status flags from the stack
 
  JSR Absolute8Bit       \ Set A = |A|
 
- STA T
- LDA T
- CLC
- RTS
+ STA T                  \ Set T = |A|
+
+ LDA T                  \ Set the status flags according to A
+
+ CLC                    \ Clear the C flag
+
+ RTS                    \ Return from the subroutine
 
 .C27EA
 
- PLP
- SEC
+ PLP                    \ Retrieve the status flags from the stack, to return
+                        \ from the subroutine
 
- RTS
+ SEC                    \ Set the C flag
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12462,16 +12570,23 @@ ENDIF
  LDA L006D              \ If bit 7 of L006D is set, return from the subroutine
  BMI sub_C27ED-1        \ (as sub_C27ED-1 contains an RTS)
 
- LDX #&14
- JMP C28E7
+ LDX #20                \ Set X = 20 to use as a loop counter as we work through
+                        \ all 20 cars
+
+ JMP C28E7              \ Jump into the loop at C28E7 to decrement X and start
+                        \ looping through the drivers, looping back to C27F6 for
+                        \ all drivers except the current player
 
 .C27F6
 
- LDA positionNumber,X
+ LDA positionNumber,X   \ If driver X is not in the driver table, jump to C285B
  BMI C285B
- LDY L06E8,X
+
+ LDY L06E8,X            \ Set Y to the ??? position on the track of driver X
+
  LDA trackData+&600,Y
  BPL C280D
+
  LDA var01Hi,X
  CMP L01A4,X
  BCS C287F
@@ -12508,7 +12623,7 @@ ENDIF
 
  STA T
  LDA positionNumber,X
- AND #&40
+ AND #%01000000
  BEQ C2843
  LDA #5
 
@@ -12634,15 +12749,19 @@ ENDIF
 
 .C28E7
 
- DEX
- BMI C28F1
- CPX currentPlayer
- BEQ C28E7
- JMP C27F6
+ DEX                    \ Decrement the loop counter to point to the next driver
+
+ BMI C28F1              \ If we have worked our way through all 20 drivers, jump
+                        \ to C28F1 to return from the subroutine
+
+ CPX currentPlayer      \ If driver X is the current player, jump up to C28E7 to
+ BEQ C28E7              \ move on to the next driver
+
+ JMP C27F6              \ Jump up to C27F6 to process the next driver
 
 .C28F1
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12653,15 +12772,19 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The position of the driver to process
 \
 \ ******************************************************************************
 
 .sub_C28F2
 
- LDA driversInOrder,X
+ LDA driversInOrder,X   \ Set A to the number of the driver in position X
  STA L0045
+
  STA L0042
+
  TAX
  LDY #&17
  SEC
@@ -12845,7 +12968,7 @@ ENDIF
  LDA L0055
  CMP #3
  BCS C2A50
- LDA L001D
+ LDA carPosition
  CMP positionAhead
  BNE C2A4D
  LDA carStatus,X
@@ -13056,15 +13179,21 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\   X                   The race position of the car to draw
 \
 \ ******************************************************************************
 
 .DrawCarInPosition
 
- STX L0045
- LDA driversInOrder,X
+ STX driverPosition     \ Store X in driverPosition so it can be retrieved at
+                        \ the end of the DrawCarOrSign routine
+
+ LDA driversInOrder,X   \ Set X to the number of the driver in position X
  TAX
+
+                        \ Fall through into DrawCarOrSign to draw the car whose
+                        \ driver number we just looked up, i.e. the car in
+                        \ position X
 
 \ ******************************************************************************
 \
@@ -13083,17 +13212,22 @@ ENDIF
 \
 \                         * 0-19 = Draw the car for this driver number
 \
-\                         * 20-22 = Draw one of the three parts that make up the
-\                                   car just in front of us (skewed so the car
-\                                   looks like it's steering):
-\
-\                           * 22 = front tyres
-\
-\                           * 21 = body
+\                         * 20-22 = Draw one of the three objects that make up
+\                                   the car just in front of us:
 \
 \                           * 20 = rear wing
 \
+\                           * 21 = body
+\
+\                           * 22 = front tyres
+\
 \                         * 23 = Draw the road sign
+\
+\   driverPosition      The value to restore into X at the end of the routine
+\
+\ Returns:
+\
+\   X                   X is set to driverPosition
 \
 \ ******************************************************************************
 
@@ -13101,12 +13235,12 @@ ENDIF
 
  LDA carStatus,X        \ Set A to this car's status byte
 
- BMI C2B0B              \ If bit 7 is set then the object is not visible, so
-                        \ jump to C2B0B to return from the subroutine without
-                        \ drawing anything
+ BMI dcas3              \ If bit 7 is set then the car is not visible, so jump
+                        \ to dcas3 to return from the subroutine without drawing
+                        \ anything
 
- AND #%00001111         \ Extract the object type from bits 0-3 and store it in
- STA objectType         \ objectType
+ AND #%00001111         \ Extract the car's object type from bits 0-3 and store
+ STA objectType         \ it in objectType
 
  LDA xCarLo,X           \ Set (A T) = xCar for this car - xPlayer
  SEC                    \
@@ -13114,46 +13248,53 @@ ENDIF
  STA T
 
  LDA xCarHi,X           \ And then the high bytes
- SBC xPlayerHi
+ SBC xPlayerHi          \
+                        \ So (A T) now contains the amount that the car we are
+                        \ drawing is to the left or right of the player's car
 
- BPL C2AEF              \ If the result is positive, jump to C2AEF to perform a
+ BPL dcas1              \ If the result is positive, jump to dcas1 to perform a
                         \ positive comparison
 
- CMP #&E0               \ If A < -32, jump to C2B0B to return from the
- BCC C2B0B              \ subroutine without drawing anything
+ CMP #&E0               \ The result is negative, so check to see if A < -32,
+ BCC dcas3              \ and if so, jump to dcas3 to return from the subroutine
+                        \ without drawing anything
 
- BCS C2AF3              \ Jump to C2AF3 (this BCS is effectively a JMP as we
+ BCS dcas2              \ Jump to dcas2 (this BCS is effectively a JMP as we
                         \ just passed through a BCC)
 
-.C2AEF
+.dcas1
 
- CMP #32                \ If A >= 32, jump to C2B0B to return from the
- BCS C2B0B              \ subroutine without drawing anything
+ CMP #32                \ The result is positive, so check to see if A >= 32,
+ BCS dcas3              \ and if so, jump to dcas3 to return from the subroutine
+                        \ without drawing anything
 
-.C2AF3
+.dcas2
 
                         \ If we get here then -32 <= A < 32
 
  ASL T                  \ Set (A T) = (A T) * 4
- ROL A
- ASL T
+ ROL A                  \
+ ASL T                  \ so -128 <= A < 128
  ROL A
 
  CLC                    \ Set xObject = 80 + A
- ADC #80                \             = 80 + (A T) / 256
- STA xObject
+ ADC #80                \
+ STA xObject            \ This moves xObject so that it is centred on the
+                        \ screen, as the centre x-coordinate of the screen is
+                        \ at 80 pixels
 
- LDA yCar,X             \ Set yObject = this car's y-coordinate
- STA yObject
+ LDA yCar,X             \ Set yObject to this car's screen y-coordinate from
+ STA yObject            \ yCar
 
- LDA scaleUpCar,X       \ Set scaleUp = this car's scale factor (i.e. size)
- STA scaleUp
+ LDA scaleUpCar,X       \ Set scaleUp to this car's scale factor (i.e. the size
+ STA scaleUp            \ of the car
 
- JSR DrawObject         \ Draw the car
+ JSR DrawObject         \ Draw the car on-screen
 
-.C2B0B
+.dcas3
 
- LDX L0045              \ Set X = L0045 so X is unchanged by the routine call
+ LDX driverPosition     \ Set X = driverPosition so X is unchanged by the
+                        \ routine call
 
  RTS                    \ Return from the subroutine
 
@@ -23687,6 +23828,8 @@ ENDIF
 \
 \ Arguments:
 \
+\   X                   Driver number
+\
 \   L62F8               If bit 7 is set, this routine does nothing
 \
 \ ******************************************************************************
@@ -23696,16 +23839,21 @@ ENDIF
  BIT L62F8              \ If bit 7 of L62F8 is set, jump to C4F90 to return from
  BMI C4F90              \ the subroutine
 
- CPX #20
- BCS C4F90
- LDA carStatus,X
+ CPX #20                \ If X >= 20, jump to C4F90 to return from the
+ BCS C4F90              \ subroutine
+
+ LDA carStatus,X        \ 
  ASL A
  BMI C4F90
- CPX currentPlayer
+
+ CPX currentPlayer      \ If driver X is not the current player, jump to C4F95
  BNE C4F95
- DEC L0030
- BEQ C4F91
- INC L0030
+
+ DEC L0030              \ Decrement L0030
+
+ BEQ C4F91              \ If L0030 = 0, jump to C4F91
+
+ INC L0030              \ Increment L0030
 
 .C4F90
 
@@ -23718,8 +23866,9 @@ ENDIF
 
 .C4F95
 
- LDA driverLapNumber,X
+ LDA driverLapNumber,X  \ Set A to the 
  BMI C4F9D
+
  INC driverLapNumber,X
 
 .C4F9D
@@ -27064,18 +27213,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F4
+\       Name: temp3
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Graphics
+\    Summary: Temporary storage, used when drawing cars
 \
 \ ******************************************************************************
 
-.L62F4
+.temp3
 
  EQUB 0
 
@@ -27668,7 +27813,7 @@ ENDIF
 \       Name: SetPlayerPositions
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Set the player's current position, plus the positions behind and
+\    Summary: Set the current player's position, plus the positions behind and
 \             in front
 \
 \ ******************************************************************************
@@ -29206,12 +29351,12 @@ ENDIF
 
 .DrawCarObjects
 
- LDX currentPosition    \ Set X to the player's current position
+ LDX currentPosition    \ Set X to the current player's position
 
  BPL C66E6              \ If X is positive, jump to C66E6 to skip the following
                         \ instruction
 
-.P66E3
+.cobj1
 
  JSR DrawCarInPosition  \ Draw the car in position X
 
@@ -29220,8 +29365,8 @@ ENDIF
  JSR GetPositionBehind  \ Set X to the number of the position behind position X,
                         \ so we work our way back through the pack
 
- CPX positionAhead      \ Loop back to P66E3 until we have reached the position
- BNE P66E3              \ ahead of the current player
+ CPX positionAhead      \ Loop back to cobj1 until we have reached the position
+ BNE cobj1              \ ahead of the current player
 
                         \ We now draw the car that's just in front of us, which
                         \ is made up of three objects that can be skewed to make
@@ -29232,10 +29377,10 @@ ENDIF
                         \ and 20, to pass to DrawCarOrSign in turn so they get
                         \ drawn in that order
 
-.P66EF
+.cobj2
 
- STX L0045              \ Store X in L0045 so it gets preserved through the call
-                        \ to DrawCarOrSign
+ STX driverPosition     \ Store X in driverPosition so it gets preserved through
+                        \ the call to DrawCarOrSign
 
  JSR DrawCarOrSign      \ Draw the specified part of the three-object car just
                         \ in front of us
@@ -29243,7 +29388,7 @@ ENDIF
  DEX                    \ Decrement the object counter
 
  CPX #20                \ Loop back until we have drawn all three objects
- BCS P66EF
+ BCS cobj2
 
  LDX positionAhead      \ Set X to the position ahead of the current player
 
