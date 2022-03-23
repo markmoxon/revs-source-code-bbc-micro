@@ -5823,18 +5823,17 @@ ENDIF
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR DrawBackground
+ JSR DrawBackground     \ Set the background colour for all the track lines in
+                        \ the track view
 
  JSR DrawRoadSigns1
 
- LDX #23                \ Set the driver number to 23, so the following call to
-                        \ DrawRoadSigns2 uses the standard palette
+ LDX #23                \ Draw the road sign (if one is visible) in the standard
+ JSR DrawRoadSigns2     \ palette
 
- JSR DrawRoadSigns2
+ JSR DrawCornerMarkers  \ Draw any visible corner markers
 
- JSR DrawCornerMarkers
-
- JSR DrawCars
+ JSR DrawCars           \ Draw any visible cars
 
  JSR CopyTyreDashEdges  \ Copy the pixels from the edges of the left tyre and
                         \ right dashboard so they can be used when drawing the
@@ -6397,7 +6396,7 @@ ENDIF
 \       Name: DrawBackground
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Sets the background colour for all the track lines in the track
+\    Summary: Set the background colour for all the track lines in the track
 \             view
 \
 \ ******************************************************************************
@@ -11839,16 +11838,19 @@ ENDIF
 
 .C2570
 
- LDA leftTrackStart+58,X
+ LDA L0700+2-&78,X
 
 .C2573
 
- AND L306C,Y
- STA W
- AND #7
+ AND L306C,Y            \ Set W = A AND 00101101 if Y = 0
+ STA W                  \               00110011 if Y = 1
+
+ AND #7                 \ Set Y = bits 0-2 of W
  TAY
- LDA L306E,Y
- STA V
+
+ LDA L306E,Y            \ Set V = 0 if Y = 0 or 1
+ STA V                  \         1 otherwise
+
  LDA L0042
  CMP #3
  BCS C2589
@@ -13071,45 +13073,63 @@ ENDIF
 
 .DrawRoadSigns2
 
- LDA L018C,X
- BMI C2B0B
- AND #&0F
- STA objectType
- LDA var13Lo,X
- SEC
- SBC var14Lo
+ LDA L018C,X            \ Set A to this car's L018C
+
+ BMI C2B0B              \ If bit 7 is set then the car is not visible, so jump
+                        \ to C2B0B to return from the subroutine without drawing
+                        \ anything
+
+ AND #%00001111         \ Extract the object type from bits 0-3 and store it in
+ STA objectType         \ objectType
+
+ LDA var13Lo,X          \ Set (A T) = var13 for this car - var14
+ SEC                    \
+ SBC var14Lo            \ starting with the low bytes
  STA T
- LDA var13Hi,X
+
+ LDA var13Hi,X          \ And then the high bytes
  SBC var14Hi
- BPL C2AEF
- CMP #&E0
- BCC C2B0B
- BCS C2AF3
+
+ BPL C2AEF              \ If the result is positive, jump to C2AEF to perform a
+                        \ positive comparison
+
+ CMP #&E0               \ If A < -32, jump to C2B0B to return from the
+ BCC C2B0B              \ subroutine without drawing anything
+
+ BCS C2AF3              \ Jump to C2AF3 (this BCS is effectively a JMP as we
+                        \ just passed through a BCC)
 
 .C2AEF
 
- CMP #&20
- BCS C2B0B
+ CMP #32                \ If A >= 32, jump to C2B0B to return from the
+ BCS C2B0B              \ subroutine without drawing anything
 
 .C2AF3
 
- ASL T
+                        \ If we get here then -32 <= A < 32
+
+ ASL T                  \ Set (A T) = (A T) * 4
  ROL A
  ASL T
  ROL A
- CLC
- ADC #80
+
+ CLC                    \ Set xObject = 80 + A
+ ADC #80                \             = 80 + (A T) / 256
  STA xObject
- LDA L03B0,X
+
+ LDA L03B0,X            \ Set yObject = this car's L03B0
  STA yObject
- LDA L03C8,X
+
+ LDA L03C8,X            \ Set scaleUp = this car's L03C8
  STA scaleUp
- JSR DrawObject
+
+ JSR DrawObject         \ Draw the car
 
 .C2B0B
 
- LDX L0045
- RTS
+ LDX L0045              \ Set X = L0045 so X is unchanged by the routine call
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14414,7 +14434,8 @@ ENDIF
 
 .L306C
 
- EQUB &2D, &33
+ EQUB %00101101
+ EQUB %00110011
 
 \ ******************************************************************************
 \
@@ -26165,6 +26186,7 @@ ENDIF
 \ Something to do with corner markers.
 \
 \ If bit 5 is set, the marker is red, otherwise it is white.
+\ If bit 0 is set, the marker is half size.
 \
 \ ******************************************************************************
 
@@ -27645,7 +27667,8 @@ ENDIF
 .ppos2
 
                         \ By this point, X contains the position within the
-                        \ driversInOrder list of the current player
+                        \ driversInOrder list of the current player (or -1 if
+                        \ the current player doesn't appear in the list)
 
  STX currentPosition    \ Store the current player's position in currentPosition
 
@@ -29159,8 +29182,10 @@ ENDIF
 
 .sub_C66DF
 
- LDX currentPosition
- BPL C66E6
+ LDX currentPosition    \ Set X to the player's current position
+
+ BPL C66E6              \ If X is positive, jump to C66E6 to skip the following
+                        \ instruction
 
 .P66E3
 
@@ -29168,21 +29193,30 @@ ENDIF
 
 .C66E6
 
- JSR GetPositionBehind  \ Set X to the number of the position behind position X
+ JSR GetPositionBehind  \ Set X to the number of the position behind position X,
+                        \ so we work our way back through the pack
 
- CPX positionAhead
- BNE P66E3
- LDX #&16
+ CPX positionAhead      \ Loop back to P66E3 until we have reached the position
+ BNE P66E3              \ ahead of the current player
+
+ LDX #22                \ Set X = 22 to loop through 22, 21 and 20
 
 .P66EF
 
- STX L0045
+ STX L0045              \ Store X in L0045 so it gets preserved through the call
+                        \ to DrawRoadSigns2
+
  JSR DrawRoadSigns2
- DEX
- CPX #&14
+
+ DEX                    \ Decrement X
+
+ CPX #20                \ Loop back until we have done 22, 21 and 20
  BCS P66EF
- LDX positionAhead
+
+ LDX positionAhead      \ Set X to the position ahead of the current player
+
  JSR sub_C2ACB
+
  RTS
 
 \ ******************************************************************************
