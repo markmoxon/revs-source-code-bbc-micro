@@ -301,7 +301,7 @@ ORG CODE%
  EQUB &14, &67
 
 \ trackData+&6EA = &59EA
-\ Tract sections and object types for 16 road signs
+\ Track sections and object types for 16 road signs
 \ Bits 0-2 = Object type of road sign (add 7 to get the type)
 \ Bits 3-7 = Index into track data at trackData+&001, trackData+&601
 \            Track section
@@ -334,16 +334,15 @@ ORG CODE%
 
  EQUB &FF
 
-\ trackData+&6FC = &59FC (low)
-\ trackData+&6FD = &59FD (high)
-\ var18 wraps round to 0 when it reaches this figure
-\ Length of track in terms of progress
+\ trackData(&6FD &6FC) = (&59FD &59FC)
+\ Length of full track (in terms of progress)
+\ carProgress wraps round to 0 when it reaches this figure
 
  EQUW &0400
 
-\ trackData+&6FE = &59FE (low)
-\ trackData+&6FF = &59FF (high)
-\ 24 bytes in (var18Hi var18Lo) are initialised to &034B
+\ trackData(&6FE &6FF) = (&59FF &59FE)
+\ 24 bytes in (carProgressHi carProgressLo) are initialised to &034B
+\ Starting point for practice laps
 
  EQUW &034B
 

@@ -3820,7 +3820,7 @@ ORG &0B00
 
 .P10A3
 
- JSR sub_C147C          \ Updates carTrackSection, L0880, var18 for this
+ JSR sub_C147C          \ Updates carTrackSection, L0880, carProgress for this
                         \ driver ???
 
  DEX                    \ Decrement the loop counter
@@ -3854,7 +3854,7 @@ ORG &0B00
  LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- JSR sub_C14C3          \ Updates carTrackSection, L0880, var18 for this
+ JSR sub_C14C3          \ Updates carTrackSection, L0880, carProgress for this
                         \ driver ???
 
  PLA                    \ Retrieve X from the stack
@@ -3881,7 +3881,8 @@ ORG &0B00
  CPX #20                \ Loop back until we have done G = 0 to 19
  BCC C10B7
 
-                        \ Loop until sub_C27AB returns C flag clear and A = 32
+                        \ Loop until GetCarDistance returns C flag clear and
+                        \ A = 32
 
 .C10D7
 
@@ -3893,13 +3894,15 @@ ORG &0B00
 
  LDX currentPlayer
 
- SEC
+ SEC                    \ Set the C flag for a 16-bit calculation in the call
+                        \ to GetCarDistance
 
- JSR sub_C27AB
+ JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
 
- BCS C10D7
+ BCS C10D7              \ If the C flag is set then the cars are far apart, so
+                        \ jump to C10D7
 
- CMP #32
+ CMP #32                \ If A <> 32, jump to C10D7
  BNE C10D7
 
  LDX #23
@@ -3913,7 +3916,7 @@ ORG &0B00
 
 .P10F2
 
- JSR sub_C14C3          \ Updates carTrackSection, L0880, var18 for driver
+ JSR sub_C14C3          \ Updates carTrackSection, L0880, carProgress for driver
                         \ 23, i.e. the road sign ???
 
  DEC V
@@ -3926,7 +3929,7 @@ ORG &0B00
 
  INC L0042
 
- JSR sub_C14C3          \ Updates carTrackSection, L0880, var18 for driver
+ JSR sub_C14C3          \ Updates carTrackSection, L0880, carProgress for driver
                         \ 23, i.e. the road sign ???
 
  BCC P10F9
@@ -12245,12 +12248,18 @@ ENDIF
 
  STA L0114,X            \ Set this driver's L0114 to 0
 
- JSR sub_C27A4
+ JSR GetCarDistance24   \ Set A and T to the distance between drivers X and Y,
+                        \ using 24-bit arithmetic
 
- BCS C26E6
- BPL C26E9
- CMP #&F6
+ BCS C26E6              \ If the C flag is set then the cars are far apart, so
+                        \ jump to C26E6
+
+ BPL C26E9              \ If the distance in A is positive then driver Y is
+                        \ ahead, so jump to C26E9
+
+ CMP #&F6               \ If A < -10, jump to C26E6
  BCC C26E6
+
  LDX W
  LDY G
  JSR SwapDriverPosition
@@ -12441,22 +12450,22 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C27A4
+\       Name: GetCarDistance24
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Calculate the distance between two drivers using 24-bit arithmetic
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The number of this driver
+\   X                   The number of driver X
 \
-\   Y                   The number of the driver ahead
+\   Y                   The number of driver Y
 \
 \ ******************************************************************************
 
-.sub_C27A4
+.GetCarDistance24
 
  LDA L0164,Y            \ Set the C flag according to the subtraction:
  SEC                    \
@@ -12465,48 +12474,78 @@ ENDIF
                         \ so the L0164 figures act like bottom bytes in the
                         \ subtraction at the start of the following routine
 
+                        \ Fall through into GetCarDistance to calculate the
+                        \ distance between the two cars
+
 \ ******************************************************************************
 \
-\       Name: sub_C27AB
+\       Name: GetCarDistance
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Calculate the distance between two drivers
 \
 \ ------------------------------------------------------------------------------
 \
-\ Something to do with the difference in var18 values between two drivers.
+\ Calculate the distance between two drivers.
 \
 \ Arguments:
 \
-\   X                   The number of this driver
+\   X                   The number of driver X
 \
-\   Y                   The number of the driver ahead
+\   Y                   The number of driver Y
 \
-\   C flag              
+\   C flag              Determines the accuracy of the arithmetic:
+\
+\                         * Clear for a 16-bit calculation using carProgress
+\
+\                         * For a 24-bit calculation, contains the carry from
+\                           GetCarDistance24 above
 \
 \ Returns:
 \
-\   (A T)               
+\   A                   The distance between the two cars, negative if driver X
+\                       is ahead, positive if driver Y is ahead
 \
-\   Status flags        According to A, except for the C flag
+\   T                   The same as A
 \
-\   C flag              
+\   C flag              How far apart the cars are:
 \
-\   H                   Bit 7 is affected
+\                         * Set if cars are far apart (distance >= 128)
+\
+\                         * Clear if they are close (distance < 128)
+\
+\   N flag              The driver order:
+\
+\                         * Set if driver X is ahead
+\
+\                         * Clear if driver Y is ahead
+\
+\   H                   Relationship to the starting line:
+\
+\                         * Bit 7 is clear if the cars are quite close (when
+\                           distance < 256) but are on opposite sides of the
+\                           starting line
+\
+\                         * Bit 7 set otherwise
 \
 \ ******************************************************************************
 
-.sub_C27AB
+.GetCarDistance
 
- LDA carProgressLo,Y    \ Set (A T) =   carProgress for the driver ahead
- SBC carProgressLo,X    \             - carProgress for this driver
+ LDA carProgressLo,Y    \ Set (A T) =   carProgress for driver Y
+ SBC carProgressLo,X    \             - carProgress for driver X
  STA T                  \
                         \ starting with the low bytes
 
  LDA carProgressHi,Y    \ And then the high bytes
- SBC carProgressHi,X
+ SBC carProgressHi,X    \
+                        \ So (A T) now contains the distance between the two
+                        \ drivers - let's call it driverDistance
 
- PHP                    \ Store the status register on the stack
+ PHP                    \ Store the status register on the stack, so the N flag
+                        \ on the stack is the sign of the above subtraction, so
+                        \ it's set if carProgress for driver Y < carProgress
+                        \ for driver X, i.e. if driver X is ahead
 
  BPL C27BF              \ If the result of the subtraction was positive, jump
                         \ to C27BF to skip the following instruction
@@ -12517,53 +12556,81 @@ ENDIF
 .C27BF
 
  STA U                  \ Set (U T) = (A T)
-                        \           = |var18 ahead - var18 this|
+                        \           = |driverDistance|
 
- SEC                    \ If the high byte of the subtraction was zero, jump to
- BEQ C27D8              \ C27D8 with the C flag set
+ SEC                    \ Set the C flag to shift into bit 7 of H below
+
+ BEQ C27D8              \ If the high byte of the distance is zero, jump to
+                        \ C27D8 to check the low byte
+
+                        \ If we get here then the high byte of the distance
+                        \ is non-zero, so now we need to check whether this is
+                        \ down to the cars being close but either side of the
+                        \ starting line (as car progress resets to zero at the
+                        \ starting line, so cars that are on either side of the
+                        \ line will have a big difference in carProgress values
+                        \ even though they are actually close together)
 
  PLA                    \ Flip the N flag in the status register on the stack
- EOR #%10000000         \ (as the N flag is bit 7 of the status register)
- PHP
+ EOR #%10000000         \ (as the N flag is bit 7 of the status register), so
+ PHP                    \ the N flag on the stack is the opposite sign to the
+                        \ carProgress subtraction we did above
 
-                        \ In the following, trackData(&6FD &6FC) = &0400 for the
-                        \ Silverstone track
+                        \ In the following, trackData(&6FD &6FC) contains the
+                        \ length of the full track
 
  LDA trackData+&6FC     \ Set (A T) = trackData(&6FD &6FC) - (U T)
- SEC                    \           = trackData(&6FD &6FC)
- SBC T                  \                       - |var18 ahead - var18 this|
- STA T                  \
-                        \ starting with the high bytes
+ SEC                    \           = trackData(&6FD &6FC) - |driverDistance|
+ SBC T                  \                       
+ STA T                  \ starting with the high bytes
 
  LDA trackData+&6FD     \ And then the low bytes
  SBC U
 
- BNE C27EA              \ If the result is non-zero, jump to C27EA to return
-                        \ from the subroutine with the C flag set
+ BNE C27EA              \ If the high byte is non-zero, then that means the cars
+                        \ are not just either side of the starting line, so they
+                        \ must be far away from each other, so jump to C27EA to
+                        \ return from the subroutine with the C flag set
+
+                        \ If we get here then the high byte is zero, which means
+                        \ the drivers are quite close but are either side of the
+                        \ starting line
 
  CLC                    \ Clear the C flag
 
 .C27D8
 
- ROR H                  \ Set bit 7 of H to the C flag
+                        \ If we get here then the drivers are close together
+                        \ (the high byte of the distance between then is zero)
 
- LDA T                  \ If T >= &80, jump to C27EA to return from the
- CMP #&80               \ subroutine with the C flag set
- BCS C27EA
+ ROR H                  \ Set bit 7 of H to the C flag, so it's clear if the
+                        \ cars are quite close but on opposite sides of the
+                        \ starting line, clear otherwise
+
+ LDA T                  \ If T >= &80, then the distance between the cars is
+ CMP #&80               \ >= 128, so jump to C27EA to return from the subroutine
+ BCS C27EA              \ with the C flag set
+
+                        \ If we get here then the distance between the cars is
+                        \ 127 or less, so the cars are determined to be close
 
  PLP                    \ Retrieve the status flags from the stack
 
- JSR Absolute8Bit       \ Set A = |A|
+ JSR Absolute8Bit       \ Set the sign of A according to the N flag, which will
+                        \ be set if driver X is ahead
 
- STA T                  \ Set T = |A|
+ STA T                  \ Set T = A
 
- LDA T                  \ Set the status flags according to A
+ LDA T                  \ Set the N flag according to the value of A
 
  CLC                    \ Clear the C flag
 
  RTS                    \ Return from the subroutine
 
 .C27EA
+
+                        \ We get here if the cars are far away from each other,
+                        \ i.e. the distance between them is >= 128
 
  PLP                    \ Retrieve the status flags from the stack, to return
                         \ from the subroutine
@@ -12808,18 +12875,26 @@ ENDIF
  STA L0042
 
  TAX
- LDY #&17
- SEC
- JSR sub_C27AB
- BCS C2911
- EOR directionFacing
- BMI C2911
- LDA T
 
- JSR Absolute8Bit       \ Set A = |A|
+ LDY #23
 
+ SEC                    \ Set the C flag for a 16-bit calculation in the call
+                        \ to GetCarDistance
+
+ JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
+
+ BCS C2911              \ If the C flag is set then the cars are far apart, so
+                        \ jump to C2911
+
+ EOR directionFacing    \ If we are facing forward and driver X is ahead, or we
+ BMI C2911              \ are facing backwards and driver Y is ahead, jump to
+                        \ C2911
+
+ LDA T                  \ Set T = |T|
+ JSR Absolute8Bit
  STA T
- CMP #&28
+
+ CMP #40                \ If |T| < 40, jump to C2914 to skip the following
  BCC C2914
 
 .C2911
@@ -15590,6 +15665,12 @@ ENDIF
 \
 \                         * If we want to calculate A * abs(n), do a BIT n
 \                           before calling the routine
+\
+\                         * If we want to set the sign of A, then call with:
+\
+\                           * N flag clear to calculate A * 1
+\
+\                           * N flag set to calculate A * -1
 \
 \ ******************************************************************************
 
