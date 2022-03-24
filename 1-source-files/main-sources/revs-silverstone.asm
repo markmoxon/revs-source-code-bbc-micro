@@ -289,7 +289,7 @@ ORG CODE%
 
 \ trackData+&6D0 = &59D0
 \
-\ These 24 bytes are copied to L5FB0
+\ These 24 bytes are copied to L5FB0, one per track section
 \ Bit 0 -> bit 7 of result
 \ Bit 1 clear -> result is scaled by U
 \ See sub_C44C6
@@ -301,34 +301,34 @@ ORG CODE%
  EQUB &14, &67
 
 \ trackData+&6EA = &59EA
-\ Positions and types for 16 road signs
-\ Bits 0-2 = Object type of road sign (add 7 to get object type)
+\ Tract sections and object types for 16 road signs
+\ Bits 0-2 = Object type of road sign (add 7 to get the type)
 \ Bits 3-7 = Index into track data at trackData+&001, trackData+&601
-\            maybe marker position along track?
-\ Road sign 0 at position 23 is the sign we see when the track loads
+\            Track section
+\ Road sign at track section 23 is the sign we see at start of practice
 
- EQUB %00000011         \ 00000 011     Object type 3 + 7 = 10 at position  0
- EQUB %00010000         \ 00010 000     Object type 0 + 7 =  7 at position  2
- EQUB %00011001         \ 00011 001     Object type 1 + 7 =  8 at position  3
- EQUB %00101100         \ 00101 100     Object type 4 + 7 = 11 at position  5
- EQUB %00111000         \ 00111 000     Object type 0 + 7 =  7 at position  7
- EQUB %01001101         \ 01001 101     Object type 5 + 7 = 12 at position  9
- EQUB %01100100         \ 01100 100     Object type 4 + 7 = 11 at position 12
- EQUB %01110101         \ 01110 101     Object type 5 + 7 = 12 at position 14
- EQUB %01110000         \ 01110 000     Object type 0 + 7 =  7 at position 14
- EQUB %01110000         \ 01110 000     Object type 0 + 7 =  7 at position 14
- EQUB %10010100         \ 10010 100     Object type 4 + 7 = 11 at position 18
- EQUB %10011000         \ 10011 000     Object type 0 + 7 =  7 at position 19
- EQUB %10100100         \ 10100 100     Object type 4 + 7 = 11 at position 20
- EQUB %10101000         \ 10101 000     Object type 0 + 7 =  7 at position 21
- EQUB %10110101         \ 10110 101     Object type 5 + 7 = 12 at position 22
- EQUB %10111000         \ 10111 000     Object type 0 + 7 =  7 at position 23
+ EQUB %00000011         \ 00000 011 = type 10 = chicane       track section  0
+ EQUB %00010000         \ 00010 000 = type  7 = straight      track section  2
+ EQUB %00011001         \ 00011 001 = type  8 = start flag    track section  3
+ EQUB %00101100         \ 00101 100 = type 11 = right turn    track section  5
+ EQUB %00111000         \ 00111 000 = type  7 = straight      track section  7
+ EQUB %01001101         \ 01001 101 = type 12 = left turn     track section  9
+ EQUB %01100100         \ 01100 100 = type 11 = right turn    track section 12
+ EQUB %01110101         \ 01110 101 = type 12 = left turn     track section 14
+ EQUB %01110000         \ 01110 000 = type  7 = straight      track section 14
+ EQUB %01110000         \ 01110 000 = type  7 = straight      track section 14
+ EQUB %10010100         \ 10010 100 = type 11 = right turn    track section 18
+ EQUB %10011000         \ 10011 000 = type  7 = straight      track section 19
+ EQUB %10100100         \ 10100 100 = type 11 = right turn    track section 20
+ EQUB %10101000         \ 10101 000 = type  7 = straight      track section 21
+ EQUB %10110101         \ 10110 101 = type 12 = left turn     track section 22
+ EQUB %10111000         \ 10111 000 = type  7 = straight      track section 23
 
 \ trackData+&6FA = &59FA
-\ Bits 3-7 contain the number of bytes at trackData+&6D0 (24) that we copy to L5FB0
-\ Is this the number of track positions?
+\ The number of bytes at trackData+&6D0 (24) that we copy to L5FB0
+\ Number of track sections
 
- EQUB 24 << 3
+ EQUB 24 * 8
 
 \ trackData+&6FB = &59FB
 
@@ -336,6 +336,8 @@ ORG CODE%
 
 \ trackData+&6FC = &59FC (low)
 \ trackData+&6FD = &59FD (high)
+\ var18 wraps round to 0 when it reaches this figure
+\ Length of track in terms of progress
 
  EQUW &0400
 
@@ -405,11 +407,12 @@ ORG CODE%
 \ Something to do with the lap timer - when L0046 matches this number, the lap
 \ timer is bumped up by 18/100 rather than 9/100 in sub_C17C3
 \ L0046 is incremented in sub_C5052
+\ Used to initialise the value of L0046 in sub_C5052
 
  EQUB 24
 
 \ trackData+&71A = &5A1A
-\ Used to initialise the value of L0046 in sub_C5052
+\ Subtracted from driver speed in sub_C27ED
 
  EQUB 0
 

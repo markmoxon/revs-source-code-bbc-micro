@@ -389,17 +389,17 @@ ORG &0000
 
  SKIP 1                 \ The type of object to draw (0 to 12)
                         \
-                        \   * 0 = 
-                        \   * 1 = 
-                        \   * 2 = 
-                        \   * 3 = 
-                        \   * 4 = 
-                        \   * 5 = 
+                        \   * 0 = very distant car
+                        \   * 1 = distant car
+                        \   * 2 = close car body (middle object of three)
+                        \   * 3 = close car rear wing (rear object of three)
+                        \   * 4 = medium distance car
+                        \   * 5 = close car tyres (front object of three)
                         \   * 6 = corner marker
-                        \   * 7 = blank road sign
-                        \   * 8 = start line road sign
-                        \   * 9 = second object for the following signs
-                        \   * 10 = right-turn chicane road sign
+                        \   * 7 = straight road sign
+                        \   * 8 = starting flag
+                        \   * 9 = base sign for the following signs
+                        \   * 10 = right-hand chicane road sign
                         \   * 11 = right turn road sign
                         \   * 12 = left turn road sign
 
@@ -1231,13 +1231,10 @@ ORG &0380
 
  SKIP 2                 \ These bytes appear to be unused
 
-.L06E8
+.carTrackSection
 
- SKIP 23                \ 
-
-.L06FF
-
- SKIP 1                 \ 
+ SKIP 24                \ The track section containing each driver (or the
+                        \ current road sign for driver 23)
 
 .L0700
 
@@ -1262,11 +1259,7 @@ ORG &0880
 
 .L0880
 
- SKIP 23                \ 
-
-.L0897
-
- SKIP 1                 \ 
+ SKIP 24                \ 
 
 .bestLapTenths
 
@@ -1276,17 +1269,35 @@ ORG &0880
 
  SKIP 36                \ 
 
-.var18Lo
+.carProgressLo
 
- SKIP 24                \ 
-
-.var18Hi
-
- SKIP 24                \ 
+ SKIP 24                \ Low byte of each car's progress around the track
                         \
-                        \ Set to trackData(&6FF &6FE) in ResetVariables
+                        \ This is the car's position on the track, in terms of
+                        \ progress from the starting line
                         \
-                        \ &034B for Silverstone
+                        \ It is zero when the car is on the starting line, and
+                        \ goes up to trackData(&6FD &6FC) as the car progresses
+                        \ round the track, before resetting to zero again at
+                        \ the end
+                        \
+                        \ Set to trackData(&6FF &6FE) in ResetVariables, which
+                        \ is &034B for the Silverstone track
+
+.carProgressHi
+
+ SKIP 24                \ High byte of each car's progress around the track
+                        \
+                        \ This is the car's position on the track, in terms of
+                        \ progress from the starting line
+                        \
+                        \ It is zero when the car is on the starting line, and
+                        \ goes up to trackData(&6FD &6FC) as the car progresses
+                        \ round the track, before resetting to zero again at
+                        \ the end
+                        \
+                        \ Set to trackData(&6FF &6FE) in ResetVariables, which
+                        \ is &034B for the Silverstone track
 
 .var20Lo
 
@@ -3809,14 +3820,15 @@ ORG &0B00
 
 .P10A3
 
- JSR sub_C147C          \ Updates L06E8, L0880, var18 for this driver ???
+ JSR sub_C147C          \ Updates carTrackSection, L0880, var18 for this
+                        \ driver ???
 
  DEX                    \ Decrement the loop counter
 
  BPL P10A3              \ Loop back until we have processed all 20 drivers
 
- LDA var18Lo            \ If var18 for driver 0 is non-zero, jump back to P10A1
- ORA var18Hi            \ to repeat the above loop
+ LDA carProgressLo      \ If carProgress for driver 0 is non-zero, jump back to
+ ORA carProgressHi      \ P10A1 to repeat the above loop
  BNE P10A1
 
  LDA #&FF               \ Set G = -1
@@ -3842,7 +3854,8 @@ ORG &0B00
  LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- JSR sub_C14C3          \ Updates L06E8, L0880, var18 for this driver ???
+ JSR sub_C14C3          \ Updates carTrackSection, L0880, var18 for this
+                        \ driver ???
 
  PLA                    \ Retrieve X from the stack
  TAX
@@ -3900,7 +3913,8 @@ ORG &0B00
 
 .P10F2
 
- JSR sub_C14C3          \ Updates L06E8, L0880, var18 for driver 23 ???
+ JSR sub_C14C3          \ Updates carTrackSection, L0880, var18 for driver
+                        \ 23, i.e. the road sign ???
 
  DEC V
 
@@ -3912,7 +3926,8 @@ ORG &0B00
 
  INC L0042
 
- JSR sub_C14C3          \ Updates L06E8, L0880, var18 for driver 23 ???
+ JSR sub_C14C3          \ Updates carTrackSection, L0880, var18 for driver
+                        \ 23, i.e. the road sign ???
 
  BCC P10F9
 
@@ -4361,7 +4376,7 @@ ORG &0B00
 
  LDA directionFacing
  BMI C1284
- LDY L06FF
+ LDY carTrackSection+23
  JSR sub_C122D
  LDA trackData,Y
  JMP C128E
@@ -4377,7 +4392,7 @@ ORG &0B00
 
  AND #7
  STA L0007
- LDY L06FF
+ LDY carTrackSection+23
  LDA trackData+&600,Y
  STA L0001
  LDA #0
@@ -4546,7 +4561,7 @@ ORG &0B00
  LDA trackData+&6FA
  LSR A
  AND #&F8
- CMP L06E8,X
+ CMP carTrackSection,X
  BNE C131B
  LDA #1
  STA L0030
@@ -4560,7 +4575,7 @@ ORG &0B00
 
 .C1326
 
- LDA L06FF
+ LDA carTrackSection+23
  STA L0021
  JSR sub_C14C3
  BCC C1333
@@ -4576,7 +4591,7 @@ ORG &0B00
  PHP
  LDA L0001
  BCS C134F
- LDY L0897
+ LDY L0880+23
  CPY #1
  BCC C134D
  CPY #&0A
@@ -4589,21 +4604,21 @@ ORG &0B00
 .C134F
 
  STA W
- LDY L06FF
+ LDY carTrackSection+23
  LDA trackData+&607,Y
  PLP
  BCC C1365
  LSR A
  TAY
  LDA W
- CPY L0897
+ CPY L0880+23
  BEQ C137C
  BNE C1378
 
 .C1365
 
  SEC
- SBC L0897
+ SBC L0880+23
  TAY
  LDA W
  CPY #7
@@ -4912,53 +4927,60 @@ ORG &0B00
 \
 \ Arguments:
 \
+\   X                   Driver number (0-22, or 23 for road sign)
+\
 \   L62F8               If bit 7 is set, the call to sub_C4F77 has no effect
 \
 \ ******************************************************************************
 
 .sub_C147C
 
- LDY L06E8,X
- LDA L0880,X
+ LDY carTrackSection,X  \ Set Y to carTrackSection for driver X
+
+ LDA L0880,X            \ Set A to 1 + L0880 for driver X
  CLC
  ADC #1
- CMP trackData+&607,Y
- PHP
- BCC C149B
- TYA
+
+ CMP trackData+&607,Y   \ If A < Y-th trackData+&607, jump to C149B
+ PHP                    \
+ BCC C149B              \ And store the status flags on the stack
+
+ TYA                    \ Set A = Y + 8
  CLC
  ADC #8
- CMP trackData+&6FA
+
+ CMP trackData+&6FA     \ If A < trackData+&6FA, jump to C1496
  BCC C1496
- LDA #0
+
+ LDA #0                 \ Set A = 0
 
 .C1496
 
- STA L06E8,X
+ STA carTrackSection,X
  LDA #0
 
 .C149B
 
  STA L0880,X
 
- INC var18Lo,X          \ Increment (var18Hi var18Lo) for driver X, starting
-                        \ with the low byte
+ INC carProgressLo,X    \ Increment (carProgressHi carProgressLo) for driver X,
+                        \ starting with the low byte
 
  BNE C14A6              \ And then the high byte
- INC var18Hi,X
+ INC carProgressHi,X
 
 .C14A6
 
- LDA var18Lo,X          \ If (var18Hi var18Lo) <> trackData(&6FD &6FC), jump to
- CMP trackData+&6FC     \ C14C1
- BNE C14C1
- LDA var18Hi,X
- CMP trackData+&6FD
+ LDA carProgressLo,X    \ If:
+ CMP trackData+&6FC     \
+ BNE C14C1              \ (carProgressHi carProgressLo) <> trackData(&6FD &6FC)
+ LDA carProgressHi,X    \
+ CMP trackData+&6FD     \ jump to C14C1
  BNE C14C1
 
- LDA #0                 \ Set (var18Hi var18Lo) = 0
- STA var18Lo,X
- STA var18Hi,X
+ LDA #0                 \ Set (carProgressHi carProgressLo) = 0
+ STA carProgressLo,X
+ STA carProgressHi,X
 
  JSR sub_C4F77
 
@@ -4982,7 +5004,7 @@ ORG &0B00
 
 .sub_C14C3
 
- LDY L06E8,X
+ LDY carTrackSection,X
  LDA L0880,X
  CLC
  BNE C14DD
@@ -4994,7 +5016,7 @@ ORG &0B00
 
  SEC
  SBC #8
- STA L06E8,X
+ STA carTrackSection,X
  TAY
  LDA trackData+&607,Y
  SEC
@@ -5008,15 +5030,15 @@ ORG &0B00
 
 .C14E4
 
- LDA var18Lo,X
+ LDA carProgressLo,X
  BNE C1509
- DEC var18Hi,X
+ DEC carProgressHi,X
  BPL C1509
 
- LDA trackData+&6FC     \ Set (var18Hi var18Lo) = trackData(&6FD &6FC)
- STA var18Lo,X
- LDA trackData+&6FD
- STA var18Hi,X
+ LDA trackData+&6FC     \ Set:
+ STA carProgressLo,X    \
+ LDA trackData+&6FD     \ (carProgressHi carProgressLo) = trackData(&6FD &6FC)
+ STA carProgressHi,X
 
  CPX currentPlayer
  BNE C14E4
@@ -5027,7 +5049,7 @@ ORG &0B00
 
 .C1509
 
- DEC var18Lo,X
+ DEC carProgressLo,X
  PLP
  RTS
 
@@ -5046,7 +5068,7 @@ ORG &0B00
 
 .sub_C150E
 
- LDY L06FF
+ LDY carTrackSection+23
  TYA
  LSR A
  LSR A
@@ -5057,7 +5079,7 @@ ORG &0B00
  LDA L0001
  LSR A
  BCS C152E
- LDA L0897
+ LDA L0880+23
  CMP trackData+&005,Y
  BCS C1532
 
@@ -6236,21 +6258,21 @@ ENDIF
 
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
- LDX #23                \ We now zero the 24-byte blocks at L06E8 and L0880, and
-                        \ initialise all 24 bytes in var18Hi and var18Lo, so set
-                        \ up a loop counter in X
+ LDX #23                \ We now zero the 24-byte blocks at carTrackSection and
+                        \ L0880, and initialise all 24 bytes in carProgressHi
+                        \ and carProgressLo, so set up a loop counter in X
 
  STX L62F9              \ Set L62F9 = 23
 
 .rese3
 
- LDA trackData+&6FF     \ Set the X-th byte of (var18Hi var18Lo) to the 16-bit
- STA var18Hi,X          \ value in trackData(&6FF &6FE), which is &034B for the
- LDA trackData+&6FE     \ Silverstone track
- STA var18Lo,X
+ LDA trackData+&6FF     \ Set the X-th byte of (carProgressHi carProgressLo) to
+ STA carProgressHi,X    \ the 16-bit value in trackData(&6FF &6FE), which is
+ LDA trackData+&6FE     \ &034B for the Silverstone track
+ STA carProgressLo,X
 
- LDA #0                 \ Zero the X-th byte of L06E8
- STA L06E8,X
+ LDA #0                 \ Zero the X-th byte of carTrackSection
+ STA carTrackSection,X
 
  STA L0880,X            \ Zero the X-th byte of L0880
 
@@ -11331,7 +11353,7 @@ ENDIF
  BPL C234F              \ facing forwards, so jump to C234F
 
  STA T
- LDA L06FF
+ LDA carTrackSection+23
  CLC
  ADC #8
  SEC
@@ -11343,7 +11365,7 @@ ENDIF
 .C234F
 
  CLC
- ADC L06FF
+ ADC carTrackSection+23
  CMP trackData+&6FA
  BCC C235B
  SBC trackData+&6FA
@@ -12476,13 +12498,13 @@ ENDIF
 
 .sub_C27AB
 
- LDA var18Lo,Y          \ Set (A T) = var18 for the driver ahead - var18 for
- SBC var18Lo,X          \             this driver
+ LDA carProgressLo,Y    \ Set (A T) =   carProgress for the driver ahead
+ SBC carProgressLo,X    \             - carProgress for this driver
  STA T                  \
                         \ starting with the low bytes
 
- LDA var18Hi,Y          \ And then the high bytes
- SBC var18Hi,X
+ LDA carProgressHi,Y    \ And then the high bytes
+ SBC carProgressHi,X
 
  PHP                    \ Store the status register on the stack
 
@@ -12582,7 +12604,7 @@ ENDIF
  LDA positionNumber,X   \ If driver X is not in the driver table, jump to C285B
  BMI C285B
 
- LDY L06E8,X            \ Set Y to the ??? position on the track of driver X
+ LDY carTrackSection,X  \ Set Y to the track section containing driver X
 
  LDA trackData+&600,Y
  BPL C280D
@@ -22596,7 +22618,7 @@ ENDIF
 .BuildRoadSign
 
  LDX currentPlayer
- LDY L06E8,X
+ LDY carTrackSection,X
  LDA trackData,Y
  LSR A
  LSR A
@@ -22628,7 +22650,7 @@ ENDIF
  ADC #7
  STA objectType
 
- LDA trackData+&6EA,X   \ Set Y to track position for road sign X
+ LDA trackData+&6EA,X   \ Set Y to track section for road sign X
  AND #%11111000
  TAY
 
