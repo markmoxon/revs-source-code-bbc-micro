@@ -6469,6 +6469,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Set the background colour for all the track lines in the track
 \             view
+\  Deep dive: Drawing the track view
 \
 \ ******************************************************************************
 
@@ -26160,6 +26161,7 @@ ORG &5E40
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
+\  Deep dive: Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29855,6 +29857,7 @@ ORG &7B00
 \    Summary: Revert all the code modifications made by the DrawTrackView
 \             routine
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ******************************************************************************
 
@@ -29912,6 +29915,7 @@ ORG &7B00
 \    Summary: Draw the top part of the track view using the data in the dash
 \             data blocks
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ******************************************************************************
 
@@ -29946,6 +29950,7 @@ ORG &7B00
 \   Category: Graphics
 \    Summary: Draw a pixel line across the screen in the track view
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ******************************************************************************
 
@@ -30089,6 +30094,7 @@ ENDMACRO
 \   Category: Graphics
 \    Summary: Draw the pixel bytes that make up the track view (0 to 15)
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30132,6 +30138,7 @@ ENDMACRO
 \   Category: Graphics
 \    Summary: Draw the part of the track view that fits around the dashboard
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30272,6 +30279,7 @@ ENDMACRO
 \   Category: Graphics
 \    Summary: Draw the pixel bytes that make up the track view (16 to 39)
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30335,6 +30343,7 @@ ENDMACRO
 \    Summary: Draw a pixel line across the screen in the track view, broken up
 \             into bytes
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30399,6 +30408,7 @@ ENDMACRO
 \   Category: Graphics
 \    Summary: Return from the subroutine
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ******************************************************************************
 
@@ -30414,6 +30424,7 @@ ENDMACRO
 \    Summary: Draw the part of the track view that fits around the dashboard and
 \             tyres
 \  Deep dive: Drawing around the dashboard
+\             Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
