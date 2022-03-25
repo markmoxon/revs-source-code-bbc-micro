@@ -954,13 +954,22 @@ ORG &0100
                         \ Gets set in InitialiseDrivers to the number of each
                         \ driver, so the initial order is driver number
 
-.var01Hi
+.carSpeedHi
 
- SKIP 20                \ 
+ SKIP 20                \ High byte of each car's forward speed
+                        \
+                        \ Stored as an 8-bit value (carSpeedHi carSpeedLo)
 
-.L0164
+.carProgressFrac
 
- SKIP 20                \ 
+ SKIP 20                \ Fractional byte of each car's progress around the
+                        \ track
+                        \
+                        \ This is the fractional part of the car's position on
+                        \ the track, in terms of progress from the starting line
+                        \
+                        \ When the fraction counter rolls over, we increment the
+                        \ car's progress in (carProgressHi carProgressLo)
 
 .L0178
 
@@ -1235,6 +1244,9 @@ ORG &0380
 
  SKIP 24                \ The track section containing each driver (or the
                         \ current road sign for driver 23)
+                        \
+                        \ Stored as the track section multiplied by 8, so for
+                        \ Silverstone, that's 0, 8, 16 to 184 (23 * 8)
 
 .L0700
 
@@ -1257,9 +1269,15 @@ ORG &0380
 
 ORG &0880
 
-.L0880
+.carSectionCount
 
- SKIP 24                \ 
+ SKIP 24                \ Each driver's progress through the current track
+                        \ section
+                        \
+                        \ Increments along with carProgress as the driver moves
+                        \ through the section, until it reaches the section's
+                        \ trackData+&607 value (the section's length), at which
+                        \ point it resets to zero for the next section
 
 .bestLapTenths
 
@@ -1271,21 +1289,6 @@ ORG &0880
 
 .carProgressLo
 
- SKIP 24                \ Low byte of each car's progress around the track
-                        \
-                        \ This is the car's position on the track, in terms of
-                        \ progress from the starting line
-                        \
-                        \ It is zero when the car is on the starting line, and
-                        \ goes up to trackData(&6FD &6FC) as the car progresses
-                        \ round the track, before resetting to zero again at
-                        \ the end
-                        \
-                        \ Set to trackData(&6FF &6FE) in ResetVariables, which
-                        \ is &034B for the Silverstone track
-
-.carProgressHi
-
  SKIP 24                \ High byte of each car's progress around the track
                         \
                         \ This is the car's position on the track, in terms of
@@ -1296,8 +1299,31 @@ ORG &0880
                         \ round the track, before resetting to zero again at
                         \ the end
                         \
-                        \ Set to trackData(&6FF &6FE) in ResetVariables, which
-                        \ is &034B for the Silverstone track
+                        \ Set to trackData(&6FF &6FE) in ResetVariables
+                        \
+                        \ For the Silverstone track, carProgress is initialised
+                        \ to &034B and has a maximum value of &0400
+                        \
+                        \ Stored as a 16-bit value (carProgressHi carProgressLo)
+
+.carProgressHi
+
+ SKIP 24                \ Top byte of each car's progress around the track
+                        \
+                        \ This is the car's position on the track, in terms of
+                        \ progress from the starting line
+                        \
+                        \ It is zero when the car is on the starting line, and
+                        \ goes up to trackData(&6FD &6FC) as the car progresses
+                        \ round the track, before resetting to zero again at
+                        \ the end
+                        \
+                        \ Set to trackData(&6FF &6FE) in ResetVariables
+                        \
+                        \ For the Silverstone track, carProgress is initialised
+                        \ to &034B and has a maximum value of &0400
+                        \
+                        \ Stored as a 16-bit value (carProgressHi carProgressLo)
 
 .var20Lo
 
@@ -3820,8 +3846,8 @@ ORG &0B00
 
 .P10A3
 
- JSR sub_C147C          \ Updates carTrackSection, L0880, carProgress for this
-                        \ driver ???
+ JSR sub_C147C          \ Updates carTrackSection, carSectionCount and
+                        \ carProgress for this driver
 
  DEX                    \ Decrement the loop counter
 
@@ -3854,8 +3880,8 @@ ORG &0B00
  LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- JSR sub_C14C3          \ Updates carTrackSection, L0880, carProgress for this
-                        \ driver ???
+ JSR sub_C14C3          \ Updates carTrackSection, carSectionCount and
+                        \ carProgress for this driver
 
  PLA                    \ Retrieve X from the stack
  TAX
@@ -3916,8 +3942,8 @@ ORG &0B00
 
 .P10F2
 
- JSR sub_C14C3          \ Updates carTrackSection, L0880, carProgress for driver
-                        \ 23, i.e. the road sign ???
+ JSR sub_C14C3          \ Updates carTrackSection, carSectionCount and
+                        \ carProgress for this driver for the road sign
 
  DEC V
 
@@ -3929,8 +3955,8 @@ ORG &0B00
 
  INC L0042
 
- JSR sub_C14C3          \ Updates carTrackSection, L0880, carProgress for driver
-                        \ 23, i.e. the road sign ???
+ JSR sub_C14C3          \ Updates carTrackSection, carSectionCount and
+                        \ carProgress for this driver for the road sign
 
  BCC P10F9
 
@@ -4145,11 +4171,13 @@ ORG &0B00
 
  CPX #&14
  BCS sub_C11CE-1
+
  LDA L0178,X
- AND #&7F
+ AND #%01111111
  ORA #&45
  STA L0114,X
- LDA #&91
+
+ LDA #%10010001
  STA positionNumber,X
 
 \ ******************************************************************************
@@ -4594,7 +4622,7 @@ ORG &0B00
  PHP
  LDA L0001
  BCS C134F
- LDY L0880+23
+ LDY carSectionCount+23
  CPY #1
  BCC C134D
  CPY #&0A
@@ -4614,14 +4642,14 @@ ORG &0B00
  LSR A
  TAY
  LDA W
- CPY L0880+23
+ CPY carSectionCount+23
  BEQ C137C
  BNE C1378
 
 .C1365
 
  SEC
- SBC L0880+23
+ SBC carSectionCount+23
  TAY
  LDA W
  CPY #7
@@ -4938,9 +4966,9 @@ ORG &0B00
 
 .sub_C147C
 
- LDY carTrackSection,X  \ Set Y to carTrackSection for driver X
+ LDY carTrackSection,X  \ Set Y to the track section offset for driver X
 
- LDA L0880,X            \ Set A to 1 + L0880 for driver X
+ LDA carSectionCount,X  \ Set A = carSectionCount + 1 for driver X
  CLC
  ADC #1
 
@@ -4964,7 +4992,7 @@ ORG &0B00
 
 .C149B
 
- STA L0880,X
+ STA carSectionCount,X
 
  INC carProgressLo,X    \ Increment (carProgressHi carProgressLo) for driver X,
                         \ starting with the low byte
@@ -5007,8 +5035,9 @@ ORG &0B00
 
 .sub_C14C3
 
- LDY carTrackSection,X
- LDA L0880,X
+ LDY carTrackSection,X  \ Set Y to the track section offset for driver X
+
+ LDA carSectionCount,X
  CLC
  BNE C14DD
  TYA
@@ -5029,7 +5058,7 @@ ORG &0B00
  PHP
  SEC
  SBC #1
- STA L0880,X
+ STA carSectionCount,X
 
 .C14E4
 
@@ -5082,7 +5111,7 @@ ORG &0B00
  LDA L0001
  LSR A
  BCS C152E
- LDA L0880+23
+ LDA carSectionCount+23
  CMP trackData+&005,Y
  BCS C1532
 
@@ -6262,8 +6291,9 @@ ENDIF
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
  LDX #23                \ We now zero the 24-byte blocks at carTrackSection and
-                        \ L0880, and initialise all 24 bytes in carProgressHi
-                        \ and carProgressLo, so set up a loop counter in X
+                        \ carSectionCount, and initialise all 24 bytes in
+                        \ (carProgressHi carProgressLo), so set up a loop
+                        \ counter in X
 
  STX L62F9              \ Set L62F9 = 23
 
@@ -6277,7 +6307,7 @@ ENDIF
  LDA #0                 \ Zero the X-th byte of carTrackSection
  STA carTrackSection,X
 
- STA L0880,X            \ Zero the X-th byte of L0880
+ STA carSectionCount,X  \ Zero the X-th byte of carSectionCount
 
  DEX                    \ Decrement the loop counter
 
@@ -6323,10 +6353,10 @@ ENDIF
  JSR sub_C109B          \ ???
 
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
-                        \ L0114, L0164, (var01Hi var01Lo) and positionNumber,
-                        \ and initialise the 20-byte blocks at carStatus,
-                        \ bestLapMinutes and L01A4, so set up a loop counter
-                        \ in X
+                        \ L0114, carProgressFrac, (carSpeedHi carSpeedLo) and
+                        \ positionNumber, and initialise the 20-byte blocks
+                        \ at carStatus, bestLapMinutes and L01A4, so set up a
+                        \ loop counter in X
 
 .rese5
 
@@ -6340,13 +6370,13 @@ ENDIF
 
  STA L0114,X            \ Zero the X-th byte of L0114
 
- STA L0164,X            \ Zero the X-th byte of L0164
+ STA carProgressFrac,X  \ Zero the X-th byte of carProgressFrac
 
- STA var01Hi,X          \ Zero the X-th byte of var01Hi
+ STA carSpeedHi,X       \ Zero the X-th byte of carSpeedHi
 
  STA positionNumber,X   \ Zero the X-th byte of positionNumber
 
- STA var01Lo,X          \ Zero the X-th byte of var01Lo
+ STA carSpeedLo,X       \ Zero the X-th byte of carSpeedLo
 
  LDA #&FF               \ Set the X-th byte of L01A4 to &FF
  STA L01A4,X
@@ -7333,18 +7363,18 @@ ENDIF
  ASL A
  ASL A
  PHP
- LDA var01Hi,Y
+ LDA carSpeedHi,Y
  CPX #&14
  BCS C1BFE
- CMP var01Hi,X
+ CMP carSpeedHi,X
  BCS C1BF9
- LDA var01Hi,X
+ LDA carSpeedHi,X
  BNE C1BFE
 
 .C1BF9
 
  ADC #&0B
- STA var01Hi,X
+ STA carSpeedHi,X
 
 .C1BFE
 
@@ -10195,7 +10225,7 @@ IF _SUPERIOR
 .sub_C1FA8
 
  BCC C1FAF
- LDA L0880,X
+ LDA carSectionCount,X
  CMP #3
 
 .C1FAF
@@ -12304,11 +12334,11 @@ ENDIF
 
  CMP #5
  BCS C26E6
- LDA var01Lo,X
+ LDA carSpeedLo,X
  CLC
- SBC var01Lo,Y
- LDA var01Hi,X
- SBC var01Hi,Y
+ SBC carSpeedLo,Y
+ LDA carSpeedHi,X
+ SBC carSpeedHi,Y
  ROR V
  BPL C26E6
  LSR A
@@ -12467,12 +12497,16 @@ ENDIF
 
 .GetCarDistance24
 
- LDA L0164,Y            \ Set the C flag according to the subtraction:
+ LDA carProgressFrac,Y  \ Set the C flag according to the subtraction:
  SEC                    \
- SBC L0164,X            \  L0164 for driver ahead - L0164 for this driver
+ SBC carProgressFrac,X  \    carProgressFrac for driver ahead
+                        \  - carProgressFrac for this driver
                         \
-                        \ so the L0164 figures act like bottom bytes in the
-                        \ subtraction at the start of the following routine
+                        \ so the carProgressFrac figures act like fractional
+                        \ bytes in the subtraction at the start of the following
+                        \ routine, though because only the C flag is kept, they
+                        \ only serve to round the result to the nearest integer,
+                        \ rather than giving a full 24-bit result
 
                         \ Fall through into GetCarDistance to calculate the
                         \ distance between the two cars
@@ -12668,15 +12702,15 @@ ENDIF
 
 .C27F6
 
- LDA positionNumber,X   \ If driver X is not in the driver table, jump to C285B
- BMI C285B
+ LDA positionNumber,X   \ If bit 7 of driver X's positionNumber is set, jump to
+ BMI C285B              \ C285B ???
 
- LDY carTrackSection,X  \ Set Y to the track section containing driver X
+ LDY carTrackSection,X  \ Set Y to the track section offset for driver X
 
  LDA trackData+&600,Y
  BPL C280D
 
- LDA var01Hi,X
+ LDA carSpeedHi,X
  CMP L01A4,X
  BCS C287F
  BCC C282F
@@ -12688,13 +12722,13 @@ ENDIF
  LDA trackData+&007,Y
  STA L01A4,X
  CLC
- SBC var01Hi,X
+ SBC carSpeedHi,X
  BCS C282F
  LSR A
  LSR A
  ORA #&C0
  STA T
- LDA L0880,X
+ LDA carSectionCount,X
  SEC
  SBC trackData+&005,Y
  BCS C287F
@@ -12703,7 +12737,7 @@ ENDIF
 
 .C282F
 
- LDA var01Hi,X
+ LDA carSpeedHi,X
  CMP #&3C
  BCS C2838
  LDA #&16
@@ -12750,18 +12784,18 @@ ENDIF
  ASL A
  ROL U
  CLC
- ADC var01Lo,X
- STA var01Lo,X
+ ADC carSpeedLo,X
+ STA carSpeedLo,X
  LDA U
- ADC var01Hi,X
+ ADC carSpeedHi,X
  CMP #&BE
  BCC C287C
  LDA #0
- STA var01Lo,X
+ STA carSpeedLo,X
 
 .C287C
 
- STA var01Hi,X
+ STA carSpeedHi,X
 
 .C287F
 
@@ -12770,10 +12804,10 @@ ENDIF
 
 .P2883
 
- LDA var01Hi,X
+ LDA carSpeedHi,X
  CLC
- ADC L0164,X
- STA L0164,X
+ ADC carProgressFrac,X
+ STA carProgressFrac,X
  BCC C2892
  JSR sub_C147C
 
@@ -12917,9 +12951,9 @@ ENDIF
 
  TAY
  LDA positionNumber,X
- AND #&10
+ AND #%00010000
  BNE sub_C2937
- LDA var01Hi,X
+ LDA carSpeedHi,X
  CMP #&32
  BCC sub_C2937
  LDA L0700+1,Y
@@ -12944,7 +12978,7 @@ ENDIF
  STA L000C
  STY T
  TAY
- LDA L0164,X
+ LDA carProgressFrac,X
  STA TT
  LDA L0178,X
  STA UU
@@ -16938,14 +16972,18 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var01Lo
+\       Name: carSpeedLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: High byte of each car's forward speed
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as an 8-bit value (carSpeedHi carSpeedLo).
 \
 \ ******************************************************************************
 
-.var01Lo
+.carSpeedLo
 
 IF _ACORNSOFT
 
@@ -20953,7 +20991,7 @@ NEXT
  ROL W
  STA V
  LDX currentPlayer
- LDA L0164,X
+ LDA carProgressFrac,X
  JSR sub_C4610
  BPL C45DF
  DEC W
@@ -20986,7 +21024,7 @@ NEXT
  ASL U
  CLC
  ADC U
- STA var01Hi,X
+ STA carSpeedHi,X
  RTS
 
 \ ******************************************************************************
@@ -21104,7 +21142,7 @@ ENDIF
 
 .C4672
 
- STA L0164,X
+ STA carProgressFrac,X
  RTS
 
 \ ******************************************************************************
@@ -22699,7 +22737,9 @@ ENDIF
 .BuildRoadSign
 
  LDX currentPlayer
- LDY carTrackSection,X
+
+ LDY carTrackSection,X  \ Set Y to the track section offset for driver X
+
  LDA trackData,Y
  LSR A
  LSR A
@@ -22731,7 +22771,7 @@ ENDIF
  ADC #7
  STA objectType
 
- LDA trackData+&6EA,X   \ Set Y to track section for road sign X
+ LDA trackData+&6EA,X   \ Set Y to track section number for road sign X
  AND #%11111000
  TAY
 
@@ -22741,10 +22781,11 @@ ENDIF
  LDY #6
  JSR sub_C2147
 
- LDA II                 \ xCar for the road sign
+ LDA II                 \ Set xCar for the road sign to (JJ II)
  STA xCarLo+23
  LDA JJ
  STA xCarHi+23
+
  SEC
  SBC xPlayerHi
 
@@ -28082,15 +28123,16 @@ ORG &3850               \ for Computer Assisted Steering (CAS) take up extra
                         \ The clever solution is to move the SetupGame routine,
                         \ which is run when the game loads, but is never needed
                         \ again, so in the Superior version, SetupGame is put
-                        \ into the same block of memory as the var01Lo,
+                        \ into the same block of memory as the carSpeedLo,
                         \ totalPointsLo and totalPointsLo variables, which are
                         \ only used after the game has started
                         \
-                        \ These lines rewind BeebAsm's assembly back to var01Lo
-                        \ (which is at address &3850), and clear the block that
-                        \ is occupied by these three variables, so we can
-                        \ assemble SetupGame in the right place while retaining
-                        \ the correct addresses for the three variables
+                        \ These lines rewind BeebAsm's assembly back to
+                        \ carSpeedLo (which is at address &3850), and clear the
+                        \ block that is occupied by these three variables, so we
+                        \ can assemble SetupGame in the right place while
+                        \ retaining the correct addresses for the three
+                        \ variables
                         \
                         \ We also make a note of the current address, so we can
                         \ ORG back to it after assembling SetupGame
@@ -29948,13 +29990,13 @@ ORG &7B00
 \ high. Each of these lines is drawn as a sequence of bytes, with each byte
 \ containing four pixels.
 \
-\ Each macro instance copies one pixel byte into screen memory, so that's one
+\ Each macro instance draws one pixel byte into screen memory, so that's one
 \ four-pixel block within the horizontal line. So the full sequence of macros,
 \ from DRAW_BYTE 0 through DRAW_BYTE 39, draws a one-pixel high line across
 \ the full width of the screen. In other words, each DRAW_BYTE macro draws a
 \ character block's worth of line, as the screen is 40 character blocks wide.
 \
-\ Each macro instance moves one pixel byte, from offset X within dash data block
+\ Each macro instance draws one pixel byte, from offset X within dash data block
 \ I%, into screen memory. The offset X is decremented for each run through the
 \ sequence of macros, as data is stored at the end of each dash data block. So
 \ as each pixel line is drawn, moving down the screen, X decrements down from 79
