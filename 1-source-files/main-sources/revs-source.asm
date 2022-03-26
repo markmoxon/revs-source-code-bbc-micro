@@ -1327,59 +1327,39 @@ ORG &0880
 
 .var20Lo
 
- SKIP 120               \ 
-
-.L0978
-
- SKIP 1                 \ 
-
-.L0979
-
- SKIP 1                 \ 
+ SKIP 40 * 3            \ 
+                        \
+                        \ Contains 40 batches of three bytes
 
 .var17Lo
 
- SKIP 128               \ 
+ SKIP 130               \ 
 
-.L09FA
+.var18Lo
 
  SKIP 3                 \ 
 
-.L09FD
+.var14Lo
 
- SKIP 1                 \ 
-
-.L09FE
-
- SKIP 2                 \ 
+ SKIP 3                 \ 
 
 .var20Hi
 
- SKIP 120               \ 
-
-.L0A78
-
- SKIP 1                 \ 
-
-.L0A79
-
- SKIP 1                 \ 
+ SKIP 40 * 3            \ 
+                        \
+                        \ Contains 40 batches of three bytes
 
 .var17Hi
 
- SKIP 128               \ 
+ SKIP 130               \ 
 
-.L0AFA
+.var18Hi
 
  SKIP 3                 \ 
 
-.L0AFD
+.var14Hi
 
- SKIP 1                 \ 
-
-.L0AFE
-
- SKIP 2                 \ 
+ SKIP 3                 \ 
 
 \ ******************************************************************************
 \
@@ -3278,7 +3258,7 @@ ORG &0B00
 .shif4
 
  JSR ResetTrackLines    \ Reset the blocks at leftVergeStart, leftTrackStart,
-                        \ rightVergeStart, rightGrassStart and trackLineColour
+                        \ rightVergeStart, rightGrassStart and backgroundColour
 
  LDX #&A6               \ Scan the keyboard to see if DELETE is being pressed
  JSR ScanKeyboard
@@ -4242,9 +4222,9 @@ ORG &0B00
 
 .P11DB
 
- LDA L09FD,X
+ LDA var14Lo,X
  STA var22Lo,X
- LDA L0AFD,X
+ LDA var14Hi,X
  STA var22Hi,X
  DEX
  BPL P11DB
@@ -4283,8 +4263,10 @@ ORG &0B00
 \
 \   Y                   Copy track data from Y-th trackData+&601, trackData+&001
 \
-\   X                   &FD = copy Y-th trackData+&601 to (L09FD, L09FE, L09FF)
-\                             copy Y-th trackData+&001 to (L0AFD, L0AFD, L0AFD)
+\   X                   &FD = copy Y-th trackData+&601 to var14Lo, var14Lo+1,
+\                                                         var14Lo+2
+\                             copy Y-th trackData+&001 to var14Hi, var14Hi+1,
+\                                                         var14Hi+2
 \
 \ ******************************************************************************
 
@@ -4321,13 +4303,13 @@ ORG &0B00
 
  JSR sub_C1208
  LDA trackData+&604,Y
- STA L0978,X
- LDA trackData+&606,Y
  STA var17Lo,X
+ LDA trackData+&606,Y
+ STA var17Lo+2,X
  LDA trackData+&004,Y
- STA L0A78,X
- LDA trackData+&006,Y
  STA var17Hi,X
+ LDA trackData+&006,Y
+ STA var17Hi+2,X
  LDA trackData+&605,Y
  STA L0002
 
@@ -4347,9 +4329,9 @@ ORG &0B00
 .sub_C124D
 
  LDA var20Lo+1,X
- STA L0979,X
+ STA var17Lo+1,X
  LDA var20Hi+1,X
- STA L0A79,X
+ STA var17Hi+1,X
  RTS
 
 \ ******************************************************************************
@@ -4690,10 +4672,10 @@ ORG &0B00
  ROL SS
  CLC
  ADC var20Lo,X
- STA L0978,X
+ STA var17Lo,X
  LDA SS
  ADC var20Hi,X
- STA L0A78,X
+ STA var17Hi,X
  LDA trackData+&500,Y
  BPL C13B4
  DEC UU
@@ -4706,10 +4688,10 @@ ORG &0B00
  ROL UU
  CLC
  ADC var20Lo+2,X
- STA var17Lo,X
+ STA var17Lo+2,X
  LDA UU
  ADC var20Hi+2,X
- STA var17Hi,X
+ STA var17Hi+2,X
  JSR sub_C13DA
 
 .C13CC
@@ -5886,7 +5868,7 @@ ENDIF
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR ResetTrackLines    \ Reset the blocks at leftVergeStart, leftTrackStart,
-                        \ rightVergeStart, rightGrassStart and trackLineColour
+                        \ rightVergeStart, rightGrassStart and backgroundColour
 
  JSR DrawTrack          \ Draw the track into the screen buffer
 
@@ -6508,9 +6490,9 @@ ENDIF
 
 .back2
 
- STA trackLineColour,Y  \ Set the colour of the horizon line to A, which also
+ STA backgroundColour,Y \ Set the colour of the horizon line to A, which also
                         \ sets the horizon line to the only non-zero line colour
-                        \ (as trackLineColour is all zeroes at this point)
+                        \ (as backgroundColour is all zeroes at this point)
 
  LDA #%00100001         \ Set A = %00100011 (colour 1, blue) to use as the line
                         \ colour for lines above the horizon, i.e. the sky
@@ -6521,7 +6503,7 @@ ENDIF
 
 .back3
 
- LDX trackLineColour,Y  \ Set X to the line colour for track line Y
+ LDX backgroundColour,Y \ Set X to the background colour for track line Y
 
  BEQ back4              \ If it is zero, then this can't be the horizon line (as
                         \ we set that to a non-zero value above), so jump to
@@ -6535,7 +6517,7 @@ ENDIF
 
 .back4
 
- STA trackLineColour,Y  \ Set the line colour for track line Y to A
+ STA backgroundColour,Y \ Set the background colour for track line Y to A
 
  DEY                    \ Decrement the loop counter to move down to the next
                         \ track line
@@ -7081,9 +7063,9 @@ ENDIF
 
 .C1AE4
 
- LDA trackLineColour,Y
+ LDA backgroundColour,Y
  STA T
- LDA trackLineColour,Y
+ LDA backgroundColour,Y
  BEQ C1AF9
  AND #&1C
  CMP GG
@@ -7097,7 +7079,7 @@ ENDIF
  LDA L5EE0,X
  AND #3
  ORA GG
- STA trackLineColour,Y
+ STA backgroundColour,Y
 
 .C1B03
 
@@ -9682,7 +9664,7 @@ IF _ACORNSOFT
  ROL A
  BNE gcol7
 
- LDA trackLineColour,Y
+ LDA backgroundColour,Y
  AND #&EC
  CMP #&40
  BEQ gcol2
@@ -9696,7 +9678,7 @@ IF _ACORNSOFT
 
 .gcol2
 
- LDA trackLineColour,Y
+ LDA backgroundColour,Y
  AND #&10
  BNE gcol3
  JSR gcol8
@@ -9708,7 +9690,7 @@ IF _ACORNSOFT
 
 .gcol4
 
- LDA trackLineColour,Y
+ LDA backgroundColour,Y
  AND #3
  TAX
 
@@ -9889,7 +9871,7 @@ IF _SUPERIOR
  BCS scol4              \ pixel byte is on the left track verge, so jump to
                         \ scol4 to work out its colour
 
- LDA trackLineColour,Y  \ If we get here then the byte is to the left of the
+ LDA backgroundColour,Y \ If we get here then the byte is to the left of the
                         \ left track verge, so set A to the background colour of
                         \ this track line
 
@@ -11606,10 +11588,10 @@ ENDIF
  LDA var20Lo,Y
  CLC
  ADC T
- STA L09FA,X
+ STA var18Lo,X
  LDA var20Hi,Y
  ADC V
- STA L0AFA,X
+ STA var18Hi,X
  INX
  CPX #3
  BEQ C2450
@@ -13021,7 +13003,7 @@ ENDIF
 
  CLC
  ADC var20Lo,Y
- STA L09FD,X
+ STA var14Lo,X
  LDA var20Hi,Y
  PHP
  CPX #1
@@ -13032,7 +13014,7 @@ ENDIF
 
  PLP
  ADC V
- STA L0AFD,X
+ STA var14Hi,X
  INY
  INX
  CPX #3
@@ -13076,21 +13058,21 @@ ENDIF
  ASL A
  ROL V
  CLC
- ADC L09FD,X
- STA L09FD,X
- LDA L0AFD,X
+ ADC var14Lo,X
+ STA var14Lo,X
+ LDA var14Hi,X
  ADC V
- STA L0AFD,X
+ STA var14Hi,X
  INX
  INX
  CPX #4
  BNE C29AD
- LDA L09FE
+ LDA var14Lo+1
  CLC
  ADC #&90
- STA L09FE
+ STA var14Lo+1
  BCC C29F4
- INC L0AFE
+ INC var14Hi+1
 
 .C29F4
 
@@ -14298,7 +14280,7 @@ ENDIF
 .C2F22
 
  DEY
- LDA trackLineColour,Y
+ LDA backgroundColour,Y
  BNE C2F44
  LDA L0033
 
@@ -14318,7 +14300,7 @@ ENDIF
 
 .C2F41
 
- STA trackLineColour,Y
+ STA backgroundColour,Y
 
 .C2F44
 
@@ -26157,10 +26139,10 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: trackLineColour
+\       Name: backgroundColour
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: The background colour for each track line
 \  Deep dive: Drawing the track view
 \
 \ ------------------------------------------------------------------------------
@@ -26171,7 +26153,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.trackLineColour
+.backgroundColour
 
  SKIP 80
 
@@ -29424,7 +29406,7 @@ ENDIF
 \
 \   * Set horizonLine+1 bytes at leftTrackStart to &80
 \
-\   * Set 80 bytes at trackLineColour to 0
+\   * Set 80 bytes at backgroundColour to 0
 \
 \ ******************************************************************************
 
@@ -29450,14 +29432,14 @@ ENDIF
 
  BPL resl1              \ Loop back until we have zeroed all horizonLine+1 bytes
 
- LDX #79                \ We now zero the 80 bytes at trackLineColour, so set a
+ LDX #79                \ We now zero the 80 bytes at backgroundColour, so set a
                         \ byte counter in X
 
  LDA #0                 \ Set A = 0 to use as our zero value
 
 .resl2
 
- STA trackLineColour,X  \ Zero the X-th byte of trackLineColour
+ STA backgroundColour,X \ Zero the X-th byte of backgroundColour
 
  DEX                    \ Decrement the byte counter
 
@@ -29959,8 +29941,8 @@ ORG &7B00
                         \ At this point, X contains the offset within the dash
                         \ data of the pixel line to be drawn across the screen
 
- LDA trackLineColour,X  \ Fetch the colour of the first byte on the line from
- AND #%00000011         \ the X-th entry in trackLineColour (bits 0 to 2)
+ LDA backgroundColour,X \ Fetch the colour of the first byte on the line from
+ AND #%00000011         \ the X-th entry in backgroundColour (bits 0 to 2)
  TAY
 
  LDA colourPalette,Y    \ Set A to logical colour Y from the colour palette,
