@@ -1274,10 +1274,10 @@ ORG &0880
  SKIP 24                \ Each driver's progress through the current track
                         \ section
                         \
-                        \ Increments along with carProgress as the driver moves
-                        \ through the section, until it reaches the section's
-                        \ trackData+&607 value (the section's length), at which
-                        \ point it resets to zero for the next section
+                        \ Increments along with carProgressLo as the driver
+                        \ moves through the section, until it reaches the
+                        \ section's trackSectionSize (the section's length),
+                        \ at which point it resets to zero for the next section
 
 .bestLapTenths
 
@@ -1295,11 +1295,11 @@ ORG &0880
                         \ progress from the starting line
                         \
                         \ It is zero when the car is on the starting line, and
-                        \ goes up to trackData(&6FD &6FC) as the car progresses
-                        \ round the track, before resetting to zero again at
-                        \ the end
+                        \ goes up to (trackLengthHi trackLengthLo) as the car
+                        \ progresses round the track, before resetting to zero
+                        \ again at the end
                         \
-                        \ Set to trackData(&6FF &6FE) in ResetVariables
+                        \ Set to (trackStartHi trackStartLo) in ResetVariables
                         \
                         \ For the Silverstone track, carProgress is initialised
                         \ to &034B and has a maximum value of &0400
@@ -1314,11 +1314,11 @@ ORG &0880
                         \ progress from the starting line
                         \
                         \ It is zero when the car is on the starting line, and
-                        \ goes up to trackData(&6FD &6FC) as the car progresses
-                        \ round the track, before resetting to zero again at
-                        \ the end
+                        \ goes up to (trackLengthHi trackLengthLo) as the car
+                        \ progresses round the track, before resetting to zero
+                        \ again at the end
                         \
-                        \ Set to trackData(&6FF &6FE) in ResetVariables
+                        \ Set to (trackStartHi trackStartLo) in ResetVariables
                         \
                         \ For the Silverstone track, carProgress is initialised
                         \ to &034B and has a maximum value of &0400
@@ -3808,7 +3808,7 @@ ORG &0B00
 \
 \                         * 1 if this is a race
 \
-\                         * The value of trackData+&718 if this is practice or
+\                         * The value of trackData718 if this is practice or
 \                           qualifying (40 for Silverstone)
 \
 \ ******************************************************************************
@@ -4261,28 +4261,31 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   Y                   Copy track data from Y-th trackData+&601, trackData+&001
+\   Y                   Copy track data from Y-th trackSection1Lo,
+\                       trackSection1Hi
 \
-\   X                   &FD = copy Y-th trackData+&601 to var14Lo, var14Lo+1,
-\                                                         var14Lo+2
-\                             copy Y-th trackData+&001 to var14Hi, var14Hi+1,
-\                                                         var14Hi+2
+\   X                   &FD = copy Y-th trackSection1Lo to var14Lo
+\                                       trackSection2Lo to var14Lo+1
+\                                       trackSection3Lo to var14Lo+2
+\                             copy Y-th trackSection1Hi to var14Hi
+\                                       trackSection2Hi to var14Hi+1
+\                                       trackSection3Hi to var14Hi+2
 \
 \ ******************************************************************************
 
 .sub_C1208
 
- LDA trackData+&601,Y
+ LDA trackSection1Lo,Y
  STA var20Lo,X
- LDA trackData+&602,Y
+ LDA trackSection2Lo,Y
  STA var20Lo+1,X
- LDA trackData+&603,Y
+ LDA trackSection3Lo,Y
  STA var20Lo+2,X
- LDA trackData+&001,Y
+ LDA trackSection1Hi,Y
  STA var20Hi,X
- LDA trackData+&002,Y
+ LDA trackSection2Hi,Y
  STA var20Hi+1,X
- LDA trackData+&003,Y
+ LDA trackSection3Hi,Y
  STA var20Hi+2,X
  RTS
 
@@ -4302,15 +4305,15 @@ ORG &0B00
 .sub_C122D
 
  JSR sub_C1208
- LDA trackData+&604,Y
+ LDA trackSection4Lo,Y
  STA var17Lo,X
- LDA trackData+&606,Y
+ LDA trackSection6Lo,Y
  STA var17Lo+2,X
- LDA trackData+&004,Y
+ LDA trackSection4Hi,Y
  STA var17Hi,X
- LDA trackData+&006,Y
+ LDA trackSection6Hi,Y
  STA var17Hi+2,X
- LDA trackData+&605,Y
+ LDA trackSection5b,Y
  STA L0002
 
 \ ******************************************************************************
@@ -4406,7 +4409,7 @@ ORG &0B00
  AND #7
  STA L0007
  LDY carTrackSection+23
- LDA trackData+&600,Y
+ LDA trackSection0b,Y
  STA L0001
  LDA #0
  STA L0700+2,X
@@ -4571,7 +4574,7 @@ ORG &0B00
  LDX #&17
  LDA directionFacing
  BMI C1326
- LDA trackData+&6FA
+ LDA trackSectionCount
  LSR A
  AND #&F8
  CMP carTrackSection,X
@@ -4660,7 +4663,7 @@ ORG &0B00
  LDA #0
  STA SS
  STA UU
- LDA trackData+&400,Y
+ LDA trackDataBlock4,Y
  BPL C1398
  DEC SS
 
@@ -4676,7 +4679,7 @@ ORG &0B00
  LDA SS
  ADC var20Hi,X
  STA var17Hi,X
- LDA trackData+&500,Y
+ LDA trackDataBlock5,Y
  BPL C13B4
  DEC UU
 
@@ -4741,7 +4744,7 @@ ORG &0B00
  BMI C13F0
  LDY L0002
  INY
- CPY trackData+&6FB
+ CPY trackData6FB
  BNE C13F8
  LDY #0
  BEQ C13F8
@@ -4750,7 +4753,7 @@ ORG &0B00
 
  LDY L0002
  BNE C13F7
- LDY trackData+&6FB
+ LDY trackData6FB
 
 .C13F7
 
@@ -4888,21 +4891,21 @@ ORG &0B00
  STA SS
  STA TT
  STA UU
- LDA trackData+&100,Y
+ LDA trackDataBlock1,Y
  STA T
  BPL C1453
  DEC SS
 
 .C1453
 
- LDA trackData+&200,Y
+ LDA trackDataBlock2,Y
  STA U
  BPL C145C
  DEC TT
 
 .C145C
 
- LDA trackData+&300,Y
+ LDA trackDataBlock3,Y
  STA V
  BPL C1465
  DEC UU
@@ -4962,7 +4965,7 @@ ORG &0B00
  CLC
  ADC #8
 
- CMP trackData+&6FA     \ If A < trackData+&6FA, jump to C1496
+ CMP trackSectionCount  \ If A < trackSectionCount, jump to C1496
  BCC C1496
 
  LDA #0                 \ Set A = 0
@@ -4984,11 +4987,11 @@ ORG &0B00
 
 .C14A6
 
- LDA carProgressLo,X    \ If:
- CMP trackData+&6FC     \
- BNE C14C1              \ (carProgressHi carProgressLo) <> trackData(&6FD &6FC)
- LDA carProgressHi,X    \
- CMP trackData+&6FD     \ jump to C14C1
+ LDA carProgressLo,X    \ If carProgress <> trackLength, jump to C14C1
+ CMP trackLengthLo
+ BNE C14C1
+ LDA carProgressHi,X
+ CMP trackLengthHi
  BNE C14C1
 
  LDA #0                 \ Set (carProgressHi carProgressLo) = 0
@@ -5024,7 +5027,7 @@ ORG &0B00
  BNE C14DD
  TYA
  BNE C14D2
- LDA trackData+&6FA
+ LDA trackSectionCount
 
 .C14D2
 
@@ -5049,9 +5052,9 @@ ORG &0B00
  DEC carProgressHi,X
  BPL C1509
 
- LDA trackData+&6FC     \ Set:
- STA carProgressLo,X    \
- LDA trackData+&6FD     \ (carProgressHi carProgressLo) = trackData(&6FD &6FC)
+ LDA trackLengthLo      \ Set carProgress = trackLength
+ STA carProgressLo,X
+ LDA trackLengthHi
  STA carProgressHi,X
 
  CPX currentPlayer
@@ -5094,7 +5097,7 @@ ORG &0B00
  LSR A
  BCS C152E
  LDA carSectionCount+23
- CMP trackData+&005,Y
+ CMP trackSection5a,Y
  BCS C1532
 
 .C1527
@@ -5118,13 +5121,13 @@ ORG &0B00
 
 .C1538
 
- LDA trackData+&600,Y
+ LDA trackSection0b,Y
  AND #1
  BEQ C1527
- LDA trackData+&005,Y
+ LDA trackSection5a,Y
  STA L0017
  BEQ C1527
- LDA trackData+&007,Y
+ LDA trackSection7,Y
  STA L0020
  AND #&7F
  STA L0018
@@ -6151,8 +6154,8 @@ ENDIF
 
  LDA #&09               \ Set A = &09, so we add 9/100 of a second below
 
- LDY L0046              \ If L0046 <> trackData+&719 (which is 24 for the
- CPY trackData+&719     \ Silverstone track), jump to time1 to skip the
+ LDY L0046              \ If L0046 <> trackData719 (which is 24 for the
+ CPY trackData719       \ Silverstone track), jump to time1 to skip the
  BNE time1              \ following
 
  LDA #&18               \ Set A = &18, so we add 18/100 of a second below
@@ -6281,9 +6284,9 @@ ENDIF
 
 .rese3
 
- LDA trackData+&6FF     \ Set the X-th byte of (carProgressHi carProgressLo) to
- STA carProgressHi,X    \ the 16-bit value in trackData(&6FF &6FE), which is
- LDA trackData+&6FE     \ &034B for the Silverstone track
+ LDA trackStartHi       \ Set the X-th byte of (carProgressHi carProgressLo) to
+ STA carProgressHi,X    \ the 16-bit value in (trackStartHi trackStartLo), which
+ LDA trackStartLo       \ is &034B for the Silverstone track
  STA carProgressLo,X
 
  LDA #0                 \ Zero the X-th byte of carTrackSection
@@ -6310,8 +6313,8 @@ ENDIF
                         \ This is a practice or qualifying lap, so we set the
                         \ player's position as specified in the track data
 
- LDX trackData+&717     \ Set A to trackData+&718, which is 4 for the
-                        \ Silverstone track
+ LDX trackLapStart      \ Set A to trackLapStart, which is 4 for the Silverstone
+                        \ track
 
  LDY currentPosition    \ Set Y to the current player's position
 
@@ -6323,13 +6326,13 @@ ENDIF
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
- LDA trackData+&718     \ Set A to trackData+&718, which is 40 for the
-                        \ Silverstone track
+ LDA trackData718       \ Set A to trackData718, which is 40 for the Silverstone
+                        \ track
 
 .rese4
 
                         \ By this point, A = 1 if this is a race, or the value
-                        \ of trackData+&718 if this is practice or qualifying
+                        \ of trackData718 if this is practice or qualifying
                         \ (40 for Silverstone)
 
  JSR sub_C109B          \ ???
@@ -11375,16 +11378,16 @@ ENDIF
  SEC
  SBC T
  BCS C235B
- ADC trackData+&6FA
+ ADC trackSectionCount
  JMP C235B
 
 .C234F
 
  CLC
  ADC carTrackSection+23
- CMP trackData+&6FA
+ CMP trackSectionCount
  BCC C235B
- SBC trackData+&6FA
+ SBC trackSectionCount
 
 .C235B
 
@@ -12593,15 +12596,15 @@ ENDIF
  PHP                    \ the N flag on the stack is the opposite sign to the
                         \ carProgress subtraction we did above
 
-                        \ In the following, trackData(&6FD &6FC) contains the
-                        \ length of the full track
+                        \ In the following, (trackLengthHi trackLengthLo)
+                        \ contains the length of the full track
 
- LDA trackData+&6FC     \ Set (A T) = trackData(&6FD &6FC) - (U T)
- SEC                    \           = trackData(&6FD &6FC) - |driverDistance|
+ LDA trackLengthLo      \ Set (A T) = (trackLengthHi trackLengthLo) - (U T)
+ SEC                    \           = trackLength - |driverDistance|
  SBC T                  \                       
  STA T                  \ starting with the high bytes
 
- LDA trackData+&6FD     \ And then the low bytes
+ LDA trackLengthHi      \ And then the low bytes
  SBC U
 
  BNE C27EA              \ If the high byte is non-zero, then that means the cars
@@ -12690,7 +12693,7 @@ ENDIF
 
  LDY carTrackSection,X  \ Set Y to the track section offset for driver X
 
- LDA trackData+&600,Y
+ LDA trackSection0b,Y
  BPL C280D
 
  LDA carSpeedHi,X
@@ -12702,7 +12705,7 @@ ENDIF
 
  LSR A
  BCS C282F
- LDA trackData+&007,Y
+ LDA trackSection7,Y
  STA L01A4,X
  CLC
  SBC carSpeedHi,X
@@ -12713,7 +12716,7 @@ ENDIF
  STA T
  LDA carSectionCount,X
  SEC
- SBC trackData+&005,Y
+ SBC trackSection5a,Y
  BCS C287F
  CMP T
  BCS C285B
@@ -12739,7 +12742,7 @@ ENDIF
  ADC driverSpeed,X
  BIT raceStarted
  BPL C284E
- SBC trackData+&71A
+ SBC trackData71A
 
 .C284E
 
@@ -12965,11 +12968,11 @@ ENDIF
  STA TT
  LDA L0178,X
  STA UU
- LDA trackData+&100,Y
+ LDA trackDataBlock1,Y
  STA VV
- LDA trackData+&200,Y
+ LDA trackDataBlock2,Y
  STA WW
- LDA trackData+&300,Y
+ LDA trackDataBlock3,Y
  STA GG
  LDX #0
  LDA TT
@@ -13020,9 +13023,9 @@ ENDIF
  CPX #3
  BNE C2960
  LDY L000C
- LDA trackData+&400,Y
+ LDA trackDataBlock4,Y
  STA VV
- LDA trackData+&500,Y
+ LDA trackDataBlock5,Y
  STA GG
  LDX #0
  LDA UU
@@ -20712,7 +20715,7 @@ NEXT
 
 .Set5FB0
 
- LDA trackData+&714,X   \ Set baseSpeed = the X-th byte of trackData+&714
+ LDA trackBaseSpeed,X   \ Set baseSpeed = the X-th byte of trackBaseSpeed
  STA baseSpeed          \
                         \ so baseSpeed contains the base speed for cars at the
                         \ chosen class or race, on this track
@@ -20725,13 +20728,13 @@ NEXT
 
  STA U                  \ Set U = baseSpeed
 
- LDA trackData+&6FA     \ Set Y = trackData+&6FA >> 3
- LSR A                  \       = &C0 >> 3
- LSR A                  \       = &18
- LSR A                  \       = 24
+ LDA trackSectionCount  \ Set Y = trackSectionCount >> 3
+ LSR A                  \
+ LSR A                  \ so Y contains the number of sections in this track
+ LSR A
  TAY
 
-                        \ Now we copy the 24 bytes between trackData+&6D0 and
+                        \ Now we copy the 24 bytes between trackData6D0 and
                         \ trackData+&6E8 to L5FB0, processing each byte as we go
                         \ (i.e. taking the input and storing the result):
                         \
@@ -20746,7 +20749,7 @@ NEXT
 
 .P44D5
 
- LDA trackData+&6D0,Y   \ Fetch the Y-th byte from trackData+&6D0 as the input
+ LDA trackData6D0,Y     \ Fetch the Y-th byte from trackData6D0 as the input
 
  LSR A                  \ Shift bit 0 of the input into the C flag and store it
  PHP                    \ on the stack so we can put it into bit 7 of the result
@@ -20848,10 +20851,10 @@ NEXT
  LDY L0700,X
  LDA L000D
  STA V
- LDA trackData+&100,Y
- EOR trackData+&300,Y
+ LDA trackDataBlock1,Y
+ EOR trackDataBlock3,Y
  PHP
- LDA trackData+&300,Y
+ LDA trackDataBlock3,Y
  PHP
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -20859,7 +20862,7 @@ NEXT
  CMP #&3C
  PHP
  BCC C454F
- LDA trackData+&100,Y
+ LDA trackDataBlock1,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -21026,10 +21029,10 @@ NEXT
 .sub_C4610
 
  STA U
- LDA trackData+&200,Y
+ LDA trackDataBlock2,Y
  EOR directionFacing
  PHP
- LDA trackData+&200,Y
+ LDA trackDataBlock2,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -22039,7 +22042,7 @@ ENDIF
 
  STA U
  LDX gearNumber
- LDA trackData+&706,X
+ LDA trackGearRatio,X
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -22160,7 +22163,7 @@ ENDIF
 .C4A7F
 
  STA U
- LDA trackData+&70D,X
+ LDA trackGearPower,X
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -22739,23 +22742,23 @@ ENDIF
  TAX
  LDY #2
  STY W
- LDA trackData+&0E0,X
+ LDA trackData0E0,X
  JSR sub_C4D21
  LDY #4
- LDA trackData+&0F0,X
+ LDA trackData0F0,X
  JSR sub_C4D21
  LDY #2
- LDA trackData+&0D0,X
+ LDA trackData0D0,X
  JSR sub_C4D21
 
- LDA trackData+&6EA,X   \ Set objectType to object type for road sign X
- AND #%00000111
+ LDA trackRoadSigns,X   \ Set objectType to object type for road sign X, from
+ AND #%00000111         \ bits 0-2 of trackRoadSigns
  CLC
  ADC #7
  STA objectType
 
- LDA trackData+&6EA,X   \ Set Y to track section number for road sign X
- AND #%11111000
+ LDA trackRoadSigns,X   \ Set Y to track section number for road sign X, from
+ AND #%11111000         \ bits 3-7 of trackRoadSigns
  TAY
 
  LDX #&FD
@@ -24280,7 +24283,7 @@ ENDIF
 
  LDX L0046
  BNE C505C
- LDX trackData+&719
+ LDX trackData719
  INX
  BEQ C505F
 
@@ -25563,7 +25566,181 @@ ENDIF
 
 .trackData
 
- SKIP 1610
+.trackSection0a
+
+ SKIP 1
+
+.trackSection1Hi
+
+ SKIP 1
+
+.trackSection2Hi
+
+ SKIP 1
+
+.trackSection3Hi
+
+ SKIP 1
+
+.trackSection4Hi
+
+ SKIP 1
+
+.trackSection5a
+
+ SKIP 1
+ 
+.trackSection6Hi
+
+ SKIP 1
+ 
+.trackSection7
+
+ SKIP 1
+
+ SKIP 8 * 23
+
+ SKIP 16
+
+.trackData0D0
+
+ SKIP 16
+
+.trackData0E0
+
+ SKIP 16
+
+.trackData0F0
+
+ SKIP 16
+
+.trackDataBlock1
+
+ SKIP 256
+
+.trackDataBlock2
+
+ SKIP 256
+
+.trackDataBlock3
+
+ SKIP 256
+
+.trackDataBlock4
+
+ SKIP 256
+
+.trackDataBlock5
+
+ SKIP 256
+
+.trackSection0b
+
+ SKIP 1
+
+.trackSection1Lo
+
+ SKIP 1
+
+.trackSection2Lo
+
+ SKIP 1
+
+.trackSection3Lo
+
+ SKIP 1
+
+.trackSection4Lo
+
+ SKIP 1
+
+.trackSection5b
+
+ SKIP 1
+ 
+.trackSection6Lo
+
+ SKIP 1
+ 
+.trackSectionSize
+
+ SKIP 1
+
+ SKIP 8 * 23
+
+ SKIP 16
+
+.trackData6D0
+
+ SKIP 24
+
+ SKIP 2
+ 
+.trackRoadSigns
+
+ SKIP 16
+
+.trackSectionCount
+
+ SKIP 1
+
+.trackData6FB
+
+ SKIP 1
+
+.trackLengthLo
+
+ SKIP 1
+
+.trackLengthHi
+
+ SKIP 1
+
+.trackStartLo
+
+ SKIP 1
+
+.trackStartHi
+
+ SKIP 1
+
+.trackLapTimeSec
+
+ SKIP 3
+
+.trackLapTimeMin
+
+ SKIP 3
+
+.trackGearRatio
+
+ SKIP 7
+
+.trackGearPower
+
+ SKIP 7
+
+.trackBaseSpeed
+
+ SKIP 3
+
+.trackLapStart
+
+ SKIP 1
+
+.trackData718
+
+ SKIP 1
+
+.trackData719
+
+ SKIP 1
+
+.trackData71A
+
+ SKIP 1
+
+ SKIP 7
 
 \ ******************************************************************************
 \
@@ -25576,6 +25753,20 @@ ENDIF
 \
 \ ******************************************************************************
 
+CLEAR &594A, &5A22      \ The track data is loaded in a separate file that is
+ORG &594A               \ moved to trackData after the game binary has loaded
+                        \
+                        \ It overwrites part of the dashboard image at that's
+                        \ loaded as part of the main game binary at dashdata41,
+                        \ which is moved into screen memory before the track
+                        \ data is moved
+                        \
+                        \ These lines rewind BeebAsm's assembly back to
+                        \ dashData41 (which is at address &594A), and clear the
+                        \ block from that point to CallTrackHook, so we can
+                        \ can set the correct address for dashData41 while also
+                        \ retaining the addresses we just set up for the track
+                        \ data
 .dashData41
 
  SKIP 67
@@ -26110,7 +26301,7 @@ ORG &5E40
 
  SKIP 1                 \ The base speed for each car, which is faster with a
                         \ higher class of race (this value is taken from the
-                        \ track data at trackData+&714):
+                        \ track data at trackBaseSpeed):
                         \
                         \   * 134 = Novice
                         \
@@ -28466,10 +28657,10 @@ ENDIF
 
  LDA driverSeconds,Y    \ Calculate the slowest lap time minus the time for
  SEC                    \ class X from the track data, starting with the seconds
- SBC trackData+&700,X
+ SBC trackLapTimeSec,X
 
  LDA driverMinutes,Y    \ And then the minutes
- SBC trackData+&703,X
+ SBC trackLapTimeMin,X
 
                         \ Note that for X = 2 (professional), the track data
                         \ figure is 0, so the C flag will always be set

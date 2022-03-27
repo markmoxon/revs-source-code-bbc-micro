@@ -47,7 +47,7 @@ ORG CODE%
 
 .trackData
 
-\ .trackSection0Hi
+\ .trackSection0a
 \ trackData      = L5300
 \ Bits 4-7 of trackData+0 (i.e. first digit in hex value) is an index into
 \ trackData+&0D0, trackData+&0E0, trackData+&0F0
@@ -61,16 +61,20 @@ ORG CODE%
 \ .trackSection3Hi
 \ trackData+&003 = L5303
 
+
+
 \ .trackSection4Hi
 \ trackData+&004 = L5304
 
-\ .trackSection5Hi
+\ .trackSection5a
 \ trackData+&005 = L5305
 
 \ .trackSection6Hi
 \ trackData+&006 = L5306
 
-\ .trackSection7Hi
+
+
+\ .trackSection7
 \ trackData+&007 = L5307
 
 EQUB &03, &D1, &0C, &0F, &CF, &60, &0F, &88     \ Track section  0
@@ -296,7 +300,7 @@ EQUB &00, &8E, &41, &40, &00, &00, &C9, &54     \ Unused?
  EQUB &28, &25, &22, &1F, &1B, &18, &15, &11
  EQUB &0E, &0A, &07, &03, &00, &FD, &FD, &32
 
-\ .trackSection0Lo
+\ .trackSection0b
 \ trackData+&600 = &5900
 
 \ .trackSection1Lo
@@ -311,13 +315,13 @@ EQUB &00, &8E, &41, &40, &00, &00, &C9, &54     \ Unused?
 \ .trackSection4Lo
 \ trackData+&604 = &5904
 
-\ .trackSection5Lo
+\ .trackSection5b
 \ trackData+&605 = &5905
 
 \ .trackSection6Lo
 \ trackData+&606 = &5906
 
-\ .trackSection7Lo
+\ .trackSectionSize
 \ trackData+&607 = &5907
 
 EQUB &30, &20, &80, &A0, &C0, &00, &94, &63     \ Track section  0
@@ -382,6 +386,7 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
 
  EQUB &14, &67          \ Unused?
 
+\ .trackRoadSigns
 \ trackData+&6EA = &59EA
 \ Track sections and object types for 16 road signs
 \ Bits 0-2 = Object type of road sign (add 7 to get the type)
@@ -484,7 +489,7 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
  EQUB 146               \ Base speed for Amateur
  EQUB 152               \ Base speed for Professional
 
-\ .trackStartPosition
+\ .trackLapStart
 \ trackData+&717 = &5A17
 \ The starting position of the player during a practice or qualifying lap
 
