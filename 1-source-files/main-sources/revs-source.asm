@@ -4252,90 +4252,165 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C1208
+\       Name: CopyCoordinate
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Copy a three-part 16-bit coordinate from the track section data
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine is normally called with X as a multiple of 3 in the range 0 to
+\ 117, representing coordinate 0 to 39. The routine copies the following track
+\ coordinates from the Y-th track section data:
+\
+\   * trackSection1
+\   * trackSection2
+\   * trackSection3
+\
+\ and stores them in the X-th coordinate in var20 (i.e. at the X-th three-byte
+\ block at var20, var20+1 and var20+2).
+\
+\ This routine is also called with X = &FD, in which it copies the following:
+\
+\   Y-th (trackSection1Hi trackSection1Lo) to X-th (var14Hi var14Lo)
+\   Y-th (trackSection2Hi trackSection2Lo) to X-th (var14Hi+1 var14Lo+1)
+\   Y-th (trackSection3Hi trackSection3Lo) to X-th (var14Hi+2 var14Lo+2)
+\
 \ Arguments:
 \
-\   Y                   Copy track data from Y-th trackSection1Lo,
-\                       trackSection1Hi
+\   Y                   Copy data from Y-th (trackSection1Hi trackSection1Lo)
+\                                           (trackSection2Hi trackSection2Lo)
+\                                           (trackSection3Hi trackSection3Lo)
 \
-\   X                   &FD = copy Y-th trackSection1Lo to var14Lo
-\                                       trackSection2Lo to var14Lo+1
-\                                       trackSection3Lo to var14Lo+2
-\                             copy Y-th trackSection1Hi to var14Hi
-\                                       trackSection2Hi to var14Hi+1
-\                                       trackSection3Hi to var14Hi+2
+\   X                   Copy data to X-th (var20Hi var20Lo)
+\                                         (var20Hi+1 var20Lo+1)
+\                                         (var20Hi+2 var20Lo+2)
 \
 \ ******************************************************************************
 
-.sub_C1208
+.CopyCoordinate
 
- LDA trackSection1Lo,Y
- STA var20Lo,X
- LDA trackSection2Lo,Y
- STA var20Lo+1,X
- LDA trackSection3Lo,Y
- STA var20Lo+2,X
- LDA trackSection1Hi,Y
+ LDA trackSection1Lo,Y  \ Copy the following 16-bit coordinates:
+ STA var20Lo,X          \
+ LDA trackSection2Lo,Y  \   * The Y-th trackSection1 to the X-th var20
+ STA var20Lo+1,X        \
+ LDA trackSection3Lo,Y  \   * The Y-th trackSection2 to the X-th var20+1
+ STA var20Lo+2,X        \
+ LDA trackSection1Hi,Y  \   * The Y-th trackSection3 to the X-th var20+2
  STA var20Hi,X
  LDA trackSection2Hi,Y
  STA var20Hi+1,X
  LDA trackSection3Hi,Y
  STA var20Hi+2,X
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C122D
+\       Name: CopyCoordinates
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Copy two three-part 16-bit coordinates from the track section data
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is normally called with X as a multiple of 3 in the range 0 to
+\ 117, representing coordinate 0 to 39. The routine copies the following track
+\ coordinates from the Y-th track section data:
+\
+\   * trackSection1
+\   * trackSection2
+\   * trackSection3
+\
+\ and stores them in the X-th coordinate in var20 (i.e. at the X-th three-byte
+\ block at var20, var20+1 and var20+2). It also copies the following track
+\ coordinates:
+\
+\   * trackSection4
+\   * trackSection2
+\   * trackSection6
+\
+\ and stores them in the X-th coordinate in var17 (i.e. at the X-th three-byte
+\ block at var17, var17+1 and var17+2). Note that the second coordinate is set
+\ to the same value as the second coordinate as the first copy.
+\
+\ It also sets L0002 to trackSection5b for the Y-th track section data.
+\
+\ Arguments:
+\
+\   Y                   Copy data from Y-th (trackSection1Hi trackSection1Lo)
+\                                           (trackSection2Hi trackSection2Lo)
+\                                           (trackSection3Hi trackSection3Lo)
+\                                           (trackSection4Hi trackSection4Lo)
+\                                           (trackSection2Hi trackSection2Lo)
+\                                           (trackSection6Hi trackSection6Lo)
+\                                           trackSection5b
+\
+\   X                   Copy data to X-th (var20Hi var20Lo)
+\                                         (var20Hi+1 var20Lo+1)
+\                                         (var20Hi+2 var20Lo+2)
+\                                         (var17Hi var17Lo)
+\                                         (var17Hi+1 var17Lo+1)
+\                                         (var17Hi+2 var17Lo+2)
+\                                         L0002
 \
 \ ******************************************************************************
 
-.sub_C122D
+.CopyCoordinates
 
- JSR sub_C1208
- LDA trackSection4Lo,Y
- STA var17Lo,X
- LDA trackSection6Lo,Y
- STA var17Lo+2,X
- LDA trackSection4Hi,Y
+ JSR CopyCoordinate     \ Call CopyCoordinate to copy the following 16-bit
+                        \ coordinates:
+                        \
+                        \   * The Y-th trackSection1 to the X-th var20
+                        \
+                        \   * The Y-th trackSection2 to the X-th var20+1
+                        \
+                        \   * The Y-th trackSection3 to the X-th var20+2
+
+ LDA trackSection4Lo,Y  \ Copy the following 16-bit coordinates:
+ STA var17Lo,X          \
+ LDA trackSection6Lo,Y  \   * The Y-th trackSection4 to the X-th var17
+ STA var17Lo+2,X        \
+ LDA trackSection4Hi,Y  \   * The Y-th trackSection6 to the X-th var17+2
  STA var17Hi,X
  LDA trackSection6Hi,Y
  STA var17Hi+2,X
- LDA trackSection5b,Y
+
+ LDA trackSection5b,Y   \ Set L0002 = the Y-th trackSection5b
  STA L0002
+
+                        \ Fall through into CopyCoordinateY to copy the
+                        \ following 16-bit coordinate:
+                        \
+                        \   * The Y-th trackSection2 to the X-th var17+1
+                        \
+                        \ This works because the call to CopyCoordinate already
+                        \ stored the Y-th trackSection2 in the X-th var20+1, and
+                        \ the following now copies that into the X-th var17+1
 
 \ ******************************************************************************
 \
-\       Name: sub_C124D
+\       Name: CopyCoordinateY
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Copy a 16-bit y-coordinate from the track section data 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   Copy X-th (var20Hi+1 var20Lo+1) to (var17Hi+1 var17Lo+1)
 \
 \ ******************************************************************************
 
-.sub_C124D
+.CopyCoordinateY
 
- LDA var20Lo+1,X
- STA var17Lo+1,X
- LDA var20Hi+1,X
+ LDA var20Lo+1,X        \ Copy the following 16-bit coordinate:
+ STA var17Lo+1,X        \
+ LDA var20Hi+1,X        \   * The X-th var20+1 to the X-th var17+1
  STA var17Hi+1,X
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4392,15 +4467,24 @@ ORG &0B00
 
  LDA directionFacing
  BMI C1284
+
  LDY carTrackSection+23
- JSR sub_C122D
+
+ JSR CopyCoordinates    \ Copy the two trackSection coordinates for track
+                        \ section Y into var20 and var27, and set L0002 to
+                        \ trackSection5b
+
  LDA trackData,Y
  JMP C128E
 
 .C1284
 
  LDY L0021
- JSR sub_C122D
+
+ JSR CopyCoordinates    \ Copy the two trackSection coordinates for track
+                        \ section Y into var20 and var27, and set L0002 to
+                        \ trackSection5b
+
  JSR sub_C13E0
  LDA #2
 
@@ -4564,7 +4648,7 @@ ORG &0B00
  STA L0023
  CLC
  ADC #3
- CMP #&78
+ CMP #120
  BCC C1304
  LDA #0
 
@@ -4658,7 +4742,9 @@ ORG &0B00
  STA L0700+2,X
  LDY L0023
  JSR sub_C0BCC
- JSR sub_C124D
+
+ JSR CopyCoordinateY    \ Copy the X-th var20+1 to var17+1
+
  LDY L0002
  LDA #0
  STA SS
@@ -11399,8 +11485,9 @@ ENDIF
 
  STX L0042
 
- LDX #&FD
- JSR sub_C1208
+ LDX #&FD               \ Copy the first trackSection coordinate for track
+ JSR CopyCoordinate     \ section Y into var14
+
 
  JSR sub_C2145
  LDY L0042
@@ -11671,7 +11758,7 @@ ENDIF
  BCS C24B0
  TXA
  CLC
- ADC #&78
+ ADC #120
  JMP C24B1
 
 .C24B0
@@ -11857,9 +11944,9 @@ ENDIF
  BPL C255A
  TXA
  CLC
- ADC #&78
+ ADC #120
  TAX
- LDA #&78
+ LDA #120
  SEC
  BNE C255D
 
@@ -11892,7 +11979,7 @@ ENDIF
 .sub_C2565
 
  LDY L0049
- CPX #&78
+ CPX #120
  BCS C2570
  LDA L0700+2,X
  BCC C2573
@@ -12931,7 +13018,7 @@ ENDIF
  ADC L0024
  BPL C2922
  CLC
- ADC #&78
+ ADC #120
 
 .C2922
 
@@ -22761,8 +22848,8 @@ ENDIF
  AND #%11111000         \ bits 3-7 of trackRoadSigns
  TAY
 
- LDX #&FD
- JSR sub_C1208
+ LDX #&FD               \ Copy the first trackSection coordinate for track
+ JSR CopyCoordinate     \ section Y into var14
 
  LDY #6
  JSR sub_C2147
