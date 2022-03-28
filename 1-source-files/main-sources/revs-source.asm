@@ -272,21 +272,30 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0021
+.signSection
 
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the number * 8 of the track section
+                        \ containing the road sign
+                        \
+                        \ Track sections are numbered from 0 to 23, so this
+                        \ ranges from 0 to 184
+                        
+.coordNumber96
 
-.L0022
+ SKIP 1                 \ Contains coordNumber - 96
 
- SKIP 1                 \ 
+.prevCoordNumber
 
-.L0023
+ SKIP 1                 \ Used to store the number * 3 of the previous
+                        \ coordinate
 
- SKIP 1                 \ 
+.coordNumber
 
-.L0024
-
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the number * 3 of the coordinate
+                        \ currently being processed
+                        \
+                        \ Coordinates are numbered from 0 to 39, so this ranges
+                        \ from 0 to 117
 
 .directionFacing
 
@@ -1242,15 +1251,17 @@ ORG &0380
 
 .carTrackSection
 
- SKIP 24                \ The track section containing each driver (or the
-                        \ current road sign for driver 23)
+ SKIP 24                \ The number of the track section * 8 for each driver
+                        \ (or for the road sign in carTrackSection+23)
                         \
-                        \ Stored as the track section multiplied by 8, so for
-                        \ Silverstone, that's 0, 8, 16 to 184 (23 * 8)
+                        \ In the Silverstone track there are 24 track sections
+                        \ numbered from 0 to 23, so this ranges from 0 to 184
+                        
 
-.L0700
+.dataBlockIndex
 
- SKIP 128               \ 
+ SKIP 128               \ Contains index values into the five trackDataBlock
+                        \ tables in the track data
 
 .lineBufferPixel
 
@@ -3817,8 +3828,8 @@ ORG &0B00
 
  STA V                  \ Store the value of A in V, so we can retrieve it later
 
- SEC                    \ Set bit 7 of L62F8, so the JSR sub_C4F77 in sub_C147C
- ROR L62F8              \ has no effect
+ SEC                    \ Set bit 7 of L62F8, so the JSR sub_C4F77 in
+ ROR L62F8              \ MoveCarForwards has no effect
 
 .P10A1
 
@@ -3826,8 +3837,8 @@ ORG &0B00
 
 .P10A3
 
- JSR sub_C147C          \ Updates carTrackSection, carSectionCount and
-                        \ carProgress for this driver
+ JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
 
  DEX                    \ Decrement the loop counter
 
@@ -3860,8 +3871,8 @@ ORG &0B00
  LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- JSR sub_C14C3          \ Updates carTrackSection, carSectionCount and
-                        \ carProgress for this driver
+ JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
 
  PLA                    \ Retrieve X from the stack
  TAX
@@ -3894,7 +3905,8 @@ ORG &0B00
 
  LDX #23
 
- JSR sub_C147C
+ JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
 
  LDY #23
 
@@ -3922,8 +3934,8 @@ ORG &0B00
 
 .P10F2
 
- JSR sub_C14C3          \ Updates carTrackSection, carSectionCount and
-                        \ carProgress for this driver for the road sign
+ JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
 
  DEC V
 
@@ -3935,8 +3947,8 @@ ORG &0B00
 
  INC L0042
 
- JSR sub_C14C3          \ Updates carTrackSection, carSectionCount and
-                        \ carProgress for this driver for the road sign
+ JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
 
  BCC P10F9
 
@@ -3957,10 +3969,10 @@ ORG &0B00
 
  BPL P1104
 
- LDA #0                 \ Set A = L0024
- STA L0024
+ LDA #0                 \ Set coordNumber = 0
+ STA coordNumber
 
-                        \ Loop, L0042 to 0
+                        \ Loop, with L0042 decrementing to 0
 
 .P1113
 
@@ -4216,7 +4228,7 @@ ORG &0B00
  LDX currentPlayer
  STX L0045
  STX L0042
- LDY L0022
+ LDY coordNumber96
  JSR sub_C2937
  LDX #2
 
@@ -4228,7 +4240,7 @@ ORG &0B00
  STA var22Hi,X
  DEX
  BPL P11DB
- LDA L0022
+ LDA coordNumber96
  CLC
  ADC #3
  CMP #&78
@@ -4416,18 +4428,14 @@ ORG &0B00
 \
 \       Name: sub_C125A
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: Subtract 96 from the current coordinate number
 \
 \ ******************************************************************************
 
 .sub_C125A
 
- LDA L0024              \ Set A = L0024 - 96
+ LDA coordNumber        \ Set A = coordNumber - 96
  SEC
  SBC #96
 
@@ -4437,7 +4445,7 @@ ORG &0B00
 
 .C1264
 
- STA L0022              \ Set L0022 = A
+ STA coordNumber96      \ Set coordNumber96 = A
 
  RTS                    \ Return from the subroutine
 
@@ -4456,7 +4464,7 @@ ORG &0B00
 
 .sub_C1267
 
- LDX L0024
+ LDX coordNumber
  LDY #6
  STY L62F5
  LDA L0062
@@ -4479,7 +4487,7 @@ ORG &0B00
 
 .C1284
 
- LDY L0021
+ LDY signSection
 
  JSR CopyCoordinates    \ Copy the two trackSection coordinates for track
                         \ section Y into var20 and var27, and set L0002 to
@@ -4496,7 +4504,7 @@ ORG &0B00
  LDA trackSection0b,Y
  STA L0001
  LDA #0
- STA L0700+2,X
+ STA dataBlockIndex+2,X
  RTS
 
 \ ******************************************************************************
@@ -4644,8 +4652,8 @@ ORG &0B00
 
 .sub_C12F7
 
- LDA L0024
- STA L0023
+ LDA coordNumber
+ STA prevCoordNumber
  CLC
  ADC #3
  CMP #120
@@ -4654,7 +4662,7 @@ ORG &0B00
 
 .C1304
 
- STA L0024
+ STA coordNumber
  LDX #&17
  LDA directionFacing
  BMI C1326
@@ -4668,7 +4676,9 @@ ORG &0B00
 
 .C131B
 
- JSR sub_C147C
+ JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
+
  BCC C1333
  JSR sub_C1267
  JMP C13CC
@@ -4676,8 +4686,11 @@ ORG &0B00
 .C1326
 
  LDA carTrackSection+23
- STA L0021
- JSR sub_C14C3
+ STA signSection
+
+ JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
+
  BCC C1333
  JSR sub_C1267
 
@@ -4685,7 +4698,7 @@ ORG &0B00
 
  LDY L0002
  JSR sub_C1442
- LDX L0024
+ LDX coordNumber
  LDA L0001
  LSR A
  PHP
@@ -4705,7 +4718,7 @@ ORG &0B00
 
  STA W
  LDY carTrackSection+23
- LDA trackData+&607,Y
+ LDA trackSectionSize,Y
  PLP
  BCC C1365
  LSR A
@@ -4739,8 +4752,8 @@ ORG &0B00
 .C137C
 
  AND L0001
- STA L0700+2,X
- LDY L0023
+ STA dataBlockIndex+2,X
+ LDY prevCoordNumber
  JSR sub_C0BCC
 
  JSR CopyCoordinateY    \ Copy the X-th var20+1 to var17+1
@@ -4785,9 +4798,9 @@ ORG &0B00
 
 .C13CC
 
- LDX L0024
+ LDX coordNumber
  LDA L0002
- STA L0700,X
+ STA dataBlockIndex,X
  JSR sub_C125A
  JSR sub_C150E
  RTS
@@ -4950,12 +4963,17 @@ ORG &0B00
  ROR A
  EOR directionFacing
  BMI C143E
- JSR sub_C147C
+
+ JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
+
  RTS
 
 .C143E
 
- JSR sub_C14C3
+ JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
+
  RTS
 
 \ ******************************************************************************
@@ -5020,12 +5038,15 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C147C
+\       Name: MoveCarForwards
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Move a specified driver forwards along the track
 \
 \ ------------------------------------------------------------------------------
+\
+\ Moves driver X forwards, updating carTrackSection, carSectionCount and
+\ carProgress accordingly, plus lap times.
 \
 \ Arguments:
 \
@@ -5033,110 +5054,164 @@ ORG &0B00
 \
 \   L62F8               If bit 7 is set, the call to sub_C4F77 has no effect
 \
+\ Returns:
+\
+\   C flag              Whether the driver has moved into a new section:
+\
+\                         * Clear if the driver is still within the same track
+\                           section as before
+\
+\                         * Set if the driver has now moved into the next track
+\                           section
+\
 \ ******************************************************************************
 
-.sub_C147C
+.MoveCarForwards
 
- LDY carTrackSection,X  \ Set Y to the track section offset for driver X
+ LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
- LDA carSectionCount,X  \ Set A = carSectionCount + 1 for driver X
- CLC
- ADC #1
+ LDA carSectionCount,X  \ Set A = carSectionCount + 1
+ CLC                    \
+ ADC #1                 \ This increments the track section counter, which keeps
+                        \ track of the driver's progress through the current
+                        \ track section, so they move forwards
 
- CMP trackData+&607,Y   \ If A < Y-th trackData+&607, jump to C149B
- PHP                    \
- BCC C149B              \ And store the status flags on the stack
+ CMP trackSectionSize,Y \ If A < Y-th trackSectionSize, then the driver is still
+ PHP                    \ within the current track section, so clear the C flag
+                        \ and store it on the stack, otherwise the driver has
+                        \ now reached the end of the current section, so set the
+                        \ C flag and store it on the stack
+
+ BCC fore2              \ If A < Y-th trackSectionSize, then the driver is still
+                        \ within the current track section, so jump to fore2 to
+                        \ update the track section counter with the new value
 
  TYA                    \ Set A = Y + 8
- CLC
- ADC #8
+ CLC                    \
+ ADC #8                 \ So A contains the track section number * 8 of the next
+                        \ track section
 
- CMP trackSectionCount  \ If A < trackSectionCount, jump to C1496
- BCC C1496
+ CMP trackSectionCount  \ If A < trackSectionCount then this isn't the last
+ BCC fore1              \ section before we wrap round to zero again, so jump to
+                        \ fore1 to skip the following instruction
 
- LDA #0                 \ Set A = 0
+ LDA #0                 \ Set A = 0, so the track section number wraps round to
+                        \ zero when we reach the last section
 
-.C1496
+.fore1
 
- STA carTrackSection,X
- LDA #0
+ STA carTrackSection,X  \ Update the driver's track section number to the new
+                        \ one that they just moved into
 
-.C149B
+ LDA #0                 \ The driver just entered a new track section, so we
+                        \ need to zero the section counter, which keeps track of
+                        \ how far through the current section the driver is, so
+                        \ set A to 0 to set as its new value below
 
- STA carSectionCount,X
+.fore2
+
+ STA carSectionCount,X  \ Set the track section counter to the new value
 
  INC carProgressLo,X    \ Increment (carProgressHi carProgressLo) for driver X,
                         \ starting with the low byte
 
- BNE C14A6              \ And then the high byte
+ BNE fore3              \ And then the high byte, if the low byte overflows
  INC carProgressHi,X
 
-.C14A6
+.fore3
 
- LDA carProgressLo,X    \ If carProgress <> trackLength, jump to C14C1
- CMP trackLengthLo
- BNE C14C1
+ LDA carProgressLo,X    \ If carProgress <> trackLength, then the driver has not
+ CMP trackLengthLo      \ yet reached the end of the track, so jump to fore4 to
+ BNE fore4              \ return from the subroutine as we are done
  LDA carProgressHi,X
  CMP trackLengthHi
- BNE C14C1
+ BNE fore4
 
- LDA #0                 \ Set (carProgressHi carProgressLo) = 0
- STA carProgressLo,X
- STA carProgressHi,X
+ LDA #0                 \ The driver has just reached the end of the track, so
+ STA carProgressLo,X    \ set (carProgressHi carProgressLo) = 0 to wrap round to
+ STA carProgressHi,X    \ the start again
 
- JSR sub_C4F77
+ JSR sub_C4F77          \ ??? Updates lap times?
 
-.C14C1
+.fore4
 
- PLP
- RTS
+ PLP                    \ Retrieve the C flag from the stack so we can return it
+                        \ from the subroutine, so it is clear if the driver is
+                        \ still within the same track section, set otherwise
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C14C3
+\       Name: MoveCarBackwards
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Move a specified driver backwards along the track
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Moves driver X backwards, updating carTrackSection, carSectionCount and
+\ carProgress accordingly.
+\
+\ Arguments:
+\
+\   X                   Driver number (0-22, or 23 for road sign)
+\
+\ Returns:
+\
+\   C flag              Whether the driver has moved into a new section:
+\
+\                         * Clear if the driver is still within the same track
+\                           section as before
+\
+\                         * Set if the driver has now moved back into the
+\                           previous track section
 \
 \ ******************************************************************************
 
-.sub_C14C3
+.MoveCarBackwards
 
- LDY carTrackSection,X  \ Set Y to the track section offset for driver X
+ LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
  LDA carSectionCount,X
+
  CLC
- BNE C14DD
+
+ BNE back2
+
  TYA
- BNE C14D2
+
+ BNE back1
+
  LDA trackSectionCount
 
-.C14D2
+.back1
 
  SEC
  SBC #8
  STA carTrackSection,X
+
  TAY
- LDA trackData+&607,Y
+ LDA trackSectionSize,Y
+
  SEC
 
-.C14DD
+.back2
 
  PHP
+
  SEC
  SBC #1
  STA carSectionCount,X
 
-.C14E4
+.back3
 
  LDA carProgressLo,X
- BNE C1509
+ BNE back4
+
  DEC carProgressHi,X
- BPL C1509
+
+ BPL back4
 
  LDA trackLengthLo      \ Set carProgress = trackLength
  STA carProgressLo,X
@@ -5144,17 +5219,21 @@ ORG &0B00
  STA carProgressHi,X
 
  CPX currentPlayer
- BNE C14E4
+ BNE back3
  LDA driverLapNumber,X
- BEQ C14E4
- DEC driverLapNumber,X
- JMP C14E4
+ BEQ back3
 
-.C1509
+ DEC driverLapNumber,X
+
+ JMP back3
+
+.back4
 
  DEC carProgressLo,X
+
  PLP
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5245,8 +5324,8 @@ ORG &0B00
 
 .C1573
 
- LDY L0024
- STA L0700+1,Y
+ LDY coordNumber
+ STA dataBlockIndex+1,Y
  RTS
 
 \ ******************************************************************************
@@ -6554,30 +6633,30 @@ ENDIF
  CLC
  ADC #20
 
- BPL back1              \ If A is positive, jump to back1 to set the lines below
+ BPL bgnd1              \ If A is positive, jump to bgnd1 to set the lines below
                         \ the horizon to the colour of grass
 
  LDA var24Hi,X          \ Set A = X-th entry in var24Hi + 20
  CLC
  ADC #20
 
- BMI back1              \ If A is negative, jump to back1 to set the lines below
+ BMI bgnd1              \ If A is negative, jump to bgnd1 to set the lines below
                         \ the horizon to the colour of grass
 
  LDA #%00100000         \ Set A = %00100000 (colour 0, black) for the horizon
                         \ line and all lines below it, so the view below the
                         \ horizon is all track
 
- BNE back2              \ Jump to back2 (this BNE is effectively a JMP as A is
+ BNE bgnd2              \ Jump to bgnd2 (this BNE is effectively a JMP as A is
                         \ never zero)
 
-.back1
+.bgnd1
 
  LDA #%00100011         \ Set A = %00100011 (colour 3, green) for the horizon
                         \ line and all lines below it, so the view below the
                         \ horizon is all grass
 
-.back2
+.bgnd2
 
  STA backgroundColour,Y \ Set the colour of the horizon line to A, which also
                         \ sets the horizon line to the only non-zero line colour
@@ -6590,13 +6669,13 @@ ENDIF
                         \ line 79 at the top of the track view down to 0 at the
                         \ bottom, so set a counter in Y
 
-.back3
+.bgnd3
 
  LDX backgroundColour,Y \ Set X to the background colour for track line Y
 
- BEQ back4              \ If it is zero, then this can't be the horizon line (as
+ BEQ bgnd4              \ If it is zero, then this can't be the horizon line (as
                         \ we set that to a non-zero value above), so jump to
-                        \ back4 we have not already set the colour
+                        \ bgnd4 we have not already set the colour
                         \ jump to 
 
  TXA                    \ If we get here then X is non-zero, so we must have
@@ -6604,14 +6683,14 @@ ENDIF
                         \ stored for the horizon line above, so that all the
                         \ rest of the lines get set to this colour
 
-.back4
+.bgnd4
 
  STA backgroundColour,Y \ Set the background colour for track line Y to A
 
  DEY                    \ Decrement the loop counter to move down to the next
                         \ track line
 
- BPL back3              \ Loop back until we have set the line colour for all
+ BPL bgnd3              \ Loop back until we have set the line colour for all
                         \ 80 track lines
 
  RTS                    \ Return from the subroutine
@@ -10162,7 +10241,7 @@ IF _SUPERIOR
 
  STA V
 
- LDY L0022
+ LDY coordNumber96
 
  LDA #60
  SEC
@@ -10178,7 +10257,7 @@ IF _SUPERIOR
  ADC #32
  STA U
 
- LDA L0700+1,Y
+ LDA dataBlockIndex+1,Y
 
  AND #%01111111
 
@@ -11939,7 +12018,7 @@ ENDIF
 
 .sub_C254A
 
- LDX L0024
+ LDX coordNumber
  EOR directionFacing
  BPL C255A
  TXA
@@ -11981,12 +12060,12 @@ ENDIF
  LDY L0049
  CPX #120
  BCS C2570
- LDA L0700+2,X
+ LDA dataBlockIndex+2,X
  BCC C2573
 
 .C2570
 
- LDA L0700+2-&78,X
+ LDA dataBlockIndex+2-120,X
 
 .C2573
 
@@ -12778,7 +12857,7 @@ ENDIF
  LDA positionNumber,X   \ If bit 7 of driver X's positionNumber is set, jump to
  BMI C285B              \ C285B ???
 
- LDY carTrackSection,X  \ Set Y to the track section offset for driver X
+ LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
  LDA trackSection0b,Y
  BPL C280D
@@ -12882,7 +12961,9 @@ ENDIF
  ADC carProgressFrac,X
  STA carProgressFrac,X
  BCC C2892
- JSR sub_C147C
+
+ JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
+                        \ carSectionCount and carProgress accordingly
 
 .C2892
 
@@ -13015,7 +13096,7 @@ ENDIF
  ADC T
  EOR #&FF
  SEC
- ADC L0024
+ ADC coordNumber
  BPL C2922
  CLC
  ADC #120
@@ -13029,7 +13110,7 @@ ENDIF
  LDA carSpeedHi,X
  CMP #&32
  BCC sub_C2937
- LDA L0700+1,Y
+ LDA dataBlockIndex+1,Y
  STA L0114,X
 
 \ ******************************************************************************
@@ -13047,7 +13128,7 @@ ENDIF
 
 .sub_C2937
 
- LDA L0700,Y
+ LDA dataBlockIndex,Y
  STA L000C
  STY T
  TAY
@@ -20821,9 +20902,10 @@ NEXT
  LSR A
  TAY
 
-                        \ Now we copy the 24 bytes between trackData6D0 and
-                        \ trackData+&6E8 to L5FB0, processing each byte as we go
-                        \ (i.e. taking the input and storing the result):
+                        \ Now we copy Y bytes (one per track section) from
+                        \ trackData6D0 to L5FB0, processing each byte as we go:
+                        \ (i.e. taking the input from trackData6D0 and storing
+                        \ the result in L5FB0):
                         \
                         \   * Bit 7 of the result = bit 0 of the input
                         \
@@ -20833,6 +20915,9 @@ NEXT
                         \
                         \     * A >> 2 * U / 256 if bit 1 of the input is clear
                         \     * A >> 2           if bit 1 of the input is set
+                        \
+                        \ where A is the input from trackData6D0 and U is the
+                        \ base speed from above
 
 .P44D5
 
@@ -20934,8 +21019,8 @@ NEXT
 
 .C452D
 
- LDX L0022
- LDY L0700,X
+ LDX coordNumber96
+ LDY dataBlockIndex,X
  LDA L000D
  STA V
  LDA trackDataBlock1,Y
@@ -20997,7 +21082,7 @@ NEXT
  LSR A
  CLC
  ADC T
- JSR sub_C4610
+ JSR MultiplyBlock2
  CLC
  ADC L005D
  CLC
@@ -21065,13 +21150,13 @@ NEXT
  STA V
  LDX currentPlayer
  LDA carProgressFrac,X
- JSR sub_C4610
+ JSR MultiplyBlock2
  BPL C45DF
  DEC W
 
 .C45DF
 
- LDY L0022
+ LDY coordNumber96
  CLC
  ADC var20Lo+1,Y
  PHP
@@ -21102,34 +21187,56 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C4610
+\       Name: MultiplyBlock2
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Multiply track data from block 2 by A
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate:
+\
+\   A = A * Y-th trackDataBlock2
+\
+\ flipping the sign if we are facing backwards.
+\
+\ Arguments:
+\
+\   A                   The number to multiply the data by
+\
+\   Y                   Offset of the data to multiply in trackDataBlock2
+\
+\ Returns:
+\
+\   N flag              Set according to the result in A
 \
 \ ******************************************************************************
 
-.sub_C4610
+.MultiplyBlock2
 
- STA U
- LDA trackDataBlock2,Y
- EOR directionFacing
+ STA U                  \ Set U to the multiplication factor in A
+
+ LDA trackDataBlock2,Y  \ Store the sign of the track data * directionFacing on
+ EOR directionFacing    \ the stack
  PHP
- LDA trackDataBlock2,Y
+
+ LDA trackDataBlock2,Y  \ Set A to the Y-th data from trackDataBlock2
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |track data|
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = U * |track data|
 
- PLP
+ PLP                    \ Set the N flag to the sign of the track data *
+                        \ directionFacing, so this will be set if the coordinate
+                        \ sign is different to bit 7 of directionFacing, clear
+                        \ if the coordinate sign matches bit 7 of
+                        \ directionFacing
 
- JSR Absolute8Bit       \ Set A = |A|
+ JSR Absolute8Bit       \ Give A the sign in the N flag
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -22811,7 +22918,7 @@ ENDIF
 
  LDX currentPlayer
 
- LDY carTrackSection,X  \ Set Y to the track section offset for driver X
+ LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
  LDA trackData,Y
  LSR A
