@@ -45,6 +45,31 @@ CODE% = &5300           \ The assembly address of the track data
 
 ORG CODE%
 
+\ Track section  0:  ||  [chicane]      Abbey Curve to Woodcote Corner     &63
+\ Track section  1:  ~~                 Woodcote Corner                    &15
+\ Track section  2:  ~~  [straight]     Woodcote Corner                    &0C
+\ Track section  3:  ||  [start]        Home straight                      &15
+\ Track section  4:  ||                 Home straight                      &69
+\ Track section  5:  ||  [right]        Approach to Copse Corner           &18
+\ Track section  6:  ->                 Copse Corner                       &1C
+\ Track section  7:  ||  [straight]     Out of Copse Corner                &09
+\ Track section  8:  ||                 Copse Corner to Maggotts Curve     &36
+\ Track section  9:  ||  [left]         Approach to Maggotts Curve         &10
+\ Track section 10:  <-                 Maggotts Curve                     &26
+\ Track section 11:  ||                 Maggotts Curve to Becketts Corner  &1B
+\ Track section 12:  ->  [right]        Becketts Corner                    &1B
+\ Track section 13:  ||                 Becketts Corner to Chapel Curve    &28
+\ Track section 14:  <-  [left, st, st] Chapel Curve                       &10
+\ Track section 15:  ||                 Hangar Straight                    &87
+\ Track section 16:  ||                 Hangar Straight                    &06
+\ Track section 17:  ||                 Approach to Stowe Corner           &1C
+\ Track section 18:  ->  [right]        Stowe Corner                       &28
+\ Track section 19:  ||  [straight]     Stowe Corner to Club Corner        &68
+\ Track section 20:  ->  [right]        Club Corner                        &21
+\ Track section 21:  ||  [straight]     Club Corner to Abbey Curve         &55
+\ Track section 22:  <-  [left]         Abbey Curve                        &12
+\ Track section 23:  ||  [straight]     Abbey Curve to Woodcote Corner     &26
+
 .trackData
 
 \ .trackSection0a
