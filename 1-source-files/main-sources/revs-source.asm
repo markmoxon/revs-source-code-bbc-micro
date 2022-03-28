@@ -990,7 +990,7 @@ ORG &0100
                         \
                         \   * Bits 0-3 = the car's object type
                         \
-                        \   * Bit 6: ??? see sub_C1163, ClearBestLapTime
+                        \   * Bit 6: ??? see sub_C1163, ClearTotalRaceTime
                         \
                         \   * Bit 7: 0 = car is visible
                         \            1 = car is hidden
@@ -1066,9 +1066,10 @@ ORG &0380
 
  SKIP 20                \ Used to store a copy of the driversInOrder list
 
-.bestLapMinutes
+.totalRaceMinutes
 
- SKIP 20                \ 
+ SKIP 20                \ Minutes of each driver's total race time, stored in
+                        \ BCD
                         \
                         \ Set to &80 in ResetVariables
 
@@ -1200,9 +1201,9 @@ ORG &0380
  SKIP 80                \ For each track line, the block number where the track
                         \ starts (i.e. the left edge of the black track)
 
-.driverTenths
+.bestLapTenths
 
- SKIP 20                \ The tenths of seconds of each driver's lap time,
+ SKIP 20                \ Tenths of seconds of each driver's best lap time,
                         \ stored in BCD
                         \
                         \ Indexed by driver number (0 to 19)
@@ -1210,42 +1211,60 @@ ORG &0380
 .clockTenths
 
  SKIP 1                 \ Tenths of seconds for the clock timer
+                        \
+                        \ The clock timer counts the time spent on the track, so
+                        \ that's the total amount of qualifying time, or the
+                        \ time spent throughout an entire race
 
 .lapTenths
 
  SKIP 1                 \ Tenths of seconds for the lap timer
+                        \
+                        \ The lap timer counts the time spent on the current lap
 
  SKIP 2                 \ These bytes appear to be unused
 
-.driverSeconds
+.bestLapSeconds
 
- SKIP 20                \ The seconds of each driver's lap time, stored in BCD
+ SKIP 20                \ Seconds of each driver's best lap time, stored in BCD
                         \
                         \ Indexed by driver number (0 to 19)
 
 .clockSeconds
 
  SKIP 1                 \ Seconds for the clock timer
+                        \
+                        \ The clock timer counts the time spent on the track, so
+                        \ that's the total amount of qualifying time, or the
+                        \ time spent throughout an entire race
 
 .lapSeconds
 
  SKIP 1                 \ Seconds for the lap timer
+                        \
+                        \ The lap timer counts the time spent on the current lap
 
  SKIP 2                 \ These bytes appear to be unused
 
-.driverMinutes
+.bestLapMinutes
 
- SKIP 20                \ The minutes of each driver's lap time, stored in BCD
+ SKIP 20                \ Minutes of each driver's best lap time, stored in BCD
                         \
                         \ Indexed by driver number (0 to 19)
 
 .clockMinutes
 
  SKIP 1                 \ Minutes for the clock timer
+                        \
+                        \ The clock timer counts the time spent on the track, so
+                        \ that's the total amount of qualifying time, or the
+                        \ time spent throughout an entire race
 
 .lapMinutes
 
  SKIP 1                 \ Minutes for the lap timer
+                        \
+                        \ The lap timer counts the time spent on the current lap
 
  SKIP 2                 \ These bytes appear to be unused
 
@@ -1290,13 +1309,19 @@ ORG &0880
                         \ section's trackSectionSize (the section's length),
                         \ at which point it resets to zero for the next section
 
-.bestLapTenths
+.totalRaceTenths
 
- SKIP 20                \ 
+ SKIP 20                \ Tenths of seconds of each driver's total race time,
+                        \ stored in BCD
+                        \
+                        \ Indexed by driver number (0 to 19)
 
-.bestLapSeconds
+.totalRaceSeconds
 
- SKIP 36                \ 
+ SKIP 36                \ Seconds of each driver's total race time, stored in
+                        \ BCD
+                        \
+                        \ Indexed by driver number (0 to 19)
 
 .carProgressLo
 
@@ -3382,11 +3407,11 @@ ORG &0B00
 \
 \   A                   Determines the order of the sorted list to create:
 \
-\                           * 0 = most recent lap times
+\                           * 0 = best lap times
 \
 \                           * Bit 6 set = accumulated points
 \
-\                           * Bit 7 set = best lap times
+\                           * Bit 7 set = total race times
 \
 \ Returns:
 \
@@ -3447,17 +3472,17 @@ ORG &0B00
                         \ If we get here then bit 6 and 7 of G are clear, so we
                         \ compare most recent lap times
 
- LDA driverTenths,Y     \ Set (A H U) =   this driver's lap time
- SBC driverTenths,X     \               - lap time of the driver ahead
+ LDA bestLapTenths,Y    \ Set (A H U) =   this driver's best lap time
+ SBC bestLapTenths,X    \               - best lap time of the driver ahead
  STA U                  \
                         \ starting with the low bytes
 
- LDA driverSeconds,Y    \ Then the high bytes
- SBC driverSeconds,X
+ LDA bestLapSeconds,Y   \ Then the high bytes
+ SBC bestLapSeconds,X
  STA H
 
- LDA driverMinutes,Y    \ And then the top bytes
- SBC driverMinutes,X
+ LDA bestLapMinutes,Y   \ And then the top bytes
+ SBC bestLapMinutes,X
 
  BCC sort7              \ If the subtraction underflowed, then this driver's
                         \ lap time is quicker than the lap time of the driver
@@ -3528,28 +3553,28 @@ ORG &0B00
 
 .sort6
 
- LDA bestLapTenths,Y    \ Set (A H U) =   this driver's best lap time
- SBC bestLapTenths,X    \               - best lap time of the driver ahead
+ LDA totalRaceTenths,Y  \ Set (A H U) =   this driver's total race time
+ SBC totalRaceTenths,X  \               - total race time of the driver ahead
  STA U                  \
                         \ starting with the low bytes
 
- LDA bestLapSeconds,Y   \ Then the high bytes
- SBC bestLapSeconds,X
+ LDA totalRaceSeconds,Y \ Then the high bytes
+ SBC totalRaceSeconds,X
  STA H
 
- LDA bestLapMinutes,Y   \ And then the top bytes
- SBC bestLapMinutes,X
+ LDA totalRaceMinutes,Y \ And then the top bytes
+ SBC totalRaceMinutes,X
 
  BCS sort4              \ If the subtraction didn't underflow then the drivers
                         \ are in the correct order, so jump to sort4 to move on
                         \ to the next position
 
                         \ Otherwise the subtraction underflowed, so this
-                        \ driver's best lap time is quicker than the best lap
-                        \ time of the driver ahead, which is the wrong way round
-                        \ if we are trying to create a list where the winner has
-                        \ the fastest lap time, so fall through into sort7 to
-                        \ swap them around in the driversInOrder list
+                        \ driver's total race time is quicker than the total
+                        \ race time of the driver ahead, which is the wrong way
+                        \ round if we are trying to create a list where the
+                        \ winner has the fastest time, so fall through into
+                        \ sort7 to swap them around in the driversInOrder list
 
 .sort7
 
@@ -3760,7 +3785,7 @@ ORG &0B00
                         \
                         \   * A = 25 indicates 26 minutes of qualifying time
 
- CMP clockMinutes     \ If A < clockMinutes then we have reached the end of
+ CMP clockMinutes       \ If A < clockMinutes then we have reached the end of
  BCC laps7              \ qualifying time, so jump to laps7 to display the
                         \ time-up message
 
@@ -3828,8 +3853,9 @@ ORG &0B00
 
  STA V                  \ Store the value of A in V, so we can retrieve it later
 
- SEC                    \ Set bit 7 of L62F8, so the JSR sub_C4F77 in
- ROR L62F8              \ MoveCarForwards has no effect
+ SEC                    \ Set bit 7 of updateLapTimes, so when we move the cars
+ ROR updateLapTimes     \ forward in MoveCarForwards, the lap number and lap
+                        \ time are not affected
 
 .P10A1
 
@@ -3837,8 +3863,7 @@ ORG &0B00
 
 .P10A3
 
- JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarForwards    \ Move driver X forwards along the track
 
  DEX                    \ Decrement the loop counter
 
@@ -3871,8 +3896,7 @@ ORG &0B00
  LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarBackwards   \ Move driver X backwards along the track
 
  PLA                    \ Retrieve X from the stack
  TAX
@@ -3903,10 +3927,9 @@ ORG &0B00
 
 .C10D7
 
- LDX #23
+ LDX #23                \ Set X to the driver number for the road sign
 
- JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarForwards    \ Move the sign forwards along the track
 
  LDY #23
 
@@ -3934,8 +3957,7 @@ ORG &0B00
 
 .P10F2
 
- JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarBackwards   \ Move the sign backwards along the track
 
  DEC V
 
@@ -3947,8 +3969,7 @@ ORG &0B00
 
  INC L0042
 
- JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarBackwards   \ Move the sign backwards along the track
 
  BCC P10F9
 
@@ -3982,7 +4003,9 @@ ORG &0B00
 
  BNE P1113
 
- LSR L62F8              \ Clear bit 7 of L62F8, so calls to sub_C4F77 work again
+ LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
+                        \ MoveCarForwards will update the lap number and lap
+                        \ time once again
 
  RTS                    \ Return from the subroutine
 
@@ -4092,8 +4115,8 @@ ORG &0B00
 
  JSR HideAllCars        \ Set all the cars to
 
- LDX currentPlayer      \ Clear the current player's best lap time if this is an
- JSR ClearBestLapTime   \ incomplete race
+ LDX currentPlayer      \ Clear the current player's total race time if this is
+ JSR ClearTotalRaceTime \ an incomplete race
 
 .C1171
 
@@ -4174,10 +4197,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ClearBestLapTime
+\       Name: ClearTotalRaceTime
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Clear the current player's best lap time following the end of an
+\    Summary: Clear the current player's total race time following the end of an
 \             incomplete race
 \
 \ ------------------------------------------------------------------------------
@@ -4188,7 +4211,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.ClearBestLapTime
+.ClearTotalRaceTime
 
  LDA numberOfLaps       \ Compare numberOfLaps with the current player's lap
  CMP driverLapNumber,X  \ number
@@ -4200,9 +4223,9 @@ ORG &0B00
                         \ the player has finished the race, so skip the
                         \ following instruction
 
- STA bestLapMinutes,X   \ The player didn't finish the race, so set the player's
-                        \ bestLapMinutes to &C0, which is negative and therefore
-                        \ not a valid time
+ STA totalRaceMinutes,X \ The player didn't finish the race, so set the player's
+                        \ total race time to &C0 minutes, which is negative and
+                        \ therefore not a valid time
 
 .clap1
 
@@ -4635,7 +4658,7 @@ ORG &0B00
 .sub_C12F3
 
  CLC
- JSR sub_C1433
+ JSR MovePlayerCar
 
 \ ******************************************************************************
 \
@@ -4663,7 +4686,9 @@ ORG &0B00
 .C1304
 
  STA coordNumber
- LDX #&17
+
+ LDX #23                \ Set X to the driver number for the road sign
+
  LDA directionFacing
  BMI C1326
  LDA trackSectionCount
@@ -4671,13 +4696,13 @@ ORG &0B00
  AND #&F8
  CMP carTrackSection,X
  BNE C131B
- LDA #1
+
+ LDA #1                 \ Set L0030 = 1
  STA L0030
 
 .C131B
 
- JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarForwards    \ Move the sign forwards along the track
 
  BCC C1333
  JSR sub_C1267
@@ -4688,8 +4713,7 @@ ORG &0B00
  LDA carTrackSection+23
  STA signSection
 
- JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarBackwards   \ Move the sign backwards along the track
 
  BCC C1333
  JSR sub_C1267
@@ -4906,7 +4930,7 @@ ORG &0B00
 .sub_C140B
 
  SEC
- JSR sub_C1433
+ JSR MovePlayerCar
  LDX #&28
  STX L0062
  JSR sub_C1420
@@ -4946,35 +4970,51 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C1433
+\       Name: MovePlayerCar
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Drive the player's car forwards or backwards
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   C flag              Controls the direction of movement:
+\
+\                         * Clear = move the car in the direction it is pointing
+\                           (i.e. drive forwards)
+\
+\                         * Set = reverse the car
 \
 \ ******************************************************************************
 
-.sub_C1433
+.MovePlayerCar
 
- LDX currentPlayer
- ROR A
- EOR directionFacing
- BMI C143E
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
- JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ ROR A                  \ If just one of the C flag and bit 7 of directionFacing
+ EOR directionFacing    \ is set (but not both), jump to mcar1 to move the car
+ BMI mcar1              \ backwards along the track
+                        \
+                        \ In other words, we move backwards if:
+                        \
+                        \   * C is clear and the car is facing backwards along
+                        \     the track, in which case it is driving forwards
+                        \     but going backwards around the track
+                        \
+                        \   * C is set and the car is facing forwards along the
+                        \     track, in which case it is reversing along the
+                        \     track while facing forwards
 
- RTS
+ JSR MoveCarForwards    \ Move the current player forwards along the track
 
-.C143E
+ RTS                    \ Return from the subroutine
 
- JSR MoveCarBackwards   \ Move driver X backwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+.mcar1
 
- RTS
+ JSR MoveCarBackwards   \ Move current player backwards along the track
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5046,13 +5086,15 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ Moves driver X forwards, updating carTrackSection, carSectionCount and
-\ carProgress accordingly, plus lap times.
+\ carProgress accordingly, as well as the lap number and lap time (but only if
+\ bit 7 of updateLapTimes is clear).
 \
 \ Arguments:
 \
 \   X                   Driver number (0-22, or 23 for road sign)
 \
-\   L62F8               If bit 7 is set, the call to sub_C4F77 has no effect
+\   updateLapTimes      If bit 7 is set, the call to UpdateLaps has no effect,
+\                       so we do not update the lap number or lap time
 \
 \ Returns:
 \
@@ -5112,6 +5154,10 @@ ORG &0B00
 
  STA carSectionCount,X  \ Set the track section counter to the new value
 
+                        \ We now need to increment the driver's progress in
+                        \ (carProgressHi carProgressLo)
+
+
  INC carProgressLo,X    \ Increment (carProgressHi carProgressLo) for driver X,
                         \ starting with the low byte
 
@@ -5131,7 +5177,7 @@ ORG &0B00
  STA carProgressLo,X    \ set (carProgressHi carProgressLo) = 0 to wrap round to
  STA carProgressHi,X    \ the start again
 
- JSR sub_C4F77          \ ??? Updates lap times?
+ JSR UpdateLaps         \ Increment the lap number and lap times for driver X
 
 .fore4
 
@@ -5150,8 +5196,8 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves driver X backwards, updating carTrackSection, carSectionCount and
-\ carProgress accordingly.
+\ Moves driver X backwards, updating carTrackSection, carSectionCount,
+\ carProgress and the current lap number accordingly.
 \
 \ Arguments:
 \
@@ -5173,65 +5219,114 @@ ORG &0B00
 
  LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
- LDA carSectionCount,X
+ LDA carSectionCount,X  \ Set A = carSectionCount, which keeps track of the
+                        \ driver's progress through the current track section
 
- CLC
+ CLC                    \ If A is non-zero then the driver can move backwards by
+ BNE back2              \ one step while staying in the same track section, so
+                        \ clear the C flag and jump to back2 to store this
+                        \ result on the stack
 
- BNE back2
+                        \ Otherwise moving backwards will move the driver into
+                        \ the previous track section
 
- TYA
+ TYA                    \ Store the current track section number * 8 in A
 
- BNE back1
+ BNE back1              \ If the track section number is non-zero, then skip the
+                        \ following instruction
 
- LDA trackSectionCount
+                        \ If we get here then the driver is in the first track
+                        \ section and is moving backwards into the previous
+                        \ track section, so we have to wrap around to the end
+                        \ of the track to move into the very last track section
+
+ LDA trackSectionCount  \ Set A = trackSectionCount
+                        \
+                        \ So A contains the number * 8 of the last track section
+                        \ plus 1 (as the track sections count from zero)
 
 .back1
 
- SEC
- SBC #8
- STA carTrackSection,X
+                        \ By this point, A contains the number * 8 of the
+                        \ current track section, updated to cater for wrapping
+                        \ round at the end
 
- TAY
- LDA trackSectionSize,Y
+ SEC                    \ Set A = A - 8
+ SBC #8                 \
+                        \ So A is now the number * 8 of the previous track
+                        \ section, which is where the driver is moving to
 
- SEC
+ STA carTrackSection,X  \ Update the driver's track section number to the new
+                        \ one that they just moved into
+
+ TAY                    \ Set A to the size of the new track section, so A
+ LDA trackSectionSize,Y \ contains the track section counter for the end of the
+                        \ new track section (so the driver moves to the end of
+                        \ the new track section)
+
+ SEC                    \ Set the C flag to indicate that the driver has moved
+                        \ into a different track section
 
 .back2
 
- PHP
+ PHP                    \ Store the C flag on the stack, which will be clear if
+                        \ the driver is still within the same track section, set
+                        \ otherwise
 
- SEC
- SBC #1
- STA carSectionCount,X
+ SEC                    \ A contains the driver's progress through the current
+ SBC #1                 \ track section, so subtract 1 to move the driver
+                        \ backwards
+
+ STA carSectionCount,X  \ Set the track section counter to the new value
 
 .back3
 
- LDA carProgressLo,X
- BNE back4
+                        \ We now need to decrement the driver's progress in
+                        \ (carProgressHi carProgressLo)
 
- DEC carProgressHi,X
+ LDA carProgressLo,X    \ If the low byte of carProgress for driver X is
+ BNE back4              \ non-zero, then jump to back4 to decrement the low
+                        \ byte, and we are done
 
- BPL back4
+ DEC carProgressHi,X    \ Otherwise decrement the high byte
 
- LDA trackLengthLo      \ Set carProgress = trackLength
- STA carProgressLo,X
- LDA trackLengthHi
- STA carProgressHi,X
+ BPL back4              \ If the high byte is positive, jump to back4 to
+                        \ decrement the low byte to &FF, and we are done
 
- CPX currentPlayer
- BNE back3
- LDA driverLapNumber,X
- BEQ back3
+                        \ If we get here then we just decremented the 16-bit
+                        \ value in (carProgressHi carProgressLo) into negative
+                        \ territory, so the driver just moved backwards across
+                        \ the starting line, into the previous lap
 
- DEC driverLapNumber,X
+ LDA trackLengthLo      \ Set carProgress for driver X = trackLength
+ STA carProgressLo,X    \
+ LDA trackLengthHi      \ So carProgress wraps around to the progress value for
+ STA carProgressHi,X    \ the end of the track, as trackLength contains the
+                        \ length of the full track (in terms of progress)
 
- JMP back3
+ CPX currentPlayer      \ If driver X is not the current player, jump to back3
+ BNE back3              \ to decrement the newly wrapped progress figure
+
+ LDA driverLapNumber,X  \ If the current lap number for the current player is
+ BEQ back3              \ zero (i.e. this is the first lap) then jump to back3
+                        \ to decrement the newly wrapped progress figure
+
+ DEC driverLapNumber,X  \ Otherwise this is not the current player's first lap,
+                        \ and they just moved backwards, across the starting
+                        \ line and into the previous lap, so decrement the
+                        \ current lap number for the current player
+
+ JMP back3              \ Jump to back3 to decrement the newly wrapped progress
+                        \ figure
 
 .back4
 
- DEC carProgressLo,X
+ DEC carProgressLo,X    \ Decrement the low byte of the driver's progress to
+                        \ move them backwards
 
- PLP
+ PLP                    \ Retrieve the C flag from the stack so we can return it
+                        \ from the subroutine, so it is clear if the driver is
+                        \ still within the same track section, set otherwise
 
  RTS                    \ Return from the subroutine
 
@@ -6358,9 +6453,9 @@ ENDIF
  JSR ZeroTimer          \ Otherwise the timer just reached the maximum possible
                         \ value, so wrap it back round to zero
 
- LDY currentPlayer      \ Set the best lap for the current player to -1, as
- LDA #&80               \ otherwise the driver might finish with a very low lap
- STA bestLapMinutes,Y   \ time, as we just set the timer back to zero
+ LDY currentPlayer      \ Set the total race time for the current player to -1,
+ LDA #&80               \ as otherwise the driver might finish with a very low
+ STA totalRaceMinutes,Y \ time just because the race timer looped back to zero
 
 .time3
 
@@ -6505,7 +6600,7 @@ ENDIF
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
                         \ L0114, carProgressFrac, (carSpeedHi carSpeedLo) and
                         \ positionNumber, and initialise the 20-byte blocks
-                        \ at carStatus, bestLapMinutes and L01A4, so set up a
+                        \ at carStatus, totalRaceMinutes and L01A4, so set up a
                         \ loop counter in X
 
 .rese5
@@ -6513,7 +6608,7 @@ ENDIF
  LDA #&80               \ Set the X-th byte of carStatus to &80
  STA carStatus,X
 
- STA bestLapMinutes,X   \ Set the X-th byte of bestLapMinutes to &80
+ STA totalRaceMinutes,X \ Set the X-th byte of totalRaceMinutes to -1
 
  LDA #0                 \ Zero the X-th byte of driverLapNumber
  STA driverLapNumber,X
@@ -12962,8 +13057,7 @@ ENDIF
  STA carProgressFrac,X
  BCC C2892
 
- JSR MoveCarForwards    \ Move driver X forwards, updating carTrackSection,
-                        \ carSectionCount and carProgress accordingly
+ JSR MoveCarForwards    \ Move driver X forwards along the track
 
 .C2892
 
@@ -19860,10 +19954,10 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: ResetLapTime
+\       Name: ResetBestLapTime
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the current lap time to 10:00.0 for a specific driver
+\    Summary: Reset the best lap time to 10:00.0 for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
@@ -19873,15 +19967,15 @@ NEXT
 \
 \ ******************************************************************************
 
-.ResetLapTime
+.ResetBestLapTime
 
- LDA #0                 \ Zero the driverTenths entry for driver X
- STA driverTenths,X
+ LDA #0                 \ Zero the bestLapTenths entry for driver X
+ STA bestLapTenths,X
 
- STA driverSeconds,X    \ Zero the driverSeconds entry for driver X
+ STA bestLapSeconds,X   \ Zero the bestLapSeconds entry for driver X
 
- LDA #&10               \ Set the driverMinutes for driver X to 10 (as is it a
- STA driverMinutes,X    \ BCD number)
+ LDA #&10               \ Set the bestLapMinutes for driver X to 10 (as is it a
+ STA bestLapMinutes,X   \ BCD number)
 
  RTS                    \ Return from the subroutine
 
@@ -20245,21 +20339,21 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: ResetLapTimes
+\       Name: ResetBestLapTimes
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Reset the current lap times for all drivers
+\    Summary: Reset the best lap times to 10:00.0 for all drivers
 \
 \ ******************************************************************************
 
-.ResetLapTimes
+.ResetBestLapTimes
 
  LDX #19                \ We are about to reset the current lap times for
                         \ all 20 drivers, so set a driver counter in X
 
 .rall1
 
- JSR ResetLapTime       \ Reset the current lap time for driver X
+ JSR ResetBestLapTime   \ Reset the best lap time to 10:00.0 for driver X
 
  DEX                    \ Decrement the driver counter
 
@@ -24143,135 +24237,216 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4F77
+\       Name: UpdateLaps
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Increment the lap number and lap times for a specific driver
 \
 \ ------------------------------------------------------------------------------
 \
+\ Update the lap number and lap times for driver X, but only if the following
+\ are true:
+\
+\   * Driver number is in the range 0 to 19
+\
+\   * Bit 7 of updateLapTimes is clear
+\
+\   * Bit 6 of the driver's status byte is clear
+\
+\   * If this is the current player, L0030 must be 1 (and it is set to 0)
+\
+\ If these conditions are met, then the lap is incremented.
+\
 \ Arguments:
 \
-\   X                   Driver number
+\   X                   Driver number (only drivers 0 to 19 have lap times)
 \
-\   L62F8               If bit 7 is set, this routine does nothing
+\   updateLapTimes      If bit 7 is set, this routine does nothing
 \
 \ ******************************************************************************
 
-.sub_C4F77
+.UpdateLaps
 
- BIT L62F8              \ If bit 7 of L62F8 is set, jump to C4F90 to return from
- BMI C4F90              \ the subroutine
+ BIT updateLapTimes     \ If bit 7 of updateLapTimes is set, jump to ulap1 to
+ BMI ulap1              \ return from the subroutine without doing anything
 
- CPX #20                \ If X >= 20, jump to C4F90 to return from the
- BCS C4F90              \ subroutine
+ CPX #20                \ If X >= 20, jump to ulap1 to return from the
+ BCS ulap1              \ subroutine
 
- LDA carStatus,X        \ 
- ASL A
- BMI C4F90
+ LDA carStatus,X        \ If bit 6 of the driver's status byte is set, jump to
+ ASL A                  \ ulap1 to return from the subroutine
+ BMI ulap1
 
- CPX currentPlayer      \ If driver X is not the current player, jump to C4F95
- BNE C4F95
+ CPX currentPlayer      \ If driver X is not the current player, jump to ulap3
+ BNE ulap3              \ to skip updating the lap number top of the screen
 
- DEC L0030              \ Decrement L0030
+                        \ If we get here then this is the current player, so now
+                        \ we check the value of L0030
 
- BEQ C4F91              \ If L0030 = 0, jump to C4F91
+ DEC L0030              \ If L0030 = 1, set L0030 to 0 and jump to ulap2 to
+ BEQ ulap2              \ update the lap details
+ INC L0030
 
- INC L0030              \ Increment L0030
-
-.C4F90
+.ulap1
 
  RTS                    \ Return from the subroutine
 
-.C4F91
+.ulap2
+
+                        \ If we get here then this is the current player, and
+                        \ L0030 has just been changed from 1 to 0
 
  LDA #%10000000         \ Set bit 7 and clear bit 6 of updateDrivingInfo so the
  STA updateDrivingInfo  \ lap number gets updated at the top of the screen
 
-.C4F95
+.ulap3
 
- LDA driverLapNumber,X  \ Set A to the 
- BMI C4F9D
+                        \ If we get here then we have passed all the checks, so
+                        \ it's time to increment the lap number and times,
+                        \ starting with the lap number
 
- INC driverLapNumber,X
+ LDA driverLapNumber,X  \ Set A to the current lap number for driver X
 
-.C4F9D
+ BMI ulap4              \ If A is negative, skip the following instruction
 
- BIT raceStarted
- BPL C4FA8
- CMP numberOfLaps
- BCC C4FB7
- BEQ C4FAF
- RTS
+ INC driverLapNumber,X  \ Increment the current lap number for driver X
 
-.C4FA8
+.ulap4
 
- CPX currentPlayer
- BEQ C4FB7
- BCC C4FB7
- RTS
+                        \ We now decide whether to increment the lap times
 
-.C4FAF
+ BIT raceStarted        \ If bit 7 of raceStarted is clear then this is practice
+ BPL ulap5              \ or qualifying, so jump to ulap5
 
- CPX currentPlayer
- BNE C4FB7
+                        \ If we get here then this is a race
+
+ CMP numberOfLaps       \ If the current lap number for driver X < the number
+ BCC ulap7              \ of laps in the race, then this is not the last lap in
+                        \ the race, so jump to ulap7
+
+ BEQ ulap6              \ If the current lap number for driver X = the number
+                        \ of laps in the race, then this is the last lap in
+                        \ the race, so jump to ulap6
+
+                        \ If we get here then the current lap number is bigger
+                        \ than the number of laps in the race, which means the
+                        \ driver has already finished the race and is still
+                        \ driving, so we don't increment the lap times
+
+ RTS                    \ Return from the subroutine
+
+.ulap5
+
+                        \ If we get here then this is practice or qualifying
+
+ CPX currentPlayer      \ If X <= the driver number of the current player, jump
+ BEQ ulap7              \ to ulap7
+ BCC ulap7
+
+                        \ If we get here then driver X has a bigger number than
+                        \ the current player, so we ignore it (is this because
+                        \ the only players with numbers higher than the current
+                        \ player are other players, rather than drivers) ???
+
+ RTS                    \ Return from the subroutine
+
+.ulap6
+
+                        \ If we get here then this is a race and this is the
+                        \ last lap in the race, so this driver just finished the
+                        \ race (as this routine is all about incrementing the
+                        \ lap number)
+
+ CPX currentPlayer      \ If X <> the driver number of the current player, jump
+ BNE ulap7              \ to ulap7
+
+                        \ If we get here then driver X is the current player, so
+                        \ the current player just finished the race
 
  LDA #80                \ Set L000F = 80
  STA L000F
 
-.C4FB7
+.ulap7
+
+                        \ If we get here, then it's time to increment the lap
+                        \ times
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
- SEC
+                        \ We now subtract driver X's total race time from the
+                        \ current clock time, to see whether this is a new best
+                        \ time
+
+ SEC                    \ Set T = clockTenths - totalRaceTenths for driver X
  LDA clockTenths
- SBC bestLapTenths,X
+ SBC totalRaceTenths,X
  STA T
- LDA clockSeconds
- SBC bestLapSeconds,X
- BCS C4FCC
- ADC #&60
+
+ LDA clockSeconds       \ Set A = clockSeconds - totalRaceSeconds for driver X
+ SBC totalRaceSeconds,X
+
+ BCS ulap8              \ If the subtraction underflowed, add 60 seconds to the
+ ADC #&60               \ result
  CLC
 
-.C4FCC
+.ulap8
 
- STA U
- LDA clockMinutes
- SBC bestLapMinutes,X
+ STA U                  \ Set U = A
+                        \       = clockSeconds - totalRaceSeconds for driver X
+
+ LDA clockMinutes       \ Set H = clockMinutes - totalRaceMinutes for driver X
+ SBC totalRaceMinutes,X
  STA H
- BCC C4FFB
- SEC
- LDA T
- SBC driverTenths,X
- LDA U
- SBC driverSeconds,X
- LDA H
- SBC driverMinutes,X
- BCS C4FFB
- LDA T
- AND #&F0
- STA driverTenths,X
- LDA U
- STA driverSeconds,X
- LDA H
- STA driverMinutes,X
 
-.C4FFB
+                        \ So by this point, (H U T) contains the time difference
+                        \ between the clock time and driver X's total race time,
+                        \ which is the current lap time (as we last updated the
+                        \ driver's total time at the end of the last lap)
 
- LDA clockTenths
+ BCC ulap9              \ If the subtraction underflowed, then somehow the clock
+                        \ timer is showing a smaller time than driver X's total
+                        \ race time, so this isn't a new best lap time, and we
+                        \ jump to ulap9
+
+ SEC                    \ Subtract (H U T) - driver X's best lap time
+ LDA T
+ SBC bestLapTenths,X
+ LDA U
+ SBC bestLapSeconds,X
+ LDA H
+ SBC bestLapMinutes,X
+
+ BCS ulap9              \ If the subtraction didn't underflow, then (H U T) is
+                        \ bigger than driver X's best lap time, so this isn't a
+                        \ new best lap time, so jump to ulap9
+
+                        \ (H U T) is lower than driver X's best lap time, so we
+                        \ have a new best lap time
+
+ LDA T                  \ Set driver X's best lap time to (H U T), setting the
+ AND #&F0               \ second digit of the tenths figure to 0
  STA bestLapTenths,X
- LDA clockSeconds
+ LDA U
  STA bestLapSeconds,X
- LDA clockMinutes
+ LDA H
  STA bestLapMinutes,X
+
+.ulap9
+
+ LDA clockTenths        \ Set the total race time for driver X to the clock time
+ STA totalRaceTenths,X  \ so we can use it to work out the lap time for the next
+ LDA clockSeconds       \ lap
+ STA totalRaceSeconds,X
+ LDA clockMinutes
+ STA totalRaceMinutes,X
 
  CLD                    \ Clear the D flag to switch arithmetic to normal
 
- RTS
+ RTS                    \ Return from the subroutine
 
- NOP
- NOP
+ NOP                    \ These instructions have no effect - presumably they
+ NOP                    \ are left over from changes during development
 
 \ ******************************************************************************
 \
@@ -27787,18 +27962,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F8
+\       Name: updateLapTimes
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drivers
+\    Summary: Controls whether moving the car forward updates the lap number and
+\             lap times
 \
 \ ******************************************************************************
 
-.L62F8
+.updateLapTimes
 
  EQUB 0
 
@@ -28632,7 +28804,7 @@ ENDIF
  DEX                    \ Set qualifyingTime = 255, so that the time we spend
  STX qualifyingTime     \ practicing is as long as we want
 
- JSR ResetLapTimes      \ Reset the current lap times for all drivers
+ JSR ResetBestLapTimes  \ Reset the best lap times to 10:00.0 for all drivers
 
  JSR HeadToTrack        \ Head to the track to choose the wing settings and
                         \ start the practice laps, which the player exits by
@@ -28713,7 +28885,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- JSR ResetLapTimes      \ Reset the current lap times to 10:00.0 for all drivers
+ JSR ResetBestLapTimes  \ Reset the best lap times to 10:00.0 for all drivers
 
  LDA #20                \ Set currentPlayer = 20, so the first human player will
  STA currentPlayer      \ be number 19, the next one will be 18, and so on
@@ -28725,7 +28897,7 @@ ENDIF
 
  LDX currentPlayer      \ Set X to the new player number
 
- JSR ResetLapTime       \ Reset the current lap time for the new player
+ JSR ResetBestLapTime   \ Reset the best lap time to 10:00.0 for the new player
 
  LDA competitionStarted \ If competitionStarted = 0, jump to game4 to ask for
  BEQ game4              \ the player's name, as the competition hasn't started
@@ -28824,10 +28996,10 @@ ENDIF
                         \ but also the highest non-human driver number (which is
                         \ lowestPlayerNumber - 1)
 
- LDA #0                 \ Sort the drivers by lap time, putting the results into
- JSR SortDrivers        \ positionNumber and driversInOrder, so they now contain
-                        \ the order of the drivers on the grid for the coming
-                        \ race
+ LDA #0                 \ Sort the drivers by best lap time, putting the results
+ JSR SortDrivers        \ into positionNumber and driversInOrder, so they now
+                        \ contain the order of the drivers on the grid for the
+                        \ coming race
 
                         \ We now adjust the class of the race to cater for the
                         \ player's qualifying lap time, which makes things more
@@ -28849,11 +29021,11 @@ ENDIF
                         \ difficulty setting) according to the figures in the
                         \ track data)
 
- LDA driverSeconds,Y    \ Calculate the slowest lap time minus the time for
+ LDA bestLapSeconds,Y   \ Calculate the slowest lap time minus the time for
  SEC                    \ class X from the track data, starting with the seconds
  SBC trackLapTimeSec,X
 
- LDA driverMinutes,Y    \ And then the minutes
+ LDA bestLapMinutes,Y   \ And then the minutes
  SBC trackLapTimeMin,X
 
                         \ Note that for X = 2 (professional), the track data
@@ -29023,7 +29195,7 @@ ENDIF
 
  BPL game14             \ Loop back until we have restored all the positions
 
- JSR ResetLapTimes      \ Reset the current lap times for all drivers
+ JSR ResetBestLapTimes  \ Reset the best lap times to 10:00.0 for all drivers
 
  LDA #%10000000         \ Head to the track to choose the wing settings and
  JSR HeadToTrack+2      \ start the race (as bit 7 of A is set), returning here
@@ -29045,8 +29217,8 @@ ENDIF
 \
 \ ******************************************************************************
 
- LDA #%10000000         \ Sort the drivers by best lap time, putting the results
- JSR SortDrivers        \ into positionNumber and driversInOrder
+ LDA #%10000000         \ Sort the drivers by total race time, putting the
+ JSR SortDrivers        \ results into positionNumber and driversInOrder
 
  LDX #5                 \ We now award points to the top six drivers in the
                         \ race, so set a counter in X
@@ -29060,24 +29232,24 @@ ENDIF
  BPL game15             \ Loop back until we have awarded points to the top six
                         \ drivers
 
- LDA #0                 \ Sort the drivers by lap time, putting the results into
- JSR SortDrivers        \ positionNumber and driversInOrder
+ LDA #0                 \ Sort the drivers by best lap time, putting the results
+ JSR SortDrivers        \ into positionNumber and driversInOrder
 
  LDX #6                 \ Award a point to the driver with the fastest lap
  JSR AwardRacePoints
 
 .game16
 
- LDA #%10000000         \ Sort the drivers by lap time, putting the results into
- JSR SortDrivers        \ positionNumber and driversInOrder
+ LDA #%10000000         \ Sort the drivers by total race time, putting the
+ JSR SortDrivers        \ results into positionNumber and driversInOrder
 
  LDX #1                 \ Print the driver table, showing points awarded in the
  LDA #4                 \ last race, under the heading "POINTS", so this shows
  JSR PrintDriverTable   \ the best drivers from the last race, along with the
                         \ points awarded to the fastest six drivers
 
- LDA #0                 \ Sort the drivers by lap time, putting the results into
- JSR SortDrivers        \ positionNumber and driversInOrder
+ LDA #0                 \ Sort the drivers by best lap time, putting the results
+ JSR SortDrivers        \ into positionNumber and driversInOrder
 
  LDX #6                 \ Print the driver table, showing lap times, under the
  LDA #0                 \ heading "BEST LAP TIMES", so this shows the lap times
@@ -30193,14 +30365,14 @@ ORG &7B00
 
  STA G                  \ Store A in G so we can check the value of bit 7 below
 
- LDA driverMinutes,X    \ Print the number of minutes in driver X's lap time
- JSR Print2DigitBCD
+ LDA bestLapMinutes,X   \ Print the number of minutes in driver X's best lap
+ JSR Print2DigitBCD     \ time
 
  LDA #&3A               \ Print ":"
  JSR PrintCharacter
 
- LDA driverSeconds,X    \ Print the number of seconds in driver X's lap time
- JSR Print2DigitBCD
+ LDA bestLapSeconds,X   \ Print the number of seconds in driver X's best lap
+ JSR Print2DigitBCD     \ time
 
  ASL G                  \ If bit 7 of G is set, we do not want to print tenths
  BCS plap1              \ of a second, so jump to plap1 to return from the 
@@ -30209,8 +30381,8 @@ ORG &7B00
  LDA #&2E               \ Print "."
  JSR PrintCharacter
 
- LDA driverTenths,X     \ Print the number of tenths of a second in driver X's
- JSR Print2DigitBCD     \ lap time
+ LDA bestLapTenths,X    \ Print the number of tenths of a second in driver X's
+ JSR Print2DigitBCD     \ best lap time
 
 .plap1
 

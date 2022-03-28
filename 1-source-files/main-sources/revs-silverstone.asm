@@ -73,34 +73,34 @@ ORG CODE%
 .trackData
 
 \ .trackSection0a
-\ trackData      = L5300
+\ trackData      = &5300
 \ Bits 4-7 of trackData+0 (i.e. first digit in hex value) is an index into
 \ trackData+&0D0, trackData+&0E0, trackData+&0F0
 
 \ .trackSection1Hi
-\ trackData+&001 = L5301
+\ trackData+&001 = &5301
 
 \ .trackSection2Hi
-\ trackData+&002 = L5302
+\ trackData+&002 = &5302
 
 \ .trackSection3Hi
-\ trackData+&003 = L5303
+\ trackData+&003 = &5303
 
 
 
 \ .trackSection4Hi
-\ trackData+&004 = L5304
+\ trackData+&004 = &5304
 
 \ .trackSection5a
-\ trackData+&005 = L5305
+\ trackData+&005 = &5305
 
 \ .trackSection6Hi
-\ trackData+&006 = L5306
+\ trackData+&006 = &5306
 
 
 
 \ .trackSection7
-\ trackData+&007 = L5307
+\ trackData+&007 = &5307
 
 EQUB &03, &D1, &0C, &0F, &CF, &60, &0F, &88     \ Track section  0
 EQUB &13, &CF, &0C, &3E, &CE, &12, &3D, &00     \ Track section  1
@@ -127,26 +127,30 @@ EQUB &E2, &B6, &08, &D7, &B4, &45, &D7, &FF     \ Track section 21
 EQUB &F2, &CF, &0B, &F5, &CE, &24, &F6, &0B     \ Track section 22
 EQUB &F2, &D1, &0C, &FD, &D0, &FF, &FD, &FF     \ Track section 23
 
-EQUB &03, &D1, &0C, &0F, &CF, &60, &0F, &88     \ Unused?
+EQUB &03, &D1, &0C, &0F, &CF, &60, &0F, &88     \ Same as track section 0
+
 EQUB &00, &8E, &41, &40, &00, &00, &C9, &54     \ Unused?
 
-\ trackData+&0D0 = L53D0
+\ .trackData0D0
+\ trackData+&0D0 = &53D0
 
  EQUB &F6, &F8, &52, &B2, &07, &FC, &D9, &28
  EQUB &FB, &CD, &27, &17, &30, &FA, &D2, &00
 
-\ trackData+&0E0 = L53E0
+\ .trackData0E0
+\ trackData+&0E0 = &53E0
 
  EQUB &6C, &04, &1B, &03, &08, &4B, &3F, &0E
  EQUB &FF, &B1, &35, &F0, &C5, &F0, &C7, &24
 
-\ trackData+&0F0 = L53F0
+\ .trackData0F0
+\ trackData+&0F0 = &53F0
 
  EQUB &08, &08, &08, &08, &00, &12, &11, &08
  EQUB &08, &F0, &EC, &0C, &16, &04, &F0, &08
 
 \ .trackDataBlock1
-\ trackData+&100 = L5400
+\ trackData+&100 = &5400
 
  EQUB &FC, &FE, &02, &06, &0A, &0E, &12, &15
  EQUB &19, &1D, &21, &25, &28, &2C, &30, &33
@@ -182,7 +186,7 @@ EQUB &00, &8E, &41, &40, &00, &00, &C9, &54     \ Unused?
  EQUB &16, &11, &0C, &08, &03, &FE, &FB, &00
 
 \ .trackDataBlock2
-\ trackData+&200 = L5500
+\ trackData+&200 = &5500
 
  EQUB &00, &00, &00, &00, &00, &00, &00, &00
  EQUB &00, &00, &00, &00, &00, &00, &00, &00
@@ -218,7 +222,7 @@ EQUB &00, &8E, &41, &40, &00, &00, &C9, &54     \ Unused?
  EQUB &11, &0D, &0A, &07, &03, &00, &00, &00
 
 \ .trackDataBlock3
-\ trackData+&300 = L5600
+\ trackData+&300 = &5600
 
  EQUB &78, &78, &78, &78, &78, &77, &77, &76
  EQUB &75, &74, &73, &72, &71, &70, &6E, &6D
@@ -254,7 +258,7 @@ EQUB &00, &8E, &41, &40, &00, &00, &C9, &54     \ Unused?
  EQUB &76, &77, &77, &78, &78, &78, &78, &53
 
 \ .trackDataBlock4
-\ trackData+&400 = L5700
+\ trackData+&400 = &5700
 
  EQUB &A9, &A9, &A9, &A9, &A9, &A9, &AA, &AA
  EQUB &AB, &AB, &AC, &AD, &AE, &AF, &B0, &B2
@@ -374,9 +378,11 @@ EQUB &2A, &03, &3E, &1E, &F2, &EB, &FC, &55     \ Track section 21
 EQUB &33, &3F, &90, &FF, &2E, &EC, &DD, &12     \ Track section 22
 EQUB &04, &DE, &7D, &D2, &7E, &FE, &C5, &26     \ Track section 23
 
-EQUB &30, &20, &80, &A0, &C0, &00, &94, &63     \ Unused?
+EQUB &30, &20, &80, &A0, &C0, &00, &94, &63     \ Same as track section 0
+
 EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
 
+\ .trackData6D0
 \ trackData+&6D0 = &59D0
 \
 \ These 24 bytes are copied to L5FB0, one per track section
@@ -384,31 +390,31 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
 \ Bit 1 clear -> result is scaled by U
 \ See sub_C44C6
 
- EQUB &14               \ Track section  0
- EQUB &33               \ Track section  1
- EQUB &72               \ Track section  2
- EQUB &3B               \ Track section  3
- EQUB &18               \ Track section  4
- EQUB &33               \ Track section  5
- EQUB &15               \ Track section  6
- EQUB &15               \ Track section  7
- EQUB &15               \ Track section  8
- EQUB &3C               \ Track section  9
- EQUB &18               \ Track section 10
- EQUB &30               \ Track section 11
- EQUB &33               \ Track section 12
- EQUB &39               \ Track section 13
- EQUB &38               \ Track section 14
- EQUB &14               \ Track section 15
- EQUB &14               \ Track section 16
- EQUB &14               \ Track section 17
- EQUB &37               \ Track section 18
- EQUB &20               \ Track section 19
- EQUB &59               \ Track section 20
- EQUB &2B               \ Track section 21
- EQUB &54               \ Track section 22
- EQUB &14               \ Track section 23
-
+ EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section  0
+ EQUB %00110011         \ 001100 1 1    -12                Track section  1
+ EQUB %01110010         \ 011100 1 0    +28                Track section  2
+ EQUB %00111011         \ 001110 1 1    -14                Track section  3
+ EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section  4
+ EQUB %00110011         \ 001100 1 1    -12                Track section  5
+ EQUB %00010101         \ 000101 0 1     -5 * baseSpeed    Track section  6
+ EQUB %00010101         \ 000101 0 1     -5 * baseSpeed    Track section  7
+ EQUB %00010101         \ 000101 0 1     -5 * baseSpeed    Track section  8
+ EQUB %00111100         \ 001111 0 0    +15 * baseSpeed    Track section  9
+ EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 10
+ EQUB %00110000         \ 001100 0 0    +12 * baseSpeed    Track section 11
+ EQUB %00110011         \ 001100 1 1    -12                Track section 12
+ EQUB %00111001         \ 001110 0 1    -14 * baseSpeed    Track section 13
+ EQUB %00111000         \ 001110 0 0    +14 * baseSpeed    Track section 14
+ EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 15
+ EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 16
+ EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 17
+ EQUB %00110111         \ 001101 1 1    -13                Track section 18
+ EQUB %00100000         \ 001000 0 0     +8 * baseSpeed    Track section 19
+ EQUB %01011001         \ 010110 0 1    -22 * baseSpeed    Track section 20
+ EQUB %00101011         \ 001010 1 1    -10                Track section 21
+ EQUB %01010100         \ 010101 0 0    +21 * baseSpeed    Track section 22
+ EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 23
+ 
  EQUB &14, &67          \ Unused?
 
 \ .trackRoadSigns
@@ -439,7 +445,7 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
 \ .trackSectionCount
 \ trackData+&6FA = &59FA
 \ The number of bytes at trackData+&6D0 (24) that we copy to L5FB0
-\ Number of track sections
+\ Number of track sections * 8
 
  EQUB 24 * 8
 
@@ -520,11 +526,13 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
 
  EQUB 4
 
+\ .trackData718
 \ trackData+&718 = &5A18
 \ Passed to sub_C109B in A by ResetVariables for a practice or qualifying lap
 
  EQUB 40
 
+\ .trackData719
 \ trackData+&719 = &5A19
 \ Something to do with the lap timer - when L0046 matches this number, the lap
 \ timer is bumped up by 18/100 rather than 9/100 in sub_C17C3
@@ -533,6 +541,7 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
 
  EQUB 24
 
+\ .trackData71A
 \ trackData+&71A = &5A1A
 \ Subtracted from driver speed in sub_C27ED
 
