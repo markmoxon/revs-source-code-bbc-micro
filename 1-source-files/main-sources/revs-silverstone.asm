@@ -45,6 +45,8 @@ CODE% = &5300           \ The assembly address of the track data
 
 ORG CODE%
 
+\ Track section #        [road signs]   Description                       Size
+\
 \ Track section  0:  ||  [chicane]      Abbey Curve to Woodcote Corner     &63
 \ Track section  1:  ~~                 Woodcote Corner                    &15
 \ Track section  2:  ~~  [straight]     Woodcote Corner                    &0C
@@ -415,7 +417,9 @@ EQUB &64, &F0, &00, &00, &48, &00, &50, &52     \ Unused?
  EQUB %01010100         \ 010101 0 0    +21 * baseSpeed    Track section 22
  EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 23
  
- EQUB &14, &67          \ Unused?
+ EQUB %00010100         \ Same as track section 0
+
+ EQUB &67               \ Unused?
 
 \ .trackRoadSigns
 \ trackData+&6EA = &59EA

@@ -183,9 +183,16 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L000F
+.leaveTrackTimer
 
- SKIP 1                 \ 
+ SKIP 1                 \ The leave track timer
+                        \
+                        \ When set to a non-zero figure, the timer starts to
+                        \ count down by one every iteration of the main loop,
+                        \ until it reaches 1, at which point we leave the track
+                        \
+                        \ During the countdown we are unable to accelerate or
+                        \ brake, but can steer
 
 .L0010
 
@@ -1028,7 +1035,7 @@ ORG &0380
 
  SKIP 24                \ The y-coordinate of each of the cars on the screen
 
-.scaleUpCar
+.carScaleUp
 
  SKIP 24                \ The scaleUp factor for each of the cars
 
@@ -1938,8 +1945,8 @@ ORG &0B00
 \
 \ ******************************************************************************
 
- LDY volumeLevel        \ Set Y to the current volumeLevel, to store in byte #2
-                        \ in this sound's soundBlock
+ LDY volumeLevel        \ Set Y to the current volumeLevel, to use as the sound
+                        \ amplitude below
 
 .MakeSound
 
@@ -3663,8 +3670,10 @@ ORG &0B00
 
 .laps1
 
- LDA L000F              \ If A <> L000F, return from the subroutine (as laps8
- BNE laps8              \ contains an RTS)
+ LDA leaveTrackTimer    \ If leaveTrackTimer is non-zero then the leave track
+ BNE laps8              \ timer is counting down, so jump to laps8 to return
+                        \ from the subroutine without updating the text at the
+                        \ top of the screen
 
  JSR UpdatePositionInfo \ Otherwise update the position number and driver names
                         \ at the top of the screeen
@@ -3817,8 +3826,8 @@ ORG &0B00
  STA qualifyTimeEnding  \ that we have displayed both the one-minute warning and
                         \ the time-up message
 
- LDA #60                \ Set L000F = 60
- STA L000F
+ LDA #60                \ Set leaveTrackTimer = 60, so we leave the track in 60
+ STA leaveTrackTimer    \ main loop iterations and return to the game menu
 
  LDX #42                \ Print token 42 on the first text line at the top of
  JSR PrintFirstLine     \ the screen, to give:
@@ -5345,24 +5354,28 @@ ORG &0B00
 
 .sub_C150E
 
- LDY carTrackSection+23
- TYA
- LSR A
- LSR A
- LSR A
+ LDY carTrackSection+23 \ Set Y to the number * 8 of the track section for the
+                        \ road sign
+
+ TYA                    \ Set X = Y / 8
+ LSR A                  \
+ LSR A                  \ So X contains the number of the track section for the
+ LSR A                  \ road sign
  TAX
+
  LDA L0017
  BNE C1557
  LDA L0001
  LSR A
  BCS C152E
+
  LDA carSectionCount+23
  CMP trackSection5a,Y
  BCS C1532
 
 .C1527
 
- LDA L5FB0,X
+ LDA L5FB0,X            \ If bit 6 of L5FB0 for section X is set, jump to C1573
  ORA #&40
  BNE C1573
 
@@ -5391,8 +5404,10 @@ ORG &0B00
  STA L0020
  AND #&7F
  STA L0018
+
  LDA L5FB0,X
  STA L0016
+
  JMP C1573
 
 .C1557
@@ -5421,6 +5436,7 @@ ORG &0B00
 
  LDY coordNumber
  STA dataBlockIndex+1,Y
+
  RTS
 
 \ ******************************************************************************
@@ -5761,8 +5777,9 @@ ENDIF
 
 .keys13
 
- LDA L000F              \ If L000F is non-zero, jump to keys19 to skip the whole
- BNE keys19             \ brake/throttle section
+ LDA leaveTrackTimer    \ If leaveTrackTimer is non-zero then the leave track
+ BNE keys19             \ timer is counting down, so jump to keys19 to skip the
+                        \ whole brake/throttle section
 
  BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
  BPL keys15             \ is not configured, so jump to keys15 to check for key
@@ -6261,8 +6278,8 @@ ENDIF
                         \     and we crashed (in which case we fell through from
                         \     part 3)
                         \
-                        \   * L000F = 1 (in which case we jumped here from part
-                        \     5)
+                        \   * leaveTrackTimer = 1 (in which case we jumped here
+                        \     from part 5 after the leave track timer ran down)
                         \
                         \ In all cases, we are done racing and need to leave
                         \ the track
@@ -6344,18 +6361,20 @@ ENDIF
 
 .main11
 
- LDX L000F              \ Set X = L000F
+ LDX leaveTrackTimer    \ Set X to the current value of the leave track timer
 
- BEQ main12             \ If X = 0, i.e. L000F = 0, jump to main12 to continue
-                        \ the main driving loop
+ BEQ main12             \ If X = 0 then the leave track timer is not running, so
+                        \ jump to main12 to continue with the main driving loop
 
- DEX                    \ Set X = L000F - 1
+ DEX                    \ The leave track timer is running, so decrement the
+                        \ timer value in X
 
- BEQ main9              \ If X = 0, i.e. L000F = 1, jump to main9 to leave the
-                        \ track
+ BEQ main9              \ If X = 0 then the leave track timer was 1 before the
+                        \ decrement and has now run down, so jump to main9 to
+                        \ leave the track
 
- STX L000F              \ Set L000F = X, i.e. decrement L000F when it is neither
-                        \ 0 or 1
+ STX leaveTrackTimer    \ Store the decremented leave track timer so that it
+                        \ continues counting down towards 1
 
 .main12
 
@@ -10499,7 +10518,7 @@ ENDIF
 \
 \   objectType          The type of object to draw (0 to 12)
 \
-\   scaleUp             The scale factor for this object
+\   scaleUp             The scale factor for this object (i.e. its size)
 \
 \   colourPalette       The colour palette to use for drawing the object
 \
@@ -12307,8 +12326,9 @@ ENDIF
 .HideAllCars
 
  LDX #22                \ We are about to process the car status bytes for
-                        \ drivers 0 to 19, plus car objects 20 to 22 for the
-                        \ closest, three-object car, so set a loop counter in X
+                        \ drivers 0 to 19, plus the three extra car objects in
+                        \ 20 to 22 that make up the four-object car, so set a
+                        \ loop counter in X
 
 .hide1
 
@@ -12326,7 +12346,7 @@ ENDIF
 \
 \       Name: Delay
 \       Type: Subroutine
-\   Category: Utility routines
+\   Category: Main loop
 \    Summary: Delay for a specified number of loops
 \
 \ ------------------------------------------------------------------------------
@@ -13181,7 +13201,7 @@ ENDIF
 
 .C2911
 
- JMP C2AA6
+ JMP HideCar
 
 .C2914
 
@@ -13341,8 +13361,11 @@ ENDIF
 
 .C29F4
 
- LDA #4
+ LDA #4                 \ Set A = 4, to use as the object type for the
+                        \ one-object car
+
  JSR sub_C2A5D
+
  LDX L0045
  LDA L0055
  CMP #3
@@ -13350,9 +13373,15 @@ ENDIF
  LDA carPosition
  CMP positionAhead
  BNE C2A4D
- LDA carStatus,X
- BMI C2A0F
- DEC carStatus,X
+
+ LDA carStatus,X        \ If bit 7 of the car's status byte is set, then the car
+ BMI C2A0F              \ is not visible, so jump to C2A0F to skip the following
+                        \ instruction
+
+ DEC carStatus,X        \ The object type is stored in bits 0-3 of carStatus, so
+                        \ this decrement the car's object type from 4 (the
+                        \ standard car) to 3 (the rear wing in the four-object
+                        \ car)
 
 .C2A0F
 
@@ -13370,17 +13399,30 @@ ENDIF
  JSR sub_C0BCC
  LDA #&14
  STA L0042
- LDA #2
+
+ LDA #2                 \ Set A = 2, to use as the object type for the rear
+                        \ tyres in the four-object car
+
  JSR sub_C2A5D
+
  LDA #&15
  STA L0042
- LDA #1
+
+ LDA #1                 \ Set A = 1, to use as the object type for the body and
+                        \ helmet in the four-object car
+
  LDX #&F4
+
  JSR sub_C2A5F
+
  LDA #&16
  STA L0042
- LDA #0
+
+ LDA #0                 \ Set A = 0, to use as the object type for the front
+                        \ tyres in the four-object car
+
  LDX #&FA
+
  JSR sub_C2A5F
 
 .C2A4D
@@ -13455,10 +13497,10 @@ ENDIF
 .sub_C2A76
 
  LDY L0042
- BCS C2AA6
+ BCS HideCar
  SEC
  SBC #1
- BMI C2AA6
+ BMI HideCar
  STA yCar,Y
  LDA scaleDown
  SEC
@@ -13484,13 +13526,26 @@ ENDIF
 
 .C2A99
 
- STA scaleUpCar,Y
+ STA carScaleUp,Y
  LDA carStatus,Y
  AND #%01110000
  ORA objectType
  JMP C2AAD
 
-.C2AA6
+\ ******************************************************************************
+\
+\       Name: HideCar
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.HideCar
 
  LDY L0042
  LDA carStatus,Y
@@ -13665,7 +13720,7 @@ ENDIF
  LDA yCar,X             \ Set yObject to this car's screen y-coordinate from
  STA yObject            \ yCar
 
- LDA scaleUpCar,X       \ Set scaleUp to this car's scale factor (i.e. the size
+ LDA carScaleUp,X       \ Set scaleUp to this car's scale factor (i.e. the size
  STA scaleUp            \ of the car
 
  JSR DrawObject         \ Draw the car on-screen
@@ -21822,7 +21877,7 @@ ENDIF
 \
 \       Name: sub_C47E5
 \       Type: Subroutine
-\   Category: Utility routines
+\   Category: 
 \    Summary: Add (var12Hi var12Lo) to (var02Hi+X var02Lo+X)
 \
 \ ------------------------------------------------------------------------------
@@ -24363,8 +24418,8 @@ ENDIF
                         \ If we get here then driver X is the current player, so
                         \ the current player just finished the race
 
- LDA #80                \ Set L000F = 80
- STA L000F
+ LDA #80                \ Set leaveTrackTimer = 80, so we leave the track in 80
+ STA leaveTrackTimer    \ main loop iterations and return to the game menu
 
 .ulap7
 
@@ -30030,8 +30085,8 @@ ENDIF
 \       Name: DrawCarObjects
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw all the car objects, with three objects for the closest car
-\             in front of us
+\    Summary: Draw all the car objects, with four objects for the closest car in
+\             front of us
 \
 \ ******************************************************************************
 
@@ -30039,14 +30094,14 @@ ENDIF
 
  LDX currentPosition    \ Set X to the current player's position
 
- BPL C66E6              \ If X is positive, jump to C66E6 to skip the following
+ BPL cobj2              \ If X is positive, jump to cobj2 to skip the following
                         \ instruction
 
 .cobj1
 
  JSR DrawCarInPosition  \ Draw the car in position X
 
-.C66E6
+.cobj2
 
  JSR GetPositionBehind  \ Set X to the number of the position behind position X,
                         \ so we work our way back through the pack
@@ -30055,30 +30110,32 @@ ENDIF
  BNE cobj1              \ ahead of the current player
 
                         \ We now draw the car that's just in front of us, which
-                        \ is made up of three objects that can be skewed to make
+                        \ is made up of four objects that can be skewed to make
                         \ it look like the car is steering
 
- LDX #22                \ The three objects are the front tyres, body and rear
-                        \ wing, so set up a counter in X to work through 22, 21
-                        \ and 20, to pass to DrawCarOrSign in turn so they get
-                        \ drawn in that order
+ LDX #22                \ The four objects are the front tyres, body, rear
+                        \ wheels and rear wing, so set up a counter in X to work
+                        \ through the first three in the order 22, 21 and 20, to
+                        \ pass to DrawCarOrSign in turn so they get drawn in
+                        \ that order: front tyres, body and rear wheels
 
-.cobj2
+.cobj3
 
  STX driverPosition     \ Store X in driverPosition so it gets preserved through
                         \ the call to DrawCarOrSign
 
- JSR DrawCarOrSign      \ Draw the specified part of the three-object car just
+ JSR DrawCarOrSign      \ Draw the specified part of the four-object car just
                         \ in front of us
 
  DEX                    \ Decrement the object counter
 
  CPX #20                \ Loop back until we have drawn all three objects
- BCS cobj2
+ BCS cobj3
 
  LDX positionAhead      \ Set X to the position ahead of the current player
 
- JSR DrawCarInPosition  \ Draw the car in position X
+ JSR DrawCarInPosition  \ Draw the car in position X, which draws the rear wing
+                        \ as the last (and closest) of the four objects
 
  RTS                    \ Return from the subroutine
 
@@ -30137,11 +30194,11 @@ ORG &7B00
                         \ We then pass N and TT (the latter via A) into the
                         \ DrawCarInMirror routine
 
- LDA scaleUpCar,X       \ Set A = the scale factor (i.e. size) for the driver
+ LDA carScaleUp,X       \ Set A = the scale factor (i.e. size) for the driver
                         \ behind
 
  LSR A                  \ Set T = A / 8
- LSR A                  \       = scaleUpCar / 8
+ LSR A                  \       = carScaleUp / 8
  LSR A
  STA T
 
