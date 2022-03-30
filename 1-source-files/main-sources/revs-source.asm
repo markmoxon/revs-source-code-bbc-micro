@@ -390,11 +390,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.xObject
+.xCoord
 
  SKIP 1                 \ The x-coordinate of the centre of the current object
 
-.yObject
+.yCoord
 
  SKIP 1                 \ The y-coordinate of the centre of the current object
                         \
@@ -491,6 +491,10 @@ ORG &0000
 
  SKIP 0                 \ Temporary storage
 
+.objectNumber
+
+ SKIP 0                 \ The object number of the four-part car we are drawing
+
 .L0042
 
  SKIP 1                 \ 
@@ -510,8 +514,7 @@ ORG &0000
 
 .driverPosition
 
- SKIP 0                 \ The position of the car we are currently drawing in
-                        \ the DrawCarInPosition routine
+ SKIP 0                 \ The position of the car we are currently drawing
 
 .L0045
 
@@ -976,7 +979,7 @@ ORG &0100
                         \
                         \ Stored as an 8-bit value (carSpeedHi carSpeedLo)
 
-.carProgressFrac
+.objProgressFrac
 
  SKIP 20                \ Fractional byte of each car's progress around the
                         \ track
@@ -985,23 +988,23 @@ ORG &0100
                         \ the track, in terms of progress from the starting line
                         \
                         \ When the fraction counter rolls over, we increment the
-                        \ car's progress in (carProgressHi carProgressLo)
+                        \ car's progress in (objProgressHi objProgressLo)
 
 .L0178
 
  SKIP 20                \ 
 
-.carStatus
+.objectStatus
 
- SKIP 24                \ Various status flags for each car
+ SKIP 24                \ Various status flags for each object
                         \
-                        \   * Bits 0-3 = the car's object type
+                        \   * Bits 0-3 = the object type
                         \
                         \   * Bit 6: ??? see sub_C1163, ClearTotalRaceTime,
                         \            MoveCars part 2
                         \
-                        \   * Bit 7: 0 = car is visible
-                        \            1 = car is hidden
+                        \   * Bit 7: 0 = object is visible
+                        \            1 = object is hidden
                         \
                         \ Set to &80 in ResetVariables
 
@@ -1030,21 +1033,21 @@ ORG &0100
 
 ORG &0380
 
-.xCarLo
+.xObjectLo
 
- SKIP 24                \ Low byte of each car's x-coordinate on the screen
+ SKIP 24                \ Low byte of each object's x-coordinate on the screen
 
-.xCarHi
+.xObjectHi
 
- SKIP 24                \ High byte of each car's x-coordinate on the screen
+ SKIP 24                \ High byte of each object's x-coordinate on the screen
 
-.yCar
+.yObject
 
- SKIP 24                \ The y-coordinate of each of the cars on the screen
+ SKIP 24                \ The y-coordinate of each of the objects on the screen
 
 .carScaleUp
 
- SKIP 24                \ The scaleUp factor for each of the cars
+ SKIP 24                \ The scaleUp factor for each of the objects
 
  SKIP 32                \ These bytes appear to be unused ???
                         \ (not yet added to deep dive)
@@ -1282,10 +1285,9 @@ ORG &0380
 
  SKIP 2                 \ These bytes appear to be unused
 
-.carTrackSection
+.objTrackSection
 
- SKIP 24                \ The number of the track section * 8 for each driver
-                        \ (or for the road sign in carTrackSection+23)
+ SKIP 24                \ The number of the track section * 8 for each object
                         \
                         \ In the Silverstone track there are 24 track sections
                         \ numbered from 0 to 23, so this ranges from 0 to 184
@@ -1313,12 +1315,12 @@ ORG &0380
 
 ORG &0880
 
-.carSectionCount
+.objSectionCount
 
- SKIP 24                \ Each driver's progress through the current track
-                        \ section
+ SKIP 24                \ Each object's position within the current track
+                        \ section, counting from the start of the section
                         \
-                        \ Increments along with carProgressLo as the driver
+                        \ Increments along with objProgressLo as the object
                         \ moves through the section, until it reaches the
                         \ section's trackSectionSize (the section's length),
                         \ at which point it resets to zero for the next section
@@ -1332,17 +1334,20 @@ ORG &0880
 
 .totalRaceSeconds
 
- SKIP 36                \ Seconds of each driver's total race time, stored in
+ SKIP 20                \ Seconds of each driver's total race time, stored in
                         \ BCD
                         \
                         \ Indexed by driver number (0 to 19)
 
-.carProgressLo
+ SKIP 16                \ These bytes appear to be unused
 
- SKIP 24                \ High byte of each car's progress around the track
+.objProgressLo
+
+ SKIP 24                \ High byte of each object's progress around the track
                         \
-                        \ This is the car's position on the track, in terms of
-                        \ progress from the starting line
+                        \ This is the object's position on the track, in terms
+                        \ of progress from the starting line, and is typically
+                        \ used for car objects
                         \
                         \ It is zero when the car is on the starting line, and
                         \ goes up to (trackLengthHi trackLengthLo) as the car
@@ -1351,17 +1356,18 @@ ORG &0880
                         \
                         \ Set to (trackStartHi trackStartLo) in ResetVariables
                         \
-                        \ For the Silverstone track, carProgress is initialised
+                        \ For the Silverstone track, objProgress is initialised
                         \ to &034B and has a maximum value of &0400
                         \
-                        \ Stored as a 16-bit value (carProgressHi carProgressLo)
+                        \ Stored as a 16-bit value (objProgressHi objProgressLo)
 
-.carProgressHi
+.objProgressHi
 
- SKIP 24                \ Top byte of each car's progress around the track
+ SKIP 24                \ Top byte of each object's progress around the track
                         \
-                        \ This is the car's position on the track, in terms of
-                        \ progress from the starting line
+                        \ This is the object's position on the track, in terms
+                        \ of progress from the starting line, and is typically
+                        \ used for car objects
                         \
                         \ It is zero when the car is on the starting line, and
                         \ goes up to (trackLengthHi trackLengthLo) as the car
@@ -1370,10 +1376,10 @@ ORG &0880
                         \
                         \ Set to (trackStartHi trackStartLo) in ResetVariables
                         \
-                        \ For the Silverstone track, carProgress is initialised
+                        \ For the Silverstone track, objProgress is initialised
                         \ to &034B and has a maximum value of &0400
                         \
-                        \ Stored as a 16-bit value (carProgressHi carProgressLo)
+                        \ Stored as a 16-bit value (objProgressHi objProgressLo)
 
 .var20Lo
 
@@ -1383,7 +1389,11 @@ ORG &0880
 
 .var17Lo
 
- SKIP 130               \ 
+ SKIP 124               \ 
+
+.var13Lo
+
+ SKIP 6                 \ 
 
 .var18Lo
 
@@ -1401,7 +1411,11 @@ ORG &0880
 
 .var17Hi
 
- SKIP 130               \ 
+ SKIP 124               \ 
+
+.var13Hi
+
+ SKIP 6                 \ 
 
 .var18Hi
 
@@ -3870,7 +3884,7 @@ ORG &0B00
  STA V                  \ Store the value of A in V, so we can retrieve it later
 
  SEC                    \ Set bit 7 of updateLapTimes, so when we move the cars
- ROR updateLapTimes     \ forward in MoveCarForwards, the lap number and lap
+ ROR updateLapTimes     \ forward in MoveObjectForward, the lap number and lap
                         \ time are not affected
 
 .P10A1
@@ -3879,14 +3893,14 @@ ORG &0B00
 
 .P10A3
 
- JSR MoveCarForwards    \ Move driver X forwards along the track
+ JSR MoveObjectForward  \ Move driver X forwards along the track
 
  DEX                    \ Decrement the loop counter
 
  BPL P10A3              \ Loop back until we have processed all 20 drivers
 
- LDA carProgressLo      \ If carProgress for driver 0 is non-zero, jump back to
- ORA carProgressHi      \ P10A1 to repeat the above loop
+ LDA objProgressLo      \ If objProgress for driver 0 is non-zero, jump back to
+ ORA objProgressHi      \ P10A1 to repeat the above loop
  BNE P10A1
 
  LDA #&FF               \ Set G = -1
@@ -3912,7 +3926,7 @@ ORG &0B00
  LDA driversInOrder,X   \ Set X to the number of driver in position X
  TAX
 
- JSR MoveCarBackwards   \ Move driver X backwards along the track
+ JSR MoveObjectBack     \ Move driver X backwards along the track
 
  PLA                    \ Retrieve X from the stack
  TAX
@@ -3938,23 +3952,23 @@ ORG &0B00
  CPX #20                \ Loop back until we have done G = 0 to 19
  BCC C10B7
 
-                        \ Loop until GetCarDistance returns C flag clear and
+                        \ Loop until GetObjectDistance returns C flag clear and
                         \ A = 32
 
 .C10D7
 
  LDX #23                \ Set X to the driver number for the road sign
 
- JSR MoveCarForwards    \ Move the sign forwards along the track
+ JSR MoveObjectForward  \ Move the sign forwards along the track
 
  LDY #23
 
  LDX currentPlayer
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
-                        \ to GetCarDistance
+                        \ to GetObjectDistance
 
- JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
+ JSR GetObjectDistance  \ Set A and T to the distance between drivers X and Y
 
  BCS C10D7              \ If the C flag is set then the cars are far apart, so
                         \ jump to C10D7
@@ -3973,7 +3987,7 @@ ORG &0B00
 
 .P10F2
 
- JSR MoveCarBackwards   \ Move the sign backwards along the track
+ JSR MoveObjectBack     \ Move the sign backwards along the track
 
  DEC V
 
@@ -3985,7 +3999,7 @@ ORG &0B00
 
  INC L0042
 
- JSR MoveCarBackwards   \ Move the sign backwards along the track
+ JSR MoveObjectBack     \ Move the sign backwards along the track
 
  BCC P10F9
 
@@ -4020,7 +4034,7 @@ ORG &0B00
  BNE P1113
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
-                        \ MoveCarForwards will update the lap number and lap
+                        \ MoveObjectForward will update the lap number and lap
                         \ time once again
 
  RTS                    \ Return from the subroutine
@@ -4127,10 +4141,10 @@ ORG &0B00
  LDA #0                 \ Set carMoving = 0 to denote that the car is stationary
  STA carMoving
 
- STA L006D              \ Set L006D = 0 to stop the cars from moving round the
-                        \ track
+ STA L006D              \ Set L006D = 0 so the call to MoveCars below will move
+                        \ the cars round the track
 
- JSR HideAllCars        \ Set all the cars to
+ JSR HideAllCars        \ Set all the cars to be hidden
 
  LDX currentPlayer      \ Clear the current player's total race time if this is
  JSR ClearTotalRaceTime \ an incomplete race
@@ -4168,7 +4182,7 @@ ORG &0B00
 
 .C1199
 
- LDA carStatus,X
+ LDA objectStatus,X
  AND #%01000000
  BNE C11A7
 
@@ -4233,8 +4247,8 @@ ORG &0B00
  LDA numberOfLaps       \ Compare numberOfLaps with the current player's lap
  CMP driverLapNumber,X  \ number
 
- LDA #%11000000         \ Set bits 6 and 7 of the current player's car status
- STA carStatus,X
+ LDA #%11000000         \ Set bits 6 and 7 of the status byte for the current
+ STA objectStatus,X     \ player's carobject, so it's hidden and ???
 
  BCC clap1              \ If numberOfLaps < current player's lap number, then
                         \ the player has finished the race, so skip the
@@ -4292,12 +4306,12 @@ ORG &0B00
  TAY
  LDX L0045
  JSR sub_C2937
- LDA xCarLo,X
+ LDA xObjectLo,X
  STA xPlayerLo
 
 .C1200
 
- LDA xCarHi,X
+ LDA xObjectHi,X
  EOR directionFacing
  STA xPlayerHi
  RTS
@@ -4516,7 +4530,7 @@ ORG &0B00
  LDA directionFacing
  BMI C1284
 
- LDY carTrackSection+23
+ LDY objTrackSection+23
 
  JSR CopyCoordinates    \ Copy the two trackSection coordinates for track
                         \ section Y into var20 and var27, and set L0002 to
@@ -4540,7 +4554,7 @@ ORG &0B00
 
  AND #7
  STA L0007
- LDY carTrackSection+23
+ LDY objTrackSection+23
  LDA trackSection0b,Y
  STA L0001
  LDA #0
@@ -4711,7 +4725,7 @@ ORG &0B00
  LDA trackSectionCount
  LSR A
  AND #&F8
- CMP carTrackSection,X
+ CMP objTrackSection,X
  BNE C131B
 
  LDA #1                 \ Set L0030 = 1
@@ -4719,7 +4733,7 @@ ORG &0B00
 
 .C131B
 
- JSR MoveCarForwards    \ Move the sign forwards along the track
+ JSR MoveObjectForward  \ Move the sign forwards along the track
 
  BCC C1333
  JSR sub_C1267
@@ -4727,10 +4741,10 @@ ORG &0B00
 
 .C1326
 
- LDA carTrackSection+23
+ LDA objTrackSection+23
  STA signSection
 
- JSR MoveCarBackwards   \ Move the sign backwards along the track
+ JSR MoveObjectBack     \ Move the sign backwards along the track
 
  BCC C1333
  JSR sub_C1267
@@ -4745,7 +4759,7 @@ ORG &0B00
  PHP
  LDA L0001
  BCS C134F
- LDY carSectionCount+23
+ LDY objSectionCount+23
  CPY #1
  BCC C134D
  CPY #&0A
@@ -4758,21 +4772,21 @@ ORG &0B00
 .C134F
 
  STA W
- LDY carTrackSection+23
+ LDY objTrackSection+23
  LDA trackSectionSize,Y
  PLP
  BCC C1365
  LSR A
  TAY
  LDA W
- CPY carSectionCount+23
+ CPY objSectionCount+23
  BEQ C137C
  BNE C1378
 
 .C1365
 
  SEC
- SBC carSectionCount+23
+ SBC objSectionCount+23
  TAY
  LDA W
  CPY #7
@@ -5023,13 +5037,13 @@ ORG &0B00
                         \     track, in which case it is reversing along the
                         \     track while facing forwards
 
- JSR MoveCarForwards    \ Move the current player forwards along the track
+ JSR MoveObjectForward  \ Move the current player forwards along the track
 
  RTS                    \ Return from the subroutine
 
 .pcar1
 
- JSR MoveCarBackwards   \ Move current player backwards along the track
+ JSR MoveObjectBack     \ Move current player backwards along the track
 
  RTS                    \ Return from the subroutine
 
@@ -5095,16 +5109,16 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: MoveCarForwards
+\       Name: MoveObjectForward
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Move a specified driver forwards along the track
+\    Summary: Move a specified object forwards along the track
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves driver X forwards, updating carTrackSection, carSectionCount and
-\ carProgress accordingly, as well as the lap number and lap time (but only if
-\ bit 7 of updateLapTimes is clear).
+\ Moves object X forwards, updating objTrackSection, objSectionCount and
+\ objProgress accordingly, as well as the lap number and lap time (but only if
+\ this is a driver and bit 7 of updateLapTimes is clear).
 \
 \ Arguments:
 \
@@ -5125,23 +5139,23 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.MoveCarForwards
+.MoveObjectForward
 
- LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
+ LDY objTrackSection,X  \ Set Y to the track section number * 8 for object X
 
- LDA carSectionCount,X  \ Set A = carSectionCount + 1
+ LDA objSectionCount,X  \ Set A = objSectionCount + 1
  CLC                    \
  ADC #1                 \ This increments the track section counter, which keeps
-                        \ track of the driver's progress through the current
-                        \ track section, so they move forwards
+                        \ track of the object's progress through the current
+                        \ track section, so it moves forwards
 
- CMP trackSectionSize,Y \ If A < Y-th trackSectionSize, then the driver is still
+ CMP trackSectionSize,Y \ If A < Y-th trackSectionSize, then the object is still
  PHP                    \ within the current track section, so clear the C flag
-                        \ and store it on the stack, otherwise the driver has
+                        \ and store it on the stack, otherwise the object has
                         \ now reached the end of the current section, so set the
                         \ C flag and store it on the stack
 
- BCC fore2              \ If A < Y-th trackSectionSize, then the driver is still
+ BCC fore2              \ If A < Y-th trackSectionSize, then the object is still
                         \ within the current track section, so jump to fore2 to
                         \ update the track section counter with the new value
 
@@ -5159,41 +5173,42 @@ ORG &0B00
 
 .fore1
 
- STA carTrackSection,X  \ Update the driver's track section number to the new
+ STA objTrackSection,X  \ Update the object's track section number to the new
                         \ one that they just moved into
 
- LDA #0                 \ The driver just entered a new track section, so we
+ LDA #0                 \ The object just entered a new track section, so we
                         \ need to zero the section counter, which keeps track of
-                        \ how far through the current section the driver is, so
+                        \ how far through the current section the object is, so
                         \ set A to 0 to set as its new value below
 
 .fore2
 
- STA carSectionCount,X  \ Set the track section counter to the new value
+ STA objSectionCount,X  \ Set the track section counter to the new value
 
-                        \ We now need to increment the driver's progress in
-                        \ (carProgressHi carProgressLo)
+                        \ We now need to increment the object's progress in
+                        \ (objProgressHi objProgressLo)
 
- INC carProgressLo,X    \ Increment (carProgressHi carProgressLo) for driver X,
+ INC objProgressLo,X    \ Increment (objProgressHi objProgressLo) for object X,
                         \ starting with the low byte
 
  BNE fore3              \ And then the high byte, if the low byte overflows
- INC carProgressHi,X
+ INC objProgressHi,X
 
 .fore3
 
- LDA carProgressLo,X    \ If carProgress <> trackLength, then the driver has not
+ LDA objProgressLo,X    \ If objProgress <> trackLength, then the object has not
  CMP trackLengthLo      \ yet reached the end of the track, so jump to fore4 to
  BNE fore4              \ return from the subroutine as we are done
- LDA carProgressHi,X
+ LDA objProgressHi,X
  CMP trackLengthHi
  BNE fore4
 
- LDA #0                 \ The driver has just reached the end of the track, so
- STA carProgressLo,X    \ set (carProgressHi carProgressLo) = 0 to wrap round to
- STA carProgressHi,X    \ the start again
+ LDA #0                 \ The object has just reached the end of the track, so
+ STA objProgressLo,X    \ set (objProgressHi objProgressLo) = 0 to wrap round to
+ STA objProgressHi,X    \ the start again
 
- JSR UpdateLaps         \ Increment the lap number and lap times for driver X
+ JSR UpdateLaps         \ Increment the lap number and lap times for object X,
+                        \ for when this object is a car
 
 .fore4
 
@@ -5205,45 +5220,45 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: MoveCarBackwards
+\       Name: MoveObjectBack
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Move a specified driver backwards along the track
+\    Summary: Move a specified object backwards along the track
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves driver X backwards, updating carTrackSection, carSectionCount,
-\ carProgress and the current lap number accordingly.
+\ Moves object X backwards, updating objTrackSection, objSectionCount,
+\ objProgress and the current lap number accordingly.
 \
 \ Arguments:
 \
-\   X                   Driver number (0-22, or 23 for road sign)
+\   X                   Object number (0-22, or 23 for road sign)
 \
 \ Returns:
 \
-\   C flag              Whether the driver has moved into a new section:
+\   C flag              Whether the object has moved into a new section:
 \
-\                         * Clear if the driver is still within the same track
+\                         * Clear if the object is still within the same track
 \                           section as before
 \
-\                         * Set if the driver has now moved back into the
+\                         * Set if the object has now moved back into the
 \                           previous track section
 \
 \ ******************************************************************************
 
-.MoveCarBackwards
+.MoveObjectBack
 
- LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
+ LDY objTrackSection,X  \ Set Y to the track section number * 8 for object X
 
- LDA carSectionCount,X  \ Set A = carSectionCount, which keeps track of the
-                        \ driver's progress through the current track section
+ LDA objSectionCount,X  \ Set A = objSectionCount, which keeps track of the
+                        \ object's progress through the current track section
 
- CLC                    \ If A is non-zero then the driver can move backwards by
+ CLC                    \ If A is non-zero then the object can move backwards by
  BNE back2              \ one step while staying in the same track section, so
                         \ clear the C flag and jump to back2 to store this
                         \ result on the stack
 
-                        \ Otherwise moving backwards will move the driver into
+                        \ Otherwise moving backwards will move the object into
                         \ the previous track section
 
  TYA                    \ Store the current track section number * 8 in A
@@ -5251,7 +5266,7 @@ ORG &0B00
  BNE back1              \ If the track section number is non-zero, then skip the
                         \ following instruction
 
-                        \ If we get here then the driver is in the first track
+                        \ If we get here then the object is in the first track
                         \ section and is moving backwards into the previous
                         \ track section, so we have to wrap around to the end
                         \ of the track to move into the very last track section
@@ -5272,55 +5287,55 @@ ORG &0B00
                         \ So A is now the number * 8 of the previous track
                         \ section, which is where the driver is moving to
 
- STA carTrackSection,X  \ Update the driver's track section number to the new
+ STA objTrackSection,X  \ Update the object's track section number to the new
                         \ one that they just moved into
 
  TAY                    \ Set A to the size of the new track section, so A
  LDA trackSectionSize,Y \ contains the track section counter for the end of the
-                        \ new track section (so the driver moves to the end of
+                        \ new track section (so the object moves to the end of
                         \ the new track section)
 
- SEC                    \ Set the C flag to indicate that the driver has moved
+ SEC                    \ Set the C flag to indicate that the object has moved
                         \ into a different track section
 
 .back2
 
  PHP                    \ Store the C flag on the stack, which will be clear if
-                        \ the driver is still within the same track section, set
+                        \ the object is still within the same track section, set
                         \ otherwise
 
- SEC                    \ A contains the driver's progress through the current
- SBC #1                 \ track section, so subtract 1 to move the driver
+ SEC                    \ A contains the object's progress through the current
+ SBC #1                 \ track section, so subtract 1 to move the object
                         \ backwards
 
- STA carSectionCount,X  \ Set the track section counter to the new value
+ STA objSectionCount,X  \ Set the track section counter to the new value
 
 .back3
 
-                        \ We now need to decrement the driver's progress in
-                        \ (carProgressHi carProgressLo)
+                        \ We now need to decrement the object's progress in
+                        \ (objProgressHi objProgressLo)
 
- LDA carProgressLo,X    \ If the low byte of carProgress for driver X is
+ LDA objProgressLo,X    \ If the low byte of objProgress for object X is
  BNE back4              \ non-zero, then jump to back4 to decrement the low
                         \ byte, and we are done
 
- DEC carProgressHi,X    \ Otherwise decrement the high byte
+ DEC objProgressHi,X    \ Otherwise decrement the high byte
 
  BPL back4              \ If the high byte is positive, jump to back4 to
                         \ decrement the low byte to &FF, and we are done
 
                         \ If we get here then we just decremented the 16-bit
-                        \ value in (carProgressHi carProgressLo) into negative
-                        \ territory, so the driver just moved backwards across
+                        \ value in (objProgressHi objProgressLo) into negative
+                        \ territory, so the object just moved backwards across
                         \ the starting line, into the previous lap
 
- LDA trackLengthLo      \ Set carProgress for driver X = trackLength
- STA carProgressLo,X    \
- LDA trackLengthHi      \ So carProgress wraps around to the progress value for
- STA carProgressHi,X    \ the end of the track, as trackLength contains the
+ LDA trackLengthLo      \ Set objProgress for driver X = trackLength
+ STA objProgressLo,X    \
+ LDA trackLengthHi      \ So objProgress wraps around to the progress value for
+ STA objProgressHi,X    \ the end of the track, as trackLength contains the
                         \ length of the full track (in terms of progress)
 
- CPX currentPlayer      \ If driver X is not the current player, jump to back3
+ CPX currentPlayer      \ If object X is not the current player, jump to back3
  BNE back3              \ to decrement the newly wrapped progress figure
 
  LDA driverLapNumber,X  \ If the current lap number for the current player is
@@ -5337,11 +5352,11 @@ ORG &0B00
 
 .back4
 
- DEC carProgressLo,X    \ Decrement the low byte of the driver's progress to
+ DEC objProgressLo,X    \ Decrement the low byte of the object's progress to
                         \ move them backwards
 
  PLP                    \ Retrieve the C flag from the stack so we can return it
-                        \ from the subroutine, so it is clear if the driver is
+                        \ from the subroutine, so it is clear if the object is
                         \ still within the same track section, set otherwise
 
  RTS                    \ Return from the subroutine
@@ -5361,7 +5376,7 @@ ORG &0B00
 
 .sub_C150E
 
- LDY carTrackSection+23 \ Set Y to the number * 8 of the track section for the
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
                         \ road sign
 
  TYA                    \ Set X = Y / 8
@@ -5376,7 +5391,7 @@ ORG &0B00
  LSR A
  BCS C152E
 
- LDA carSectionCount+23
+ LDA objSectionCount+23
  CMP trackSection5a,Y
  BCS C1532
 
@@ -6562,24 +6577,24 @@ ENDIF
 
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
- LDX #23                \ We now zero the 24-byte blocks at carTrackSection and
-                        \ carSectionCount, and initialise all 24 bytes in
-                        \ (carProgressHi carProgressLo), so set up a loop
+ LDX #23                \ We now zero the 24-byte blocks at objTrackSection and
+                        \ objSectionCount, and initialise all 24 bytes in
+                        \ (objProgressHi objProgressLo), so set up a loop
                         \ counter in X
 
  STX L62F9              \ Set L62F9 = 23
 
 .rese3
 
- LDA trackStartHi       \ Set the X-th byte of (carProgressHi carProgressLo) to
- STA carProgressHi,X    \ the 16-bit value in (trackStartHi trackStartLo), which
+ LDA trackStartHi       \ Set the X-th byte of (objProgressHi objProgressLo) to
+ STA objProgressHi,X    \ the 16-bit value in (trackStartHi trackStartLo), which
  LDA trackStartLo       \ is &034B for the Silverstone track
- STA carProgressLo,X
+ STA objProgressLo,X
 
- LDA #0                 \ Zero the X-th byte of carTrackSection
- STA carTrackSection,X
+ LDA #0                 \ Zero the X-th byte of objTrackSection
+ STA objTrackSection,X
 
- STA carSectionCount,X  \ Zero the X-th byte of carSectionCount
+ STA objSectionCount,X  \ Zero the X-th byte of objSectionCount
 
  DEX                    \ Decrement the loop counter
 
@@ -6625,15 +6640,15 @@ ENDIF
  JSR sub_C109B          \ ???
 
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
-                        \ L0114, carProgressFrac, (carSpeedHi carSpeedLo) and
+                        \ L0114, objProgressFrac, (carSpeedHi carSpeedLo) and
                         \ positionNumber, and initialise the 20-byte blocks
-                        \ at carStatus, totalRaceMinutes and carCornerSpeed,
+                        \ at objectStatus, totalRaceMinutes and carCornerSpeed,
                         \ so set up a loop counter in X
 
 .rese5
 
- LDA #%10000000         \ Set the X-th byte of carStatus to %10000000
- STA carStatus,X
+ LDA #%10000000         \ Set the X-th byte of objectStatus to %10000000, so the
+ STA objectStatus,X     \ object is hidden
 
  STA totalRaceMinutes,X \ Set the X-th byte of totalRaceMinutes to -1
 
@@ -6642,7 +6657,7 @@ ENDIF
 
  STA L0114,X            \ Zero the X-th byte of L0114
 
- STA carProgressFrac,X  \ Zero the X-th byte of carProgressFrac
+ STA objProgressFrac,X  \ Zero the X-th byte of objProgressFrac
 
  STA carSpeedHi,X       \ Zero the X-th byte of carSpeedHi
 
@@ -7461,13 +7476,13 @@ ENDIF
  ASL V                  \ so A < 96 or A >= -96
  ROL A
 
- CLC                    \ Set xObject = A + 80
+ CLC                    \ Set xCoord = A + 80
  ADC #80                \
- STA xObject            \ where 80 is the x-coordinate of the middle of the
+ STA xCoord             \ where 80 is the x-coordinate of the middle of the
                         \ screen (as the screen is 160 pixels wide)
 
- LDA L5F20,X            \ Set yObject = X-th value from L5F20
- STA yObject
+ LDA L5F20,X            \ Set yCoord = X-th value from L5F20
+ STA yCoord
 
  LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
                         \ two places
@@ -7630,7 +7645,7 @@ ENDIF
 
 .C1BDF
 
- LDA xCarHi,X
+ LDA xObjectHi,X
  SEC
  SBC xPlayerHi
  ASL A
@@ -7719,7 +7734,7 @@ ENDIF
 \
 \   nextEdge            The next edge (as a scaled scaffold measurement)
 \
-\   xObject             The pixel x-coordinate of the centre of the object
+\   xCoord              The pixel x-coordinate of the centre of the object
 \
 \   colourData          Colour data:
 \
@@ -7872,7 +7887,7 @@ ENDIF
                         \
                         \   * Left edge, set:
                         \
-                        \       thisEdge = xObject + thisEdge / 2
+                        \       thisEdge = xCoord + thisEdge / 2
                         \       blockNumber = thisEdge / 4
                         \
                         \   * Right or extra edge, set:
@@ -7908,8 +7923,8 @@ ENDIF
 
 .draw2
 
- CLC                    \ Set thisEdge = A + xObject
- ADC xObject            \              = thisEdge / 2 + xObject
+ CLC                    \ Set thisEdge = A + xCoord
+ ADC xCoord             \              = thisEdge / 2 + xCoord
  STA thisEdge
 
  LSR A                  \ Set blockNumber = A / 4
@@ -7938,7 +7953,7 @@ ENDIF
                         \ the edge type, so now we set nextEdgeCoord and
                         \ nextBlockNumber as follows:
                         \
-                        \   nextEdgeCoord = xObject + nextEdge / 2
+                        \   nextEdgeCoord = xCoord + nextEdge / 2
                         \
                         \   nextBlockNumber = nextEdgeCoord / 4
 
@@ -7964,8 +7979,8 @@ ENDIF
 
 .draw6
 
- CLC                    \ Set nextEdgeCoord = A + xObject
- ADC xObject            \        = nextEdge / 2 + xObject
+ CLC                    \ Set nextEdgeCoord = A + xCoord
+ ADC xCoord             \        = nextEdge / 2 + xCoord
  STA nextEdgeCoord
 
  LSR A                  \ Set nextBlockNumber = A / 4
@@ -7976,7 +7991,7 @@ ENDIF
                         \
                         \   * Left edge:
                         \
-                        \       thisEdge = xObject + thisEdge / 2
+                        \       thisEdge = xCoord + thisEdge / 2
                         \       blockNumber = thisEdge / 4
                         \
                         \   * Right or extra edge, set:
@@ -7986,7 +8001,7 @@ ENDIF
                         \
                         \ and we also have the following:
                         \
-                        \   nextEdgeCoord = xObject + nextEdge / 2
+                        \   nextEdgeCoord = xCoord + nextEdge / 2
                         \   nextBlockNumber = nextEdgeCoord / 4
                         \
                         \ So we have:
@@ -10498,7 +10513,7 @@ IF _SUPERIOR
 .sub_C1FA8
 
  BCC C1FAF
- LDA carSectionCount,X
+ LDA objSectionCount,X
  CMP #3
 
 .C1FAF
@@ -10987,7 +11002,7 @@ ENDIF
 \                       for this this object (i.e. the index of the data for the
 \                       object's first part)
 \
-\   yObject             The object's y-coordinate (for the centre of the object)
+\   yCoord              The object's y-coordinate (for the centre of the object)
 \                       in terms of track lines, so 80 is the top of the track
 \                       view and 0 is the bottom of the track view
 \
@@ -11035,8 +11050,8 @@ ENDIF
  LDX objectTop,Y        \ Set A to the scaled scaffold for the top of this part
  LDA scaledScaffold,X   \ of the object
 
- CLC                    \ Set A = A + yObject
- ADC yObject            \
+ CLC                    \ Set A = A + yCoord
+ ADC yCoord             \
                         \ so A is now the track line of the top of the object
 
  BMI drob9              \ If A > 128, then the top of this object part is well
@@ -11055,8 +11070,8 @@ ENDIF
  LDX objectBottom,Y     \ Set A to the scaled scaffold for the bottom of this
  LDA scaledScaffold,X   \ part of the object
 
- CLC                    \ Set A = A + yObject
- ADC yObject            \
+ CLC                    \ Set A = A + yCoord
+ ADC yCoord             \
                         \ so A is now the track line of the bottom of the object
 
  BMI drob3              \ If A < 0, then the bottom of this object part is lower
@@ -11226,35 +11241,34 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2145
+\       Name: ProjectObjectX
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The offset of the variable to use:
+\
+\                         * &F4 = var13
+\
+\                         * &FA = var18
+\
+\                         * &FD = var14
+\
+\   Y                   The offset from var22 to use
+\
+\ Other entry points:
+\
+\   ProjectObjectX-2    Use var22 (Y = 0)
 \
 \ ******************************************************************************
-
-.sub_C2145
 
  LDY #0
 
-\ ******************************************************************************
-\
-\       Name: sub_C2147
-\       Type: Subroutine
-\   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2147
+.ProjectObjectX
 
  LDA var20Lo,X
  SEC
@@ -11476,35 +11490,22 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2285
+\       Name: ProjectObjectY
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   ProjectObjectY-2    Use var21 (Y = 0)
 \
 \ ******************************************************************************
-
-.sub_C2285
 
  LDY #0
 
-\ ******************************************************************************
-\
-\       Name: sub_C2287
-\       Type: Subroutine
-\   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.sub_C2287
+.ProjectObjectY
 
  LDA var20Lo+1,X
  SEC
@@ -11659,7 +11660,7 @@ ENDIF
  BPL C234F              \ facing forwards, so jump to C234F
 
  STA T
- LDA carTrackSection+23
+ LDA objTrackSection+23
  CLC
  ADC #8
  SEC
@@ -11671,7 +11672,7 @@ ENDIF
 .C234F
 
  CLC
- ADC carTrackSection+23
+ ADC objTrackSection+23
  CMP trackSectionCount
  BCC C235B
  SBC trackSectionCount
@@ -11690,7 +11691,7 @@ ENDIF
  JSR CopyCoordinate     \ section Y into var14
 
 
- JSR sub_C2145
+ JSR ProjectObjectX-2
  LDY L0042
 
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
@@ -11707,7 +11708,7 @@ ENDIF
  CPX #&28
  BCS C239A
  LDX #&FD
- JSR sub_C2285
+ JSR ProjectObjectY-2
  LDX L0042
  LDA LL
  STA L5F20,X
@@ -11766,7 +11767,7 @@ ENDIF
 
 .sub_C23BB
 
- JSR sub_C2145
+ JSR ProjectObjectX-2
  LDY L0012
 
 \ ******************************************************************************
@@ -11837,7 +11838,7 @@ ENDIF
 
 .C23FC
 
- JSR sub_C2285
+ JSR ProjectObjectY-2
  BCS C2403
  BPL C246A
 
@@ -11897,7 +11898,7 @@ ENDIF
 
  LDX #&FA
  JSR sub_C23BB
- JSR sub_C2285
+ JSR ProjectObjectY-2
  BCS C2469
  LDX L0014
 
@@ -12340,9 +12341,9 @@ ENDIF
 
 .hide1
 
- LDA carStatus,X        \ Set bit 7 in the X-th byte of carStatus to set car X
- ORA #%10000000         \ to hidden
- STA carStatus,X
+ LDA objectStatus,X     \ Set bit 7 in the X-th byte of objectStatus to set the
+ ORA #%10000000         \ car for driver X to be hidden
+ STA objectStatus,X
 
  DEX                    \ Decrement the loop counter
 
@@ -12404,16 +12405,15 @@ ENDIF
 
  LDY driversInOrder,X   \ Set Y to the number of the driver in behind us
 
- LDA carStatus,Y        \ Clear bit 7 of the car's status byte, to flag the car
- AND #%01111111         \ behind us as being visible
- STA carStatus,Y
+ LDA objectStatus,Y     \ Clear bit 7 of the car object's status byte, to flag
+ AND #%01111111         \ the car behind us as being visible
+ STA objectStatus,Y
 
  JSR MoveCars           \ Move the cars around the track
 
  JSR sub_C2692          \ ???
 
- JSR HideAllCars        \ Hide all the cars by setting bit 7 of each car's
-                        \ status byte
+ JSR HideAllCars        \ Set all the cars to be hidden
 
  JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
@@ -12460,8 +12460,8 @@ ENDIF
 
  BPL dcar1              \ Loop back until we have processed five cars in front
 
- JSR DrawCarObjects     \ Draw all the cars objects, with the closest car in
-                        \ front of us split into three objects
+ JSR DrawCars           \ Draw all the cars, with the closest car in front of us
+                        \ split into four objects
 
  LDX positionBehind     \ Set X to the position of the driver behind us
 
@@ -12554,8 +12554,7 @@ ENDIF
 
  STA L0114,X            \ Set this driver's L0114 to 0
 
- JSR GetCarDistance24   \ Set A and T to the distance between drivers X and Y,
-                        \ using 24-bit arithmetic
+ JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
 
  BCS C26E6              \ If the C flag is set then the cars are far apart, so
                         \ jump to C26E6
@@ -12676,7 +12675,7 @@ ENDIF
 
 .C2749
 
- LDA carStatus,X
+ LDA objectStatus,X
  BPL C275E
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
@@ -12756,10 +12755,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetCarDistance24
+\       Name: GetCarDistance
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate the distance between two drivers using 24-bit arithmetic
+\    Summary: Calculate the distance between two cars
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12771,68 +12770,68 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetCarDistance24
+.GetCarDistance
 
- LDA carProgressFrac,Y  \ Set the C flag according to the subtraction:
+ LDA objProgressFrac,Y  \ Set the C flag according to the subtraction:
  SEC                    \
- SBC carProgressFrac,X  \    carProgressFrac for driver ahead
-                        \  - carProgressFrac for this driver
+ SBC objProgressFrac,X  \    objProgressFrac for driver ahead
+                        \  - objProgressFrac for this driver
                         \
-                        \ so the carProgressFrac figures act like fractional
+                        \ so the objProgressFrac figures act like fractional
                         \ bytes in the subtraction at the start of the following
                         \ routine, though because only the C flag is kept, they
                         \ only serve to round the result to the nearest integer,
                         \ rather than giving a full 24-bit result
 
-                        \ Fall through into GetCarDistance to calculate the
+                        \ Fall through into GetObjectDistance to calculate the
                         \ distance between the two cars
 
 \ ******************************************************************************
 \
-\       Name: GetCarDistance
+\       Name: GetObjectDistance
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate the distance between two drivers
+\    Summary: Calculate the distance between two objects
 \
 \ ------------------------------------------------------------------------------
 \
-\ Calculate the distance between two drivers.
+\ Calculate the distance between two objects.
 \
 \ Arguments:
 \
-\   X                   The number of driver X
+\   X                   The number of object X
 \
-\   Y                   The number of driver Y
+\   Y                   The number of object Y
 \
 \   C flag              Determines the accuracy of the arithmetic:
 \
-\                         * Clear for a 16-bit calculation using carProgress
+\                         * Clear for a 16-bit calculation using objProgress
 \
 \                         * For a 24-bit calculation, contains the carry from
-\                           GetCarDistance24 above
+\                           GetCarDistance above
 \
 \ Returns:
 \
-\   A                   The distance between the two cars, negative if driver X
-\                       is ahead, positive if driver Y is ahead
+\   A                   The distance between the two objects, negative if object
+\                       X is ahead, positive if object Y is ahead
 \
 \   T                   The same as A
 \
-\   C flag              How far apart the cars are:
+\   C flag              How far apart the objects are:
 \
-\                         * Set if cars are far apart (distance >= 128)
+\                         * Set if objects are far apart (distance >= 128)
 \
 \                         * Clear if they are close (distance < 128)
 \
-\   N flag              The driver order:
+\   N flag              The object order:
 \
-\                         * Set if driver X is ahead
+\                         * Set if object X is ahead
 \
-\                         * Clear if driver Y is ahead
+\                         * Clear if object Y is ahead
 \
 \   H                   Relationship to the starting line:
 \
-\                         * Bit 7 is clear if the cars are quite close (when
+\                         * Bit 7 is clear if the object are quite close (when
 \                           distance < 256) but are on opposite sides of the
 \                           starting line
 \
@@ -12840,94 +12839,96 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetCarDistance
+.GetObjectDistance
 
- LDA carProgressLo,Y    \ Set (A T) =   carProgress for driver Y
- SBC carProgressLo,X    \             - carProgress for driver X
+ LDA objProgressLo,Y    \ Set (A T) =   objProgress for object Y
+ SBC objProgressLo,X    \             - objProgress for object X
  STA T                  \
                         \ starting with the low bytes
 
- LDA carProgressHi,Y    \ And then the high bytes
- SBC carProgressHi,X    \
+ LDA objProgressHi,Y    \ And then the high bytes
+ SBC objProgressHi,X    \
                         \ So (A T) now contains the distance between the two
-                        \ drivers - let's call it driverDistance
+                        \ objects - let's call it objectDistance
 
  PHP                    \ Store the status register on the stack, so the N flag
                         \ on the stack is the sign of the above subtraction, so
-                        \ it's set if carProgress for driver Y < carProgress
-                        \ for driver X, i.e. if driver X is ahead
+                        \ it's set if objProgress for object Y < objProgress
+                        \ for object X, i.e. if object X is ahead
 
- BPL C27BF              \ If the result of the subtraction was positive, jump
-                        \ to C27BF to skip the following instruction
+ BPL dist1              \ If the result of the subtraction was positive, jump
+                        \ to dist1 to skip the following instruction
 
  JSR Absolute16Bit      \ The result of the subtraction was negative, so set
                         \ (A T) = |A T|
 
-.C27BF
+.dist1
 
  STA U                  \ Set (U T) = (A T)
-                        \           = |driverDistance|
+                        \           = |objectDistance|
 
  SEC                    \ Set the C flag to shift into bit 7 of H below
 
- BEQ C27D8              \ If the high byte of the distance is zero, jump to
-                        \ C27D8 to check the low byte
+ BEQ dist2              \ If the high byte of the distance is zero, jump to
+                        \ dist2 to check the low byte
 
                         \ If we get here then the high byte of the distance
                         \ is non-zero, so now we need to check whether this is
-                        \ down to the cars being close but either side of the
-                        \ starting line (as car progress resets to zero at the
-                        \ starting line, so cars that are on either side of the
-                        \ line will have a big difference in carProgress values
-                        \ even though they are actually close together)
+                        \ down to the objects being close but either side of the
+                        \ starting line (as object progress resets to zero at
+                        \ the starting line, so objects that are on either side
+                        \ of the line will have a big difference in objProgress
+                        \ values even though they are actually close together)
 
  PLA                    \ Flip the N flag in the status register on the stack
  EOR #%10000000         \ (as the N flag is bit 7 of the status register), so
  PHP                    \ the N flag on the stack is the opposite sign to the
-                        \ carProgress subtraction we did above
+                        \ objProgress subtraction we did above
 
                         \ In the following, (trackLengthHi trackLengthLo)
                         \ contains the length of the full track
 
  LDA trackLengthLo      \ Set (A T) = (trackLengthHi trackLengthLo) - (U T)
- SEC                    \           = trackLength - |driverDistance|
+ SEC                    \           = trackLength - |objectDistance|
  SBC T                  \                       
  STA T                  \ starting with the high bytes
 
  LDA trackLengthHi      \ And then the low bytes
  SBC U
 
- BNE C27EA              \ If the high byte is non-zero, then that means the cars
-                        \ are not just either side of the starting line, so they
-                        \ must be far away from each other, so jump to C27EA to
-                        \ return from the subroutine with the C flag set
+ BNE dist3              \ If the high byte is non-zero, then that means the
+                        \ objects are not just either side of the starting line,
+                        \ so they must be far away from each other, so jump to
+                        \ dist3 to return from the subroutine with the C flag
+                        \ set
 
                         \ If we get here then the high byte is zero, which means
-                        \ the drivers are quite close but are either side of the
+                        \ the objects are quite close but are either side of the
                         \ starting line
 
  CLC                    \ Clear the C flag
 
-.C27D8
+.dist2
 
-                        \ If we get here then the drivers are close together
+                        \ If we get here then the objects are close together
                         \ (the high byte of the distance between then is zero)
 
  ROR H                  \ Set bit 7 of H to the C flag, so it's clear if the
-                        \ cars are quite close but on opposite sides of the
+                        \ objects are quite close but on opposite sides of the
                         \ starting line, clear otherwise
 
- LDA T                  \ If T >= &80, then the distance between the cars is
- CMP #&80               \ >= 128, so jump to C27EA to return from the subroutine
- BCS C27EA              \ with the C flag set
+ LDA T                  \ If T >= 128, then the distance between the objects is
+ CMP #128               \ >= 128, so jump to dist3 to return from the subroutine
+ BCS dist3              \ with the C flag set
 
-                        \ If we get here then the distance between the cars is
-                        \ 127 or less, so the cars are determined to be close
+                        \ If we get here then the distance between the objects
+                        \ is 127 or less, so the objects are determined to be
+                        \ close
 
  PLP                    \ Retrieve the status flags from the stack
 
  JSR Absolute8Bit       \ Set the sign of A according to the N flag, which will
-                        \ be set if driver X is ahead
+                        \ be set if object X is ahead
 
  STA T                  \ Set T = A
 
@@ -12937,10 +12938,10 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.C27EA
+.dist3
 
-                        \ We get here if the cars are far away from each other,
-                        \ i.e. the distance between them is >= 128
+                        \ We get here if the objects are far away from each
+                        \ other, i.e. the distance between them is >= 128
 
  PLP                    \ Retrieve the status flags from the stack, to return
                         \ from the subroutine
@@ -12991,7 +12992,7 @@ ENDIF
  LDA positionNumber,X   \ If bit 7 of driver X's positionNumber is set, jump to
  BMI mcar8              \ mcar8 to apply the brakes
 
- LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
+ LDY objTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
  LDA trackSection0b,Y   \ Set A to trackSection0b for the driver's track section
 
@@ -13040,14 +13041,14 @@ ENDIF
                         \   T = A / 4
                         \     = (trackMaxSpeed - carSpeedHi - 1) / 4
 
- LDA carSectionCount,X  \ Set A = carSectionCount - trackSection5a
+ LDA objSectionCount,X  \ Set A = objSectionCount - trackSection5a
  SEC                    \
  SBC trackSection5a,Y   \ so this takes the driver's current progress through
                         \ the track section and subtracts the trackSection5a
                         \ for this track section
 
  BCS mcar11             \ If the subtraction didn't underflow, then
-                        \ carSectionCount >= trackSection5a, so jump to mcar11
+                        \ objSectionCount >= trackSection5a, so jump to mcar11
                         \ to skip changing the car's speed
 
  CMP T                  \ If A >= T, jump to mcar8 to apply the brakes
@@ -13168,16 +13169,16 @@ ENDIF
 
 .mcar12
 
- LDA carSpeedHi,X       \ Add carSpeedHi to carProgressFrac to move the car
+ LDA carSpeedHi,X       \ Add carSpeedHi to objProgressFrac to move the car
  CLC                    \ along the track by its speed
- ADC carProgressFrac,X
- STA carProgressFrac,X
+ ADC objProgressFrac,X
+ STA objProgressFrac,X
 
  BCC mcar13             \ If the addition didn't overflow, jump to mcar13 to do
                         \ the next loop
 
- JSR MoveCarForwards    \ The addition overflowed, so carProgressFrac has filled
-                        \ up and we need to update (carProgressHi carProgressLo)
+ JSR MoveObjectForward  \ The addition overflowed, so objProgressFrac has filled
+                        \ up and we need to update (objProgressHi objProgressLo)
                         \ for driver X
 
 .mcar13
@@ -13186,12 +13187,12 @@ ENDIF
 
  BPL mcar12             \ Loop back until we have added carSpeedHi twice
 
- LDA carStatus,X        \ If bit 7 of the driver's carStatus is set, then the
- ASL A                  \ car is not visibie, so jump to mar20 to move on to the
- BCS mcar20             \ next car
+ LDA objectStatus,X     \ If bit 7 of the driver's car object status byte is
+ ASL A                  \ set, then the car is not visibie, so jump to mar20 to
+ BCS mcar20             \ move on to the next car
 
- BMI mcar17             \ If bit 6 of the driver's carStatus is set, jump to
-                        \ mcar17 
+ BMI mcar17             \ If bit 6 of the driver's car object status byte is
+                        \ set, jump to mcar17 
 
  LDA L0114,X
  AND #%01000000
@@ -13291,18 +13292,21 @@ ENDIF
 .sub_C28F2
 
  LDA driversInOrder,X   \ Set A to the number of the driver in position X
- STA L0045
 
- STA L0042
+ STA driverPosition     \ Store the driver number in driverPosition so we can
+                        \ retrieve it later
 
- TAX
+ STA objectNumber       \ Store the driver number in objectNumber in case we
+                        \ need to hide this object
+
+ TAX                    \ Set X to the driver number
 
  LDY #23
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
-                        \ to GetCarDistance
+                        \ to GetObjectDistance
 
- JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
+ JSR GetObjectDistance  \ Set A and T to the distance between drivers X and Y
 
  BCS C2911              \ If the C flag is set then the cars are far apart, so
                         \ jump to C2911
@@ -13320,7 +13324,7 @@ ENDIF
 
 .C2911
 
- JMP HideCar
+ JMP HideObject
 
 .C2914
 
@@ -13365,7 +13369,7 @@ ENDIF
  STA L000C
  STY T
  TAY
- LDA carProgressFrac,X
+ LDA objProgressFrac,X
  STA TT
  LDA L0178,X
  STA UU
@@ -13483,7 +13487,7 @@ ENDIF
  LDA #4                 \ Set A = 4, to use as the object type for the
                         \ one-object car
 
- JSR sub_C2A5D
+ JSR sub_C2A5F-2
 
  LDX L0045
  LDA L0055
@@ -13493,87 +13497,89 @@ ENDIF
  CMP positionAhead
  BNE C2A4D
 
- LDA carStatus,X        \ If bit 7 of the car's status byte is set, then the car
- BMI C2A0F              \ is not visible, so jump to C2A0F to skip the following
-                        \ instruction
+ LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
+ BMI C2A0F              \ the car is not visible, so jump to C2A0F to skip the
+                        \ following instruction
 
- DEC carStatus,X        \ The object type is stored in bits 0-3 of carStatus, so
-                        \ this decrement the car's object type from 4 (the
+ DEC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
+                        \ so this decrements the car's object type from 4 (the
                         \ standard car) to 3 (the rear wing in the four-object
                         \ car)
 
 .C2A0F
 
  LDY L000C
+
  JSR sub_C1442
+
  JSR sub_C2B0E
+
  LDY #&FD
+
  LDX #&FA
+
  JSR sub_C0BCC
+
  JSR sub_C2B0E
+
  LDX #&F4
+
  JSR sub_C0BCC
+
  JSR sub_C2B0E
+
  LDX #&FD
+
  JSR sub_C0BCC
- LDA #&14
- STA L0042
+
+ LDA #20                \ Set objectNumber = 20, to use as then object number
+ STA objectNumber       \ for the rear tyres in the four-object car
 
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR sub_C2A5D
+ JSR sub_C2A5F-2
 
- LDA #&15
- STA L0042
+ LDA #21                \ Set objectNumber = 21, to use as then object number
+ STA objectNumber       \ for the body and helmet in the four-object car
 
  LDA #1                 \ Set A = 1, to use as the object type for the body and
                         \ helmet in the four-object car
 
- LDX #&F4
+ LDX #&F4               \ Set X = &F4 so the call to sub_C2A5F uses var13
 
  JSR sub_C2A5F
 
- LDA #&16
- STA L0042
+ LDA #22                \ Set objectNumber = 22, to use as then object number
+ STA objectNumber       \ for the rear tyres in the four-object car
 
- LDA #0                 \ Set A = 0, to use as the object type for the front
+ LDA #0                 \ Set A = 0, to use as the object type for the rear
                         \ tyres in the four-object car
 
- LDX #&FA
+ LDX #&FA               \ Set X = &FA so the call to sub_C2A5F uses var18
 
  JSR sub_C2A5F
 
 .C2A4D
 
- LDX L0045
- RTS
+ LDX driverPosition
+
+ RTS                    \ Return from the subroutine
 
 .C2A50
 
  CMP #5
  BCC C2A4D
- LDA carStatus,X
- BMI C2A4D
- INC carStatus,X
- RTS
 
-\ ******************************************************************************
-\
-\       Name: sub_C2A5D
-\       Type: Subroutine
-\   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
+ BMI C2A4D              \ the car is not visible, so jump to C2A4D to skip the
+                        \ following instruction
 
-.sub_C2A5D
+ INC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
+                        \ so this oncrements the car's object type from 4 (the
+                        \ standard car) to 5 (the distant car)
 
- LDX #&FD
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13584,21 +13590,42 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   Object type
+\
+\   X                   The offset of the variable to use in ProjectObjectX:
+\
+\                         * &F4 = var13
+\
+\                         * &FA = var18
+\
+\                         * &FD = var14
+\
+\ Other entry points:
+\
+\   sub_C2A5F-2         Use var14 in ProjectObjectX
 \
 \ ******************************************************************************
 
+ LDX #&FD               \ Set X = &FD so the call to ProjectObjectX uses var14
+
 .sub_C2A5F
 
- STA objectType
- JSR sub_C2145
- LDY L0042
- LDA II
- STA xCarLo,Y
+ STA objectType         \ Store the object type in objectType
+
+ JSR ProjectObjectX-2
+
+ LDY objectNumber       \ Set Y to the number of the car we are processing
+
+ LDA II                 \ Set the screen x-coordinate for this car in (xObjectHi
+ STA xObjectLo,Y        \ xObjectLo) to (JJ II)
  LDA JJ
- STA xCarHi,Y
+ STA xObjectHi,Y
+
  JSR sub_C2AB1
- JSR sub_C2285
+
+ JSR ProjectObjectY-2
 
 \ ******************************************************************************
 \
@@ -13615,64 +13642,79 @@ ENDIF
 
 .sub_C2A76
 
- LDY L0042
- BCS HideCar
+ LDY objectNumber
+
+ BCS HideObject
+
  SEC
  SBC #1
- BMI HideCar
- STA yCar,Y
+
+ BMI HideObject
+
+ STA yObject,Y
+
  LDA scaleDown
  SEC
  SBC #9
  TAX
+
  LDA scaleUp
  DEX
+
  BEQ C2A99
  BPL C2A95
 
 .P2A8F
 
  LSR A
+
  INX
+
  BNE P2A8F
  BEQ C2A99
 
 .C2A95
 
  ASL A
+
  DEX
+
  BNE C2A95
 
 .C2A99
 
  STA carScaleUp,Y
- LDA carStatus,Y
+
+ LDA objectStatus,Y
  AND #%01110000
  ORA objectType
+
  JMP C2AAD
 
 \ ******************************************************************************
 \
-\       Name: HideCar
+\       Name: HideObject
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Set an object to be hidden
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   objectNumber        The number of the object to hide
 \
 \ ******************************************************************************
 
-.HideCar
+.HideObject
 
- LDY L0042
- LDA carStatus,Y
+ LDY objectNumber
+ LDA objectStatus,Y
  ORA #%10000000
 
 .C2AAD
 
- STA carStatus,Y
+ STA objectStatus,Y
  RTS
 
 \ ******************************************************************************
@@ -13786,7 +13828,7 @@ ENDIF
 
 .DrawCarOrSign
 
- LDA carStatus,X        \ Set A to this car's status byte
+ LDA objectStatus,X     \ Set A to this car's status byte
 
  BMI dcas3              \ If bit 7 is set then the car is not visible, so jump
                         \ to dcas3 to return from the subroutine without drawing
@@ -13795,12 +13837,12 @@ ENDIF
  AND #%00001111         \ Extract the car's object type from bits 0-3 and store
  STA objectType         \ it in objectType
 
- LDA xCarLo,X           \ Set (A T) = xCar for this car - xPlayer
+ LDA xObjectLo,X        \ Set (A T) = xObject for this car - xPlayer
  SEC                    \
  SBC xPlayerLo          \ starting with the low bytes
  STA T
 
- LDA xCarHi,X           \ And then the high bytes
+ LDA xObjectHi,X        \ And then the high bytes
  SBC xPlayerHi          \
                         \ So (A T) now contains the amount that the car we are
                         \ drawing is to the left or right of the player's car
@@ -13830,14 +13872,14 @@ ENDIF
  ASL T                  \ so -128 <= A < 128
  ROL A
 
- CLC                    \ Set xObject = 80 + A
+ CLC                    \ Set xCoord = 80 + A
  ADC #80                \
- STA xObject            \ This moves xObject so that it is centred on the
+ STA xCoord             \ This moves xCoord so that it is centred on the
                         \ screen, as the centre x-coordinate of the screen is
                         \ at 80 pixels
 
- LDA yCar,X             \ Set yObject to this car's screen y-coordinate from
- STA yObject            \ yCar
+ LDA yObject,X          \ Set yCoord to this car's screen y-coordinate from
+ STA yCoord             \ yObject
 
  LDA carScaleUp,X       \ Set scaleUp to this car's scale factor (i.e. the size
  STA scaleUp            \ of the car
@@ -21417,7 +21459,7 @@ NEXT
  ROL W
  STA V
  LDX currentPlayer
- LDA carProgressFrac,X
+ LDA objProgressFrac,X
  JSR MultiplyBlock2
  BPL C45DF
  DEC W
@@ -21590,7 +21632,7 @@ ENDIF
 
 .C4672
 
- STA carProgressFrac,X
+ STA objProgressFrac,X
  RTS
 
 \ ******************************************************************************
@@ -23186,7 +23228,7 @@ ENDIF
 
  LDX currentPlayer
 
- LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
+ LDY objTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
  LDA trackSection0a,Y
  LSR A
@@ -23227,12 +23269,12 @@ ENDIF
  JSR CopyCoordinate     \ section Y into var14
 
  LDY #6
- JSR sub_C2147
+ JSR ProjectObjectX
 
- LDA II                 \ Set xCar for the road sign to (JJ II)
- STA xCarLo+23
+ LDA II                 \ Set xObject for the road sign to (JJ II)
+ STA xObjectLo+23
  LDA JJ
- STA xCarHi+23
+ STA xObjectHi+23
 
  SEC
  SBC xPlayerHi
@@ -23257,7 +23299,7 @@ ENDIF
  STA L0042
  JSR sub_C2AB3
  LDY #6
- JSR sub_C2287
+ JSR ProjectObjectY
  JSR sub_C2A76
  RTS
 
@@ -24425,7 +24467,7 @@ ENDIF
 \
 \   * Bit 7 of updateLapTimes is clear
 \
-\   * Bit 6 of the driver's status byte is clear
+\   * Bit 6 of the driver's car's object status byte is clear
 \
 \   * If this is the current player, L0030 must be 1 (and it is set to 0)
 \
@@ -24444,11 +24486,11 @@ ENDIF
  BIT updateLapTimes     \ If bit 7 of updateLapTimes is set, jump to ulap1 to
  BMI ulap1              \ return from the subroutine without doing anything
 
- CPX #20                \ If X >= 20, jump to ulap1 to return from the
- BCS ulap1              \ subroutine
+ CPX #20                \ If X >= 20 then this is not a driver number, so jump
+ BCS ulap1              \ to ulap1 to return from the subroutine
 
- LDA carStatus,X        \ If bit 6 of the driver's status byte is set, jump to
- ASL A                  \ ulap1 to return from the subroutine
+ LDA objectStatus,X     \ If bit 6 of the driver's car object status byte is
+ ASL A                  \ set, jump to ulap1 to return from the subroutine
  BMI ulap1
 
  CPX currentPlayer      \ If driver X is not the current player, jump to ulap3
@@ -30170,7 +30212,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawCarObjects
+\       Name: DrawCars
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw all the car objects, with four objects for the closest car in
@@ -30178,7 +30220,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.DrawCarObjects
+.DrawCars
 
  LDX currentPosition    \ Set X to the current player's position
 
@@ -30260,11 +30302,11 @@ ORG &7B00
 
  LDX driversInOrder,Y   \ Set X to the number of the driver behind us
 
- LDA carStatus,X        \ If the status byte for the car behind us has bit 7
- BMI upmi1              \ set, then it is hidden, so jump to upmi1 to clear the
-                        \ mirror (as V will be set to a negative value, and this
-                        \ will never match any values from mirrorSegment, as all
-                        \ the mirrorSegment entries are positive)
+ LDA objectStatus,X     \ If the object status byte for the car behind us has
+ BMI upmi1              \ bit 7set, then it is hidden, so jump to upmi1 to clear
+                        \ the mirror (as V will be set to a negative value, and
+                        \ this will never match any values from mirrorSegment,
+                        \ as all the mirrorSegment entries are positive)
 
                         \ We now calculate the size of the car to draw in the
                         \ mirror (in other words, the height of the block we
@@ -30300,16 +30342,16 @@ ORG &7B00
  STA N
 
                         \ Next we calculate the mirror segment that the car
-                        \ should appear in, based on the xCarHi value for the
+                        \ should appear in, based on the xObjectHi value for the
                         \ car, and xPlayerHi, storing the result in A
                         \
                         \ This will then be matched with the values in
                         \ mirrorSegment to see which segment to update
 
- LDA xCarHi,X           \ Set A = xCarHi for the driver behind
+ LDA xObjectHi,X        \ Set A = xObjectHi for the driver behind
 
  SEC                    \ Set A = (A - xPlayerHi - 4) / 8
- SBC xPlayerHi          \       = (xCarHi - xPlayerHi - 4) / 8
+ SBC xPlayerHi          \       = (xObjectHi - xPlayerHi - 4) / 8
  SEC
  SBC #4
  LSR A
