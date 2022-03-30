@@ -261,7 +261,7 @@ ORG &0000
 .carPosition
 
  SKIP 1                 \ The position of the car ahead of us that we are
-                        \ considering drawing in the DrawCars routine
+                        \ considering drawing in the MoveAndDrawCars routine
 
 .L001E
 
@@ -997,19 +997,26 @@ ORG &0100
                         \
                         \   * Bits 0-3 = the car's object type
                         \
-                        \   * Bit 6: ??? see sub_C1163, ClearTotalRaceTime
+                        \   * Bit 6: ??? see sub_C1163, ClearTotalRaceTime,
+                        \            MoveCars part 2
                         \
                         \   * Bit 7: 0 = car is visible
                         \            1 = car is hidden
                         \
                         \ Set to &80 in ResetVariables
 
-.L01A4
+.carCornerSpeed
 
- SKIP 20                \ 
+ SKIP 20                \ Set to the car's maximum speed for the next corner,
+                        \ which is taken from the track data and used to set the
+                        \ corner approach speed for non-player drivers
                         \
-                        \ Set to &FF in ResetVariables
-
+                        \ Only applies to corners with bit 7 of trackSection0b
+                        \ set, in which case carCornerSpeed is set to the
+                        \ trackMaxSpeed value from the preceding track section
+                        \
+                        \ Set to 255 in ResetVariables, which means no minimum
+                        \ speed
 
 \ ******************************************************************************
 \
@@ -4120,7 +4127,8 @@ ORG &0B00
  LDA #0                 \ Set carMoving = 0 to denote that the car is stationary
  STA carMoving
 
- STA L006D              \ Set L006D = 0
+ STA L006D              \ Set L006D = 0 to stop the cars from moving round the
+                        \ track
 
  JSR HideAllCars        \ Set all the cars to
 
@@ -4137,7 +4145,7 @@ ORG &0B00
  LDA configStop
  BMI C11AA
 
- JSR sub_C27ED
+ JSR MoveCars
 
  JSR sub_C2692
 
@@ -4514,7 +4522,7 @@ ORG &0B00
                         \ section Y into var20 and var27, and set L0002 to
                         \ trackSection5b
 
- LDA trackData,Y
+ LDA trackSection0a,Y
  JMP C128E
 
 .C1284
@@ -5002,8 +5010,8 @@ ORG &0B00
  LDX currentPlayer      \ Set X to the driver number of the current player
 
  ROR A                  \ If just one of the C flag and bit 7 of directionFacing
- EOR directionFacing    \ is set (but not both), jump to mcar1 to move the car
- BMI mcar1              \ backwards along the track
+ EOR directionFacing    \ is set (but not both), jump to pcar1 to move the car
+ BMI pcar1              \ backwards along the track
                         \
                         \ In other words, we move backwards if:
                         \
@@ -5019,7 +5027,7 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
-.mcar1
+.pcar1
 
  JSR MoveCarBackwards   \ Move current player backwards along the track
 
@@ -5165,7 +5173,6 @@ ORG &0B00
 
                         \ We now need to increment the driver's progress in
                         \ (carProgressHi carProgressLo)
-
 
  INC carProgressLo,X    \ Increment (carProgressHi carProgressLo) for driver X,
                         \ starting with the low byte
@@ -5400,7 +5407,7 @@ ORG &0B00
  LDA trackSection5a,Y
  STA L0017
  BEQ C1527
- LDA trackSection7,Y
+ LDA trackMaxSpeed,Y
  STA L0020
  AND #&7F
  STA L0018
@@ -6165,7 +6172,8 @@ ENDIF
 
  JSR DrawCornerMarkers  \ Draw any visible corner markers
 
- JSR DrawCars           \ Draw any visible cars
+ JSR MoveAndDrawCars    \ Move the cars around the track and draw any that are
+                        \ visible, up to a maximum of five
 
  JSR CopyTyreDashEdges  \ Copy the pixels from the edges of the left tyre and
                         \ right dashboard so they can be used when drawing the
@@ -6619,12 +6627,12 @@ ENDIF
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
                         \ L0114, carProgressFrac, (carSpeedHi carSpeedLo) and
                         \ positionNumber, and initialise the 20-byte blocks
-                        \ at carStatus, totalRaceMinutes and L01A4, so set up a
-                        \ loop counter in X
+                        \ at carStatus, totalRaceMinutes and carCornerSpeed,
+                        \ so set up a loop counter in X
 
 .rese5
 
- LDA #&80               \ Set the X-th byte of carStatus to &80
+ LDA #%10000000         \ Set the X-th byte of carStatus to %10000000
  STA carStatus,X
 
  STA totalRaceMinutes,X \ Set the X-th byte of totalRaceMinutes to -1
@@ -6642,8 +6650,8 @@ ENDIF
 
  STA carSpeedLo,X       \ Zero the X-th byte of carSpeedLo
 
- LDA #&FF               \ Set the X-th byte of L01A4 to &FF
- STA L01A4,X
+ LDA #255               \ Set the X-th byte of carCornerSpeed to 255
+ STA carCornerSpeed,X
 
  DEX                    \ Decrement the loop counter
 
@@ -11220,7 +11228,7 @@ ENDIF
 \
 \       Name: sub_C2145
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11237,7 +11245,7 @@ ENDIF
 \
 \       Name: sub_C2147
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11470,7 +11478,7 @@ ENDIF
 \
 \       Name: sub_C2285
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -11487,7 +11495,7 @@ ENDIF
 \
 \       Name: sub_C2287
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -12374,14 +12382,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawCars
+\       Name: MoveAndDrawCars
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Draw up to five cars in front of us
+\    Summary: Move the cars around the track and draw any that are visible, up
+\             to a maximum of five
 \
 \ ******************************************************************************
 
-.DrawCars
+.MoveAndDrawCars
 
  LDA qualifyingTime     \ If bit 7 of qualifyingTime is set then this is a
  BMI Delay              \ practice lap (i.e. qualifyingTime = 255), so there are
@@ -12399,7 +12408,7 @@ ENDIF
  AND #%01111111         \ behind us as being visible
  STA carStatus,Y
 
- JSR sub_C27ED          \ ???
+ JSR MoveCars           \ Move the cars around the track
 
  JSR sub_C2692          \ ???
 
@@ -12942,215 +12951,325 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C27ED
+\       Name: MoveCars (Part 1 of 2)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Move the cars around the track
 \
 \ ------------------------------------------------------------------------------
 \
+\ This part changes the car's speed according to the following algorithm. It
+\ calculates the speed change in (U A), and then applies it to the car's speed.
+\
+\ Arguments:
+\
+\   L006D               If bit 7 is set, this routine does nothing
+\
 \ Other entry points:
 \
-\   sub_C27ED-1         Contains an RTS
+\   MoveCars-1          Contains an RTS
 \
 \ ******************************************************************************
 
-.sub_C27ED
+.MoveCars
 
  LDA L006D              \ If bit 7 of L006D is set, return from the subroutine
- BMI sub_C27ED-1        \ (as sub_C27ED-1 contains an RTS)
+ BMI MoveCars-1         \ (as MoveCars-1 contains an RTS)
 
  LDX #20                \ Set X = 20 to use as a loop counter as we work through
                         \ all 20 cars
 
- JMP C28E7              \ Jump into the loop at C28E7 to decrement X and start
-                        \ looping through the drivers, looping back to C27F6 for
+ JMP mcar20             \ Jump into the loop at mcar20 to decrement X and start
+                        \ looping through the drivers, looping back to mcar1 for
                         \ all drivers except the current player
 
-.C27F6
+.mcar1
+
+                        \ This first part of the loop changes the car's speed as
+                        \ required
 
  LDA positionNumber,X   \ If bit 7 of driver X's positionNumber is set, jump to
- BMI C285B              \ C285B ???
+ BMI mcar8              \ mcar8 to apply the brakes
 
  LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
- LDA trackSection0b,Y
- BPL C280D
+ LDA trackSection0b,Y   \ Set A to trackSection0b for the driver's track section
 
- LDA carSpeedHi,X
- CMP L01A4,X
- BCS C287F
- BCC C282F
+ BPL mcar2              \ If bit 7 of A is clear, jump to mcar2
 
-.C280D
+                        \ If we get here then bit 7 of this section's
+                        \ trackSection0b is set
 
- LSR A
- BCS C282F
- LDA trackSection7,Y
- STA L01A4,X
- CLC
+ LDA carSpeedHi,X       \ If the high byte of the car's speed >= the car's
+ CMP carCornerSpeed,X   \ carCornerSpeed then jump to mcar11 to skip changing
+ BCS mcar11             \ the car's speed, as it is already going fast enough
+                        \ for the corner
+
+ BCC mcar3              \ Otherwise jump to mcar3 to continue with the speed
+                        \ calculation (this BCC is effectively a JMP as we just
+                        \ passed through a BCS)
+
+.mcar2
+
+                        \ If we get here then bit 7 of this section's
+                        \ trackSection0b is clear
+
+ LSR A                  \ Set A = A >> 2 and set the C flag to bit 0
+
+ BCS mcar3              \ If bit 0 of A was set, jump to mcar3 to continue with
+                        \ the speed calculation
+
+                        \ If we get here then bits 0 and 7 of this section's
+                        \ trackSection0b are both clear
+
+ LDA trackMaxSpeed,Y    \ Set carCornerSpeed for this driver to trackMaxSpeed
+ STA carCornerSpeed,X   \ for this track section
+
+ CLC                    \ Set A = trackMaxSpeed - carSpeedHi - 1
  SBC carSpeedHi,X
- BCS C282F
- LSR A
- LSR A
- ORA #&C0
- STA T
- LDA carSectionCount,X
- SEC
- SBC trackSection5a,Y
- BCS C287F
- CMP T
- BCS C285B
 
-.C282F
+ BCS mcar3              \ If the subtraction didn't underflow, then
+                        \ trackMaxSpeed > carSpeedHi, so jump to mcar3 to
+                        \ continue with the speed calculation
 
- LDA carSpeedHi,X
- CMP #&3C
- BCS C2838
- LDA #&16
+ LSR A                  \ Set T = A >> 2 with bits 6 and 7 set
+ LSR A                  \
+ ORA #%11000000         \ As A is negative, this divides A by 4 while keeping
+ STA T                  \ the sign, so:
+                        \
+                        \   T = A / 4
+                        \     = (trackMaxSpeed - carSpeedHi - 1) / 4
 
-.C2838
+ LDA carSectionCount,X  \ Set A = carSectionCount - trackSection5a
+ SEC                    \
+ SBC trackSection5a,Y   \ so this takes the driver's current progress through
+                        \ the track section and subtracts the trackSection5a
+                        \ for this track section
 
- STA T
- LDA positionNumber,X
- AND #%01000000
- BEQ C2843
- LDA #5
+ BCS mcar11             \ If the subtraction didn't underflow, then
+                        \ carSectionCount >= trackSection5a, so jump to mcar11
+                        \ to skip changing the car's speed
 
-.C2843
+ CMP T                  \ If A >= T, jump to mcar8 to apply the brakes
+ BCS mcar8
 
- CLC
- ADC driverSpeed,X
- BIT raceStarted
- BPL C284E
- SBC trackData71A
+.mcar3
 
-.C284E
+ LDA carSpeedHi,X       \ Set A to the high byte of the car's speed
 
- LDY #0
- SEC
- SBC T
- BCS C2856
+ CMP #60                \ If the high byte of the car's speed in A >= 60, jump
+ BCS mcar4              \ to mcar4 to skip the following instruction
+
+ LDA #22                \ Set A = 22
+
+.mcar4
+
+ STA T                  \ Set T = A
+
+ LDA positionNumber,X   \ If bit 6 of driver X's positionNumber is clear, jump
+ AND #%01000000         \ to mcar5 with A = 0
+ BEQ mcar5
+
+ LDA #5                 \ Set A = 5
+
+.mcar5
+
+ CLC                    \ Set A = A + the driver's speed, as calculated in the
+ ADC driverSpeed,X      \ SetDriverSpeed routine
+
+ BIT raceStarted        \ If bit 7 of raceStarted is clear then this is practice
+ BPL mcar6              \ or qualifying, so jump to mcar6 to skip the following
+                        \ instruction
+
+ SBC trackRaceSlowdown  \ This is a race, so set A = A - trackRaceSlowdown
+                        \
+                        \ The value of trackRaceSlowdown for the Silverstone
+                        \ track is zero, so this has no effect, but if it were
+                        \ non-zero then it would reduce the speed of all cars
+                        \ in a race by that amount
+
+.mcar6
+
+                        \ We now set (U A) = A - T to get the speed change
+
+ LDY #0                 \ Set Y = 0, so (Y A) = A
+
+ SEC                    \ Set (Y A) = (Y A) - T
+ SBC T                  \           = A - T
+                        \
+                        \ starting with the low bytes
+
+ BCS mcar7              \ And then the high bytes
  DEY
 
-.C2856
+.mcar7
 
- STY U
- JMP C2861
+ STY U                  \ Set (U A) = (Y A)
+                        \           = A - T
 
-.C285B
+ JMP mcar9              \ Jump to mcar9
 
- LDA #&FF
- STA U
- LDA #0
+.mcar8
 
-.C2861
+                        \ If we get here then we are applying the brakes, so
+                        \ set (U A) to -256 so we subtract 1024 from the speed
+                        \ in the following
 
- ASL A
+ LDA #&FF               \ Set (U A) = -256 (&FF00)
+ STA U                  \
+ LDA #0                 \ so the following adds -1024 to the car speed
+
+.mcar9
+
+                        \ By this point we have calculated the speed change in
+                        \ (U A), so now we apply it
+
+ ASL A                  \ Set (U A) = (U A) * 4
  ROL U
  ASL A
  ROL U
- CLC
- ADC carSpeedLo,X
- STA carSpeedLo,X
- LDA U
+
+ CLC                    \ Set (A carSpeedLo) = (carSpeedHi carSpeedLo) + (U A)
+ ADC carSpeedLo,X       \
+ STA carSpeedLo,X       \ starting with the low bytes
+
+ LDA U                  \ And then the high bytes
  ADC carSpeedHi,X
- CMP #&BE
- BCC C287C
- LDA #0
- STA carSpeedLo,X
 
-.C287C
+ CMP #190               \ If the high byte in A < 190, jump to mcar10 to store
+ BCC mcar10             \ the result in carSpeedHi
 
- STA carSpeedHi,X
+ LDA #0                 \ Otherwise the car's speed is now a negative value, so
+ STA carSpeedLo,X       \ we zero the car's speed, starting with the low byte,
+                        \ and setting A = 0 so we also zero the high byte in the
+                        \ next instruction
 
-.C287F
+.mcar10
 
- LDA #1
- STA V
+ STA carSpeedHi,X       \ Update the high byte of the car's speed to A
 
-.P2883
+\ ******************************************************************************
+\
+\       Name: MoveCars (Part 2 of 2)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Move the cars around the track
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part moves the car round the track by the speed we just calculated.
+\
+\ ******************************************************************************
 
- LDA carSpeedHi,X
- CLC
+.mcar11
+
+ LDA #1                 \ Set V = 1, so we do the following loop twice, which
+ STA V                  \ updates the car's progress by 2 x carSpeedHi
+
+.mcar12
+
+ LDA carSpeedHi,X       \ Add carSpeedHi to carProgressFrac to move the car
+ CLC                    \ along the track by its speed
  ADC carProgressFrac,X
  STA carProgressFrac,X
- BCC C2892
 
- JSR MoveCarForwards    \ Move driver X forwards along the track
+ BCC mcar13             \ If the addition didn't overflow, jump to mcar13 to do
+                        \ the next loop
 
-.C2892
+ JSR MoveCarForwards    \ The addition overflowed, so carProgressFrac has filled
+                        \ up and we need to update (carProgressHi carProgressLo)
+                        \ for driver X
 
- DEC V
- BPL P2883
- LDA carStatus,X
- ASL A
- BCS C28E7
- BMI C28CE
+.mcar13
+
+ DEC V                  \ Decrement the loop counter in V
+
+ BPL mcar12             \ Loop back until we have added carSpeedHi twice
+
+ LDA carStatus,X        \ If bit 7 of the driver's carStatus is set, then the
+ ASL A                  \ car is not visibie, so jump to mar20 to move on to the
+ BCS mcar20             \ next car
+
+ BMI mcar17             \ If bit 6 of the driver's carStatus is set, jump to
+                        \ mcar17 
+
  LDA L0114,X
- AND #&40
- BEQ C28CE
+ AND #%01000000
+ BEQ mcar17
+
  LDA L0178,X
  EOR L0114,X
- BPL C28CE
- LDA L0178,X
- BPL C28C1
- CMP #&EC
- BCC C28BB
- DEC L0178,X
- BCS C28E7
+ BPL mcar17
 
-.C28BB
+ LDA L0178,X
+ BPL mcar15
+
+ CMP #&EC
+ BCC mcar14
+
+ DEC L0178,X
+
+ BCS mcar20
+
+.mcar14
 
  CMP #&E2
- BCC C28CE
- BCS C28E7
+ BCC mcar17
+ BCS mcar20
 
-.C28C1
+.mcar15
 
- CMP #&14
- BCS C28CA
+ CMP #20
+ BCS mcar16
+
  INC L0178,X
- BCC C28E7
 
-.C28CA
+ BCC mcar20
+
+.mcar16
 
  CMP #&1E
- BCC C28E7
+ BCC mcar20
 
-.C28CE
+.mcar17
 
  LDA L0114,X
- AND #&BF
+ AND #%10111111
+
  CLC
- BPL C28DF
- EOR #&7F
- ADC L0178,X
- BCS C28E4
- BCC C28E7
 
-.C28DF
+ BPL mcar18
+
+ EOR #%01111111
 
  ADC L0178,X
- BCS C28E7
 
-.C28E4
+ BCS mcar19
+ BCC mcar20
+
+.mcar18
+
+ ADC L0178,X
+
+ BCS mcar20
+
+.mcar19
 
  STA L0178,X
 
-.C28E7
+.mcar20
 
  DEX                    \ Decrement the loop counter to point to the next driver
 
- BMI C28F1              \ If we have worked our way through all 20 drivers, jump
-                        \ to C28F1 to return from the subroutine
+ BMI mcar21             \ If we have worked our way through all 20 drivers, jump
+                        \ to mcar21 to return from the subroutine
 
- CPX currentPlayer      \ If driver X is the current player, jump up to C28E7 to
- BEQ C28E7              \ move on to the next driver
+ CPX currentPlayer      \ If driver X is the current player, jump up to mcar20
+ BEQ mcar20             \ to move on to the next driver
 
- JMP C27F6              \ Jump up to C27F6 to process the next driver
+ JMP mcar1              \ Jump up to mcar1 to process the next driver
 
-.C28F1
+.mcar21
 
  RTS                    \ Return from the subroutine
 
@@ -13231,7 +13350,7 @@ ENDIF
 \
 \       Name: sub_C2937
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13443,7 +13562,7 @@ ENDIF
 \
 \       Name: sub_C2A5D
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13460,7 +13579,7 @@ ENDIF
 \
 \       Name: sub_C2A5F
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13485,7 +13604,7 @@ ENDIF
 \
 \       Name: sub_C2A76
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13560,7 +13679,7 @@ ENDIF
 \
 \       Name: sub_C2AB1
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13577,7 +13696,7 @@ ENDIF
 \
 \       Name: sub_C2AB3
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13736,7 +13855,7 @@ ENDIF
 \
 \       Name: sub_C2B0E
 \       Type: Subroutine
-\   Category: 
+\   Category: Maths
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -23069,7 +23188,7 @@ ENDIF
 
  LDY carTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
- LDA trackData,Y
+ LDA trackSection0a,Y
  LSR A
  LSR A
  LSR A
@@ -26018,7 +26137,7 @@ ENDIF
 
  SKIP 1
  
-.trackSection7
+.trackMaxSpeed
 
  SKIP 1
 
@@ -26160,7 +26279,7 @@ ENDIF
 
  SKIP 1
 
-.trackData71A
+.trackRaceSlowdown
 
  SKIP 1
 
@@ -28317,37 +28436,6 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed for a specific driver is based on a number of elements:
-\
-\   * A random element that is weighted to being small, but can sometimes be
-\     larger
-\
-\   * The speed is affected by the driver's position on the grid: cars at the
-\     front of the grid are faster than those at the back
-\
-\   * The speed is affected by the race class, with the range of different car
-\     speeds in Professional races being tighter than in Amateur races, which
-\     in turn are tighter than Novice races
-\
-\ This speed is then added to the track's base speed, which is stored as part of
-\ the track data. The track's base speed is different depending on the race
-\ class, so taking Silverstone as an example, we get these final ranges for the
-\ front two cars:
-\
-\   * Novice       = 134 plus -28 to +28 = 106 to 162
-\   * Amateur      = 146 plus -14 to +14 = 132 to 160
-\   * Professional = 153 plus  -7 to  +7 = 146 to 160
-\
-\ and these final ranges for the two cars at the back:
-\
-\   * Novice       = 134 plus -46 to +8 =  88 to 142
-\   * Amateur      = 146 plus -23 to +4 = 123 to 150
-\   * Professional = 153 plus -12 to +2 = 141 to 155
-\
-\ So on Silverstone, the cars on the front of the grid in a Novice race can
-\ actually be faster than those on the front of the grid in a Professional race,
-\ though it's unlikely.
-\
 \ Arguments:
 \
 \   driverNumber        The number of the driver
@@ -29086,9 +29174,9 @@ ENDIF
                         \ Note that for X = 2 (professional), the track data
                         \ figure is 0, so the C flag will always be set
 
- BCS game7              \ If the slowest lap time is longer than the figure from
-                        \ trackData, jump to game7 to consider setting the class
-                        \ to X, if it is easier than the current class
+ BCS game7              \ If the slowest lap time is longer than trackLapTimeMin
+                        \ from the track data, jump to game7 to consider setting
+                        \ the class to X, if it is easier than the current class
                         \
                         \ In other words, if the slowest lap time is really slow
                         \ and is by a human player, this can make the game
