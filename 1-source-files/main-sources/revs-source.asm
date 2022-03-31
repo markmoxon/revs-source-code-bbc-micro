@@ -1045,9 +1045,10 @@ ORG &0380
 
  SKIP 24                \ The y-coordinate of each of the objects on the screen
 
-.carScaleUp
+.objectScaleUp
 
- SKIP 24                \ The scaleUp factor for each of the objects
+ SKIP 24                \ The scaleUp factor for each of the objects (i.e. the
+                        \ object's size)
 
  SKIP 32                \ These bytes appear to be unused ???
                         \ (not yet added to deep dive)
@@ -2223,41 +2224,76 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0BCC
+\       Name: AddCoordinates
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Add two three-axis coordinates together
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Given a three-axis variable varX and a three-axis variable varY, this routine
+\ calculates the following addition:
 \
+\                 [ (SS T) ]
+\   varX = varY + [ (TT U) ]
+\                 [ (UU V) ]
+\
+\ Arguments:
+\
+\   X                   The offset from var20 of the varX variable to update:
+\
+\                         * &F4 = var13
+\
+\                         * &FA = var18
+\
+\                         * &FD = var14
+\
+\   Y                   The offset from var20 of the varY variable to add:
+\
+\                         * &F4 = var13
+\
+\                         * &FA = var18
+\
+\                         * &FD = var14
+\
+\   (SS T)              The value to add to the first axis
+\
+\   (TT U)              The value to add to the second axis
+\
+\   (UU V)              The value to add to the third axis
+\   
 \ ******************************************************************************
 
-.sub_C0BCC
+.AddCoordinates
 
- LDA var20Lo,Y
- CLC
- ADC T
+ LDA var20Lo,Y          \ Set varX0 = varY0 + (SS T)
+ CLC                    \
+ ADC T                  \ starting with the high bytes
  STA var20Lo,X
- LDA var20Hi,Y
+
+ LDA var20Hi,Y          \ And then the low bytes
  ADC SS
  STA var20Hi,X
- LDA var20Lo+1,Y
- CLC
- ADC U
+
+ LDA var20Lo+1,Y        \ Set varX1 = varY1 + (TT U)
+ CLC                    \
+ ADC U                  \ starting with the high bytes
  STA var20Lo+1,X
- LDA var20Hi+1,Y
+
+ LDA var20Hi+1,Y        \ And then the low bytes
  ADC TT
  STA var20Hi+1,X
- LDA var20Lo+2,Y
- CLC
- ADC V
+
+ LDA var20Lo+2,Y        \ Set varX2 = varY2 + (UU V)
+ CLC                    \
+ ADC V                  \ starting with the high bytes
  STA var20Lo+2,X
- LDA var20Hi+2,Y
+
+ LDA var20Hi+2,Y        \ And then the low bytes
  ADC UU
  STA var20Hi+2,X
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4220,7 +4256,7 @@ ORG &0B00
 
  LDA L0178,X
  AND #%01111111
- ORA #&45
+ ORA #%01000101
  STA L0114,X
 
  LDA #%10010001
@@ -4752,7 +4788,10 @@ ORG &0B00
 .C1333
 
  LDY L0002
- JSR sub_C1442
+
+ JSR SetCoordinate      \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
+                        \ trackDataBlock1, trackDataBlock2 and trackDataBlock3
+
  LDX coordNumber
  LDA L0001
  LSR A
@@ -4809,7 +4848,8 @@ ORG &0B00
  AND L0001
  STA dataBlockIndex+2,X
  LDY prevCoordNumber
- JSR sub_C0BCC
+
+ JSR AddCoordinates
 
  JSR CopyCoordinateY    \ Copy the X-th var20+1 to var17+1
 
@@ -5049,63 +5089,105 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C1442
+\       Name: SetCoordinate
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Fetch a three-axis coordinate from the track data
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   The index of the coordinate in the track data blocks
+\
+\ Returns:
+\
+\   (SS T)              The Y-th entry from trackDataBlock1 as a 16-bit signed
+\                       integer
+\
+\   (TT U)              The Y-th entry from trackDataBlock2 as a 16-bit signed
+\                       integer
+\
+\   (UU V)              The Y-th entry from trackDataBlock3 as a 16-bit signed
+\                       integer
 \
 \ ******************************************************************************
 
-.sub_C1442
+.SetCoordinate
 
- LDA #0
+ LDA #0                 \ Zero the high bytes of (SS T), (TT U) and (UU V)
  STA SS
  STA TT
  STA UU
- LDA trackDataBlock1,Y
+
+ LDA trackDataBlock1,Y  \ Set T = the Y-th entry from trackDataBlock1
  STA T
- BPL C1453
- DEC SS
 
-.C1453
+ BPL coor1              \ If the byte we just fetched is negative, decrement
+ DEC SS                 \ the high byte in SS to &FF, so (SS T) has the correct
+                        \ sign
 
- LDA trackDataBlock2,Y
+.coor1
+
+ LDA trackDataBlock2,Y  \ Set U = the Y-th entry from trackDataBlock2
  STA U
- BPL C145C
- DEC TT
 
-.C145C
+ BPL coor2              \ If the byte we just fetched is negative, decrement
+ DEC TT                 \ the high byte in TT to &FF, so (TT U) has the correct
+                        \ sign
 
- LDA trackDataBlock3,Y
+.coor2
+
+ LDA trackDataBlock3,Y  \ Set V = the Y-th entry from trackDataBlock3
  STA V
- BPL C1465
- DEC UU
 
-.C1465
+ BPL coor3              \ If the byte we just fetched is negative, decrement
+ DEC UU                 \ the high byte in UU to &FF, so (UU V) has the correct
+                        \ sign
 
- LDA directionFacing
- BEQ C147B
- LDX #2
+.coor3
 
-.P146B
+ LDA directionFacing    \ If our car is facing fowards, jump to coor5 to return
+ BEQ coor5              \ from the subroutine
 
- LDA #0
- SEC
- SBC T,X
+                        \ We are facing backwards, so we need to negate the
+                        \ coordinate we just fetched
+
+ LDX #2                 \ We are about to negate the following 16-bit variables:
+                        \
+                        \   (SS T)
+                        \   (TT U)
+                        \   (UU V)
+                        \
+                        \ so set a counter in X to use as an index that loops
+                        \ through 2, 1 and 0, as:
+                        \
+                        \   (TT U) = (SS+1 U+1)
+                        \   (UU V) = (SS+2 U+2)
+                        \
+                        \ The following comments are for (SS T), but the same
+                        \ process applies for (TT U) and (UU V)
+
+.coor4
+
+ LDA #0                 \ Set (SS T) = 0 - (SS T)
+ SEC                    \
+ SBC T,X                \ starting with the low bytes
  STA T,X
- LDA #0
+
+ LDA #0                 \ And then the high bytes
  SBC SS,X
  STA SS,X
- DEX
- BPL P146B
 
-.C147B
+ DEX                    \ Decrement the loop counter to move on to the next
+                        \ variable
 
- RTS
+ BPL coor4              \ Loop back until we have negated all three 16-bit
+                        \ variables
+
+.coor5
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -6179,8 +6261,8 @@ ENDIF
  JSR DrawBackground     \ Set the background colour for all the track lines in
                         \ the track view
 
- JSR BuildRoadSign      \ Build the road sign (if one is visible) in the slot
-                        \ for driver 23
+ JSR BuildRoadSign      \ Build the road sign (if one is visible) in object
+                        \ number 23
 
  LDX #23                \ Draw any visible road signs
  JSR DrawCarOrSign
@@ -11244,13 +11326,14 @@ ENDIF
 \       Name: ProjectObjectX
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Project an object onto the screen and calculate the object's
+\             screen x-coordinate
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The offset of the variable to use:
+\   X                   The offset from var20 of the first variable to use:
 \
 \                         * &F4 = var13
 \
@@ -11258,7 +11341,15 @@ ENDIF
 \
 \                         * &FD = var14
 \
-\   Y                   The offset from var22 to use
+\   Y                   The offset from var22 of the second variable to use:
+\
+\                         * 6 = var23
+\
+\ Returns:
+\
+\   (JJ II)             The projected screen x-coordinate of the object
+\
+\   M                   
 \
 \ Other entry points:
 \
@@ -11277,7 +11368,7 @@ ENDIF
  LDA var20Hi,X
  SBC var22Hi,Y
  STA VV
- BPL C2165
+ BPL prox1
  LDA #0
  SEC
  SBC PP
@@ -11285,7 +11376,7 @@ ENDIF
  LDA #0
  SBC VV
 
-.C2165
+.prox1
 
  STA SS
  LDA var20Lo+2,X
@@ -11295,7 +11386,7 @@ ENDIF
  LDA var20Hi+2,X
  SBC var19Hi,Y
  STA GG
- BPL C2185
+ BPL prox2
  LDA #0
  SEC
  SBC RR
@@ -11303,17 +11394,17 @@ ENDIF
  LDA #0
  SBC GG
 
-.C2185
+.prox2
 
  STA UU
  CMP SS
- BCC C2193
- BNE C21A6
+ BCC prox3
+ BNE prox4
  LDA RR
  CMP PP
- BCS C21A6
+ BCS prox4
 
-.C2193
+.prox3
 
  LDA UU
  STA H
@@ -11323,9 +11414,9 @@ ENDIF
  STA I
  LDA SS
  STA J
- JMP C21C1
+ JMP prox6
 
-.C21A6
+.prox4
 
  PHP
  LDA SS
@@ -11337,26 +11428,26 @@ ENDIF
  LDA UU
  STA J
  PLP
- BEQ C220D
- JMP C2239
+ BEQ prox9
+ JMP prox14
 
-.P21BD
+.prox5
 
  ASL RR
  ROL UU
 
-.C21C1
+.prox6
 
  ASL PP
  ROL A
- BCC P21BD
+ BCC prox5
  ROR A
  STA V
  LDA RR
  STA T
  LDA UU
  CMP V
- BEQ C220D
+ BEQ prox9
 
  JSR Divide8x8          \ Set T = A * 256 / V
 
@@ -11374,7 +11465,7 @@ ENDIF
  STA JJ
  LDA VV
  EOR GG
- BMI C21FF
+ BMI prox7
  LDA #0
  SEC
  SBC II
@@ -11383,71 +11474,71 @@ ENDIF
  SBC JJ
  STA JJ
 
-.C21FF
+.prox7
 
  LDA #&40
  BIT VV
- BPL C2207
+ BPL prox8
  LDA #&C0
 
-.C2207
+.prox8
 
  CLC
  ADC JJ
  STA JJ
  RTS
 
-.C220D
+.prox9
 
  LDA #&FF
  STA M
  LDA #0
  STA II
  BIT VV
- BPL C2227
+ BPL prox11
  BIT GG
- BPL C2222
+ BPL prox10
  LDA #&A0
  STA JJ
  RTS
 
-.C2222
+.prox10
 
  LDA #&E0
  STA JJ
  RTS
 
-.C2227
+.prox11
 
  BIT GG
- BPL C2230
+ BPL prox12
  LDA #&60
  STA JJ
  RTS
 
-.C2230
+.prox12
 
  LDA #&20
  STA JJ
  RTS
 
-.P2235
+.prox13
 
  ASL PP
  ROL SS
 
-.C2239
+.prox14
 
  ASL RR
  ROL A
- BCC P2235
+ BCC prox13
  ROR A
  STA V
  LDA PP
  STA T
  LDA SS
  CMP V
- BEQ C220D
+ BEQ prox9
 
  JSR Divide8x8          \ Set T = A * 256 / V
 
@@ -11465,7 +11556,7 @@ ENDIF
  STA JJ
  LDA VV
  EOR GG
- BPL C2277
+ BPL prox15
  LDA #0
  SEC
  SBC II
@@ -11474,14 +11565,14 @@ ENDIF
  SBC JJ
  STA JJ
 
-.C2277
+.prox15
 
  LDA #0
  BIT GG
- BPL C227F
+ BPL prox16
  LDA #&80
 
-.C227F
+.prox16
 
  CLC
  ADC JJ
@@ -11493,9 +11584,18 @@ ENDIF
 \       Name: ProjectObjectY
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Project an object onto the screen and calculate the object's
+\             screen y-coordinate
 \
 \ ------------------------------------------------------------------------------
+\
+\ Returns:
+\
+\   A                   The projected y-coordinate of the object
+\
+\   scaleUp             The scale up factor
+\
+\   scaleDown           The scale down factor
 \
 \ Other entry points:
 \
@@ -11514,7 +11614,7 @@ ENDIF
  LDA var20Hi+1,X
  SBC var21Hi,Y
  STA WW
- BPL C22A5
+ BPL proy1
  LDA #0
  SEC
  SBC QQ
@@ -11522,7 +11622,7 @@ ENDIF
  LDA #0
  SBC WW
 
-.C22A5
+.proy1
 
  LSR A
  ROR QQ
@@ -11532,34 +11632,34 @@ ENDIF
  ROR QQ
  STA TT
  CMP L
- BCC C22BE
- BNE C22BC
+ BCC proy3
+ BNE proy2
  LDA QQ
  CMP K
- BCC C22BE
+ BCC proy3
 
-.C22BC
+.proy2
 
  SEC
  RTS
 
-.C22BE
+.proy3
 
  LDY #0
  LDA L
- JMP C22CA
+ JMP proy5
 
-.P22C5
+.proy4
 
  ASL QQ
  ROL TT
  INY
 
-.C22CA
+.proy5
 
  ASL K
  ROL A
- BCC P22C5
+ BCC proy4
  ROR A
  STA V
  STY scaleDown
@@ -11574,27 +11674,27 @@ ENDIF
 
  LDA T
  CMP #&80
- BCS C22FE
+ BCS proy8
  BIT WW
- BPL C22F5
+ BPL proy6
  LDA #&3C
  SEC
  SBC T
- JMP C22F8
+ JMP proy7
 
-.C22F5
+.proy6
 
  CLC
  ADC #&3C
 
-.C22F8
+.proy7
 
  SEC
  SBC L000D
  STA LL
  CLC
 
-.C22FE
+.proy8
 
  RTS
 
@@ -11623,7 +11723,7 @@ ENDIF
 
  LDY L0005
  CPY #6
- BEQ C22FE
+ BEQ proy8
  LDY L0006
  CPY #6
  BEQ C2330
@@ -11691,7 +11791,9 @@ ENDIF
  JSR CopyCoordinate     \ section Y into var14
 
 
- JSR ProjectObjectX-2
+ JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
+                        \ object's screen x-coordinate, returning it in (JJ II)
+
  LDY L0042
 
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
@@ -11707,8 +11809,12 @@ ENDIF
  LDX L0042
  CPX #&28
  BCS C239A
+
  LDX #&FD
- JSR ProjectObjectY-2
+
+ JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
+                        \ object's screen y-coordinate, returning it in A
+
  LDX L0042
  LDA LL
  STA L5F20,X
@@ -11767,7 +11873,9 @@ ENDIF
 
 .sub_C23BB
 
- JSR ProjectObjectX-2
+ JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
+                        \ object's screen x-coordinate, returning it in (JJ II)
+
  LDY L0012
 
 \ ******************************************************************************
@@ -11838,7 +11946,9 @@ ENDIF
 
 .C23FC
 
- JSR ProjectObjectY-2
+ JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
+                        \ object's screen y-coordinate, returning it in A
+
  BCS C2403
  BPL C246A
 
@@ -11898,7 +12008,10 @@ ENDIF
 
  LDX #&FA
  JSR sub_C23BB
- JSR ProjectObjectY-2
+
+ JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
+                        \ object's screen y-coordinate, returning it in A
+
  BCS C2469
  LDX L0014
 
@@ -12448,7 +12561,7 @@ ENDIF
  STX carPosition        \ Store the position of the car we are considering in
                         \ carPosition
 
- JSR sub_C28F2          \ ???
+ JSR BuildCarObject     \ Create the car object so we can draw it below
 
  LDX carPosition        \ Retrieve the position of the car that we stored in
                         \ carPosition above
@@ -12465,7 +12578,7 @@ ENDIF
 
  LDX positionBehind     \ Set X to the position of the driver behind us
 
- JSR sub_C28F2          \ ???
+ JSR BuildCarObject     \ Create the car object ???
 
  RTS                    \ Return from the subroutine
 
@@ -12823,11 +12936,11 @@ ENDIF
 \
 \                         * Clear if they are close (distance < 128)
 \
-\   N flag              The object order:
+\   N flag              The object order (if the objects are close):
 \
-\                         * Set if object X is ahead
+\                         * Set if object X is ahead by more than 256
 \
-\                         * Clear if object Y is ahead
+\                         * Clear otherwise
 \
 \   H                   Relationship to the starting line:
 \
@@ -12853,8 +12966,8 @@ ENDIF
 
  PHP                    \ Store the status register on the stack, so the N flag
                         \ on the stack is the sign of the above subtraction, so
-                        \ it's set if objProgress for object Y < objProgress
-                        \ for object X, i.e. if object X is ahead
+                        \ it's set if objProgressHi for object Y < objProgressHi
+                        \ for object X, i.e. if object X is ahead by 256 or more
 
  BPL dist1              \ If the result of the subtraction was positive, jump
                         \ to dist1 to skip the following instruction
@@ -12883,7 +12996,15 @@ ENDIF
  PLA                    \ Flip the N flag in the status register on the stack
  EOR #%10000000         \ (as the N flag is bit 7 of the status register), so
  PHP                    \ the N flag on the stack is the opposite sign to the
-                        \ objProgress subtraction we did above
+                        \ objProgress subtraction we did above, in other words
+                        \ it's now clear if object X is ahead by 256 or more and
+                        \ set otherwise
+                        \
+                        \ This caters for the situation where the cars are close
+                        \ but on either side of the starting line, in which case
+                        \ the subtraction we did above will give the wrong
+                        \ result, so this flips the order of the two objects to
+                        \ be correct
 
                         \ In the following, (trackLengthHi trackLengthLo)
                         \ contains the length of the full track
@@ -12915,7 +13036,7 @@ ENDIF
 
  ROR H                  \ Set bit 7 of H to the C flag, so it's clear if the
                         \ objects are quite close but on opposite sides of the
-                        \ starting line, clear otherwise
+                        \ starting line, otherwise it is set
 
  LDA T                  \ If T >= 128, then the distance between the objects is
  CMP #128               \ >= 128, so jump to dist3 to return from the subroutine
@@ -12927,8 +13048,7 @@ ENDIF
 
  PLP                    \ Retrieve the status flags from the stack
 
- JSR Absolute8Bit       \ Set the sign of A according to the N flag, which will
-                        \ be set if object X is ahead
+ JSR Absolute8Bit       \ Multiply the sign of A by the N flag
 
  STA T                  \ Set T = A
 
@@ -13276,83 +13396,122 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C28F2
+\       Name: BuildCarObject
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Create an object for the specified car
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The position of the driver to process
+\   X                   The position of the driver whose car object we want to
+\                       build
 \
 \ ******************************************************************************
 
-.sub_C28F2
+.BuildCarObject
 
  LDA driversInOrder,X   \ Set A to the number of the driver in position X
 
  STA driverPosition     \ Store the driver number in driverPosition so we can
                         \ retrieve it later
 
- STA objectNumber       \ Store the driver number in objectNumber in case we
-                        \ need to hide this object
+ STA objectNumber       \ Store the driver number in objectNumber, in case we
+                        \ need to hide this driver's car below
 
  TAX                    \ Set X to the driver number
 
- LDY #23
+ LDY #23                \ Set Y to the object number of the road sign
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
                         \ to GetObjectDistance
 
- JSR GetObjectDistance  \ Set A and T to the distance between drivers X and Y
+ JSR GetObjectDistance  \ Set A and T to the distance between driver X and the
+                        \ road sign in object Y
 
- BCS C2911              \ If the C flag is set then the cars are far apart, so
-                        \ jump to C2911
+ BCS bcar1              \ If the C flag is set then the car and sign are far
+                        \ apart, so jump to bcar1 to hide the car
 
- EOR directionFacing    \ If we are facing forward and driver X is ahead, or we
- BMI C2911              \ are facing backwards and driver Y is ahead, jump to
-                        \ C2911
+ EOR directionFacing    \ This tests whether bit 7 of directionFacing and bit 7
+ BMI bcar1              \ of the distance in A are different, which will happen
+                        \ if either of the following is true:
+                        \
+                        \   * We are facing forwards (0) and driver X is ahead
+                        \     of the sign in object Y by more than 256 (1)
+                        \
+                        \   * We are facing backwards (1) and driver X is not
+                        \     ahead of the sign in object Y by more than 256 (0)
+                        \
+                        \ In both cases driver X is too far away from us to be
+                        \ seen, and bit 7 of the result of the EOR will be set,
+                        \ so jump to bcar1 to hide the car
 
  LDA T                  \ Set T = |T|
- JSR Absolute8Bit
- STA T
+ JSR Absolute8Bit       \
+ STA T                  \ so A and T contain the absolute value of the distance
+                        \ between the car and sign
 
- CMP #40                \ If |T| < 40, jump to C2914 to skip the following
- BCC C2914
+ CMP #40                \ If |A| < 40, jump to bcar2 to skip the following
+ BCC bcar2              \ instruction and continue creating the car object
 
-.C2911
+                        \ If we get here then the car and sign are far apart,
+                        \ so we hide the car
 
- JMP HideObject
+.bcar1
 
-.C2914
+ JMP HideObject         \ Hide the object in objectNumber, which this hides the
+                        \ car object for driver X, and return from the
+                        \ subroutine using a tail call
 
- ASL A
- CLC
- ADC T
- EOR #&FF
- SEC
- ADC coordNumber
- BPL C2922
- CLC
+.bcar2
+
+                        \ If we get here, A and T contain the absolute value of
+                        \ the distance between the car and sign
+
+ ASL A                  \ Set A = A * 2
+                        \       = distance * 2
+
+ CLC                    \ Set A = ~(A + T)
+ ADC T                  \       = ~(distance * 2 + distance)
+ EOR #&FF               \       = ~(distance * 3)
+
+ SEC                    \ Set A = A + 1 + coordNumber
+ ADC coordNumber        \       = ~(distance * 3) + 1 + coordNumber
+                        \       = -(distance * 3) + coordNumber
+                        \       = coordNumber - distance * 3
+                        \
+                        \ The coordNumber contains the number * 3 of the
+                        \ coordinate that was last processed, so this is the
+                        \ same as:
+                        \
+                        \   (number - distance) * 3
+
+ BPL bcar3              \ If the result was positive, i.e. number >= distance,
+                        \ jump to bcar3 to skip the following
+
+ CLC                    \ Otherwise set A = A + 120
  ADC #120
 
-.C2922
+.bcar3
 
- TAY
- LDA positionNumber,X
- AND #%00010000
+ TAY                    \ Copy the result from A into Y
+
+ LDA positionNumber,X   \ If bit 4 of driver X's positionNumber is set, jump to
+ AND #%00010000         \ sub_C2937
  BNE sub_C2937
- LDA carSpeedHi,X
- CMP #&32
+
+ LDA carSpeedHi,X       \ if the high byte of driver X's speed is less than 50,
+ CMP #50                \ jump to sub_C2937
  BCC sub_C2937
- LDA dataBlockIndex+1,Y
- STA L0114,X
+
+ LDA dataBlockIndex+1,Y \ Set the driver's L0114 to entry Y + 1 from
+ STA L0114,X            \ dataBlockIndex, so L0114 contains the index value into
+                        \ the track data for entry Y + 1
 
 \ ******************************************************************************
 \
-\       Name: sub_C2937
+\       Name: sub_C2937 (Part 1 of 2)
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: 
@@ -13482,17 +13641,29 @@ ENDIF
  BCC C29F4
  INC var14Hi+1
 
+\ ******************************************************************************
+\
+\       Name: sub_C2937 (Part 2 of 2)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: 
+\
+\ ******************************************************************************
+
 .C29F4
 
  LDA #4                 \ Set A = 4, to use as the object type for the
                         \ one-object car
 
- JSR sub_C2A5F-2
+ JSR ProjectObject-2    \ Project the object onto the screen, using var14
 
  LDX L0045
+
  LDA L0055
- CMP #3
+
+ CMP #3                 \ If A >= 3, jump to C2A50
  BCS C2A50
+
  LDA carPosition
  CMP positionAhead
  BNE C2A4D
@@ -13510,27 +13681,40 @@ ENDIF
 
  LDY L000C
 
- JSR sub_C1442
+ JSR SetCoordinate      \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
+                        \ trackDataBlock1, trackDataBlock2 and trackDataBlock3
 
- JSR sub_C2B0E
+ JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDY #&FD
+ LDY #&FD               \ Set Y = &FD so the call to AddCoordinates uses var14
 
- LDX #&FA
+ LDX #&FA               \ Set X = &FA so the call to AddCoordinates uses var18
 
- JSR sub_C0BCC
+ JSR AddCoordinates     \ Set:
+                        \
+                        \                   [ (SS T) ]
+                        \   var18 = var14 + [ (TT U) ] / 2
+                        \                   [ (UU V) ]
 
- JSR sub_C2B0E
+ JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDX #&F4
+ LDX #&F4               \ Set X = &F4 so the call to AddCoordinates uses var13
 
- JSR sub_C0BCC
+ JSR AddCoordinates     \ Set:
+                        \
+                        \                   [ (SS T) ]
+                        \   var13 = var14 + [ (TT U) ] / 4
+                        \                   [ (UU V) ]
 
- JSR sub_C2B0E
+ JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDX #&FD
+ LDX #&FD               \ Set X = &FD so the call to AddCoordinates uses var14
 
- JSR sub_C0BCC
+ JSR AddCoordinates     \ Set:
+                        \
+                        \                   [ (SS T) ]
+                        \   var14 = var14 + [ (TT U) ] / 8
+                        \                   [ (UU V) ]
 
  LDA #20                \ Set objectNumber = 20, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -13538,7 +13722,7 @@ ENDIF
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR sub_C2A5F-2
+ JSR ProjectObject-2    \ Project the object onto the screen, using var14
 
  LDA #21                \ Set objectNumber = 21, to use as then object number
  STA objectNumber       \ for the body and helmet in the four-object car
@@ -13546,9 +13730,9 @@ ENDIF
  LDA #1                 \ Set A = 1, to use as the object type for the body and
                         \ helmet in the four-object car
 
- LDX #&F4               \ Set X = &F4 so the call to sub_C2A5F uses var13
+ LDX #&F4               \ Set X = &F4 so the call to ProjectObject uses var13
 
- JSR sub_C2A5F
+ JSR ProjectObject      \ Project the object onto the screen, using var13
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -13556,37 +13740,44 @@ ENDIF
  LDA #0                 \ Set A = 0, to use as the object type for the rear
                         \ tyres in the four-object car
 
- LDX #&FA               \ Set X = &FA so the call to sub_C2A5F uses var18
+ LDX #&FA               \ Set X = &FA so the call to ProjectObject uses var18
 
- JSR sub_C2A5F
+ JSR ProjectObject      \ Project the object onto the screen, using var18
 
 .C2A4D
 
- LDX driverPosition
+ LDX driverPosition     \ Retrieve the value of X that we stored at the start of
+                        \ the BuildCarObject routine
 
  RTS                    \ Return from the subroutine
 
 .C2A50
 
- CMP #5
- BCC C2A4D
+                        \ We jump here when A contains L0055 and A >= 3
+
+ CMP #5                 \ If A < 5, i.e. A = 4, jump to C2A4D to return from the
+ BCC C2A4D              \ subroutine
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
- BMI C2A4D              \ the car is not visible, so jump to C2A4D to skip the
-                        \ following instruction
+ BMI C2A4D              \ the car is not visible, so jump to C2A4D to return
+                        \ from the subroutine
+
+                        \ If we get here then A >= 5 and the car is visible, so
+                        \ the car is in the distance
 
  INC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
-                        \ so this oncrements the car's object type from 4 (the
+                        \ so this increments the car's object type from 4 (the
                         \ standard car) to 5 (the distant car)
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C2A5F
+\       Name: ProjectObject
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Project an object onto the screen and calculate the object's
+\             screen coordinates
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13594,7 +13785,8 @@ ENDIF
 \
 \   A                   Object type
 \
-\   X                   The offset of the variable to use in ProjectObjectX:
+\   X                   The offset from var20 of the variable to use in the
+\                       ProjectObjectX routine:
 \
 \                         * &F4 = var13
 \
@@ -13604,92 +13796,131 @@ ENDIF
 \
 \ Other entry points:
 \
-\   sub_C2A5F-2         Use var14 in ProjectObjectX
+\   ProjectObject-2     Use var14 in the call to ProjectObjectX
 \
 \ ******************************************************************************
 
- LDX #&FD               \ Set X = &FD so the call to ProjectObjectX uses var14
+ LDX #&FD               \ Set X = &FD so the calls to ProjectObjectX and
+                        \ ProjectObjectY use var14 and var14+1
 
-.sub_C2A5F
+.ProjectObject
 
  STA objectType         \ Store the object type in objectType
 
- JSR ProjectObjectX-2
+ JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
+                        \ object's screen x-coordinate, returning it in (JJ II)
 
- LDY objectNumber       \ Set Y to the number of the car we are processing
+ LDY objectNumber       \ Set Y to the number of the object we are processing
 
- LDA II                 \ Set the screen x-coordinate for this car in (xObjectHi
- STA xObjectLo,Y        \ xObjectLo) to (JJ II)
+ LDA II                 \ Set the screen x-coordinate for this object in
+ STA xObjectLo,Y        \ (xObjectHi xObjectLo) to (JJ II)
  LDA JJ
  STA xObjectHi,Y
 
- JSR sub_C2AB1
+ JSR sub_C2AB3-2        \ ???
 
- JSR ProjectObjectY-2
+ JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
+                        \ object's screen y-coordinate, returning it in A
+
+                        \ Fall through into SetObjectDetails to set the object's
+                        \ visibility, scale and type
 
 \ ******************************************************************************
 \
-\       Name: sub_C2A76
+\       Name: SetObjectDetails
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Set an object's visibility, scale and type
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The projected y-coordinate of the object, as returned by
+\                       ProjectObjectY
+\
+\   C flag              If the C flag is set, hide the object
+\
+\   scaleUp             The scale up factor, as returned by ProjectObjectY
+\
+\   scaleDown           The scale down factor, as returned by ProjectObjectY
 \
 \ ******************************************************************************
 
-.sub_C2A76
+.SetObjectDetails
 
- LDY objectNumber
+ LDY objectNumber       \ Set Y to the number of the object
 
- BCS HideObject
+ BCS HideObject         \ If the C flag is set, jump to HideObject to hide the
+                        \ object and return from the subroutine using a tail
+                        \ call
 
- SEC
+ SEC                    \ Set A = A - 1
  SBC #1
 
- BMI HideObject
+ BMI HideObject         \ If the result is negative, jump to HideObject to hide
+                        \ the object and return from the subroutine using a tail
+                        \ call
 
- STA yObject,Y
+ STA yObject,Y          \ Store the object's y-coordinate in yObject
 
- LDA scaleDown
+                        \ We now set the object's scaleUp value (i.e. its size)
+                        \ to the following:
+                        \
+                        \   scaleUp / 2 ^ (scaleDown - 10)
+                        \
+                        \ where scaleUp and scaleDown were set by the call to 
+
+ LDA scaleDown          \ Set X = scaleDown - 9
  SEC
  SBC #9
  TAX
 
- LDA scaleUp
- DEX
+ LDA scaleUp            \ Set A = scaleUp
 
- BEQ C2A99
- BPL C2A95
+ DEX                    \ Set X = X - 1
+                        \       = scaleDown - 10
 
-.P2A8F
+ BEQ sobj3              \ If X = 0, jump to sobj3 to set the object's scaleUp
+                        \ to A
 
- LSR A
+ BPL sobj2              \ If X > 0, jump to sobj3 to set the object's scaleUp
+                        \ to A << X
 
- INX
+                        \ Otherwise X < 0, so we calculate A >> X to set as the
+                        \ the object's scaleUp
 
- BNE P2A8F
- BEQ C2A99
+.sobj1
 
-.C2A95
+ LSR A                  \ Set A = A >> 1
 
- ASL A
+ INX                    \ Increment the shift counter in X
 
- DEX
+ BNE sobj1              \ Loop back to sobj1 until we have shifted by X places
 
- BNE C2A95
+ BEQ sobj3              \ Jump to sobj3 (this BEQ is effectively a JMP as we
+                        \ just passed through a BNE)
 
-.C2A99
+.sobj2
 
- STA carScaleUp,Y
+ ASL A                  \ Set A = A << 1
 
- LDA objectStatus,Y
- AND #%01110000
- ORA objectType
+ DEX                    \ Decrement the shift counter in X
 
- JMP C2AAD
+ BNE sobj2              \ Loop back to sobj2 until we have shifted by X places
+
+.sobj3
+
+ STA objectScaleUp,Y    \ Set the object's scaleUp (i.e. size) to A
+
+ LDA objectStatus,Y     \ Set A to the object's status byte
+
+ AND #%01110000         \ Clear bit 7 to make the object visible, and set bits
+ ORA objectType         \ 0-3 to the object type
+
+ JMP SetObjectStatus    \ Jump to SetObjectStatus to store the updated object
+                        \ status byte, returning from the subroutine using a
+                        \ tail call
 
 \ ******************************************************************************
 \
@@ -13708,31 +13939,38 @@ ENDIF
 
 .HideObject
 
- LDY objectNumber
- LDA objectStatus,Y
- ORA #%10000000
+ LDY objectNumber       \ Set Y to the number of the object to hide
 
-.C2AAD
+ LDA objectStatus,Y     \ Set A to the object's status byte
 
- STA objectStatus,Y
- RTS
+ ORA #%10000000         \ Set bit 7 in the object's status byte in A, which
+                        \ marks the object as hidden
+
+                        \ Fall through into SetObjectStatus to store the updated
+                        \ object status byte
 
 \ ******************************************************************************
 \
-\       Name: sub_C2AB1
+\       Name: SetObjectStatus
 \       Type: Subroutine
-\   Category: Graphics
-\    Summary: 
+\   Category: Driving model
+\    Summary: Set an object's status byte
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   The object status byte
+\
+\   Y                   The number of the object
 \
 \ ******************************************************************************
 
-.sub_C2AB1
+.SetObjectStatus
 
- LDY #&25
+ STA objectStatus,Y     \ Set object Y's status byte to the value in A
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13743,21 +13981,37 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   
+\
+\   K                   
+\
+\ Other entry points:
+\
+\   sub_C2AB3-2         Y = 37
 \
 \ ******************************************************************************
+
+ LDY #37
 
 .sub_C2AB3
 
  JSR sub_C0CA5
+
  LDA L
  STA L0055
+
  BNE C2ACA
+
  CPY K
  BCC C2ACA
+
  DEC L0068
+
  LDA K
  STA L0041
+
  LDA L0042
  STA L0067
 
@@ -13828,24 +14082,25 @@ ENDIF
 
 .DrawCarOrSign
 
- LDA objectStatus,X     \ Set A to this car's status byte
+ LDA objectStatus,X     \ Set A to this object's status byte
 
- BMI dcas3              \ If bit 7 is set then the car is not visible, so jump
+ BMI dcas3              \ If bit 7 is set then the object is not visible, so jump
                         \ to dcas3 to return from the subroutine without drawing
                         \ anything
 
- AND #%00001111         \ Extract the car's object type from bits 0-3 and store
+ AND #%00001111         \ Extract the object's object type from bits 0-3 and store
  STA objectType         \ it in objectType
 
- LDA xObjectLo,X        \ Set (A T) = xObject for this car - xPlayer
+ LDA xObjectLo,X        \ Set (A T) = xObject for this object - xPlayer
  SEC                    \
  SBC xPlayerLo          \ starting with the low bytes
  STA T
 
  LDA xObjectHi,X        \ And then the high bytes
  SBC xPlayerHi          \
-                        \ So (A T) now contains the amount that the car we are
-                        \ drawing is to the left or right of the player's car
+                        \ So (A T) now contains the amount that the object we
+                        \ are drawing is to the left or right of the player's
+                        \ car
 
  BPL dcas1              \ If the result is positive, jump to dcas1 to perform a
                         \ positive comparison
@@ -13878,13 +14133,13 @@ ENDIF
                         \ screen, as the centre x-coordinate of the screen is
                         \ at 80 pixels
 
- LDA yObject,X          \ Set yCoord to this car's screen y-coordinate from
+ LDA yObject,X          \ Set yCoord to this object's screen y-coordinate from
  STA yCoord             \ yObject
 
- LDA carScaleUp,X       \ Set scaleUp to this car's scale factor (i.e. the size
+ LDA objectScaleUp,X    \ Set scaleUp to this object's scale factor (i.e. the size
  STA scaleUp            \ of the car
 
- JSR DrawObject         \ Draw the car on-screen
+ JSR DrawObject         \ Draw the object on-screen
 
 .dcas3
 
@@ -13895,35 +14150,67 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2B0E
+\       Name: HalveCoordinate
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: 
+\    Summary: Halve a coordinate with three 16-bit axes
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Given a three-axis variable, this routine halves each axis in-place:
+\
+\   [ (SS T) ]   [ (SS T) ]
+\   [ (TT U) ] = [ (TT U) ] / 2
+\   [ (UU V) ]   [ (UU V) ]
+\
+\ Arguments:
+\
+\   (SS T)              The value of the coordinate's first axis
+\
+\   (TT U)              The value of the coordinate's second axis
+\
+\   (UU V)              The value of the coordinate's third axis
 \
 \ ******************************************************************************
 
-.sub_C2B0E
+.HalveCoordinate
 
- LDX #2
+ LDX #2                 \ We are about to right-shift the following 16-bit
+                        \ variables:
+                        \
+                        \   (SS T)
+                        \   (TT U)
+                        \   (UU V)
+                        \
+                        \ so set a counter in X to use as an index that loops
+                        \ through 2, 1 and 0, as:
+                        \
+                        \   (TT U) = (SS+1 U+1)
+                        \   (UU V) = (SS+2 U+2)
+                        \
+                        \ The following comments are for (SS T), but the same
+                        \ process applies for (TT U) and (UU V)
 
-.P2B10
+.halc1
 
- LDA SS,X
- CLC
- BPL C2B16
+ LDA SS,X               \ Set A to the high byte of (SS T)
+
+ CLC                    \ If A is negative, set the C flag, otherwise clear the
+ BPL halc2              \ C flag, so this sets the C flag to the sign of (SS T)
  SEC
 
-.C2B16
+.halc2
 
- ROR SS,X
+ ROR SS,X               \ Set (SS T) = (SS T) >> 1
  ROR T,X
- DEX
- BPL P2B10
- RTS
+
+ DEX                    \ Decrement the loop counter to move on to the next
+                        \ variable
+
+ BPL halc1              \ Loop back until we have shifted all three 16-bit
+                        \ variables to the right 
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -23216,7 +23503,7 @@ ENDIF
 \       Name: BuildRoadSign
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Create an object for the road sign
 \
 \ ------------------------------------------------------------------------------
 \
@@ -23237,11 +23524,11 @@ ENDIF
  LSR A
  STA L0045
  CMP L62F9
- BNE C4CBB
+ BNE sign1
  ADC #0
  AND #&0F
 
-.C4CBB
+.sign1
 
  TAX
  LDY #2
@@ -23265,14 +23552,20 @@ ENDIF
  AND #%11111000         \ bits 3-7 of trackRoadSigns
  TAY
 
- LDX #&FD               \ Copy the first trackSection coordinate for track
- JSR CopyCoordinate     \ section Y into var14
+ LDX #&FD               \ Set X = &FD so the calls to CopyCoordinate,
+                        \ ProjectObjectX and ProjectObjectY use var14 and
+                        \ var14+1
 
- LDY #6
- JSR ProjectObjectX
+ JSR CopyCoordinate     \ Copy the first trackSection coordinate for track
+                        \ section Y into var14
 
- LDA II                 \ Set xObject for the road sign to (JJ II)
- STA xObjectLo+23
+ LDY #6                 \ Set Y = 6 so the call to ProjectObjectX uses var23
+
+ JSR ProjectObjectX     \ Project the object onto the screen and calculate the
+                        \ object's screen x-coordinate, returning it in (JJ II)
+
+ LDA II                 \ Set the screen x-coordinate for the road sign in
+ STA xObjectLo+23       \ (xObjectHi+23 xObjectLo+23) to (JJ II)
  LDA JJ
  STA xObjectHi+23
 
@@ -23282,26 +23575,32 @@ ENDIF
  JSR Absolute8Bit       \ Set A = |A|
 
  CMP #&40
- BCC C4D09
+ BCC sign2
  LDY L0045
  STY L62F9
 
-.C4D09
+.sign2
 
  LDY #&25
  CMP #&6E
- BCC C4D11
+ BCC sign3
  LDY #&50
 
-.C4D11
+.sign3
 
- LDA #&17
+ LDA #23
  STA L0042
+
  JSR sub_C2AB3
- LDY #6
- JSR ProjectObjectY
- JSR sub_C2A76
- RTS
+
+ LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses var23
+
+ JSR ProjectObjectY     \ Project the object onto the screen and calculate the
+                        \ object's screen y-coordinate, returning it in A
+
+ JSR SetObjectDetails   \ Set the object's visibility, scale and type
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -30324,11 +30623,11 @@ ORG &7B00
                         \ We then pass N and TT (the latter via A) into the
                         \ DrawCarInMirror routine
 
- LDA carScaleUp,X       \ Set A = the scale factor (i.e. size) for the driver
+ LDA objectScaleUp,X    \ Set A = the scale factor (i.e. size) for the driver
                         \ behind
 
  LSR A                  \ Set T = A / 8
- LSR A                  \       = carScaleUp / 8
+ LSR A                  \       = objectScaleUp / 8
  LSR A
  STA T
 
