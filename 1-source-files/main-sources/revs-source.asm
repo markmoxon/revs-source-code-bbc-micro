@@ -173,9 +173,9 @@ ORG &0000
  SKIP 1                 \ High byte of the player's x-coordinate when projected
                         \ onto the screen
 
-.L000C
+.yStore1
 
- SKIP 1                 \ 
+ SKIP 1                 \ Temporary storage for Y
 
 .L000D
 
@@ -966,9 +966,23 @@ ORG &0100
                         \
                         \   * Bit 7 = car is braking?
 
-.carL0114
+.carSteering
 
- SKIP 20                \ 
+ SKIP 20                \ Contains the steering to apply to each car
+                        \
+                        \   * Bits 0-5 = the amount of steering
+                        \
+                        \   * Bit 6 = ???
+                        \
+                        \   * Bit 7 = the direction (0 = left, 1 = right)
+                        \
+                        \ The steering is stored as a sign-magnitude number,
+                        \ where the sign is in bit 7 and the magnitude is in
+                        \ bits 0-5
+                        \
+                        \ The amount is in terms of the racing line, where the
+                        \ width of the track is 256, so steering by 26 would
+                        \ steer the car sideways by 10% of the track width
 
 .driverSpeed
 
@@ -1025,6 +1039,9 @@ ORG &0100
                         \   * 128 is the centre line
                         \
                         \   * 255 is full left
+                        \
+                        \ Bit 7 is therefore set if the car is in the left half
+                        \ the track, and clear for the right half
 
 .objectStatus
 
@@ -4286,13 +4303,13 @@ ORG &0B00
 
 .sub_C11AB
 
- CPX #&14
+ CPX #20
  BCS sub_C11CE-1
 
  LDA carRacingLine,X
  AND #%01111111
  ORA #%01000101
- STA carL0114,X
+ STA carSteering,X
 
  LDA #%10010001
  STA carStatus,X
@@ -6757,7 +6774,7 @@ ENDIF
  JSR sub_C109B          \ ???
 
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
-                        \ carL0114, carProgress, (carSpeedHi carSpeedLo) and
+                        \ carSteering, carProgress, (carSpeedHi carSpeedLo) and
                         \ carStatus, and initialise the 20-byte blocks at
                         \ objectStatus, totalRaceMinutes and carSectionSpeed,
                         \ so set up a loop counter in X
@@ -6772,7 +6789,7 @@ ENDIF
  LDA #0                 \ Zero the X-th byte of driverLapNumber
  STA driverLapNumber,X
 
- STA carL0114,X         \ Zero the X-th byte of carL0114
+ STA carSteering,X      \ Zero the X-th byte of carSteering
 
  STA carProgress,X      \ Zero the X-th byte of carProgress
 
@@ -12700,7 +12717,7 @@ ENDIF
  LDA #0                 \ Set N = 0, which we will use to build our flags
  STA N
 
- STA carL0114,X         \ Set this driver's carL0114 to 0
+ STA carSteering,X      \ Set this driver's carSteering to 0
 
  JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
 
@@ -12863,7 +12880,7 @@ ENDIF
  LDA T
  AND #%10000000
  ORA SS
- STA carL0114,X
+ STA carSteering,X
 
 .C2786
 
@@ -13309,11 +13326,34 @@ ENDIF
 \       Name: MoveCars (Part 2 of 2)
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Move the cars around the track
+\    Summary: Move the cars forward around the track, and apply steering
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part moves the car round the track by the speed we just calculated.
+\ This part moves the car round the track by the speed we just calculated, and
+\ applies steering if required.
+\
+\ The steering algorithm works as follows:
+\
+\   * Only apply steering if the car is visible.
+\
+\   * If any of the following are true, apply the amount of steering given in
+\     carSteering:
+\
+\     * Bit 6 of the car's objectStatus is set
+\
+\     * Bit 6 of the car's carSteering is clear
+\
+\     * Bit 7 of the car's racing line = bit 7 of carSteering, so:
+\
+\       * Car is in the right half and is steering left (when bit 7 is clear)
+\
+\       * Car is in the left half and is steering right (when bit 7 is set)
+\
+\     * The car is not within 30 of either verge, 30 <= carRacingLine < 226
+\
+\   * Otherwise, if the car's racing line is within 20 of either verge, steer
+\     away from the verge by one.
 \
 \ ******************************************************************************
 
@@ -13347,71 +13387,122 @@ ENDIF
  BCS mcar20             \ move on to the next car
 
  BMI mcar17             \ If bit 6 of the driver's car object status byte is
-                        \ set, jump to mcar17 
+                        \ set, jump to mcar17 to steer the car
 
- LDA carL0114,X
- AND #%01000000
+ LDA carSteering,X      \ If bit 6 of the car's carSteering is clear, jump to
+ AND #%01000000         \ mcar17 to steer the car
  BEQ mcar17
 
- LDA carRacingLine,X
- EOR carL0114,X
- BPL mcar17
+ LDA carRacingLine,X    \ If bit 7 of the car's racing line and carSteering are
+ EOR carSteering,X      \ the same (so the car is steering into the opposite
+ BPL mcar17             \ half of the track), jump to mcar17 to steer the car
 
- LDA carRacingLine,X
- BPL mcar15
+ LDA carRacingLine,X    \ If the car's racing line < 128, then the car is in the
+ BPL mcar15             \ right half of the track, so jump to mcar15 to check
+                        \ how close it is to the right verge
 
- CMP #&EC
+ CMP #236               \ If the car's racing line < 236, jump to mcar14
  BCC mcar14
 
- DEC carRacingLine,X
+                        \ If we get here then the car's racing line >= 236, which
+                        \ is very close to the left verge, so we steer a little
+                        \ to the right
 
- BCS mcar20
+ DEC carRacingLine,X    \ Steer the car a little to the right
+
+ BCS mcar20             \ Jump to mcar20 (this BCS is effectively a JMP as we
+                        \ just passed through a BCC)
 
 .mcar14
 
- CMP #&E2
- BCC mcar17
- BCS mcar20
+ CMP #226               \ If the car's racing line < 226, jump to mcar17 to
+ BCC mcar17             \ steer the car
+
+                        \ If we get here, then the car's racing line >= 226,
+                        \ which is quite close to the left verge
+
+ BCS mcar20             \ Jump to mcar20 (this BCS is effectively a JMP as we
+                        \ just passed through a BCC)
 
 .mcar15
 
- CMP #20
+ CMP #20                \ If the car's racing line >= 20, jump to mcar16
  BCS mcar16
 
- INC carRacingLine,X
+                        \ If we get here then the car's racing line < 20, which
+                        \ is very close to the right verge, so we steer a little
+                        \ to the left
 
- BCC mcar20
+ INC carRacingLine,X    \ Steer the car a little to the left
+
+ BCC mcar20             \ Jump to mcar20 (this BCC is effectively a JMP as we
+                        \ just passed through a BCS)
 
 .mcar16
 
- CMP #&1E
- BCC mcar20
+ CMP #30                \ If the car's racing line < 30, jump to mcar20 to move
+ BCC mcar20             \ on to the next driver
 
 .mcar17
 
- LDA carL0114,X
- AND #%10111111
+                        \ If we get here, then we need to apply the steering
+                        \ given in carSteering
+                        \
+                        \ carSteering is a sign-magnitude number, where bit 7 is
+                        \ the sign and bits 0-5 contain the magnitude, so before
+                        \ we can apply the steering, we need to convert it into
+                        \ a signed number
 
- CLC
+ LDA carSteering,X      \ Set A to the car's carSteering
 
- BPL mcar18
+ AND #%10111111         \ Clear bit 6
 
- EOR #%01111111
+ CLC                    \ Clear the C flag in preparation for the addition below
 
- ADC carRacingLine,X
+ BPL mcar18             \ If bit 7 of A is clear, then the amount of steering is
+                        \ positive and the number is already correct, so jump to
+                        \ mcar18 to add it to the racing line
 
- BCS mcar19
- BCC mcar20
+                        \ If we get here then the sign-magnitude number in A is
+                        \ negative, so we need to convert this into a signed
+                        \ number
+                        \
+                        \ We do this by first setting bit 6 (which we just
+                        \ cleared above) so bits 6 and 7 are both set, and we
+                        \ then need to flip bits 0-5, to convert the positive
+                        \ magnitude into its negative equivalent
+                        \
+                        \ We can do this in one EOR instruction, as follows
+
+ EOR #%01111111         \ Set bit 6 of A and flip bits 0-5, so A is now a
+                        \ negative number that we can add to the racing line in
+                        \ order to subtract the correct amount of steering
+
+ ADC carRacingLine,X    \ Steer the car right by the amount in A
+
+ BCS mcar19             \ If the subtraction didn't underflow then we are still
+                        \ on the track, so jump to mcar19 to update the racing
+                        \ line with the new figure
+
+ BCC mcar20             \ Otherwise the subtraction just underflowed, which
+                        \ means we just steered the car off the track, so jump
+                        \ to mcar20 so we don't update the car's racing line
+                        \ (this BCC is effectively a JMP as we just passed
+                        \ through a BCS)
 
 .mcar18
 
- ADC carRacingLine,X
+ ADC carRacingLine,X    \ Steer the car left by the amount in A
 
- BCS mcar20
+ BCS mcar20             \ If the addition just overflowed then this would steer
+                        \ the car off the track, so jump to mcar20 so we don't
+                        \ update the car's racing line (so we don't actually do
+                        \ the steer)
 
 .mcar19
 
- STA carRacingLine,X
+ STA carRacingLine,X    \ Update the car's racing line with the updated figure,
+                        \ to steer the car across the track
 
 .mcar20
 
@@ -13536,13 +13627,13 @@ ENDIF
  AND #%00010000         \ sub_C2937
  BNE sub_C2937
 
- LDA carSpeedHi,X       \ if the high byte of driver X's speed is less than 50,
+ LDA carSpeedHi,X       \ If the high byte of driver X's speed is less than 50,
  CMP #50                \ jump to sub_C2937
  BCC sub_C2937
 
- LDA dataBlockIndex+1,Y \ Set the driver's carL0114 to entry Y + 1 from
- STA carL0114,X         \ dataBlockIndex, so carL0114 contains the index into
-                        \ the track data from entry Y + 1
+ LDA dataBlockIndex+1,Y \ Set the driver's carSteering to entry Y + 1 from
+ STA carSteering,X      \ dataBlockIndex, so the car follows the curve of the
+                        \ track ???
 
 \ ******************************************************************************
 \
@@ -13553,49 +13644,82 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The object (car) number
+\
+\   Y                   Coordinate number * 3
 \
 \ ******************************************************************************
 
 .sub_C2937
 
- LDA dataBlockIndex,Y
- STA L000C
- STY T
- TAY
- LDA carProgress,X
+ LDA dataBlockIndex,Y   \ Fetch the data block index for coordinate Y
+
+ STA yStore1            \ Store the data block index in yStore1
+
+ STY T                  \ Store the coordinate number * 3 in T
+
+ TAY                    \ Set Y to the data block index
+
+ LDA carProgress,X      \ Set TT to the lowest byte of the car's progress
  STA TT
- LDA carRacingLine,X
+
+ LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
- LDA trackDataBlock1,Y
+
+ LDA trackDataBlock1,Y  \ Set VV to the track data block 1 value for this index
  STA VV
- LDA trackDataBlock2,Y
- STA WW
- LDA trackDataBlock3,Y
- STA GG
- LDX #0
- LDA TT
- STA U
- LDY T
+
+ LDA trackDataBlock2,Y  \ Set VV+1 to the track data block 2 value for this
+ STA VV+1               \ index
+
+ LDA trackDataBlock3,Y  \ Set VV+2 to the track data block 3 value for this
+ STA VV+2               \ index
+
+ LDX #0                 \ Set X = 0, to use as a loop counter (0, 1, 2)
+
+ LDA TT                 \ Set U = TT
+ STA U                  \       = the lowest byte of the car's progress
+
+ LDY T                  \ Set Y to the coordinate number * 3
 
 .C2960
 
- LDA #0
+ LDA #0                 \ Set (V A) = 0
  STA V
- LDA VV,X
- BPL C297B
- EOR #&FF
+
+ LDA VV,X               \ Set A to track data block 1, 2 or 3, depending on the
+                        \ value of the loop counter in X
+
+                        \ We now calculate (A T) = A * U, making sure we get the
+                        \ signs right
+
+ BPL C297B              \ If A is positive, jump to C297B to multiply A and U as
+                        \ they are
+
+                        \ If we get here then A is negative, so we need to apply
+                        \ the correct sign to the multiplication
+
+ EOR #&FF               \ Negate A (so it is now positive)
  CLC
  ADC #1
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- EOR #&FF
- CLC
+ EOR #&FF               \ Negate A again (so it is now the correct sign for the
+ CLC                    \ multiplication)
  ADC #1
- BCS C297E
- DEC V
- BCC C297E
+
+ BCS C297E              \ If the addition just overflowed, then the result is
+                        \ now positive, which means V is already the correct
+                        \ high byte for (V A), so jump to C297E
+
+ DEC V                  \ Otherwise, decrement V to &FF so it's the correct
+                        \ high byte for (V A)
+
+ BCC C297E              \ Jump to C297E (this BCC is effectively a JMP as we
+                        \ just passed through a BCS)
 
 .C297B
 
@@ -13603,30 +13727,62 @@ ENDIF
 
 .C297E
 
- CLC
- ADC var20Lo,Y
- STA var14Lo,X
- LDA var20Hi,Y
- PHP
- CPX #1
- BNE C298F
- AND #&1F
+                        \ By this point, we have the following, signed result:
+                        \
+                        \   (V A T) = A * U
+                        \           = trackDataBlockX * carProgress
+                        \
+                        \ We now add (V A) to the Y-th entry in var20, which is
+                        \ the var20 entry for the coordinate number passed to
+                        \ the routine (Y contains the coordinate number * 3),
+                        \ and store the result in the three-axis variable in
+                        \ var14
+                        \
+                        \ For the middle axis of the coordinare, i.e. for the
+                        \ multiplication:
+                        \
+                        \   var14+1 = var20+Y+1 + (V A)
+                        \
+                        \ then we add var20Hi mod 32 instead of var20Hi
+
+ CLC                    \ Set (var14Hi var14Lo) = (var20Hi var20Lo) + (V A)
+ ADC var20Lo,Y          \
+ STA var14Lo,X          \ starting with the low bytes
+
+ LDA var20Hi,Y          \ And then the high bytes (though with a short
+                        \ interlude for when X = 1, to add var20Hi mod 32
+                        \ instead)
+
+ PHP                    \ Store the C flag on the stack so we can retrieve it
+                        \ when adding the high bytes below
+
+ CPX #1                 \ If X = 1, set A = A mod 32
+ BNE C298F              \                 = var20Hi mod 32
+ AND #31
 
 .C298F
 
- PLP
+ PLP                    \ Now we can finally add the high bytes 
  ADC V
  STA var14Hi,X
- INY
- INX
- CPX #3
+
+ INY                    \ Increment the coordinate pointer
+
+ INX                    \ Increment the axis pointer
+
+ CPX #3                 \ Loop back until X has looped through 0, 1 and 2
  BNE C2960
- LDY L000C
+
+ LDY yStore1            \ Set Y to the data block index that we stored above
+
  LDA trackDataBlock4,Y
  STA VV
+
  LDA trackDataBlock5,Y
  STA GG
+
  LDX #0
+
  LDA UU
  STA U
 
@@ -13714,7 +13870,7 @@ ENDIF
 
 .C2A0F
 
- LDY L000C
+ LDY yStore1            \ Set Y to the data block index that we stored above
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
                         \ trackDataBlock1, trackDataBlock2 and trackDataBlock3
