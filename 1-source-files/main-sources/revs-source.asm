@@ -4909,7 +4909,7 @@ ORG &0B00
  LDA #0
  STA SS
  STA UU
- LDA trackDataBlock4,Y
+ LDA xTrackOutVector,Y
  BPL C1398
  DEC SS
 
@@ -4925,7 +4925,7 @@ ORG &0B00
  LDA SS
  ADC var20Hi,X
  STA var17Hi,X
- LDA trackDataBlock5,Y
+ LDA zTrackOutVector,Y
  BPL C13B4
  DEC UU
 
@@ -13651,7 +13651,7 @@ ENDIF
 \ calculating the position of the car on the track but ignoring its racing line.
 \
 \ var14 = var20 + xyzTrackVector * carProgress
-\               + trackDataBlock4-5 * carRacingLine
+\               + xyzTrackOutVector * carRacingLine
 \               + 144
 \
 \ Arguments:
@@ -13803,15 +13803,15 @@ ENDIF
 
                         \ We now calculate the following:
                         \
-                        \   var14 = var20 + trackDataBlock4-5 * carRacingLine
+                        \   var14 = var20 + xyzTrackOutVector * carRacingLine
 
 
  LDY yStore1            \ Set Y to the data block index that we stored above
 
- LDA trackDataBlock4,Y  \ Set VV to the track data block 4 value for this index
+ LDA xTrackOutVector,Y  \ Set VV to the track data block 4 value for this index
  STA VV
 
- LDA trackDataBlock5,Y  \ Set VV+2 to the track data block 5 value for this
+ LDA zTrackOutVector,Y  \ Set VV+2 to the track data block 5 value for this
  STA VV+2               \ index
 
                         \ Note that VV+1 still contains the track data block 2
@@ -13869,7 +13869,7 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = trackDataBlock4-5 * carRacingLine
+                        \           = xyzTrackOutVector * carRacingLine
 
  ASL A                  \ Set (V A) = (V A) * 4
  ROL V
@@ -26775,11 +26775,11 @@ ENDIF
 
  SKIP 256
 
-.trackDataBlock4
+.xTrackOutVector
 
  SKIP 256
 
-.trackDataBlock5
+.zTrackOutVector
 
  SKIP 256
 
