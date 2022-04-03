@@ -4371,7 +4371,7 @@ ORG &0B00
  STX L0045
  STX L0042
  LDY coordNumber96
- JSR sub_C2937
+ JSR BuildCarObjects
  LDX #2
 
 .P11DB
@@ -4393,7 +4393,7 @@ ORG &0B00
 
  TAY
  LDX L0045
- JSR sub_C2937
+ JSR BuildCarObjects
  LDA xObjectScreenLo,X
  STA xPlayerScreenLo
 
@@ -4842,7 +4842,7 @@ ORG &0B00
  LDY L0002
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
-                        \ trackDataBlock1, trackDataBlock2 and trackDataBlock3
+                        \ xTrackVector, yTrackVector and zTrackVector
 
  LDX coordNumber
  LDA L0001
@@ -5154,13 +5154,13 @@ ORG &0B00
 \
 \ Returns:
 \
-\   (SS T)              The Y-th entry from trackDataBlock1 as a 16-bit signed
+\   (SS T)              The Y-th entry from xTrackVector as a 16-bit signed
 \                       integer
 \
-\   (TT U)              The Y-th entry from trackDataBlock2 as a 16-bit signed
+\   (TT U)              The Y-th entry from yTrackVector as a 16-bit signed
 \                       integer
 \
-\   (UU V)              The Y-th entry from trackDataBlock3 as a 16-bit signed
+\   (UU V)              The Y-th entry from zTrackVector as a 16-bit signed
 \                       integer
 \
 \ ******************************************************************************
@@ -5172,7 +5172,7 @@ ORG &0B00
  STA TT
  STA UU
 
- LDA trackDataBlock1,Y  \ Set T = the Y-th entry from trackDataBlock1
+ LDA xTrackVector,Y     \ Set T = the Y-th entry from xTrackVector
  STA T
 
  BPL coor1              \ If the byte we just fetched is negative, decrement
@@ -5181,7 +5181,7 @@ ORG &0B00
 
 .coor1
 
- LDA trackDataBlock2,Y  \ Set U = the Y-th entry from trackDataBlock2
+ LDA yTrackVector,Y     \ Set U = the Y-th entry from yTrackVector
  STA U
 
  BPL coor2              \ If the byte we just fetched is negative, decrement
@@ -5190,7 +5190,7 @@ ORG &0B00
 
 .coor2
 
- LDA trackDataBlock3,Y  \ Set V = the Y-th entry from trackDataBlock3
+ LDA zTrackVector,Y     \ Set V = the Y-th entry from zTrackVector
  STA V
 
  BPL coor3              \ If the byte we just fetched is negative, decrement
@@ -12613,7 +12613,8 @@ ENDIF
  STX thisPosition       \ Store the position of the car we are considering in
                         \ thisPosition
 
- JSR BuildCarObject     \ Create the car object so we can draw it below
+ JSR CheckCarDistance   \ Check the distance to the car object and build the car
+                        \ object if it is visible, so we can draw it below
 
  LDX thisPosition       \ Retrieve the position of the car that we stored in
                         \ thisPosition above
@@ -12630,7 +12631,9 @@ ENDIF
 
  LDX positionBehind     \ Set X to the position of the driver behind us
 
- JSR BuildCarObject     \ Create the car object ???
+ JSR CheckCarDistance   \ Check the distance to the car object and build the car
+                        \ object if it is visible, so it can be shown in the
+                        \ mirror if close enough
 
  RTS                    \ Return from the subroutine
 
@@ -13522,21 +13525,21 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: BuildCarObject
+\       Name: CheckCarDistance
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Create an object for the specified car
+\    Summary: Check the distance to the specified car
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The position of the driver whose car object we want to
-\                       build
+\   X                   The position of the driver whose distance we want to
+\                       check
 \
 \ ******************************************************************************
 
-.BuildCarObject
+.CheckCarDistance
 
  LDA driversInOrder,X   \ Set A to the number of the driver in position X
 
@@ -13624,12 +13627,12 @@ ENDIF
  TAY                    \ Copy the result from A into Y
 
  LDA carStatus,X        \ If bit 4 of driver X's carStatus is set, jump to
- AND #%00010000         \ sub_C2937
- BNE sub_C2937
+ AND #%00010000         \ BuildCarObjects
+ BNE BuildCarObjects
 
  LDA carSpeedHi,X       \ If the high byte of driver X's speed is less than 50,
- CMP #50                \ jump to sub_C2937
- BCC sub_C2937
+ CMP #50                \ jump to BuildCarObjects
+ BCC BuildCarObjects
 
  LDA dataBlockIndex+1,Y \ Set the driver's carSteering to entry Y + 1 from
  STA carSteering,X      \ dataBlockIndex, so the car follows the curve of the
@@ -13637,22 +13640,29 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2937 (Part 1 of 2)
+\       Name: BuildCarObjects (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Calculate the 3D coordinate of the specified car
 \
 \ ------------------------------------------------------------------------------
 \
+\ This part builds the 3D coordinate of the specified car, starting by
+\ calculating the position of the car on the track but ignoring its racing line.
+\
+\ var14 = var20 + xyzTrackVector * carProgress
+\               + trackDataBlock4-5 * carRacingLine
+\               + 144
+\
 \ Arguments:
 \
-\   X                   The object (car) number
+\   X                   The object number of the car object to build
 \
-\   Y                   Coordinate number * 3
+\   Y                   The track coordinate number * 3
 \
 \ ******************************************************************************
 
-.sub_C2937
+.BuildCarObjects
 
  LDA dataBlockIndex,Y   \ Fetch the data block index for coordinate Y
 
@@ -13668,16 +13678,21 @@ ENDIF
  LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
 
- LDA trackDataBlock1,Y  \ Set VV to the track data block 1 value for this index
- STA VV
+ LDA xTrackVector,Y     \ Set VV to the x-coordinate of the track vector for
+ STA VV                 \ this point on the track
 
- LDA trackDataBlock2,Y  \ Set VV+1 to the track data block 2 value for this
- STA VV+1               \ index
+ LDA yTrackVector,Y     \ Set VV+1 to the y-coordinate of the track vector for
+ STA VV+1               \ this point on the track
 
- LDA trackDataBlock3,Y  \ Set VV+2 to the track data block 3 value for this
- STA VV+2               \ index
+ LDA zTrackVector,Y     \ Set VV+2 to the z-coordinate of the track vector for
+ STA VV+2               \ this point on the track
 
- LDX #0                 \ Set X = 0, to use as a loop counter (0, 1, 2)
+                        \ We now calculate the following:
+                        \
+                        \   var14 = var20 + xyzTrackVector * carProgress
+
+ LDX #0                 \ Set X = 0, to use as a loop counter through the three
+                        \ axes, i.e. 0, 1, 2
 
  LDA TT                 \ Set U = TT
  STA U                  \       = the lowest byte of the car's progress
@@ -13730,7 +13745,7 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = trackDataBlockX * carProgress
+                        \           = xyzTrackVector * carProgress
                         \
                         \ We now add (V A) to the Y-th entry in var20, which is
                         \ the var20 entry for the coordinate number passed to
@@ -13773,37 +13788,77 @@ ENDIF
  CPX #3                 \ Loop back until X has looped through 0, 1 and 2
  BNE C2960
 
+\ ******************************************************************************
+\
+\       Name: BuildCarObjects (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Graphics
+\    Summary: Add the racing line to the 3D coordinate of the specified car
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part adds the racing line to the 3D coordinate
+\
+\ ******************************************************************************
+
+                        \ We now calculate the following:
+                        \
+                        \   var14 = var20 + trackDataBlock4-5 * carRacingLine
+
+
  LDY yStore1            \ Set Y to the data block index that we stored above
 
- LDA trackDataBlock4,Y
+ LDA trackDataBlock4,Y  \ Set VV to the track data block 4 value for this index
  STA VV
 
- LDA trackDataBlock5,Y
- STA GG
+ LDA trackDataBlock5,Y  \ Set VV+2 to the track data block 5 value for this
+ STA VV+2               \ index
 
- LDX #0
+                        \ Note that VV+1 still contains the track data block 2
+                        \ value for this index
 
- LDA UU
- STA U
+ LDX #0                 \ Set X = 0, to use as a loop counter through the x and
+                        \ z-axes, i.e. 0, 2
+
+ LDA UU                 \ Set U = UU
+ STA U                  \       = the car's current racing line
 
 .C29AD
 
- LDA #0
+ LDA #0                 \ Set (V A) = 0
  STA V
- LDA VV,X
- BPL C29C8
- EOR #&FF
+
+ LDA VV,X               \ Set A to track data block 4, 2 or 5, depending on the
+                        \ value of the loop counter in X
+
+                        \ We now calculate (A T) = A * U, making sure we get the
+                        \ signs right
+
+ BPL C29C8              \ If A is positive, jump to C29C8 to multiply A and U as
+                        \ they are
+
+                        \ If we get here then A is negative, so we need to apply
+                        \ the correct sign to the multiplication
+
+ EOR #&FF               \ Negate A (so it is now positive)
  CLC
  ADC #1
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- EOR #&FF
- CLC
+ EOR #&FF               \ Negate A again (so it is now the correct sign for the
+ CLC                    \ multiplication)
  ADC #1
- BCS C29CB
- DEC V
- BCC C29CB
+
+ BCS C29CB              \ If the addition just overflowed, then the result is
+                        \ now positive, which means V is already the correct
+                        \ high byte for (V A), so jump to C29CB
+
+ DEC V                  \ Otherwise, decrement V to &FF so it's the correct
+                        \ high byte for (V A)
+
+ BCC C29CB              \ Jump to C29CB (this BCC is effectively a JMP as we
+                        \ just passed through a BCS)
 
 .C29C8
 
@@ -13811,33 +13866,45 @@ ENDIF
 
 .C29CB
 
- ASL A
+                        \ By this point, we have the following, signed result:
+                        \
+                        \   (V A T) = A * U
+                        \           = trackDataBlock4-5 * carRacingLine
+
+ ASL A                  \ Set (V A) = (V A) * 4
  ROL V
  ASL A
  ROL V
- CLC
- ADC var14Lo,X
- STA var14Lo,X
- LDA var14Hi,X
+
+ CLC                    \ Set (var14Hi var14Lo) = (var14Hi var14Lo) + (V A)
+ ADC var14Lo,X          \
+ STA var14Lo,X          \ starting with the low bytes
+
+ LDA var14Hi,X          \ And then the high bytes
  ADC V
  STA var14Hi,X
+
+ INX                    \ Set X = X + 2
  INX
- INX
- CPX #4
- BNE C29AD
- LDA var14Lo+1
- CLC
- ADC #&90
+
+ CPX #4                 \ Loop back to C29AD until we have processed the x-axis
+ BNE C29AD              \ (for X = 0) and z-axis (for X = 2)
+
+ LDA var14Lo+1          \ Set (var14Hi var14Lo) = (var14Hi var14Lo) + 144
+ CLC                    \
+ ADC #144               \ starting with the low bytes
  STA var14Lo+1
- BCC C29F4
+
+ BCC C29F4              \ And then the high bytes
  INC var14Hi+1
 
 \ ******************************************************************************
 \
-\       Name: sub_C2937 (Part 2 of 2)
+\       Name: BuildCarObjects (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Calculate the screen coordinates of all the objects in the
+\             specified car
 \
 \ ******************************************************************************
 
@@ -13873,7 +13940,7 @@ ENDIF
  LDY yStore1            \ Set Y to the data block index that we stored above
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
-                        \ trackDataBlock1, trackDataBlock2 and trackDataBlock3
+                        \ xTrackVector, yTrackVector and zTrackVector
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
@@ -13938,7 +14005,7 @@ ENDIF
 .C2A4D
 
  LDX thisDriver         \ Set X to the driver number that we stored at the start
-                        \ of the BuildCarObject routine
+                        \ of the CheckCarDistance routine
 
  RTS                    \ Return from the subroutine
 
@@ -17923,7 +17990,7 @@ ENDIF
 \       Name: carSpeedLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of each car's forward speed
+\    Summary: Low byte of each car's forward speed
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17935,7 +18002,7 @@ ENDIF
 
 IF _ACORNSOFT
 
- EQUB &FF, &88
+ EQUB &FF, &88          \ These values are workspace noise and have no meaning
  EQUB &88, &CC
  EQUB &CC, &CC
  EQUB &CC, &CC
@@ -17956,8 +18023,16 @@ ENDIF
 \
 \       Name: totalPointsLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Drivers
+\    Summary: Low byte of total accumulated points for each driver
+\
+\ ------------------------------------------------------------------------------
+\
+\ Indexed by driver number (0 to 19).
+\
+\ Gets set in InitialiseDrivers.
+\
+\ Stored as a 24-bit value (totalPointsTop totalPointsHi totalPointsLo).
 \
 \ ******************************************************************************
 
@@ -17965,7 +18040,7 @@ ENDIF
 
 IF _ACORNSOFT
 
- EQUB &CC, &CC
+ EQUB &CC, &CC          \ These values are workspace noise and have no meaning
  EQUB &EE, &FF
  EQUB &FF, &88
  EQUB &CC, &EE
@@ -17978,14 +18053,7 @@ IF _ACORNSOFT
 
 ELIF _SUPERIOR
 
- SKIP 20                \ Low byte of total accumulated points for each driver
-                        \
-                        \ Indexed by driver number (0 to 19)
-                        \
-                        \ Gets set to 0 in InitialiseDrivers
-                        \
-                        \ Stored as a 24-bit value (totalPointsTop totalPointsHi
-                        \ totalPointsLo)
+ SKIP 20
 
 ENDIF
 
@@ -18003,7 +18071,7 @@ ENDIF
 
 IF _ACORNSOFT
 
- EQUB &FF, &FF
+ EQUB &FF, &FF          \ These values are workspace noise and have no meaning
  EQUB &FF, &FF
  EQUB &FF, &FF
  EQUB &FF, &FF
@@ -18543,11 +18611,11 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Indexed by driver number (0 to 19)
+\ Indexed by driver number (0 to 19).
 \
-\ Gets set in InitialiseDrivers
+\ Gets set in InitialiseDrivers.
 \
-\ Stored as a 24-bit value (totalPointsTop totalPointsHi totalPointsLo)
+\ Stored as a 24-bit value (totalPointsTop totalPointsHi totalPointsLo).
 \
 \ ******************************************************************************
 
@@ -21817,10 +21885,10 @@ NEXT
  LDY dataBlockIndex,X
  LDA L000D
  STA V
- LDA trackDataBlock1,Y
- EOR trackDataBlock3,Y
+ LDA xTrackVector,Y
+ EOR zTrackVector,Y
  PHP
- LDA trackDataBlock3,Y
+ LDA zTrackVector,Y
  PHP
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -21828,7 +21896,7 @@ NEXT
  CMP #&3C
  PHP
  BCC C454F
- LDA trackDataBlock1,Y
+ LDA xTrackVector,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -21990,7 +22058,7 @@ NEXT
 \
 \ Calculate:
 \
-\   A = A * Y-th trackDataBlock2
+\   A = A * Y-th yTrackVector
 \
 \ flipping the sign if we are facing backwards.
 \
@@ -21998,7 +22066,7 @@ NEXT
 \
 \   A                   The number to multiply the data by
 \
-\   Y                   Offset of the data to multiply in trackDataBlock2
+\   Y                   Offset of the data to multiply in yTrackVector
 \
 \ Returns:
 \
@@ -22010,11 +22078,11 @@ NEXT
 
  STA U                  \ Set U to the multiplication factor in A
 
- LDA trackDataBlock2,Y  \ Store the sign of the track data * directionFacing on
+ LDA yTrackVector,Y     \ Store the sign of the track data * directionFacing on
  EOR directionFacing    \ the stack
  PHP
 
- LDA trackDataBlock2,Y  \ Set A to the Y-th data from trackDataBlock2
+ LDA yTrackVector,Y     \ Set A to the Y-th data from yTrackVector
 
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |track data|
@@ -26695,15 +26763,15 @@ ENDIF
 
  SKIP 16
 
-.trackDataBlock1
+.xTrackVector
 
  SKIP 256
 
-.trackDataBlock2
+.yTrackVector
 
  SKIP 256
 
-.trackDataBlock3
+.zTrackVector
 
  SKIP 256
 
@@ -30718,22 +30786,27 @@ ENDIF
 
 .DrawCars
 
- LDX currentPosition    \ Set X to the current player's position
+ LDX currentPosition    \ Set X to the current player's position, so we work our
+                        \ way backwards through the pack, starting with the car
+                        \ behind the current player, and wrapping round to the
+                        \ cars in front, working our way towards the player's
+                        \ car in the order in which they should be drawn (with
+                        \ distant cars first)
 
- BPL cobj2              \ If X is positive, jump to cobj2 to skip the following
+ BPL cars2              \ If X is positive, jump to cars2 to skip the following
                         \ instruction
 
-.cobj1
+.cars1
 
  JSR DrawCarInPosition  \ Draw the car in position X
 
-.cobj2
+.cars2
 
  JSR GetPositionBehind  \ Set X to the number of the position behind position X,
                         \ so we work our way back through the pack
 
- CPX positionAhead      \ Loop back to cobj1 until we have reached the position
- BNE cobj1              \ ahead of the current player
+ CPX positionAhead      \ Loop back to cars1 until we have reached the position
+ BNE cars1              \ ahead of the current player
 
                         \ We now draw the car that's just in front of us, which
                         \ is made up of four objects that can be skewed to make
@@ -30745,7 +30818,7 @@ ENDIF
                         \ pass to DrawCarOrSign in turn so they get drawn in
                         \ that order: front tyres, body and rear wheels
 
-.cobj3
+.cars3
 
  STX xStore2            \ Store X in xStore2 so it gets preserved through
                         \ the call to DrawCarOrSign
@@ -30756,7 +30829,7 @@ ENDIF
  DEX                    \ Decrement the object counter
 
  CPX #20                \ Loop back until we have drawn all three objects
- BCS cobj3
+ BCS cars3
 
  LDX positionAhead      \ Set X to the position ahead of the current player
 

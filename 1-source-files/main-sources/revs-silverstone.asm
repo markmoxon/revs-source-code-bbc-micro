@@ -398,8 +398,11 @@ ORG CODE%
  EQUB &08, &08, &08, &08, &00, &12, &11, &08
  EQUB &08, &F0, &EC, &0C, &16, &04, &F0, &08
 
-\ .trackDataBlock1
+\ .xTrackVector
 \ trackData+&100 = &5400
+\ x-coordinate of the vector between two consecutive points on the inside of
+\ the track
+\ i.e. left-right on the screen
 
  EQUB &FC, &FE, &02, &06, &0A, &0E, &12, &15
  EQUB &19, &1D, &21, &25, &28, &2C, &30, &33
@@ -434,8 +437,11 @@ ORG CODE%
  EQUB &3A, &36, &31, &2D, &28, &24, &1F, &1A
  EQUB &16, &11, &0C, &08, &03, &FE, &FB, &00
 
-\ .trackDataBlock2
+\ .yTrackVector
 \ trackData+&200 = &5500
+\ y-coordinate of the vector between two consecutive points on the inside of
+\ the track
+\ i.e. up-down on the screen (track height)
 
  EQUB &00, &00, &00, &00, &00, &00, &00, &00
  EQUB &00, &00, &00, &00, &00, &00, &00, &00
@@ -470,8 +476,11 @@ ORG CODE%
  EQUB &0E, &0F, &10, &11, &12, &12, &13, &14
  EQUB &11, &0D, &0A, &07, &03, &00, &00, &00
 
-\ .trackDataBlock3
+\ .zTrackVector
 \ trackData+&300 = &5600
+\ z-coordinate of the vector between two consecutive points on the inside of
+\ the track
+\ i.e. in-out of the screen
 
  EQUB &78, &78, &78, &78, &78, &77, &77, &76
  EQUB &75, &74, &73, &72, &71, &70, &6E, &6D
@@ -506,8 +515,10 @@ ORG CODE%
  EQUB &69, &6B, &6D, &6F, &71, &73, &74, &75
  EQUB &76, &77, &77, &78, &78, &78, &78, &53
 
-\ .trackDataBlock4
+\ .xTrackOutVector
 \ trackData+&400 = &5700
+\ x-coordinate of the vector from the inside to the outside of the track
+\ i.e. left-right on the screen
 
  EQUB &A9, &A9, &A9, &A9, &A9, &A9, &AA, &AA
  EQUB &AB, &AB, &AC, &AD, &AE, &AF, &B0, &B2
@@ -542,8 +553,10 @@ ORG CODE%
  EQUB &B3, &B1, &B0, &AE, &AD, &AC, &AB, &AA
  EQUB &AA, &A9, &A9, &A9, &A9, &A9, &A9, &76
 
-\ .trackDataBlock5
+\ .zTrackOutVector
 \ trackData+&500 = &5800
+\ z-coordinate of the vector from the inside to the outside of the track
+\ i.e. in-out of the screen
 
  EQUB &FE, &00, &02, &05, &08, &0B, &0E, &11
  EQUB &13, &16, &19, &1C, &1E, &21, &24, &26
