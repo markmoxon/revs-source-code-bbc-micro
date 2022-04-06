@@ -17032,7 +17032,8 @@ ENDIF
 \       Name: objectTop
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Measurement for the top of each object part
+\    Summary: Scaffold measurements for the top of each object part
+\  Deep dive: Object definitions
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17044,59 +17045,140 @@ ENDIF
 
 .objectTop
 
- EQUB 7 + 8             \ Object type  0
- EQUB 7 + 8
- EQUB 6 + 8
- EQUB 6 + 8
- EQUB 5 + 8
-
- EQUB 5                 \ Object type  1
- EQUB 6
- EQUB 7 + 8
- EQUB 4
-
- EQUB 6 + 8             \ Object type  2
- EQUB 0
- EQUB 5 + 8
- EQUB 7 + 8
- EQUB 7 + 8
-
- EQUB 2                 \ Object type  3
- EQUB 3
- EQUB 4
- EQUB 1 + 8
-
- EQUB 6                 \ Object type  4
- EQUB 7 + 8
- EQUB 6 + 8
- EQUB 0
- EQUB 5 + 8
- EQUB 7
- EQUB 4
-
- EQUB 2 + 8             \ Object type  5
-
- EQUB 0                 \ Object type  6
-
- EQUB 1                 \ Object type  7
- EQUB 4 + 8
- EQUB 4 + 8
-
- EQUB 2                 \ Object type  8
- EQUB 1
-
- EQUB 1                 \ Object type  9
- EQUB 2 + 8
-
- EQUB 3                 \ Object type 10
- EQUB 4
- EQUB 0
-
- EQUB 1                 \ Object type 11
- EQUB 3
-
- EQUB 1                 \ Object type 12
- EQUB 3
+ EQUB 7 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-4, -5, -22, -18)
+                        
+ EQUB 7 + 8             \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-4, -5, 18, 22)
+                        
+ EQUB 6 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
+                        \                   Coordinates: (-5, -17, -24, -16)
+                        
+ EQUB 6 + 8             \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
+                        \                   Coordinates: (-5, -17, 16, 24)
+                        
+ EQUB 5 + 8             \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
+                        \                   Coordinates: (-8, -17, -18, 18)
+                        
+                        
+ EQUB 5                 \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
+                        \                   Coordinates: (5, 2, -5, 5)
+                        
+ EQUB 6                 \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
+                        \                   Coordinates: (2, -1, -8, 8)
+                        
+ EQUB 7 + 8             \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 4                 \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
+                        \                   Coordinates: (6, 5, -2, 2)
+                        
+                        
+ EQUB 6 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 0                 \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 5 + 8             \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 7 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-2, -3, -24, -18)
+                        
+ EQUB 7 + 8             \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-2, -3, 18, 24)
+                        
+                        
+ EQUB 2                 \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
+                        \                   Coordinates: (6, 4, -16, 16)
+                        
+ EQUB 3                 \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
+                        \                   Coordinates: (4, 3, -16, 16)
+                        
+ EQUB 4                 \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
+                        \                   Coordinates: (3, -10, -1, 1)
+                        
+ EQUB 1 + 8             \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
+                        \                   Coordinates: (-10, -16, -1, 1)
+                        
+                        
+ EQUB 6                 \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
+                        \                   Coordinates: (3, -1, -6, 6)
+                        
+ EQUB 7 + 8             \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 6 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 0                 \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 5 + 8             \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 7                 \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
+                        \                   Coordinates: (1, -5, -1, 1)
+                        
+ EQUB 4                 \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
+                        \                   Coordinates: (6, 3, -16, 16)
+                        
+                        
+ EQUB 2 + 8             \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
+                        \                   Coordinates: (-3, -17, -26, 26)
+                        
+                        
+ EQUB 0                 \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
+                        \                   Coordinates: (16, 1, -10, 10)
+                        
+                        
+ EQUB 1                 \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
+                        \                   Coordinates: (20, -8, -28, 28)
+                        
+ EQUB 4 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
+                        \                   Coordinates: (-8, -18, -20, -16)
+                        
+ EQUB 4 + 8             \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
+                        \                   Coordinates: (-8, -18, 16, 20)
+                        
+                        
+ EQUB 2                 \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
+                        \                   Coordinates: (3, -18, -2, 2)
+                        
+ EQUB 1                 \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
+                        \                   Coordinates: (16, 3, -2, 16)
+                        
+                        
+ EQUB 1                 \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
+                        \                   Coordinates: (12, -10, -16, 16)
+                        
+ EQUB 2 + 8             \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
+                        \                   Coordinates: (-10, -16, -3, 3)
+                        
+                        
+ EQUB 3                 \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
+                        \                    Coordinates: (4, 1, -10, 10)
+                        
+ EQUB 4                 \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
+                        \                    Coordinates: (1, -6, -10, -9)
+                        
+ EQUB 0                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
+                        \                    Coordinates: (10, 4, 9, 10)
+                        
+                        
+ EQUB 1                 \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
+                        \                    Coordinates: (8, 5, -10, 8)
+                        
+ EQUB 3                 \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
+                        \                    Coordinates: (5, -6, -10, -8)
+                        
+                        
+ EQUB 1                 \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
+                        \                    Coordinates: (8, 5, -8, 10)
+                        
+ EQUB 3                 \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
+                        \                    Coordinates: (5, -6, 8, 10)
 
 \ ******************************************************************************
 \
@@ -17192,7 +17274,8 @@ ENDIF
 \       Name: objectBottom
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Measurement for the bottom of each object part
+\    Summary: Scaffold measurements for the bottom of each object part
+\  Deep dive: Object definitions
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17204,59 +17287,140 @@ ENDIF
 
 .objectBottom
 
- EQUB 6 + 8             \ Object type  0
- EQUB 6 + 8
- EQUB 3 + 8
- EQUB 3 + 8
- EQUB 3 + 8
-
- EQUB 6                 \ Object type  1
- EQUB 7 + 8
- EQUB 5 + 8
- EQUB 5
-
- EQUB 5 + 8             \ Object type  2
- EQUB 7
- EQUB 3 + 8
- EQUB 6 + 8
- EQUB 6 + 8
-
- EQUB 3                 \ Object type  3
- EQUB 4
- EQUB 1 + 8
- EQUB 0 + 8
-
- EQUB 7 + 8             \ Object type  4
- EQUB 5 + 8
- EQUB 5 + 8
- EQUB 7
- EQUB 1 + 8
- EQUB 5 + 8
- EQUB 6
-
- EQUB 1 + 8             \ Object type  5
-
- EQUB 2                 \ Object type  6
-
- EQUB 4 + 8             \ Object type  7
- EQUB 2 + 8
- EQUB 2 + 8
-
- EQUB 0 + 8             \ Object type  8
- EQUB 2
-
- EQUB 2 + 8             \ Object type  9
- EQUB 0 + 8
-
- EQUB 4                 \ Object type 10
- EQUB 2 + 8
- EQUB 3
-
- EQUB 3                 \ Object type 11
- EQUB 2 + 8
-
- EQUB 3                 \ Object type 12
- EQUB 2 + 8
+ EQUB 6 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-4, -5, -22, -18)
+                        
+ EQUB 6 + 8             \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-4, -5, 18, 22)
+                        
+ EQUB 3 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
+                        \                   Coordinates: (-5, -17, -24, -16)
+                        
+ EQUB 3 + 8             \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
+                        \                   Coordinates: (-5, -17, 16, 24)
+                        
+ EQUB 3 + 8             \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
+                        \                   Coordinates: (-8, -17, -18, 18)
+                        
+                        
+ EQUB 6                 \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
+                        \                   Coordinates: (5, 2, -5, 5)
+                        
+ EQUB 7 + 8             \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
+                        \                   Coordinates: (2, -1, -8, 8)
+                        
+ EQUB 5 + 8             \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 5                 \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
+                        \                   Coordinates: (6, 5, -2, 2)
+                        
+                        
+ EQUB 5 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 7                 \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 3 + 8             \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 6 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-2, -3, -24, -18)
+                        
+ EQUB 6 + 8             \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-2, -3, 18, 24)
+                        
+                        
+ EQUB 3                 \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
+                        \                   Coordinates: (6, 4, -16, 16)
+                        
+ EQUB 4                 \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
+                        \                   Coordinates: (4, 3, -16, 16)
+                        
+ EQUB 1 + 8             \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
+                        \                   Coordinates: (3, -10, -1, 1)
+                        
+ EQUB 0 + 8             \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
+                        \                   Coordinates: (-10, -16, -1, 1)
+                        
+                        
+ EQUB 7 + 8             \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
+                        \                   Coordinates: (3, -1, -6, 6)
+                        
+ EQUB 5 + 8             \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 5 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 7                 \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 1 + 8             \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 5 + 8             \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
+                        \                   Coordinates: (1, -5, -1, 1)
+                        
+ EQUB 6                 \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
+                        \                   Coordinates: (6, 3, -16, 16)
+                        
+                        
+ EQUB 1 + 8             \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
+                        \                   Coordinates: (-3, -17, -26, 26)
+                        
+                        
+ EQUB 2                 \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
+                        \                   Coordinates: (16, 1, -10, 10)
+                        
+                        
+ EQUB 4 + 8             \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
+                        \                   Coordinates: (20, -8, -28, 28)
+                        
+ EQUB 2 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
+                        \                   Coordinates: (-8, -18, -20, -16)
+                        
+ EQUB 2 + 8             \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
+                        \                   Coordinates: (-8, -18, 16, 20)
+                        
+                        
+ EQUB 0 + 8             \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
+                        \                   Coordinates: (3, -18, -2, 2)
+                        
+ EQUB 2                 \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
+                        \                   Coordinates: (16, 3, -2, 16)
+                        
+                        
+ EQUB 2 + 8             \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
+                        \                   Coordinates: (12, -10, -16, 16)
+                        
+ EQUB 0 + 8             \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
+                        \                   Coordinates: (-10, -16, -3, 3)
+                        
+                        
+ EQUB 4                 \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
+                        \                    Coordinates: (4, 1, -10, 10)
+                        
+ EQUB 2 + 8             \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
+                        \                    Coordinates: (1, -6, -10, -9)
+                        
+ EQUB 3                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
+                        \                    Coordinates: (10, 4, 9, 10)
+                        
+                        
+ EQUB 3                 \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
+                        \                    Coordinates: (8, 5, -10, 8)
+                        
+ EQUB 2 + 8             \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
+                        \                    Coordinates: (5, -6, -10, -8)
+                        
+                        
+ EQUB 3                 \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
+                        \                    Coordinates: (8, 5, -8, 10)
+                        
+ EQUB 2 + 8             \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
+                        \                    Coordinates: (5, -6, 8, 10)
 
 \ ******************************************************************************
 \
@@ -17329,7 +17493,8 @@ ENDIF
 \       Name: objectLeft
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Measurement for the left of each object part
+\    Summary: Scaffold measurements for the left of each object part
+\  Deep dive: Object definitions
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17341,59 +17506,140 @@ ENDIF
 
 .objectLeft
 
- EQUB 1 + 8             \ Object type  0
- EQUB 2
- EQUB 0 + 8
- EQUB 4
- EQUB 2 + 8
-
- EQUB 5 + 8             \ Object type  1
- EQUB 3 + 8
- EQUB 1 + 8
- EQUB 6 + 8
-
- EQUB 0 + 8             \ Object type  2
- EQUB 4
- EQUB 0 + 8
- EQUB 1 + 8
- EQUB 2
-
- EQUB 0 + 8             \ Object type  3
- EQUB 0 + 8
- EQUB 5 + 8
- EQUB 5 + 8
-
- EQUB 4 + 8             \ Object type  4
- EQUB 3 + 8
- EQUB 0 + 8
- EQUB 2
- EQUB 0 + 8
- EQUB 7 + 8
- EQUB 2 + 8
-
- EQUB 0 + 8             \ Object type  5
-
- EQUB 1 + 8             \ Object type  6
-
- EQUB 0 + 8             \ Object type  7
- EQUB 1 + 8
- EQUB 3
-
- EQUB 3 + 8             \ Object type  8
- EQUB 3 + 8
-
- EQUB 0 + 8             \ Object type  9
- EQUB 3 + 8
-
- EQUB 0 + 8             \ Object type 10
- EQUB 0 + 8
- EQUB 1
-
- EQUB 0 + 8             \ Object type 11
- EQUB 0 + 8
-
- EQUB 1 + 8             \ Object type 12
- EQUB 1
+ EQUB 1 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-4, -5, -22, -18)
+                        
+ EQUB 2                 \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-4, -5, 18, 22)
+                        
+ EQUB 0 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
+                        \                   Coordinates: (-5, -17, -24, -16)
+                        
+ EQUB 4                 \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
+                        \                   Coordinates: (-5, -17, 16, 24)
+                        
+ EQUB 2 + 8             \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
+                        \                   Coordinates: (-8, -17, -18, 18)
+                        
+                        
+ EQUB 5 + 8             \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
+                        \                   Coordinates: (5, 2, -5, 5)
+                        
+ EQUB 3 + 8             \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
+                        \                   Coordinates: (2, -1, -8, 8)
+                        
+ EQUB 1 + 8             \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 6 + 8             \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
+                        \                   Coordinates: (6, 5, -2, 2)
+                        
+                        
+ EQUB 0 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 4                 \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 0 + 8             \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 1 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-2, -3, -24, -18)
+                        
+ EQUB 2                 \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-2, -3, 18, 24)
+                        
+                        
+ EQUB 0 + 8             \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
+                        \                   Coordinates: (6, 4, -16, 16)
+                        
+ EQUB 0 + 8             \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
+                        \                   Coordinates: (4, 3, -16, 16)
+                        
+ EQUB 5 + 8             \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
+                        \                   Coordinates: (3, -10, -1, 1)
+                        
+ EQUB 5 + 8             \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
+                        \                   Coordinates: (-10, -16, -1, 1)
+                        
+                        
+ EQUB 4 + 8             \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
+                        \                   Coordinates: (3, -1, -6, 6)
+                        
+ EQUB 3 + 8             \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 0 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 2                 \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 0 + 8             \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 7 + 8             \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
+                        \                   Coordinates: (1, -5, -1, 1)
+                        
+ EQUB 2 + 8             \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
+                        \                   Coordinates: (6, 3, -16, 16)
+                        
+                        
+ EQUB 0 + 8             \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
+                        \                   Coordinates: (-3, -17, -26, 26)
+                        
+                        
+ EQUB 1 + 8             \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
+                        \                   Coordinates: (16, 1, -10, 10)
+                        
+                        
+ EQUB 0 + 8             \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
+                        \                   Coordinates: (20, -8, -28, 28)
+                        
+ EQUB 1 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
+                        \                   Coordinates: (-8, -18, -20, -16)
+                        
+ EQUB 3                 \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
+                        \                   Coordinates: (-8, -18, 16, 20)
+                        
+                        
+ EQUB 3 + 8             \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
+                        \                   Coordinates: (3, -18, -2, 2)
+                        
+ EQUB 3 + 8             \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
+                        \                   Coordinates: (16, 3, -2, 16)
+                        
+                        
+ EQUB 0 + 8             \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
+                        \                   Coordinates: (12, -10, -16, 16)
+                        
+ EQUB 3 + 8             \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
+                        \                   Coordinates: (-10, -16, -3, 3)
+                        
+                        
+ EQUB 0 + 8             \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
+                        \                    Coordinates: (4, 1, -10, 10)
+                        
+ EQUB 0 + 8             \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
+                        \                    Coordinates: (1, -6, -10, -9)
+                        
+ EQUB 1                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
+                        \                    Coordinates: (10, 4, 9, 10)
+                        
+                        
+ EQUB 0 + 8             \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
+                        \                    Coordinates: (8, 5, -10, 8)
+                        
+ EQUB 0 + 8             \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
+                        \                    Coordinates: (5, -6, -10, -8)
+                        
+                        
+ EQUB 1 + 8             \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
+                        \                    Coordinates: (8, 5, -8, 10)
+                        
+ EQUB 1                 \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
+                        \                    Coordinates: (5, -6, 8, 10)
 
 \ ******************************************************************************
 \
@@ -17489,7 +17735,8 @@ ENDIF
 \       Name: objectRight
 \       Type: Variable
 \   Category: Graphics
-\    Summary: Measurement for the right of each object part
+\    Summary: Scaffold measurements for the right of each object part
+\  Deep dive: Object definitions
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17501,59 +17748,140 @@ ENDIF
 
 .objectRight
 
- EQUB 2 + 8             \ Object type  0
- EQUB 1
- EQUB 4 + 8
- EQUB 0
- EQUB 2
-
- EQUB 5                 \ Object type  1
- EQUB 3
- EQUB 1
- EQUB 6
-
- EQUB 4 + 8             \ Object type  2
- EQUB 1 + 8
- EQUB 0
- EQUB 2 + 8
- EQUB 1
-
- EQUB 0                 \ Object type  3
- EQUB 0
- EQUB 5
- EQUB 5
-
- EQUB 4                 \ Object type  4
- EQUB 3
- EQUB 2 + 8
- EQUB 1 + 8
- EQUB 0
- EQUB 7
- EQUB 2
-
- EQUB 0                 \ Object type  5
-
- EQUB 1                 \ Object type  6
-
- EQUB 0                 \ Object type  7
- EQUB 3 + 8
- EQUB 1
-
- EQUB 3                 \ Object type  8
- EQUB 1
-
- EQUB 0                 \ Object type  9
- EQUB 3
-
- EQUB 0                 \ Object type 10
- EQUB 1 + 8
- EQUB 0
-
- EQUB 1                 \ Object type 11
- EQUB 1 + 8
-
- EQUB 0                 \ Object type 12
- EQUB 0
+ EQUB 2 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-4, -5, -22, -18)
+                        
+ EQUB 1                 \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-4, -5, 18, 22)
+                        
+ EQUB 4 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
+                        \                   Coordinates: (-5, -17, -24, -16)
+                        
+ EQUB 0                 \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
+                        \                   Coordinates: (-5, -17, 16, 24)
+                        
+ EQUB 2                 \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
+                        \                   Coordinates: (-8, -17, -18, 18)
+                        
+                        
+ EQUB 5                 \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
+                        \                   Coordinates: (5, 2, -5, 5)
+                        
+ EQUB 3                 \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
+                        \                   Coordinates: (2, -1, -8, 8)
+                        
+ EQUB 1                 \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 6                 \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
+                        \                   Coordinates: (6, 5, -2, 2)
+                        
+                        
+ EQUB 4 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 1 + 8             \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 0                 \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 2 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
+                        \                   Coordinates: (-2, -3, -24, -18)
+                        
+ EQUB 1                 \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
+                        \                   Coordinates: (-2, -3, 18, 24)
+                        
+                        
+ EQUB 0                 \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
+                        \                   Coordinates: (6, 4, -16, 16)
+                        
+ EQUB 0                 \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
+                        \                   Coordinates: (4, 3, -16, 16)
+                        
+ EQUB 5                 \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
+                        \                   Coordinates: (3, -10, -1, 1)
+                        
+ EQUB 5                 \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
+                        \                   Coordinates: (-10, -16, -1, 1)
+                        
+                        
+ EQUB 4                 \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
+                        \                   Coordinates: (3, -1, -6, 6)
+                        
+ EQUB 3                 \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
+                        \                   Coordinates: (-1, -5, -12, 12)
+                        
+ EQUB 2 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
+                        \                   Coordinates: (-3, -5, -26, -16)
+                        
+ EQUB 1 + 8             \                   Extra edges: Scaffolds: 0, 4
+                        \                                Coordinates: 26, 16
+                        
+ EQUB 0                 \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
+                        \                   Coordinates: (-5, -17, -26, 26)
+                        
+ EQUB 7                 \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
+                        \                   Coordinates: (1, -5, -1, 1)
+                        
+ EQUB 2                 \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
+                        \                   Coordinates: (6, 3, -16, 16)
+                        
+                        
+ EQUB 0                 \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
+                        \                   Coordinates: (-3, -17, -26, 26)
+                        
+                        
+ EQUB 1                 \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
+                        \                   Coordinates: (16, 1, -10, 10)
+                        
+                        
+ EQUB 0                 \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
+                        \                   Coordinates: (20, -8, -28, 28)
+                        
+ EQUB 3 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
+                        \                   Coordinates: (-8, -18, -20, -16)
+                        
+ EQUB 1                 \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
+                        \                   Coordinates: (-8, -18, 16, 20)
+                        
+                        
+ EQUB 3                 \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
+                        \                   Coordinates: (3, -18, -2, 2)
+                        
+ EQUB 1                 \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
+                        \                   Coordinates: (16, 3, -2, 16)
+                        
+                        
+ EQUB 0                 \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
+                        \                   Coordinates: (12, -10, -16, 16)
+                        
+ EQUB 3                 \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
+                        \                   Coordinates: (-10, -16, -3, 3)
+                        
+                        
+ EQUB 0                 \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
+                        \                    Coordinates: (4, 1, -10, 10)
+                        
+ EQUB 1 + 8             \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
+                        \                    Coordinates: (1, -6, -10, -9)
+                        
+ EQUB 0                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
+                        \                    Coordinates: (10, 4, 9, 10)
+                        
+                        
+ EQUB 1                 \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
+                        \                    Coordinates: (8, 5, -10, 8)
+                        
+ EQUB 1 + 8             \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
+                        \                    Coordinates: (5, -6, -10, -8)
+                        
+                        
+ EQUB 0                 \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
+                        \                    Coordinates: (8, 5, -8, 10)
+                        
+ EQUB 0                 \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
+                        \                    Coordinates: (5, -6, 8, 10)
 
 \ ******************************************************************************
 \
@@ -17664,64 +17992,153 @@ ENDIF
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Data for the colour of each object part
+\  Deep dive: Object definitions
+\
+\ ------------------------------------------------------------------------------
+\
+\ Entries contain colour numbers and flags. n + 16 draws an outside edge in the
+\ fill colour rather than the edge colour. n + 64 indicates that this is the
+\ last part in this object. n + 128 indicates that this is a four-edge object
+\ part.
 \
 \ ******************************************************************************
 
 .objectColour
 
- EQUB 10                \ Object type  0
- EQUB 10
- EQUB 8
- EQUB 8
- EQUB 5 + 64
-
- EQUB 8                 \ Object type  1
- EQUB 8
- EQUB 9
- EQUB 10 + 64
-
- EQUB 8 + 128           \ Object type  2
- EQUB 8
- EQUB 8
- EQUB 10
- EQUB 10 + 64
-
- EQUB 2                 \ Object type  3
- EQUB 0
- EQUB 2
- EQUB 10 + 64
-
- EQUB 8                 \ Object type  4
- EQUB 5
- EQUB 8 + 128
- EQUB 8
- EQUB 8
- EQUB 2
- EQUB 2 + 64
-
- EQUB 8 + 64            \ Object type  5
-
- EQUB 2 + 16 + 64       \ Object type  6
-
- EQUB 8                 \ Object type  7
- EQUB 1 + 16
- EQUB 1 + 16 + 64
-
- EQUB 0                 \ Object type  8
- EQUB 8 + 64
-
- EQUB 10                \ Object type  9
- EQUB 2 + 16 + 64
-
- EQUB 0                 \ Object type 10
- EQUB 0
- EQUB 0 + 64
-
- EQUB 0                 \ Object type 11
- EQUB 0 + 64
-
- EQUB 0                 \ Object type 12
- EQUB 0 + 64
+ EQUB 10                \ Object 0, Part 0: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 10                \ Object 0, Part 1: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 8                 \ Object 0, Part 2: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 8                 \ Object 0, Part 3: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 5 + 64            \ Object 0, Part 4: Edge: 1 (red), Fill: 1 (red)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 8                 \ Object 1, Part 0: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 8                 \ Object 1, Part 1: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 9                 \ Object 1, Part 2: Edge: 1 (red), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 10 + 64           \ Object 1, Part 3: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 8 + 128           \ Object 2, Part 0: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 1 (yes)
+                        
+ EQUB 8                 \                   Extra edges: Fill: 1 (red)
+                        
+                        
+ EQUB 8                 \ Object 2, Part 2: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 10                \ Object 2, Part 3: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 10 + 64           \ Object 2, Part 4: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 2                 \ Object 3, Part 0: Edge: 2 (white), Fill: 0 (black)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 0                 \ Object 3, Part 1: Edge: 0 (black), Fill: 0 (black)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 2                 \ Object 3, Part 2: Edge: 2 (white), Fill: 0 (black)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 10 + 64           \ Object 3, Part 3: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 8                 \ Object 4, Part 0: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 5                 \ Object 4, Part 1: Edge: 1 (red), Fill: 1 (red)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 8 + 128           \ Object 4, Part 2: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 1 (yes)
+                        
+ EQUB 8                 \                   Extra edges: Fill: 1 (red)
+                        
+                        
+ EQUB 8                 \ Object 4, Part 4: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 2                 \ Object 4, Part 5: Edge: 2 (white), Fill: 0 (black)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 2 + 64            \ Object 4, Part 6: Edge: 2 (white), Fill: 0 (black)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 8 + 64            \ Object 5, Part 0: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 2 + 16 + 64       \ Object 6, Part 0: Edge: 2 (white), Fill: 0 (black)
+                        \                   Outside: 1 (yes), Four-edge: 0 (no)
+                        
+                        
+ EQUB 8                 \ Object 7, Part 0: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 1 + 16            \ Object 7, Part 1: Edge: 1 (red), Fill: 0 (black)
+                        \                   Outside: 1 (yes), Four-edge: 0 (no)
+                        
+ EQUB 1 + 16 + 64       \ Object 7, Part 2: Edge: 1 (red), Fill: 0 (black)
+                        \                   Outside: 1 (yes), Four-edge: 0 (no)
+                        
+                        
+ EQUB 0                 \ Object 8, Part 0: Edge: 0 (black), Fill: 0 (black)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 8 + 64            \ Object 8, Part 1: Edge: 0 (black), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 10                \ Object 9, Part 0: Edge: 2 (white), Fill: 2 (white)
+                        \                   Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 2 + 16 + 64       \ Object 9, Part 1: Edge: 2 (white), Fill: 0 (black)
+                        \                   Outside: 1 (yes), Four-edge: 0 (no)
+                        
+                        
+ EQUB 0                 \ Object 10, Part 0: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 0                 \ Object 10, Part 1: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 0 + 64            \ Object 10, Part 2: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 0                 \ Object 11, Part 0: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 0 + 64            \ Object 11, Part 1: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
+                        
+                        
+ EQUB 0                 \ Object 12, Part 0: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
+                        
+ EQUB 0 + 64            \ Object 12, Part 1: Edge: 0 (black), Fill: 0 (black)
+                        \                    Outside: 0 (no), Four-edge: 0 (no)
 
 \ ******************************************************************************
 \
@@ -19573,6 +19990,7 @@ NEXT
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Index range of an object's data in the object data tables
+\  Deep dive: Object definitions
 \
 \ ------------------------------------------------------------------------------
 \
