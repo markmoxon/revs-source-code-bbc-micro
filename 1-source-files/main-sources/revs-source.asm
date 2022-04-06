@@ -411,19 +411,19 @@ ORG &0000
 
  SKIP 1                 \ The type of object to draw (0 to 12)
                         \
-                        \   * 0 = very distant car
-                        \   * 1 = distant car
-                        \   * 2 = close car body (middle object of three)
-                        \   * 3 = close car rear wing (rear object of three)
-                        \   * 4 = medium distance car
-                        \   * 5 = close car tyres (front object of three)
-                        \   * 6 = corner marker
-                        \   * 7 = straight road sign
-                        \   * 8 = starting flag
-                        \   * 9 = base sign for the following signs
-                        \   * 10 = right-hand chicane road sign
-                        \   * 11 = right turn road sign
-                        \   * 12 = left turn road sign
+                        \   * 0 = Four-object car, front tyres
+                        \   * 1 = Four-object car, body and helmet
+                        \   * 2 = Four-object car, rear tyres
+                        \   * 3 = Four-object car, rear wing
+                        \   * 4 = Standard car
+                        \   * 5 = Distant car
+                        \   * 6 = Corner marker
+                        \   * 7 = Straight sign
+                        \   * 8 = Start flag
+                        \   * 9 = Blank road sign
+                        \   * 10 = Chicane road sign
+                        \   * 11 = Right turn road sign
+                        \   * 12 = Left turn road sign
 
 .var15Lo
 
