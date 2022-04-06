@@ -1348,7 +1348,7 @@ ORG &0380
 
 .dataBlockIndex
 
- SKIP 128               \ Contains index values into the five trackDataBlock
+ SKIP 128               \ Contains index values into the five track Vector
                         \ tables in the track data
 
 .lineBufferPixel
@@ -12613,8 +12613,8 @@ ENDIF
  STX thisPosition       \ Store the position of the car we are considering in
                         \ thisPosition
 
- JSR CheckCarDistance   \ Check the distance to the car object and build the car
-                        \ object if it is visible, so we can draw it below
+ JSR BuildVisibleCar    \ Build the car object if it is visible, so we can draw
+                        \ it below
 
  LDX thisPosition       \ Retrieve the position of the car that we stored in
                         \ thisPosition above
@@ -12631,9 +12631,8 @@ ENDIF
 
  LDX positionBehind     \ Set X to the position of the driver behind us
 
- JSR CheckCarDistance   \ Check the distance to the car object and build the car
-                        \ object if it is visible, so it can be shown in the
-                        \ mirror if close enough
+ JSR BuildVisibleCar    \ Build the car object if it is visible, so it can be
+                        \ shown in the mirror if close enough
 
  RTS                    \ Return from the subroutine
 
@@ -13525,10 +13524,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: CheckCarDistance
+\       Name: BuildVisibleCar
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: Check the distance to the specified car
+\    Summary: Check the distance to the specified car and build the car object
+\             if it is close enough
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13539,7 +13539,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.CheckCarDistance
+.BuildVisibleCar
 
  LDA driversInOrder,X   \ Set A to the number of the driver in position X
 
@@ -13559,11 +13559,11 @@ ENDIF
  JSR GetObjectDistance  \ Set A and T to the distance between driver X and the
                         \ road sign in object Y
 
- BCS bcar1              \ If the C flag is set then the car and sign are far
-                        \ apart, so jump to bcar1 to hide the car
+ BCS bvis1              \ If the C flag is set then the car and sign are far
+                        \ apart, so jump to bvis1 to hide the car
 
  EOR directionFacing    \ This tests whether bit 7 of directionFacing and bit 7
- BMI bcar1              \ of the distance in A are different, which will happen
+ BMI bvis1              \ of the distance in A are different, which will happen
                         \ if either of the following is true:
                         \
                         \   * We are facing forwards (0) and driver X is ahead
@@ -13574,26 +13574,26 @@ ENDIF
                         \
                         \ In both cases driver X is too far away from us to be
                         \ seen, and bit 7 of the result of the EOR will be set,
-                        \ so jump to bcar1 to hide the car
+                        \ so jump to bvis1 to hide the car
 
  LDA T                  \ Set T = |T|
  JSR Absolute8Bit       \
  STA T                  \ so A and T contain the absolute value of the distance
                         \ between the car and sign
 
- CMP #40                \ If |A| < 40, jump to bcar2 to skip the following
- BCC bcar2              \ instruction and continue creating the car object
+ CMP #40                \ If |A| < 40, jump to bvis2 to skip the following
+ BCC bvis2              \ instruction and continue creating the car object
 
                         \ If we get here then the car and sign are far apart,
                         \ so we hide the car
 
-.bcar1
+.bvis1
 
  JMP HideObject         \ Hide the object in objectNumber, which this hides the
                         \ car object for driver X, and return from the
                         \ subroutine using a tail call
 
-.bcar2
+.bvis2
 
                         \ If we get here, A and T contain the absolute value of
                         \ the distance between the car and sign
@@ -13616,13 +13616,13 @@ ENDIF
                         \
                         \   (number - distance) * 3
 
- BPL bcar3              \ If the result was positive, i.e. number >= distance,
-                        \ jump to bcar3 to skip the following
+ BPL bvis3              \ If the result was positive, i.e. number >= distance,
+                        \ jump to bvis3 to skip the following
 
  CLC                    \ Otherwise set A = A + 120
  ADC #120
 
-.bcar3
+.bvis3
 
  TAY                    \ Copy the result from A into Y
 
@@ -13636,7 +13636,7 @@ ENDIF
 
  LDA dataBlockIndex+1,Y \ Set the driver's carSteering to entry Y + 1 from
  STA carSteering,X      \ dataBlockIndex, so the car follows the curve of the
-                        \ track ???
+                        \ track ??? (similar to CAS calculation)
 
 \ ******************************************************************************
 \
@@ -13647,16 +13647,27 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part builds the 3D coordinate of the specified car, starting by
-\ calculating the position of the car on the track but ignoring its racing line.
+\ This routine calculates the 3D coordinate of the specified car, given its
+\ progress through the current section and the racing line, as follows:
 \
-\ var14 = var20 + xyzTrackVector * carProgress
-\               + xyzTrackOutVector * carRacingLine
-\               + 144
+\   [ var14   ]     [ var20   ]   [ xTrackVector ]
+\   [ var14+1 ] =   [ var20+1 ] + [ yTrackVector ] * carProgress
+\   [ var14+2 ]     [ var20+2 ]   [ zTrackVector ]
+\
+\                   [ xTrackOutVector ]                   [  0  ]
+\                 + [ yTrackVector    ] * carRacingLine + [ 144 ]
+\                   [ zTrackOutVector ]                   [  0  ]
+\
+\ This part calculates the 3D coordinate of the car along the inside edge of
+\ the track, i.e. the first part of the above:
+\
+\   [ var14   ]   [ var20   ]   [ xTrackVector ]
+\   [ var14+1 ] = [ var20+1 ] + [ yTrackVector ] * carProgress
+\   [ var14+2 ]   [ var20+2 ]   [ zTrackVector ]
 \
 \ Arguments:
 \
-\   X                   The object number of the car object to build
+\   X                   The driver number of the car object to build
 \
 \   Y                   The track coordinate number * 3
 \
@@ -13664,7 +13675,7 @@ ENDIF
 
 .BuildCarObjects
 
- LDA dataBlockIndex,Y   \ Fetch the data block index for coordinate Y
+ LDA dataBlockIndex,Y   \ Fetch the data block index for track coordinate Y
 
  STA yStore1            \ Store the data block index in yStore1
 
@@ -13699,7 +13710,7 @@ ENDIF
 
  LDY T                  \ Set Y to the coordinate number * 3
 
-.C2960
+.bcar1
 
  LDA #0                 \ Set (V A) = 0
  STA V
@@ -13710,7 +13721,7 @@ ENDIF
                         \ We now calculate (A T) = A * U, making sure we get the
                         \ signs right
 
- BPL C297B              \ If A is positive, jump to C297B to multiply A and U as
+ BPL bcar2              \ If A is positive, jump to bcar2 to multiply A and U as
                         \ they are
 
                         \ If we get here then A is negative, so we need to apply
@@ -13726,21 +13737,21 @@ ENDIF
  CLC                    \ multiplication)
  ADC #1
 
- BCS C297E              \ If the addition just overflowed, then the result is
+ BCS bcar3              \ If the addition just overflowed, then the result is
                         \ now positive, which means V is already the correct
-                        \ high byte for (V A), so jump to C297E
+                        \ high byte for (V A), so jump to bcar3
 
  DEC V                  \ Otherwise, decrement V to &FF so it's the correct
                         \ high byte for (V A)
 
- BCC C297E              \ Jump to C297E (this BCC is effectively a JMP as we
+ BCC bcar3              \ Jump to bcar3 (this BCC is effectively a JMP as we
                         \ just passed through a BCS)
 
-.C297B
+.bcar2
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
-.C297E
+.bcar3
 
                         \ By this point, we have the following, signed result:
                         \
@@ -13772,10 +13783,10 @@ ENDIF
                         \ when adding the high bytes below
 
  CPX #1                 \ If X = 1, set A = A mod 32
- BNE C298F              \                 = var20Hi mod 32
+ BNE bcar4              \                 = var20Hi mod 32
  AND #31
 
-.C298F
+.bcar4
 
  PLP                    \ Now we can finally add the high bytes 
  ADC V
@@ -13786,7 +13797,7 @@ ENDIF
  INX                    \ Increment the axis pointer
 
  CPX #3                 \ Loop back until X has looped through 0, 1 and 2
- BNE C2960
+ BNE bcar1
 
 \ ******************************************************************************
 \
@@ -13797,7 +13808,12 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part adds the racing line to the 3D coordinate
+\ This part adds in the vector from the inside edge of the track to the car,
+\ i.e. the second part of the above:
+\
+\   [ var14   ]   [ var14   ]   [ xTrackOutVector ]                   [  0  ]
+\   [ var14+1 ] = [ var14+1 ] + [ yTrackVector    ] * carRacingLine + [ 144 ]
+\   [ var14+2 ]   [ var14+2 ]   [ zTrackOutVector ]                   [  0  ]
 \
 \ ******************************************************************************
 
@@ -13823,7 +13839,7 @@ ENDIF
  LDA UU                 \ Set U = UU
  STA U                  \       = the car's current racing line
 
-.C29AD
+.bcar5
 
  LDA #0                 \ Set (V A) = 0
  STA V
@@ -13834,7 +13850,7 @@ ENDIF
                         \ We now calculate (A T) = A * U, making sure we get the
                         \ signs right
 
- BPL C29C8              \ If A is positive, jump to C29C8 to multiply A and U as
+ BPL bcar6              \ If A is positive, jump to bcar6 to multiply A and U as
                         \ they are
 
                         \ If we get here then A is negative, so we need to apply
@@ -13850,21 +13866,21 @@ ENDIF
  CLC                    \ multiplication)
  ADC #1
 
- BCS C29CB              \ If the addition just overflowed, then the result is
+ BCS bcar7              \ If the addition just overflowed, then the result is
                         \ now positive, which means V is already the correct
-                        \ high byte for (V A), so jump to C29CB
+                        \ high byte for (V A), so jump to bcar7
 
  DEC V                  \ Otherwise, decrement V to &FF so it's the correct
                         \ high byte for (V A)
 
- BCC C29CB              \ Jump to C29CB (this BCC is effectively a JMP as we
+ BCC bcar7              \ Jump to bcar7 (this BCC is effectively a JMP as we
                         \ just passed through a BCS)
 
-.C29C8
+.bcar6
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
-.C29CB
+.bcar7
 
                         \ By this point, we have the following, signed result:
                         \
@@ -13887,15 +13903,17 @@ ENDIF
  INX                    \ Set X = X + 2
  INX
 
- CPX #4                 \ Loop back to C29AD until we have processed the x-axis
- BNE C29AD              \ (for X = 0) and z-axis (for X = 2)
+ CPX #4                 \ Loop back to bcar5 until we have processed the x-axis
+ BNE bcar5              \ (for X = 0) and z-axis (for X = 2)
 
- LDA var14Lo+1          \ Set (var14Hi var14Lo) = (var14Hi var14Lo) + 144
+                        \ Finally, we add 144 to the y-coordinate
+
+ LDA var14Lo+1          \ Set (var14Hi+1 var14Lo+1) += 144
  CLC                    \
  ADC #144               \ starting with the low bytes
  STA var14Lo+1
 
- BCC C29F4              \ And then the high bytes
+ BCC bcar8              \ And then the high bytes
  INC var14Hi+1
 
 \ ******************************************************************************
@@ -13908,7 +13926,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.C29F4
+.bcar8
 
  LDA #4                 \ Set A = 4, to use as the object type for the
                         \ one-object car
@@ -13919,15 +13937,15 @@ ENDIF
 
  LDA L0055
 
- CMP #3                 \ If A >= 3, jump to C2A50
- BCS C2A50
+ CMP #3                 \ If A >= 3, jump to bcar11
+ BCS bcar11
 
  LDA thisPosition
  CMP positionAhead
- BNE C2A4D
+ BNE bcar10
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
- BMI C2A0F              \ the car is not visible, so jump to C2A0F to skip the
+ BMI bcar9              \ the car is not visible, so jump to bcar9 to skip the
                         \ following instruction
 
  DEC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
@@ -13935,7 +13953,7 @@ ENDIF
                         \ standard car) to 3 (the rear wing in the four-object
                         \ car)
 
-.C2A0F
+.bcar9
 
  LDY yStore1            \ Set Y to the data block index that we stored above
 
@@ -14002,22 +14020,22 @@ ENDIF
 
  JSR ProjectObject      \ Project the object onto the screen, using var18
 
-.C2A4D
+.bcar10
 
  LDX thisDriver         \ Set X to the driver number that we stored at the start
-                        \ of the CheckCarDistance routine
+                        \ of the BuildVisibleCar routine
 
  RTS                    \ Return from the subroutine
 
-.C2A50
+.bcar11
 
                         \ We jump here when A contains L0055 and A >= 3
 
- CMP #5                 \ If A < 5, i.e. A = 4, jump to C2A4D to return from the
- BCC C2A4D              \ subroutine
+ CMP #5                 \ If A < 5, i.e. A = 4, jump to bcar10 to return from
+ BCC bcar10             \ the subroutine
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
- BMI C2A4D              \ the car is not visible, so jump to C2A4D to return
+ BMI bcar10             \ the car is not visible, so jump to bcar10 to return
                         \ from the subroutine
 
                         \ If we get here then A >= 5 and the car is visible, so
