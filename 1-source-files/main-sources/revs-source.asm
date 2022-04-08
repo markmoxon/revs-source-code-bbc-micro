@@ -246,7 +246,7 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.objectIndex
+.thisObjectIndex
 
  SKIP 0                 \ The index of the current object part's data as we work
                         \ our way through an object's constituent parts
@@ -10847,7 +10847,7 @@ ENDIF
  STA II                 \ objectScaffold for object type X + 1 (so the last
                         \ entry for object type X will be index II - 1)
 
- LDA objectIndexes,X    \ Set QQ to the index of the first entry in the object
+ LDA objectIndex,X      \ Set QQ to the index of the first entry in the object
  STA MM                 \ data tables for object type X (so MM will point to the
                         \ first entry for this object in the objectTop,
                         \ objectBottom, objectLeft, objectRight and objectColour
@@ -11159,8 +11159,8 @@ ENDIF
                         \ data tables
 
                         \ We now work our way through the data for this object,
-                        \ drawing one part at a time, using Y and objectIndex
-                        \ as the loop counter as we loop through each part
+                        \ drawing one part at a time, using thisObjectIndex and
+                        \ Y as the loop counter as we loop through each part
                         \
                         \ Note that most object parts are defined by one set of
                         \ object data, so they correspond to two edges (left and
@@ -11256,8 +11256,8 @@ ENDIF
 
  STA colourData         \ Set colourData to the colour data for this object part
 
- STY objectIndex        \ Store the current index into the object data in
-                        \ objectIndex
+ STY thisObjectIndex    \ Store the current index into the object data in
+                        \ thisObjectIndex
 
  LDY #1                 \ Draw the left edge of this object part
  JSR DrawObjectEdge
@@ -11282,7 +11282,7 @@ ENDIF
                         \ of this object, so jump to drob7 to return from the
                         \ subroutine as we have now drawn the whole object
 
- LDY objectIndex        \ Otherwise we need to move on to the next part, so set
+ LDY thisObjectIndex    \ Otherwise we need to move on to the next part, so set
                         \ Y to the loop counter
 
 .drob6
@@ -11343,10 +11343,10 @@ ENDIF
                         \   * Third edge:  nextEdge   = objectTop
                         \                  colourData = objectColour
 
- LDY objectIndex        \ Set Y to the loop counter
+ LDY thisObjectIndex    \ Set Y to the loop counter
 
  INY                    \ Increment the loop counter to point to the next bit of
- STY objectIndex        \ object data (which contains the data for the second
+ STY thisObjectIndex    \ object data (which contains the data for the second
                         \ and third edges)
 
  LDX objectLeft,Y       \ Set nextEdge to the scaled data from objectLeft for
@@ -11359,7 +11359,7 @@ ENDIF
  LDY #0                 \ Draw the second edge of the four-edge object part
  JSR DrawObjectEdge
 
- LDY objectIndex        \ Set Y to the index into the object data
+ LDY thisObjectIndex    \ Set Y to the index into the object data
 
  LDX objectTop,Y        \ Set nextEdge to the scaled data from objectTop for
  LDA scaledScaffold,X   \ this object part, to pass to DrawObjectEdge
@@ -13646,6 +13646,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Calculate the 3D coordinate of the specified car
+\  Deep dive: Drawing a 3D car from 2D parts
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13807,6 +13808,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Add the racing line to the 3D coordinate of the specified car
+\  Deep dive: Drawing a 3D car from 2D parts
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13925,6 +13927,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Calculate the screen coordinates of all the objects in the
 \             specified car
+\  Deep dive: Drawing a 3D car from 2D parts
 \
 \ ******************************************************************************
 
@@ -14585,7 +14588,7 @@ ENDIF
  LDA L5F20,Y
  STA RR
  STX L0045
- STY objectIndex
+ STY thisObjectIndex
  PLP
  BCS C2BCA
  BIT GG
@@ -14770,7 +14773,7 @@ ENDIF
  ORA #&80
  ORA T
  STA L0033
- LDA objectIndex
+ LDA thisObjectIndex
  CLC
  ADC #1
  CMP L004B
@@ -14890,7 +14893,7 @@ ENDIF
 .C2D08
 
  LDX L0045
- LDY objectIndex
+ LDY thisObjectIndex
  RTS
 
  LDA L0053
@@ -20006,7 +20009,7 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: objectIndexes
+\       Name: objectIndex
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Index range of an object's data in the object data tables
@@ -20020,7 +20023,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.objectIndexes
+.objectIndex
 
  EQUB 0                 \ Object type  0 =  0 to  4
  EQUB 5                 \ Object type  1 =  5 to  8
