@@ -10893,6 +10893,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Scale an object's scaffold by the scale factors in scaleUp and
 \             scaleDown
+\  Deep dive: Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -11124,7 +11125,8 @@ ENDIF
 \       Name: DrawObjectEdges
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Draw all the parts of an object by drawing edges into the screen
+\             buffer
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17057,6 +17059,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Scaffold measurements for the top of each object part
 \  Deep dive: Object definitions
+\             Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17299,6 +17302,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Scaffold measurements for the bottom of each object part
 \  Deep dive: Object definitions
+\             Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17518,6 +17522,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Scaffold measurements for the left of each object part
 \  Deep dive: Object definitions
+\             Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17760,6 +17765,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Scaffold measurements for the right of each object part
 \  Deep dive: Object definitions
+\             Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20045,6 +20051,7 @@ NEXT
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Index of an object's scaffold in the objectScaffold table
+\  Deep dive: Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21927,6 +21934,7 @@ NEXT
 \       Type: Variable
 \   Category: Graphics
 \    Summary: The scaffold used to construct each object, in a scalable format
+\  Deep dive: Scaling objects with scaffolds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -27694,6 +27702,7 @@ ORG &5E40
 \       Type: Variable
 \   Category: Graphics
 \    Summary: Storage for an object's scaled scaffold
+\  Deep dive: Scaling objects with scaffolds
 \
 \ ******************************************************************************
 
