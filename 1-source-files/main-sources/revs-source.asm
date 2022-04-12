@@ -1061,9 +1061,9 @@ ORG &0100
 
  SKIP 20                \ Set to the car's maximum speed for the next section,
                         \ which is taken from the track data and used to set the
-                        \ corner approach speed for non-player drivers
+                        \ section's approach speed for non-player drivers
                         \
-                        \ Only applies to corners with bit 7 of trackSection0b
+                        \ Only applies to sections with bit 7 of trackSection0b
                         \ set, in which case carSectionSpeed is set to the
                         \ trackMaxSpeed value from the preceding track section
                         \
@@ -1344,7 +1344,6 @@ ORG &0380
                         \
                         \ In the Silverstone track there are 24 track sections
                         \ numbered from 0 to 23, so this ranges from 0 to 184
-                        
 
 .dataBlockIndex
 
@@ -1434,49 +1433,149 @@ ORG &0880
                         \
                         \ Stored as a 16-bit value (objProgressHi objProgressLo)
 
-.var20Lo
+.xVector1Lo
 
- SKIP 40 * 3            \ 
+ SKIP 1
+
+.yVector1Lo
+
+ SKIP 1
+
+.zVector1Lo
+
+ SKIP 1
+
+ SKIP 39 * 3            \ The next 39 (xVector1, yVector1, zVector1) entries
                         \
                         \ Contains 40 batches of three bytes
 
-.var17Lo
+.xVector2Lo
 
- SKIP 124               \ 
+ SKIP 1
 
-.var13Lo
+.yVector2Lo
 
- SKIP 6                 \ 
+ SKIP 1
 
-.var18Lo
+.zVector2Lo
 
- SKIP 3                 \ 
+ SKIP 1
 
-.var14Lo
-
- SKIP 3                 \ 
-
-.var20Hi
-
- SKIP 40 * 3            \ 
+ SKIP 39 * 3            \ The next 39 (xVector2, yVector2, zVector2) entries
                         \
                         \ Contains 40 batches of three bytes
 
-.var17Hi
+ SKIP 4                 \ These bytes appear to be unused
 
- SKIP 124               \ 
+.xVector7Lo
 
-.var13Hi
+ SKIP 1
 
- SKIP 6                 \ 
+.yVector7Lo
 
-.var18Hi
+ SKIP 1
 
- SKIP 3                 \ 
+.zVector7Lo
 
-.var14Hi
+ SKIP 1
 
- SKIP 3                 \ 
+ SKIP 3                 \ These bytes appear to be unused
+
+.xVector3Lo
+
+ SKIP 1
+
+.yVector3Lo
+
+ SKIP 1
+
+.zVector3Lo
+
+ SKIP 1
+
+.xVector4Lo
+
+ SKIP 1
+
+.yVector4Lo
+
+ SKIP 1
+
+.zVector4Lo
+
+ SKIP 1
+
+.xVector1Hi
+
+ SKIP 1
+
+.yVector1Hi
+
+ SKIP 1
+
+.zVector1Hi
+
+ SKIP 1
+
+ SKIP 39 * 3            \ The next 39 (xVector1, yVector1, zVector1) entries
+                        \
+                        \ Contains 40 batches of three bytes
+
+.xVector2Hi
+
+ SKIP 1
+
+.yVector2Hi
+
+ SKIP 1
+
+.zVector2Hi
+
+ SKIP 1
+
+ SKIP 39 * 3            \ The next 39 (xVector2, yVector2, zVector2) entries
+                        \
+                        \ Contains 40 batches of three bytes
+
+ SKIP 4                 \ These bytes appear to be unused
+
+.xVector7Hi
+
+ SKIP 1
+
+.yVector7Hi
+
+ SKIP 1
+
+.zVector7Hi
+
+ SKIP 1
+
+ SKIP 3                 \ These bytes appear to be unused
+
+.xVector3Hi
+
+ SKIP 1
+
+.yVector3Hi
+
+ SKIP 1
+
+.zVector3Hi
+
+ SKIP 1
+
+.xVector4Hi
+
+ SKIP 1
+
+.yVector4Hi
+
+ SKIP 1
+
+.zVector4Hi
+
+ SKIP 1
 
 \ ******************************************************************************
 \
@@ -2276,37 +2375,38 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: AddCoordinates
+\       Name: AddVectors
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: Add two three-axis coordinates together
+\    Summary: Add two three-axis vectors together
 \
 \ ------------------------------------------------------------------------------
 \
-\ Given a three-axis variable varX and a three-axis variable varY, this routine
-\ calculates the following addition:
+\ Given a three-axis variable vectorX and a three-axis variable vectorY, this
+\ routine calculates the following addition:
 \
-\                 [ (SS T) ]
-\   varX = varY + [ (TT U) ]
-\                 [ (UU V) ]
+\                       [ (SS T) ]
+\   vectorX = vectorY + [ (TT U) ]
+\                       [ (UU V) ]
 \
 \ Arguments:
 \
-\   X                   The offset from var20 of the varX variable to update:
+\   X                   The offset from xVector1 of the vectorX variable to
+\                       update:
 \
-\                         * &F4 = var13
+\                         * &F4 = xVector7
 \
-\                         * &FA = var18
+\                         * &FA = xVector3
 \
-\                         * &FD = var14
+\                         * &FD = xVector4
 \
-\   Y                   The offset from var20 of the varY variable to add:
+\   Y                   The offset from xVector1 of the vectorY variable to add:
 \
-\                         * &F4 = var13
+\                         * &F4 = xVector7
 \
-\                         * &FA = var18
+\                         * &FA = xVector3
 \
-\                         * &FD = var14
+\                         * &FD = xVector4
 \
 \   (SS T)              The value to add to the first axis
 \
@@ -2316,34 +2416,34 @@ ORG &0B00
 \   
 \ ******************************************************************************
 
-.AddCoordinates
+.AddVectors
 
- LDA var20Lo,Y          \ Set varX0 = varY0 + (SS T)
+ LDA xVector1Lo,Y       \ Set xVectorX = xVectorY + (SS T)
  CLC                    \
  ADC T                  \ starting with the high bytes
- STA var20Lo,X
+ STA xVector1Lo,X
 
- LDA var20Hi,Y          \ And then the low bytes
+ LDA xVector1Hi,Y       \ And then the low bytes
  ADC SS
- STA var20Hi,X
+ STA xVector1Hi,X
 
- LDA var20Lo+1,Y        \ Set varX1 = varY1 + (TT U)
+ LDA yVector1Lo,Y       \ Set yVectorX = yVectorY + (TT U)
  CLC                    \
  ADC U                  \ starting with the high bytes
- STA var20Lo+1,X
+ STA yVector1Lo,X
 
- LDA var20Hi+1,Y        \ And then the low bytes
+ LDA yVector1Hi,Y       \ And then the low bytes
  ADC TT
- STA var20Hi+1,X
+ STA yVector1Hi,X
 
- LDA var20Lo+2,Y        \ Set varX2 = varY2 + (UU V)
+ LDA zVector1Lo,Y       \ Set zVectorX = zVectorY + (UU V)
  CLC                    \
  ADC V                  \ starting with the high bytes
- STA var20Lo+2,X
+ STA zVector1Lo,X
 
- LDA var20Hi+2,Y        \ And then the low bytes
+ LDA zVector1Hi,Y       \ And then the low bytes
  ADC UU
- STA var20Hi+2,X
+ STA zVector1Hi,X
 
  RTS                    \ Return from the subroutine
 
@@ -4376,10 +4476,10 @@ ORG &0B00
 
 .P11DB
 
- LDA var14Lo,X
- STA var22Lo,X
- LDA var14Hi,X
- STA var22Hi,X
+ LDA xVector4Lo,X
+ STA xVector5Lo,X
+ LDA xVector4Hi,X
+ STA xVector5Hi,X
  DEX
  BPL P11DB
  LDA coordNumber96
@@ -4417,45 +4517,44 @@ ORG &0B00
 \ 117, representing coordinate 0 to 39. The routine copies the following track
 \ coordinates from the Y-th track section data:
 \
-\   * trackSection1
-\   * trackSection2
-\   * trackSection3
+\   * xTrackSectionI
+\   * yTrackSectionI
+\   * zTrackSectionI
 \
-\ and stores them in the X-th coordinate in var20 (i.e. at the X-th three-byte
-\ block at var20, var20+1 and var20+2).
+\ and stores them in the X-th coordinate in (xVector1, yVector1, zVector1).
 \
 \ This routine is also called with X = &FD, in which it copies the following:
 \
-\   Y-th (trackSection1Hi trackSection1Lo) to X-th (var14Hi var14Lo)
-\   Y-th (trackSection2Hi trackSection2Lo) to X-th (var14Hi+1 var14Lo+1)
-\   Y-th (trackSection3Hi trackSection3Lo) to X-th (var14Hi+2 var14Lo+2)
+\   Y-th (xTrackSectionIHi xTrackSectionILo) to X-th (xVector4Hi xVector4Lo)
+\   Y-th (yTrackSectionIHi yTrackSectionILo) to X-th (yVector4Hi yVector4Lo)
+\   Y-th (zTrackSectionIHi zTrackSectionILo) to X-th (zVector4Hi zVector4Lo)
 \
 \ Arguments:
 \
-\   Y                   Copy data from Y-th (trackSection1Hi trackSection1Lo)
-\                                           (trackSection2Hi trackSection2Lo)
-\                                           (trackSection3Hi trackSection3Lo)
+\   Y                   Copy data from Y-th (xTrackSectionIHi xTrackSectionILo)
+\                                           (yTrackSectionIHi yTrackSectionILo)
+\                                           (zTrackSectionIHi zTrackSectionILo)
 \
-\   X                   Copy data to X-th (var20Hi var20Lo)
-\                                         (var20Hi+1 var20Lo+1)
-\                                         (var20Hi+2 var20Lo+2)
+\   X                   Copy data to X-th (xVector1Hi xVector1Lo)
+\                                         (yVector1Hi yVector1Lo)
+\                                         (zVector1Hi zVector1Lo)
 \
 \ ******************************************************************************
 
 .GetSectionCoord
 
- LDA trackSection1Lo,Y  \ Copy the following 16-bit coordinates:
- STA var20Lo,X          \
- LDA trackSection2Lo,Y  \   * The Y-th trackSection1 to the X-th var20
- STA var20Lo+1,X        \
- LDA trackSection3Lo,Y  \   * The Y-th trackSection2 to the X-th var20+1
- STA var20Lo+2,X        \
- LDA trackSection1Hi,Y  \   * The Y-th trackSection3 to the X-th var20+2
- STA var20Hi,X
- LDA trackSection2Hi,Y
- STA var20Hi+1,X
- LDA trackSection3Hi,Y
- STA var20Hi+2,X
+ LDA xTrackSectionILo,Y \ Copy the following 16-bit coordinates:
+ STA xVector1Lo,X          \
+ LDA yTrackSectionILo,Y \   * The Y-th xTrackSectionI to the X-th xVector1
+ STA yVector1Lo,X       \
+ LDA zTrackSectionILo,Y \   * The Y-th yTrackSectionI to the X-th yVector1
+ STA zVector1Lo,X       \
+ LDA xTrackSectionIHi,Y \   * The Y-th zTrackSectionI to the X-th zVector1
+ STA xVector1Hi,X
+ LDA yTrackSectionIHi,Y
+ STA yVector1Hi,X
+ LDA zTrackSectionIHi,Y
+ STA zVector1Hi,X
 
  RTS                    \ Return from the subroutine
 
@@ -4470,42 +4569,41 @@ ORG &0B00
 \
 \ This routine is normally called with X as a multiple of 3 in the range 0 to
 \ 117, representing coordinate 0 to 39. The routine copies the following track
-\ coordinates from the Y-th track section data:
+\ section coordinates from the Y-th track section data:
 \
-\   * trackSection1
-\   * trackSection2
-\   * trackSection3
+\   * xTrackSectionI
+\   * yTrackSectionI
+\   * zTrackSectionI
 \
-\ and stores them in the X-th coordinate in var20 (i.e. at the X-th three-byte
-\ block at var20, var20+1 and var20+2). It also copies the following track
-\ coordinates:
+\ and stores them in the X-th coordinate in (xVector1, yVector1, zVector1). It
+\ also copies the following track section coordinates:
 \
-\   * trackSection4
-\   * trackSection2
-\   * trackSection6
+\   * xTrackSectionO
+\   * yTrackSectionI
+\   * zTrackSectionO
 \
-\ and stores them in the X-th coordinate in var17 (i.e. at the X-th three-byte
-\ block at var17, var17+1 and var17+2). Note that the second coordinate is set
-\ to the same value as the second coordinate as the first copy.
+\ and stores them in the X-th coordinate in (xVector2, yVector2, zVector2).
+\ Note that the second coordinate is set to the same value as the second
+\ coordinate from the first copy.
 \
-\ It also sets L0002 to trackSection5b for the Y-th track section data.
+\ It also sets L0002 to trackSectionFrom for the Y-th track section data.
 \
 \ Arguments:
 \
-\   Y                   Copy data from Y-th (trackSection1Hi trackSection1Lo)
-\                                           (trackSection2Hi trackSection2Lo)
-\                                           (trackSection3Hi trackSection3Lo)
-\                                           (trackSection4Hi trackSection4Lo)
-\                                           (trackSection2Hi trackSection2Lo)
-\                                           (trackSection6Hi trackSection6Lo)
-\                                           trackSection5b
+\   Y                   Copy data from Y-th (xTrackSectionIHi xTrackSectionILo)
+\                                           (yTrackSectionIHi yTrackSectionILo)
+\                                           (zTrackSectionIHi zTrackSectionILo)
+\                                           (xTrackSectionOHi xTrackSectionOLo)
+\                                           (yTrackSectionIHi yTrackSectionILo)
+\                                           (zTrackSectionOHi zTrackSectionOLo)
+\                                           trackSectionFrom
 \
-\   X                   Copy data to X-th (var20Hi var20Lo)
-\                                         (var20Hi+1 var20Lo+1)
-\                                         (var20Hi+2 var20Lo+2)
-\                                         (var17Hi var17Lo)
-\                                         (var17Hi+1 var17Lo+1)
-\                                         (var17Hi+2 var17Lo+2)
+\   X                   Copy data to X-th (xVector1Hi xVector1Lo)
+\                                         (yVector1Hi yVector1Lo)
+\                                         (zVector1Hi zVector1Lo)
+\                                         (xVector2Hi xVector2Lo)
+\                                         (yVector2Hi yVector2Lo)
+\                                         (zVector2Hi zVector2Lo)
 \                                         L0002
 \
 \ ******************************************************************************
@@ -4515,32 +4613,33 @@ ORG &0B00
  JSR GetSectionCoord    \ Call GetSectionCoord to copy the following 16-bit
                         \ coordinate:
                         \
-                        \   * The Y-th trackSection1 to the X-th var20
+                        \   * The Y-th xTrackSectionI to the X-th xVector1
                         \
-                        \   * The Y-th trackSection2 to the X-th var20+1
+                        \   * The Y-th yTrackSectionI to the X-th yVector1
                         \
-                        \   * The Y-th trackSection3 to the X-th var20+2
+                        \   * The Y-th zTrackSectionI to the X-th zVector1
 
- LDA trackSection4Lo,Y  \ Copy the following 16-bit coordinate:
- STA var17Lo,X          \
- LDA trackSection6Lo,Y  \   * The Y-th trackSection4 to the X-th var17
- STA var17Lo+2,X        \
- LDA trackSection4Hi,Y  \   * The Y-th trackSection6 to the X-th var17+2
- STA var17Hi,X
- LDA trackSection6Hi,Y
- STA var17Hi+2,X
+ LDA xTrackSectionOLo,Y \ Copy the following 16-bit coordinate:
+ STA xVector2Lo,X       \
+ LDA zTrackSectionOLo,Y \   * The Y-th xTrackSectionO to the X-th xVector2
+ STA zVector2Lo,X       \
+ LDA xTrackSectionOHi,Y \   * The Y-th zTrackSectionO to the X-th zVector2
+ STA xVector2Hi,X
+ LDA zTrackSectionOHi,Y
+ STA zVector2Hi,X
 
- LDA trackSection5b,Y   \ Set L0002 = the Y-th trackSection5b
+ LDA trackSectionFrom,Y \ Set L0002 = the Y-th trackSectionFrom
  STA L0002
 
                         \ Fall through into CopySectionData to copy the
                         \ following 16-bit coordinate:
                         \
-                        \   * The Y-th trackSection2 to the X-th var17+1
+                        \   * The Y-th yTrackSectionI to the X-th yVector2
                         \
                         \ This works because the call to GetSectionCoord already
-                        \ stored the Y-th trackSection2 in the X-th var20+1, and
-                        \ the following now copies that into the X-th var17+1
+                        \ stored the Y-th yTrackSectionI in the X-th yVector1,
+                        \ and the following now copies that into the X-th
+                        \ yVector2
 
 \ ******************************************************************************
 \
@@ -4553,16 +4652,17 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   X                   Copy X-th (var20Hi+1 var20Lo+1) to (var17Hi+1 var17Lo+1)
+\   X                   Copy X-th (yVector1Hi yVector1Lo) to
+\                       (yVector2Hi yVector2Lo)
 \
 \ ******************************************************************************
 
 .CopySectionData
 
- LDA var20Lo+1,X        \ Copy the following 16-bit coordinate:
- STA var17Lo+1,X        \
- LDA var20Hi+1,X        \   * The X-th var20+1 to the X-th var17+1
- STA var17Hi+1,X
+ LDA yVector1Lo,X       \ Copy the following 16-bit coordinate:
+ STA yVector2Lo,X       \
+ LDA yVector1Hi,X       \   * The X-th yVector1 to the X-th yVector2
+ STA yVector2Hi,X
 
  RTS                    \ Return from the subroutine
 
@@ -4621,8 +4721,8 @@ ORG &0B00
  LDY objTrackSection+23
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into var20 and var27, and set L0002 to
-                        \ trackSection5b
+                        \ section Y into xVector1 and var27, and set L0002 to
+                        \ trackSectionFrom
 
  LDA trackSection0a,Y
  JMP C128E
@@ -4632,8 +4732,8 @@ ORG &0B00
  LDY signSection
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into var20 and var27, and set L0002 to
-                        \ trackSection5b
+                        \ section Y into xVector1 and var27, and set L0002 to
+                        \ trackSectionFrom
 
  JSR sub_C13E0
  LDA #2
@@ -4842,7 +4942,7 @@ ORG &0B00
  LDY L0002
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
-                        \ xTrackVector, yTrackVector and zTrackVector
+                        \ xTrackVectorI, yTrackVectorI and zTrackVectorI
 
  LDX coordNumber
  LDA L0001
@@ -4901,15 +5001,15 @@ ORG &0B00
  STA dataBlockIndex+2,X
  LDY prevCoordNumber
 
- JSR AddCoordinates
+ JSR AddVectors
 
- JSR CopySectionData    \ Copy the X-th var20+1 to var17+1
+ JSR CopySectionData    \ Copy the X-th yVector1 to yVector2
 
  LDY L0002
  LDA #0
  STA SS
  STA UU
- LDA xTrackOutVector,Y
+ LDA xTrackVectorO,Y
  BPL C1398
  DEC SS
 
@@ -4920,12 +5020,12 @@ ORG &0B00
  ASL A
  ROL SS
  CLC
- ADC var20Lo,X
- STA var17Lo,X
+ ADC xVector1Lo,X
+ STA xVector2Lo,X
  LDA SS
- ADC var20Hi,X
- STA var17Hi,X
- LDA zTrackOutVector,Y
+ ADC xVector1Hi,X
+ STA xVector2Hi,X
+ LDA zTrackVectorO,Y
  BPL C13B4
  DEC UU
 
@@ -4936,11 +5036,11 @@ ORG &0B00
  ASL A
  ROL UU
  CLC
- ADC var20Lo+2,X
- STA var17Lo+2,X
+ ADC zVector1Lo,X
+ STA zVector2Lo,X
  LDA UU
- ADC var20Hi+2,X
- STA var17Hi+2,X
+ ADC zVector1Hi,X
+ STA zVector2Hi,X
  JSR sub_C13DA
 
 .C13CC
@@ -4990,7 +5090,7 @@ ORG &0B00
  BMI C13F0
  LDY L0002
  INY
- CPY trackData6FB
+ CPY trackVectorCount
  BNE C13F8
  LDY #0
  BEQ C13F8
@@ -4999,7 +5099,7 @@ ORG &0B00
 
  LDY L0002
  BNE C13F7
- LDY trackData6FB
+ LDY trackVectorCount
 
 .C13F7
 
@@ -5154,13 +5254,13 @@ ORG &0B00
 \
 \ Returns:
 \
-\   (SS T)              The Y-th entry from xTrackVector as a 16-bit signed
+\   (SS T)              The Y-th entry from xTrackVectorI as a 16-bit signed
 \                       integer
 \
-\   (TT U)              The Y-th entry from yTrackVector as a 16-bit signed
+\   (TT U)              The Y-th entry from yTrackVectorI as a 16-bit signed
 \                       integer
 \
-\   (UU V)              The Y-th entry from zTrackVector as a 16-bit signed
+\   (UU V)              The Y-th entry from zTrackVectorI as a 16-bit signed
 \                       integer
 \
 \ ******************************************************************************
@@ -5172,7 +5272,7 @@ ORG &0B00
  STA TT
  STA UU
 
- LDA xTrackVector,Y     \ Set T = the Y-th entry from xTrackVector
+ LDA xTrackVectorI,Y    \ Set T = the Y-th entry from xTrackVectorI
  STA T
 
  BPL coor1              \ If the byte we just fetched is negative, decrement
@@ -5181,7 +5281,7 @@ ORG &0B00
 
 .coor1
 
- LDA yTrackVector,Y     \ Set U = the Y-th entry from yTrackVector
+ LDA yTrackVectorI,Y    \ Set U = the Y-th entry from yTrackVectorI
  STA U
 
  BPL coor2              \ If the byte we just fetched is negative, decrement
@@ -5190,7 +5290,7 @@ ORG &0B00
 
 .coor2
 
- LDA zTrackVector,Y     \ Set V = the Y-th entry from zTrackVector
+ LDA zTrackVectorI,Y    \ Set V = the Y-th entry from zTrackVectorI
  STA V
 
  BPL coor3              \ If the byte we just fetched is negative, decrement
@@ -6697,17 +6797,17 @@ ENDIF
  BPL rese1              \ Loop back until we have zeroed all variables from
                         \ movingCar to L0068
 
- LDX #&7F               \ We now zero all variables from var22Lo to L62FF, so
+ LDX #&7F               \ We now zero all variables from xVector5Lo to L62FF, so
                         \ set up a loop counter in X
 
 .rese2
 
- STA var22Lo,X          \ Zero the X-th byte from var22Lo
+ STA xVector5Lo,X       \ Zero the X-th byte from xVector5Lo
 
  DEX                    \ Decrement the loop counter
 
  BPL rese2              \ Loop back until we have zeroed all variables from
-                        \ var22Lo to L62FF
+                        \ xVector5Lo to L62FF
 
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
@@ -11398,17 +11498,17 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The offset from var20 of the first variable to use:
+\   X                   The offset from xVector1 of the first variable to use:
 \
-\                         * &F4 = var13
+\                         * &F4 = xVector7
 \
-\                         * &FA = var18
+\                         * &FA = xVector3
 \
-\                         * &FD = var14
+\                         * &FD = xVector4
 \
-\   Y                   The offset from var22 of the second variable to use:
+\   Y                   The offset from xVector5 of the second variable to use:
 \
-\                         * 6 = var23
+\                         * 6 = xVector6
 \
 \ Returns:
 \
@@ -11418,7 +11518,7 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObjectX-2    Use var22 (Y = 0)
+\   ProjectObjectX-2    Use xVector5 (Y = 0)
 \
 \ ******************************************************************************
 
@@ -11426,12 +11526,12 @@ ENDIF
 
 .ProjectObjectX
 
- LDA var20Lo,X
+ LDA xVector1Lo,X
  SEC
- SBC var22Lo,Y
+ SBC xVector5Lo,Y
  STA PP
- LDA var20Hi,X
- SBC var22Hi,Y
+ LDA xVector1Hi,X
+ SBC xVector5Hi,Y
  STA VV
  BPL prox1
  LDA #0
@@ -11444,12 +11544,12 @@ ENDIF
 .prox1
 
  STA SS
- LDA var20Lo+2,X
+ LDA zVector1Lo,X
  SEC
- SBC var19Lo,Y
+ SBC zVector5Lo,Y
  STA RR
- LDA var20Hi+2,X
- SBC var19Hi,Y
+ LDA zVector1Hi,X
+ SBC zVector5Hi,Y
  STA GG
  BPL prox2
  LDA #0
@@ -11672,12 +11772,12 @@ ENDIF
 
 .ProjectObjectY
 
- LDA var20Lo+1,X
+ LDA yVector1Lo,X
  SEC
- SBC var21Lo,Y
+ SBC yVector5Lo,Y
  STA QQ
- LDA var20Hi+1,X
- SBC var21Hi,Y
+ LDA yVector1Hi,X
+ SBC yVector5Hi,Y
  STA WW
  BPL proy1
  LDA #0
@@ -11853,7 +11953,7 @@ ENDIF
  STX L0042
 
  LDX #&FD               \ Copy the first trackSection coordinate for track
- JSR GetSectionCoord    \ section Y into var14
+ JSR GetSectionCoord    \ section Y into xVector4
 
 
  JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
@@ -12032,12 +12132,12 @@ ENDIF
 
 .C2410
 
- LDA var20Lo,X
+ LDA xVector1Lo,X
  SEC
- SBC var20Lo,Y
+ SBC xVector1Lo,Y
  STA T
- LDA var20Hi,X
- SBC var20Hi,Y
+ LDA xVector1Hi,X
+ SBC xVector1Hi,Y
  CLC
  BPL C2423
  SEC
@@ -12052,13 +12152,13 @@ ENDIF
  ROR T
  STA V
  LDX U
- LDA var20Lo,Y
+ LDA xVector1Lo,Y
  CLC
  ADC T
- STA var18Lo,X
- LDA var20Hi,Y
+ STA xVector3Lo,X
+ LDA xVector1Hi,Y
  ADC V
- STA var18Hi,X
+ STA xVector3Hi,X
  INX
  CPX #3
  BEQ C2450
@@ -13664,20 +13764,20 @@ ENDIF
 \ This routine calculates the 3D coordinate of the specified car, given its
 \ progress through the current section and the racing line, as follows:
 \
-\   [ var14   ]     [ var20   ]   [ xTrackVector ]
-\   [ var14+1 ] =   [ var20+1 ] + [ yTrackVector ] * carProgress
-\   [ var14+2 ]     [ var20+2 ]   [ zTrackVector ]
+\   [ xVector4 ]     [ xVector1 ]   [ xTrackVectorI ]
+\   [ yVector4 ] =   [ yVector1 ] + [ yTrackVectorI ] * carProgress
+\   [ zVector4 ]     [ zVector1 ]   [ zTrackVectorI ]
 \
-\                   [ xTrackOutVector ]                   [  0  ]
-\                 + [ yTrackVector    ] * carRacingLine + [ 144 ]
-\                   [ zTrackOutVector ]                   [  0  ]
+\                   [ xTrackVectorO ]                   [  0  ]
+\                 + [ yTrackVectorI ] * carRacingLine + [ 144 ]
+\                   [ zTrackVectorO ]                   [  0  ]
 \
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
 \
-\   [ var14   ]   [ var20   ]   [ xTrackVector ]
-\   [ var14+1 ] = [ var20+1 ] + [ yTrackVector ] * carProgress
-\   [ var14+2 ]   [ var20+2 ]   [ zTrackVector ]
+\   [ xVector4 ]   [ xVector1 ]   [ xTrackVectorI ]
+\   [ yVector4 ] = [ yVector1 ] + [ yTrackVectorI ] * carProgress
+\   [ zVector4 ]   [ zVector1 ]   [ zTrackVectorI ]
 \
 \ Arguments:
 \
@@ -13703,18 +13803,18 @@ ENDIF
  LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
 
- LDA xTrackVector,Y     \ Set VV to the x-coordinate of the track vector for
+ LDA xTrackVectorI,Y    \ Set VV to the x-coordinate of the track vector for
  STA VV                 \ this point on the track
 
- LDA yTrackVector,Y     \ Set VV+1 to the y-coordinate of the track vector for
+ LDA yTrackVectorI,Y    \ Set VV+1 to the y-coordinate of the track vector for
  STA VV+1               \ this point on the track
 
- LDA zTrackVector,Y     \ Set VV+2 to the z-coordinate of the track vector for
+ LDA zTrackVectorI,Y    \ Set VV+2 to the z-coordinate of the track vector for
  STA VV+2               \ this point on the track
 
                         \ We now calculate the following:
                         \
-                        \   var14 = var20 + trackVector * carProgress
+                        \   xVector4 = xVector1 + trackVectorI * carProgress
 
  LDX #0                 \ Set X = 0, to use as a loop counter through the three
                         \ axes, i.e. 0, 1, 2
@@ -13770,41 +13870,42 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = trackVector * carProgress
+                        \           = trackVectorI * carProgress
                         \
-                        \ We now add (V A) to the Y-th entry in var20, which is
-                        \ the var20 entry for the coordinate number passed to
-                        \ the routine (Y contains the coordinate number * 3),
+                        \ We now add (V A) to the Y-th entry in xVector1, which
+                        \ is the xVector1 entry for the coordinate number passed
+                        \ to the routine (Y contains the coordinate number * 3),
                         \ and store the result in the three-axis variable in
-                        \ var14
+                        \ xVector4
                         \
                         \ For the middle axis of the coordinare, i.e. for the
                         \ multiplication:
                         \
-                        \   var14+1 = var20+Y+1 + (V A)
+                        \   yVector4 = Y-th yVector1 + (V A)
                         \
-                        \ then we add var20Hi mod 32 instead of var20Hi
+                        \ then we add xVector1Hi mod 32 instead of xVector1Hi
 
- CLC                    \ Set (var14Hi var14Lo) = (var20Hi var20Lo) + (V A)
- ADC var20Lo,Y          \
- STA var14Lo,X          \ starting with the low bytes
+ CLC                    \ Set (xVector4Hi xVector4Lo) = (xVector1Hi xVector1Lo)
+ ADC xVector1Lo,Y       \                                + (V A)
+ STA xVector4Lo,X       \
+                        \ starting with the low bytes
 
- LDA var20Hi,Y          \ And then the high bytes (though with a short
-                        \ interlude for when X = 1, to add var20Hi mod 32
+ LDA xVector1Hi,Y       \ And then the high bytes (though with a short
+                        \ interlude for when X = 1, to add xVector1Hi mod 32
                         \ instead)
 
  PHP                    \ Store the C flag on the stack so we can retrieve it
                         \ when adding the high bytes below
 
  CPX #1                 \ If X = 1, set A = A mod 32
- BNE bcar4              \                 = var20Hi mod 32
+ BNE bcar4              \                 = xVector1Hi mod 32
  AND #31
 
 .bcar4
 
  PLP                    \ Now we can finally add the high bytes 
  ADC V
- STA var14Hi,X
+ STA xVector4Hi,X
 
  INY                    \ Increment the coordinate pointer
 
@@ -13826,22 +13927,22 @@ ENDIF
 \ This part adds in the vector from the inside edge of the track to the car,
 \ i.e. the second part of the above:
 \
-\   [ var14   ]   [ var14   ]   [ xTrackOutVector ]                   [  0  ]
-\   [ var14+1 ] = [ var14+1 ] + [ yTrackVector    ] * carRacingLine + [ 144 ]
-\   [ var14+2 ]   [ var14+2 ]   [ zTrackOutVector ]                   [  0  ]
+\   [ xVector4 ]   [ xVector4 ]   [ xTrackVectorO ]                   [  0  ]
+\   [ yVector4 ] = [ yVector4 ] + [ yTrackVectorI ] * carRacingLine + [ 144 ]
+\   [ zVector4 ]   [ zVector4 ]   [ zTrackVectorO ]                   [  0  ]
 \
 \ ******************************************************************************
 
                         \ We now calculate the following:
                         \
-                        \   var14 = var20 + trackOutVector * carRacingLine
+                        \   xVector4 = xVector1 + trackVectorO * carRacingLine
 
  LDY yStore1            \ Set Y to the data block index that we stored above
 
- LDA xTrackOutVector,Y  \ Set VV to the track data block 4 value for this index
+ LDA xTrackVectorO,Y    \ Set VV to the track data block 4 value for this index
  STA VV
 
- LDA zTrackOutVector,Y  \ Set VV+2 to the track data block 5 value for this
+ LDA zTrackVectorO,Y    \ Set VV+2 to the track data block 5 value for this
  STA VV+2               \ index
 
                         \ Note that VV+1 still contains the track data block 2
@@ -13899,20 +14000,21 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = trackOutVector * carRacingLine
+                        \           = trackVectorO * carRacingLine
 
  ASL A                  \ Set (V A) = (V A) * 4
  ROL V
  ASL A
  ROL V
 
- CLC                    \ Set (var14Hi var14Lo) = (var14Hi var14Lo) + (V A)
- ADC var14Lo,X          \
- STA var14Lo,X          \ starting with the low bytes
+ CLC                    \ Set (xVector4Hi xVector4Lo) = (xVector4Hi xVector4Lo)
+ ADC xVector4Lo,X       \                                + (V A)
+ STA xVector4Lo,X       \
+                        \ starting with the low bytes
 
- LDA var14Hi,X          \ And then the high bytes
+ LDA xVector4Hi,X       \ And then the high bytes
  ADC V
- STA var14Hi,X
+ STA xVector4Hi,X
 
  INX                    \ Set X = X + 2
  INX
@@ -13922,13 +14024,13 @@ ENDIF
 
                         \ Finally, we add 144 to the y-coordinate
 
- LDA var14Lo+1          \ Set (var14Hi+1 var14Lo+1) += 144
+ LDA yVector4Lo         \ Set (yVector4Hi yVector4Lo) += 144
  CLC                    \
  ADC #144               \ starting with the low bytes
- STA var14Lo+1
+ STA yVector4Lo
 
  BCC bcar8              \ And then the high bytes
- INC var14Hi+1
+ INC yVector4Hi
 
 \ ******************************************************************************
 \
@@ -13946,7 +14048,7 @@ ENDIF
  LDA #4                 \ Set A = 4, to use as the object type for the
                         \ one-object car
 
- JSR ProjectObject-2    \ Project the object onto the screen, using var14
+ JSR ProjectObject-2    \ Project the object onto the screen, using xVector4
 
  LDX L0045
 
@@ -13973,39 +14075,39 @@ ENDIF
  LDY yStore1            \ Set Y to the data block index that we stored above
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
-                        \ xTrackVector, yTrackVector and zTrackVector
+                        \ xTrackVectorI, yTrackVectorI and zTrackVectorI
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDY #&FD               \ Set Y = &FD so the call to AddCoordinates uses var14
+ LDY #&FD               \ Set Y = &FD so the call to AddVectors uses xVector4
 
- LDX #&FA               \ Set X = &FA so the call to AddCoordinates uses var18
+ LDX #&FA               \ Set X = &FA so the call to AddVectors uses xVector3
 
- JSR AddCoordinates     \ Set:
+ JSR AddVectors         \ Set:
                         \
-                        \                   [ (SS T) ]
-                        \   var18 = var14 + [ (TT U) ] / 2
-                        \                   [ (UU V) ]
+                        \                         [ (SS T) ]
+                        \   xVector3 = xVector4 + [ (TT U) ] / 2
+                        \                         [ (UU V) ]
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDX #&F4               \ Set X = &F4 so the call to AddCoordinates uses var13
+ LDX #&F4               \ Set X = &F4 so the call to AddVectors uses xVector7
 
- JSR AddCoordinates     \ Set:
+ JSR AddVectors         \ Set:
                         \
-                        \                   [ (SS T) ]
-                        \   var13 = var14 + [ (TT U) ] / 4
-                        \                   [ (UU V) ]
+                        \                         [ (SS T) ]
+                        \   xVector7 = xVector4 + [ (TT U) ] / 4
+                        \                         [ (UU V) ]
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDX #&FD               \ Set X = &FD so the call to AddCoordinates uses var14
+ LDX #&FD               \ Set X = &FD so the call to AddVectors uses xVector4
 
- JSR AddCoordinates     \ Set:
+ JSR AddVectors         \ Set:
                         \
-                        \                   [ (SS T) ]
-                        \   var14 = var14 + [ (TT U) ] / 8
-                        \                   [ (UU V) ]
+                        \                         [ (SS T) ]
+                        \   xVector4 = xVector4 + [ (TT U) ] / 8
+                        \                         [ (UU V) ]
 
  LDA #20                \ Set objectNumber = 20, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -14013,7 +14115,7 @@ ENDIF
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR ProjectObject-2    \ Project the object onto the screen, using var14
+ JSR ProjectObject-2    \ Project the object onto the screen, using xVector4
 
  LDA #21                \ Set objectNumber = 21, to use as then object number
  STA objectNumber       \ for the body and helmet in the four-object car
@@ -14021,9 +14123,9 @@ ENDIF
  LDA #1                 \ Set A = 1, to use as the object type for the body and
                         \ helmet in the four-object car
 
- LDX #&F4               \ Set X = &F4 so the call to ProjectObject uses var13
+ LDX #&F4               \ Set X = &F4 so the call to ProjectObject uses xVector7
 
- JSR ProjectObject      \ Project the object onto the screen, using var13
+ JSR ProjectObject      \ Project the object onto the screen, using xVector7
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -14031,9 +14133,9 @@ ENDIF
  LDA #0                 \ Set A = 0, to use as the object type for the rear
                         \ tyres in the four-object car
 
- LDX #&FA               \ Set X = &FA so the call to ProjectObject uses var18
+ LDX #&FA               \ Set X = &FA so the call to ProjectObject uses xVector3
 
- JSR ProjectObject      \ Project the object onto the screen, using var18
+ JSR ProjectObject      \ Project the object onto the screen, using xVector3
 
 .bcar10
 
@@ -14076,23 +14178,23 @@ ENDIF
 \
 \   A                   Object type
 \
-\   X                   The offset from var20 of the variable to use in the
+\   X                   The offset from xVector1 of the variable to use in the
 \                       ProjectObjectX routine:
 \
-\                         * &F4 = var13
+\                         * &F4 = xVector7
 \
-\                         * &FA = var18
+\                         * &FA = xVector3
 \
-\                         * &FD = var14
+\                         * &FD = xVector4
 \
 \ Other entry points:
 \
-\   ProjectObject-2     Use var14 in the call to ProjectObjectX
+\   ProjectObject-2     Use xVector4 in the call to ProjectObjectX
 \
 \ ******************************************************************************
 
  LDX #&FD               \ Set X = &FD so the calls to ProjectObjectX and
-                        \ ProjectObjectY use var14 and var14+1
+                        \ ProjectObjectY use xVector4 and yVector4
 
 .ProjectObject
 
@@ -22343,10 +22445,10 @@ NEXT
  LDY dataBlockIndex,X
  LDA L000D
  STA V
- LDA xTrackVector,Y
- EOR zTrackVector,Y
+ LDA xTrackVectorI,Y
+ EOR zTrackVectorI,Y
  PHP
- LDA zTrackVector,Y
+ LDA zTrackVectorI,Y
  PHP
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -22354,7 +22456,7 @@ NEXT
  CMP #&3C
  PHP
  BCC C454F
- LDA xTrackVector,Y
+ LDA xTrackVectorI,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -22478,21 +22580,21 @@ NEXT
 
  LDY coordNumber96
  CLC
- ADC var20Lo+1,Y
+ ADC yVector1Lo,Y
  PHP
  CLC
  ADC #&AC
  PHP
  CLC
  ADC V
- STA var21Lo
- LDA var20Hi+1,Y
+ STA yVector5Lo
+ LDA yVector1Hi,Y
  ADC W
  PLP
  ADC #0
  PLP
  ADC #0
- STA var21Hi
+ STA yVector5Hi
  LDA speedHi
  STA U
  LDA #&21
@@ -22516,7 +22618,7 @@ NEXT
 \
 \ Calculate:
 \
-\   A = A * Y-th yTrackVector
+\   A = A * Y-th yTrackVectorI
 \
 \ flipping the sign if we are facing backwards.
 \
@@ -22524,7 +22626,7 @@ NEXT
 \
 \   A                   The number to multiply the data by
 \
-\   Y                   Offset of the data to multiply in yTrackVector
+\   Y                   Offset of the data to multiply in yTrackVectorI
 \
 \ Returns:
 \
@@ -22536,11 +22638,11 @@ NEXT
 
  STA U                  \ Set U to the multiplication factor in A
 
- LDA yTrackVector,Y     \ Store the sign of the track data * directionFacing on
+ LDA yTrackVectorI,Y    \ Store the sign of the track data * directionFacing on
  EOR directionFacing    \ the stack
  PHP
 
- LDA yTrackVector,Y     \ Set A to the Y-th data from yTrackVector
+ LDA yTrackVectorI,Y    \ Set A to the Y-th data from yTrackVectorI
 
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |track data|
@@ -23345,12 +23447,12 @@ ENDIF
  LDA L62B1,Y
  ADC T
  STA L62B1,Y
- LDA var22Lo,Y
+ LDA xVector5Lo,Y
  ADC U
- STA var22Lo,Y
- LDA var22Hi,Y
+ STA xVector5Lo,Y
+ LDA xVector5Hi,Y
  ADC V
- STA var22Hi,Y
+ STA xVector5Hi,Y
  DEY
  DEY
  DEX
@@ -24253,16 +24355,25 @@ ENDIF
 
 .sign1
 
- TAX
- LDY #2
+ TAX                    \ Set X to the trackData0D0 offset of the section
+
+ LDY #2                 \ Set W = 2
  STY W
+
  LDA trackData0E0,X
+
  JSR sub_C4D21
+
  LDY #4
+
  LDA trackData0F0,X
+
  JSR sub_C4D21
+
  LDY #2
+
  LDA trackData0D0,X
+
  JSR sub_C4D21
 
  LDA trackRoadSigns,X   \ Set objectType to object type for road sign X, from
@@ -24276,13 +24387,13 @@ ENDIF
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
-                        \ ProjectObjectX and ProjectObjectY use var14 and
-                        \ var14+1
+                        \ ProjectObjectX and ProjectObjectY use xVector4 and
+                        \ yVector4
 
  JSR GetSectionCoord    \ Copy the first trackSection coordinate for track
-                        \ section Y into var14
+                        \ section Y into xVector4
 
- LDY #6                 \ Set Y = 6 so the call to ProjectObjectX uses var23
+ LDY #6                 \ Set Y = 6 so the call to ProjectObjectX uses xVector6
 
  JSR ProjectObjectX     \ Project the object onto the screen and calculate the
                         \ object's screen x-coordinate, returning it in (JJ II)
@@ -24316,7 +24427,7 @@ ENDIF
 
  JSR sub_C2AB3
 
- LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses var23
+ LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses xVector6
 
  JSR ProjectObjectY     \ Project the object onto the screen and calculate the
                         \ object's screen y-coordinate, returning it in A
@@ -24334,38 +24445,66 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   
+\
+\   W                   Gets decremented each call, 2 then 1 then 0 (z, y, x)
+\
+\   Y                   Shift counter
 \
 \ ******************************************************************************
 
 .sub_C4D21
 
- PHA
- LDA #0
+ PHA                    \ Set (V A T) = (0 A 0)
+ LDA #0                 \             = A * 256
  STA T
  STA V
  PLA
- BPL C4D2D
- DEC V
+
+ BPL C4D2D              \ If A is positive then V is already the correct high
+                        \ byte for (V A T), so jump to C4D2D
+
+ DEC V                  \ Otherwise, decrement V to &FF so it's the correct
+                        \ high byte for (V A T)
+
+                        \ We now shift (V A T) right by Y places
 
 .C4D2D
 
- LSR V
+ LSR V                  \ Set (V A T) = (V A T) >> 1
  ROR A
  ROR T
- DEY
- BNE C4D2D
- STA U
- LDY W
- DEC W
- LDA var22Lo,Y
- SEC
- SBC T
- STA var23Lo,Y
- LDA var22Hi,Y
+
+ DEY                    \ Decrement the shift counter
+
+ BNE C4D2D              \ Loop back until we have right-shifted Y times
+
+ STA U                  \ Set (V U T) = (V A T)
+                        \             = A * 256 >> Y
+                        \             = A * 2 ^ (8 - Y)
+                        \
+                        \ We know that V doesn't contain any data, just sign
+                        \ bits, so this means:
+                        \
+                        \   (U T) = A * 2 ^ (8 - Y)
+
+ LDY W                  \ Fetch the axis index from W
+
+ DEC W                  \ Decrement the axis index in W, ready for the next call
+                        \ to sub_C4D21
+
+ LDA xVector5Lo,Y       \ Set xVector = xVector5 - (U T)
+ SEC                    \
+ SBC T                  \ starting with the low bytes
+ STA xVector6Lo,Y
+
+ LDA xVector5Hi,Y       \ And then the high bytes
  SBC U
- STA var23Hi,Y
- RTS
+ STA xVector6Hi,Y
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -27177,19 +27316,19 @@ ENDIF
 
  SKIP 1
 
-.trackSection1Hi
+.xTrackSectionIHi
 
  SKIP 1
 
-.trackSection2Hi
+.yTrackSectionIHi
 
  SKIP 1
 
-.trackSection3Hi
+.zTrackSectionIHi
 
  SKIP 1
 
-.trackSection4Hi
+.xTrackSectionOHi
 
  SKIP 1
 
@@ -27197,7 +27336,7 @@ ENDIF
 
  SKIP 1
  
-.trackSection6Hi
+.zTrackSectionOHi
 
  SKIP 1
  
@@ -27221,23 +27360,23 @@ ENDIF
 
  SKIP 16
 
-.xTrackVector
+.xTrackVectorI
 
  SKIP 256
 
-.yTrackVector
+.yTrackVectorI
 
  SKIP 256
 
-.zTrackVector
+.zTrackVectorI
 
  SKIP 256
 
-.xTrackOutVector
+.xTrackVectorO
 
  SKIP 256
 
-.zTrackOutVector
+.zTrackVectorO
 
  SKIP 256
 
@@ -27245,27 +27384,27 @@ ENDIF
 
  SKIP 1
 
-.trackSection1Lo
+.xTrackSectionILo
 
  SKIP 1
 
-.trackSection2Lo
+.yTrackSectionILo
 
  SKIP 1
 
-.trackSection3Lo
+.zTrackSectionILo
 
  SKIP 1
 
-.trackSection4Lo
+.xTrackSectionOLo
 
  SKIP 1
 
-.trackSection5b
+.trackSectionFrom
 
  SKIP 1
  
-.trackSection6Lo
+.zTrackSectionOLo
 
  SKIP 1
  
@@ -27291,7 +27430,7 @@ ENDIF
 
  SKIP 1
 
-.trackData6FB
+.trackVectorCount
 
  SKIP 1
 
@@ -28110,7 +28249,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var22Lo
+\       Name: xVector5Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28121,13 +28260,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var22Lo
+.xVector5Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var21Lo
+\       Name: yVector5Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28138,13 +28277,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var21Lo
+.yVector5Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var19Lo
+\       Name: zVector5Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28155,13 +28294,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var19Lo
+.zVector5Lo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var22Hi
+\       Name: xVector5Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28172,13 +28311,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var22Hi
+.xVector5Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var21Hi
+\       Name: yVector5Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28189,13 +28328,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var21Hi
+.yVector5Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var19Hi
+\       Name: zVector5Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28206,13 +28345,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var19Hi
+.zVector5Hi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var23Lo
+\       Name: xVector6Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28223,13 +28362,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var23Lo
+.xVector6Lo
 
- EQUB 0, 0, 0
+ EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var23Hi
+\       Name: yVector6Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -28240,9 +28379,79 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var23Hi
+.yVector6Lo
 
- EQUB 0, 0, 0, 0, 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: zVector6Lo
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.zVector6Lo
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: xVector6Hi
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.xVector6Hi
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: yVector6Hi
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.yVector6Hi
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: zVector6Hi
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.zVector6Hi
+
+ EQUB 0
+
+ EQUB 0, 0, 0           \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
