@@ -7851,6 +7851,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw the specified edge of an object part
+\  Deep dive: Creating objects from edges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8173,6 +8174,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Calculate the screen address for the edge we want to draw
+\  Deep dive: Creating objects from edges
 \
 \ ******************************************************************************
 
@@ -8278,6 +8280,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Construct a pixel byte for the edge we want to draw
+\  Deep dive: Creating objects from edges
 \
 \ ******************************************************************************
 
@@ -8606,6 +8609,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Draw the edge into the screen buffer, merging with any content
 \             already in the buffer
+\  Deep dive: Creating objects from edges
 \
 \ ******************************************************************************
 
@@ -8944,6 +8948,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Fill the object if required and loop back for the next edge
+\  Deep dive: Creating objects from edges
 \
 \ ******************************************************************************
 
@@ -9101,6 +9106,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Fill the block to the right of an object
+\  Deep dive: Creating objects from edges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9394,6 +9400,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Fill the block to the right of an object
+\  Deep dive: Creating objects from edges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9787,6 +9794,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Fill the object part from the previous edge to the current edge
+\  Deep dive: Creating objects from edges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -11127,6 +11135,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Draw all the parts of an object by drawing edges into the screen
 \             buffer
+\  Deep dive: Creating objects from edges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13705,7 +13714,7 @@ ENDIF
 
                         \ We now calculate the following:
                         \
-                        \   var14 = var20 + xyzTrackVector * carProgress
+                        \   var14 = var20 + trackVector * carProgress
 
  LDX #0                 \ Set X = 0, to use as a loop counter through the three
                         \ axes, i.e. 0, 1, 2
@@ -13761,7 +13770,7 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = xyzTrackVector * carProgress
+                        \           = trackVector * carProgress
                         \
                         \ We now add (V A) to the Y-th entry in var20, which is
                         \ the var20 entry for the coordinate number passed to
@@ -13825,8 +13834,7 @@ ENDIF
 
                         \ We now calculate the following:
                         \
-                        \   var14 = var20 + xyzTrackOutVector * carRacingLine
-
+                        \   var14 = var20 + trackOutVector * carRacingLine
 
  LDY yStore1            \ Set Y to the data block index that we stored above
 
@@ -13891,7 +13899,7 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = xyzTrackOutVector * carRacingLine
+                        \           = trackOutVector * carRacingLine
 
  ASL A                  \ Set (V A) = (V A) * 4
  ROL V
@@ -20884,6 +20892,7 @@ ENDIF
 \   Category: Graphics
 \    Summary: Dash data offsets, tweaked to give bottom line values that are
 \             compatible with the process of filling blocks to the left
+\  Deep dive: Creating objects from edges
 \
 \ ------------------------------------------------------------------------------
 \
