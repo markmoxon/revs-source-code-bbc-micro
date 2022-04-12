@@ -122,9 +122,10 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0002
+.thisVectorNumber
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of the track vector currently being
+                        \ processed
 
 .currentPosition
 
@@ -289,22 +290,22 @@ ORG &0000
                         \ Track sections are numbered from 0 to 23, so this
                         \ ranges from 0 to 184
                         
-.coordNumber96
+.zIndex96
 
- SKIP 1                 \ Contains coordNumber - 96
+ SKIP 1                 \ Contains zIndex - 96
 
-.prevCoordNumber
+.zIndexPrevious
 
- SKIP 1                 \ Used to store the number * 3 of the previous
+ SKIP 1                 \ Used to store the z-index * 3 of the previous
                         \ coordinate
 
-.coordNumber
+.zIndex
 
- SKIP 1                 \ Used to store the number * 3 of the coordinate
+ SKIP 1                 \ Used to store the z-index * 3 of the coordinate
                         \ currently being processed
                         \
-                        \ Coordinates are numbered from 0 to 39, so this ranges
-                        \ from 0 to 117
+                        \ Coordinate z-indexes are numbered from 0 to 39, so
+                        \ this ranges from 0 to 117
 
 .directionFacing
 
@@ -598,9 +599,12 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0055
+.objectDistance
 
- SKIP 1                 \ 
+ SKIP 1                 \ The distance of the current object
+                        \
+                        \ If a car's distance is >= 5, then it is drawn as a
+                        \ distant car
 
 .temp1
 
@@ -4208,8 +4212,8 @@ ORG &0B00
 
  BPL P1104
 
- LDA #0                 \ Set coordNumber = 0
- STA coordNumber
+ LDA #0                 \ Set zIndex = 0
+ STA zIndex
 
                         \ Loop, with L0042 decrementing to 0
 
@@ -4470,7 +4474,7 @@ ORG &0B00
  LDX currentPlayer
  STX L0045
  STX L0042
- LDY coordNumber96
+ LDY zIndex96
  JSR BuildCarObjects
  LDX #2
 
@@ -4482,7 +4486,7 @@ ORG &0B00
  STA xVector5Hi,X
  DEX
  BPL P11DB
- LDA coordNumber96
+ LDA zIndex96
  CLC
  ADC #3
  CMP #&78
@@ -4586,7 +4590,8 @@ ORG &0B00
 \ Note that the second coordinate is set to the same value as the second
 \ coordinate from the first copy.
 \
-\ It also sets L0002 to trackSectionFrom for the Y-th track section data.
+\ It also sets thisVectorNumber to trackSectionFrom for the Y-th track section
+\ data.
 \
 \ Arguments:
 \
@@ -4604,7 +4609,7 @@ ORG &0B00
 \                                         (xVector2Hi xVector2Lo)
 \                                         (yVector2Hi yVector2Lo)
 \                                         (zVector2Hi zVector2Lo)
-\                                         L0002
+\                                         thisVectorNumber
 \
 \ ******************************************************************************
 
@@ -4628,8 +4633,8 @@ ORG &0B00
  LDA zTrackSectionOHi,Y
  STA zVector2Hi,X
 
- LDA trackSectionFrom,Y \ Set L0002 = the Y-th trackSectionFrom
- STA L0002
+ LDA trackSectionFrom,Y \ Set thisVectorNumber = the Y-th trackSectionFrom
+ STA thisVectorNumber
 
                         \ Fall through into CopySectionData to copy the
                         \ following 16-bit coordinate:
@@ -4671,13 +4676,13 @@ ORG &0B00
 \       Name: sub_C125A
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Subtract 96 from the current coordinate number
+\    Summary: Subtract 96 from the current z-index
 \
 \ ******************************************************************************
 
 .sub_C125A
 
- LDA coordNumber        \ Set A = coordNumber - 96
+ LDA zIndex             \ Set A = zIndex - 96
  SEC
  SBC #96
 
@@ -4687,7 +4692,7 @@ ORG &0B00
 
 .C1264
 
- STA coordNumber96      \ Set coordNumber96 = A
+ STA zIndex96           \ Set zIndex96 = A
 
  RTS                    \ Return from the subroutine
 
@@ -4706,7 +4711,7 @@ ORG &0B00
 
 .sub_C1267
 
- LDX coordNumber
+ LDX zIndex
  LDY #6
  STY L62F5
  LDA L0062
@@ -4715,14 +4720,14 @@ ORG &0B00
 
 .C1274
 
- LDA directionFacing
+ LDA directionFacing    \ If our car is facing fowards, jump to C1284
  BMI C1284
 
  LDY objTrackSection+23
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xVector1 and var27, and set L0002 to
-                        \ trackSectionFrom
+                        \ section Y into xVector1 and var27, and set
+                        \ thisVectorNumber to trackSectionFrom
 
  LDA trackSection0a,Y
  JMP C128E
@@ -4732,10 +4737,12 @@ ORG &0B00
  LDY signSection
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xVector1 and var27, and set L0002 to
-                        \ trackSectionFrom
+                        \ section Y into xVector1 and var27, and set
+                        \ thisVectorNumber to trackSectionFrom
 
- JSR sub_C13E0
+ JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
+                        \ track in the direction we are facing
+
  LDA #2
 
 .C128E
@@ -4894,22 +4901,29 @@ ORG &0B00
 
 .sub_C12F7
 
- LDA coordNumber
- STA prevCoordNumber
- CLC
+ LDA zIndex             \ Set A to the z-index of the current coordinate
+
+ STA zIndexPrevious     \ Store A in zIndexPrevious, as we are about to move on
+                        \ to the next z-index
+
+ CLC                    \ Set A = A + 3 to move on to the next z-index
  ADC #3
- CMP #120
- BCC C1304
- LDA #0
+
+ CMP #120               \ If A < 120, then we haven't reached the maximum
+ BCC C1304              \ z-index, so jump to C1304 to store the updated value
+
+ LDA #0                 \ We just reached the last z-index, so set A = 0 to wrap
+                        \ round to the start
 
 .C1304
 
- STA coordNumber
+ STA zIndex             \ Store the updated value in zIndex
 
  LDX #23                \ Set X to the driver number for the road sign
 
- LDA directionFacing
+ LDA directionFacing    \ If our car is facing fowards, jump to C1236
  BMI C1326
+
  LDA trackSectionCount
  LSR A
  AND #&F8
@@ -4939,12 +4953,12 @@ ORG &0B00
 
 .C1333
 
- LDY L0002
+ LDY thisVectorNumber
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
                         \ xTrackVectorI, yTrackVectorI and zTrackVectorI
 
- LDX coordNumber
+ LDX zIndex
  LDA L0001
  LSR A
  PHP
@@ -4999,13 +5013,13 @@ ORG &0B00
 
  AND L0001
  STA dataBlockIndex+2,X
- LDY prevCoordNumber
+ LDY zIndexPrevious
 
  JSR AddVectors
 
  JSR CopySectionData    \ Copy the X-th yVector1 to yVector2
 
- LDY L0002
+ LDY thisVectorNumber
  LDA #0
  STA SS
  STA UU
@@ -5045,8 +5059,8 @@ ORG &0B00
 
 .C13CC
 
- LDX coordNumber
- LDA L0002
+ LDX zIndex
+ LDA thisVectorNumber
  STA dataBlockIndex,X
  JSR sub_C125A
  JSR sub_C150E
@@ -5069,49 +5083,63 @@ ORG &0B00
 
  LDA L0001
  AND #1
- BEQ C13FA
+ BEQ sub_C13FB-1
 
 \ ******************************************************************************
 \
-\       Name: sub_C13E0
+\       Name: UpdateVectorNumber
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: Update thisVectorNumber to the next vector along the track in the
+\             direction we are facing
 \
 \ ******************************************************************************
 
-.sub_C13E0
+.UpdateVectorNumber
 
- LDA directionFacing
- BMI C13F0
- LDY L0002
- INY
- CPY trackVectorCount
- BNE C13F8
- LDY #0
- BEQ C13F8
+ LDA directionFacing    \ If our car is facing fowards, jump to uvec1
+ BMI uvec1
 
-.C13F0
+ LDY thisVectorNumber   \ Set Y to the current track vector number
 
- LDY L0002
- BNE C13F7
- LDY trackVectorCount
+ INY                    \ Increment Y to point to the next track vector number
+                        \ along the track
 
-.C13F7
+ CPY trackVectorCount   \ If Y <> trackVectorCount, then we have not reached the
+ BNE uvec3              \ last vector, so jump to uvec3 to store the new value
+                        \ of thisVectorNumber
 
- DEY
+ LDY #0                 \ If we get here then we have reached the last vector,
+                        \ so set Y = 0 to wrap around to the first vector
 
-.C13F8
+ BEQ uvec3              \ Jump to uvec3 to set thisVectorNumber = 0 (this BEQ is
+                        \ effectively a JMP as Y is always zero)
 
- STY L0002
+.uvec1
 
-.C13FA
+                        \ If we get here then our car is facing backwards
 
- RTS
+ LDY thisVectorNumber   \ Set Y to the current track vector number
+
+ BNE uvec2              \ If Y <> 0, then we are not on the first track vector,
+                        \ so jump to uvec2 to decrement to the previous vector
+
+ LDY trackVectorCount   \ Set Y = trackVectorCount, so we wrap around to the
+                        \ last vector
+
+.uvec2
+
+ DEY                    \ Decrement Y to point to the previous track vector
+                        \ number, i.e. backwards along the track
+
+.uvec3
+
+ STY thisVectorNumber   \ Update thisVectorNumber with the new value that we set
+                        \ above
+
+.uvec4
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5122,7 +5150,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   sub_C13FB-1         Contains an RTS
 \
 \ ******************************************************************************
 
@@ -5178,17 +5208,22 @@ ORG &0B00
 
 .sub_C1420
 
- LDA directionFacing
- EOR #&80
+ LDA directionFacing    \ Flip bit 7 of directionFacing to denote that our car
+ EOR #%10000000         \ is facing in the other direction
  STA directionFacing
+
  JSR sub_C13DA
+
  STX L0042
 
 .P142B
 
  JSR sub_C12F7
+
  DEC L0042
+
  BNE P142B
+
  RTS
 
 \ ******************************************************************************
@@ -5690,7 +5725,7 @@ ORG &0B00
 
 .C1573
 
- LDY coordNumber
+ LDY zIndex
  STA dataBlockIndex+1,Y
 
  RTS
@@ -10620,7 +10655,7 @@ IF _SUPERIOR
 
  STA V
 
- LDY coordNumber96
+ LDY zIndex96
 
  LDA #60
  SEC
@@ -11498,7 +11533,8 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The offset from xVector1 of the first variable to use:
+\   X                   The offset from xVector1 of the variable to use for the
+\                       object's 3D coordinates
 \
 \                         * &F4 = xVector7
 \
@@ -11954,7 +11990,6 @@ ENDIF
 
  LDX #&FD               \ Copy the first trackSection coordinate for track
  JSR GetSectionCoord    \ section Y into xVector4
-
 
  JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
                         \ object's screen x-coordinate, returning it in (JJ II)
@@ -12419,7 +12454,7 @@ ENDIF
 
 .sub_C254A
 
- LDX coordNumber
+ LDX zIndex
  EOR directionFacing
  BPL C255A
  TXA
@@ -13129,7 +13164,7 @@ ENDIF
  LDA objProgressHi,Y    \ And then the high bytes
  SBC objProgressHi,X    \
                         \ So (A T) now contains the distance between the two
-                        \ objects - let's call it objectDistance
+                        \ objects - let's call it distance
 
  PHP                    \ Store the status register on the stack, so the N flag
                         \ on the stack is the sign of the above subtraction, so
@@ -13145,7 +13180,7 @@ ENDIF
 .dist1
 
  STA U                  \ Set (U T) = (A T)
-                        \           = |objectDistance|
+                        \           = |distance|
 
  SEC                    \ Set the C flag to shift into bit 7 of H below
 
@@ -13177,7 +13212,7 @@ ENDIF
                         \ contains the length of the full track
 
  LDA trackLengthLo      \ Set (A T) = (trackLengthHi trackLengthLo) - (U T)
- SEC                    \           = trackLength - |objectDistance|
+ SEC                    \           = trackLength - |distance|
  SBC T                  \                       
  STA T                  \ starting with the high bytes
 
@@ -13718,18 +13753,18 @@ ENDIF
  ADC T                  \       = ~(distance * 2 + distance)
  EOR #&FF               \       = ~(distance * 3)
 
- SEC                    \ Set A = A + 1 + coordNumber
- ADC coordNumber        \       = ~(distance * 3) + 1 + coordNumber
-                        \       = -(distance * 3) + coordNumber
-                        \       = coordNumber - distance * 3
+ SEC                    \ Set A = A + 1 + zIndex
+ ADC zIndex             \       = ~(distance * 3) + 1 + zIndex
+                        \       = -(distance * 3) + zIndex
+                        \       = zIndex - distance * 3
                         \
-                        \ The coordNumber contains the number * 3 of the
+                        \ zIndex contains the number * 3 of the z-index of the
                         \ coordinate that was last processed, so this is the
                         \ same as:
                         \
-                        \   (number - distance) * 3
+                        \   (z-index - distance) * 3
 
- BPL bvis3              \ If the result was positive, i.e. number >= distance,
+ BPL bvis3              \ If the result was positive, i.e. z-index >= distance,
                         \ jump to bvis3 to skip the following
 
  CLC                    \ Otherwise set A = A + 120
@@ -13737,7 +13772,8 @@ ENDIF
 
 .bvis3
 
- TAY                    \ Copy the result from A into Y
+ TAY                    \ Copy the result from A into Y, so Y now contains the
+                        \ z-index of the coordinate of the car object
 
  LDA carStatus,X        \ If bit 4 of driver X's carStatus is set, jump to
  AND #%00010000         \ BuildCarObjects
@@ -13747,8 +13783,8 @@ ENDIF
  CMP #50                \ jump to BuildCarObjects
  BCC BuildCarObjects
 
- LDA dataBlockIndex+1,Y \ Set the driver's carSteering to entry Y + 1 from
- STA carSteering,X      \ dataBlockIndex, so the car follows the curve of the
+ LDA dataBlockIndex+1,Y \ Set the driver's carSteering to entry Y from
+ STA carSteering,X      \ dataBlockIndex+1, so the car follows the curve of the
                         \ track ??? (similar to CAS calculation)
 
 \ ******************************************************************************
@@ -13764,38 +13800,59 @@ ENDIF
 \ This routine calculates the 3D coordinate of the specified car, given its
 \ progress through the current section and the racing line, as follows:
 \
-\   [ xVector4 ]     [ xVector1 ]   [ xTrackVectorI ]
-\   [ yVector4 ] =   [ yVector1 ] + [ yTrackVectorI ] * carProgress
-\   [ zVector4 ]     [ zVector1 ]   [ zTrackVectorI ]
+\   [ xVector4 ]     [ xVector1        ]   [ xTrackVectorI ]
+\   [ yVector4 ]  =  [ yVector1 mod 32 ] + [ yTrackVectorI ] * carProgress
+\   [ zVector4 ]     [ zVector1        ]   [ zTrackVectorI ]
 \
-\                   [ xTrackVectorO ]                   [  0  ]
-\                 + [ yTrackVectorI ] * carRacingLine + [ 144 ]
-\                   [ zTrackVectorO ]                   [  0  ]
+\                    [ xTrackVectorO ]
+\                  + [       0       ] * carRacingLine * 4
+\                    [ zTrackVectorO ]
+\
+\                    [  0  ]
+\                  + [ 144 ]
+\                    [  0  ]
+\
+\ In the above:
+\
+\   * trackVectorI is the inner track vector for the car's position
+\
+\   * trackVectorO is the outer track vector for the car's position
+\
+\   * xVector1 is the coordinate of the z-index for the car's position ???
+\
+\ The routine then projects the car object (or objects) into screen coordinates.
 \
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
 \
-\   [ xVector4 ]   [ xVector1 ]   [ xTrackVectorI ]
-\   [ yVector4 ] = [ yVector1 ] + [ yTrackVectorI ] * carProgress
-\   [ zVector4 ]   [ zVector1 ]   [ zTrackVectorI ]
+\   [ xVector4 ]   [ xVector1        ]   [ xTrackVectorI ]
+\   [ yVector4 ] = [ yVector1 mod 32 ] + [ yTrackVectorI ] * carProgress
+\   [ zVector4 ]   [ zVector1        ]   [ zTrackVectorI ]
 \
 \ Arguments:
 \
 \   X                   The driver number of the car object to build
 \
-\   Y                   The track coordinate number * 3
+\   Y                   The z-index * 3 of the car object to build
+\
+\ Returns:
+\
+\   X                   X is set to the driver number in thisDriver
 \
 \ ******************************************************************************
 
 .BuildCarObjects
 
- LDA dataBlockIndex,Y   \ Fetch the data block index for track coordinate Y
+ LDA dataBlockIndex,Y   \ Fetch the track vector number for z-index Y, which
+                        \ gives us the track vector number of the car object
+                        \ we want to build
 
- STA yStore1            \ Store the data block index in yStore1
+ STA yStore1            \ Store the track vector number in yStore1 so we can
+                        \ retrieve it in parts 2 and 3
 
- STY T                  \ Store the coordinate number * 3 in T
+ STY T                  \ Store the z-index * 3 in T
 
- TAY                    \ Set Y to the data block index
+ TAY                    \ Set Y to the track vector number of the car object
 
  LDA carProgress,X      \ Set TT to the lowest byte of the car's progress
  STA TT
@@ -13803,37 +13860,39 @@ ENDIF
  LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
 
- LDA xTrackVectorI,Y    \ Set VV to the x-coordinate of the track vector for
- STA VV                 \ this point on the track
+ LDA xTrackVectorI,Y    \ Set VV to the x-coordinate of the inner track vector
+ STA VV                 \ for the car object
 
- LDA yTrackVectorI,Y    \ Set VV+1 to the y-coordinate of the track vector for
- STA VV+1               \ this point on the track
+ LDA yTrackVectorI,Y    \ Set VV+1 to the y-coordinate of the inner track vector
+ STA VV+1               \ for the car object
 
- LDA zTrackVectorI,Y    \ Set VV+2 to the z-coordinate of the track vector for
- STA VV+2               \ this point on the track
+ LDA zTrackVectorI,Y    \ Set VV+2 to the z-coordinate of the inner track vector
+ STA VV+2               \ for the car object
 
                         \ We now calculate the following:
                         \
                         \   xVector4 = xVector1 + trackVectorI * carProgress
 
- LDX #0                 \ Set X = 0, to use as a loop counter through the three
-                        \ axes, i.e. 0, 1, 2
+ LDX #0                 \ We are about to work our way through the three axes,
+                        \ so set X = 0 to use as an axis counter, working
+                        \ through the three axes x, y, z using X = 0, 1, 2
+                        \
+                        \ The comments below are for the x-axis
 
  LDA TT                 \ Set U = TT
  STA U                  \       = the lowest byte of the car's progress
 
- LDY T                  \ Set Y to the coordinate number * 3
+ LDY T                  \ Set Y to the z-index * 3 that we stored above
 
 .bcar1
 
  LDA #0                 \ Set (V A) = 0
  STA V
 
- LDA VV,X               \ Set A to track data block 1, 2 or 3, depending on the
-                        \ value of the loop counter in X
+ LDA VV,X               \ Set A to the x-coordinate of the inner track vector
 
-                        \ We now calculate (A T) = A * U, making sure we get the
-                        \ signs right
+                        \ We now calculate (V A T) = A * U, making sure we get
+                        \ the signs right
 
  BPL bcar2              \ If A is positive, jump to bcar2 to multiply A and U as
                         \ they are
@@ -13853,10 +13912,10 @@ ENDIF
 
  BCS bcar3              \ If the addition just overflowed, then the result is
                         \ now positive, which means V is already the correct
-                        \ high byte for (V A), so jump to bcar3
+                        \ high byte for (V A T), so jump to bcar3
 
  DEC V                  \ Otherwise, decrement V to &FF so it's the correct
-                        \ high byte for (V A)
+                        \ high byte for (V A T)
 
  BCC bcar3              \ Jump to bcar3 (this BCC is effectively a JMP as we
                         \ just passed through a BCS)
@@ -13873,32 +13932,30 @@ ENDIF
                         \           = trackVectorI * carProgress
                         \
                         \ We now add (V A) to the Y-th entry in xVector1, which
-                        \ is the xVector1 entry for the coordinate number passed
-                        \ to the routine (Y contains the coordinate number * 3),
-                        \ and store the result in the three-axis variable in
-                        \ xVector4
+                        \ is the xVector1 entry for the z-index passed to the
+                        \ routine (Y contains the z-index * 3), and store the
+                        \ result in the three-axis variable in xVector4
                         \
-                        \ For the middle axis of the coordinare, i.e. for the
+                        \ For the y-axis of the coordinate, i.e. for the
                         \ multiplication:
                         \
-                        \   yVector4 = Y-th yVector1 + (V A)
+                        \   yVector4 = yVector1 + (V A)
                         \
-                        \ then we add xVector1Hi mod 32 instead of xVector1Hi
+                        \ then we add yVector1Hi mod 32 instead of yVector1Hi
 
  CLC                    \ Set (xVector4Hi xVector4Lo) = (xVector1Hi xVector1Lo)
  ADC xVector1Lo,Y       \                                + (V A)
  STA xVector4Lo,X       \
                         \ starting with the low bytes
 
- LDA xVector1Hi,Y       \ And then the high bytes (though with a short
-                        \ interlude for when X = 1, to add xVector1Hi mod 32
-                        \ instead)
+ LDA xVector1Hi,Y       \ And then the high bytes (though with a short interlude
+                        \ for when X = 1, to add yVector1Hi mod 32 instead)
 
  PHP                    \ Store the C flag on the stack so we can retrieve it
                         \ when adding the high bytes below
 
  CPX #1                 \ If X = 1, set A = A mod 32
- BNE bcar4              \                 = xVector1Hi mod 32
+ BNE bcar4              \                 = yVector1Hi mod 32
  AND #31
 
 .bcar4
@@ -13907,11 +13964,11 @@ ENDIF
  ADC V
  STA xVector4Hi,X
 
- INY                    \ Increment the coordinate pointer
+ INY                    \ Increment the z-index pointer
 
  INX                    \ Increment the axis pointer
 
- CPX #3                 \ Loop back until X has looped through 0, 1 and 2
+ CPX #3                 \ Loop back until X has looped through all three axes
  BNE bcar1
 
 \ ******************************************************************************
@@ -13927,29 +13984,42 @@ ENDIF
 \ This part adds in the vector from the inside edge of the track to the car,
 \ i.e. the second part of the above:
 \
-\   [ xVector4 ]   [ xVector4 ]   [ xTrackVectorO ]                   [  0  ]
-\   [ yVector4 ] = [ yVector4 ] + [ yTrackVectorI ] * carRacingLine + [ 144 ]
-\   [ zVector4 ]   [ zVector4 ]   [ zTrackVectorO ]                   [  0  ]
+\   [ xVector4 ]   [ xVector4 ]   [ xTrackVectorO ]
+\   [ yVector4 ] = [ yVector4 ] + [       0       ] * carRacingLine * 4
+\   [ zVector4 ]   [ zVector4 ]   [ zTrackVectorO ]
+\
+\                                 [  0  ]
+\                               + [ 144 ]
+\                                 [  0  ]
 \
 \ ******************************************************************************
 
-                        \ We now calculate the following:
+                        \ We start by calculating the following:
                         \
-                        \   xVector4 = xVector1 + trackVectorO * carRacingLine
+                        \   xVector4 =   xVector1
+                        \              + trackVectorO * carRacingLine * 4
+                        \
+                        \ for the x-axis and z-axis only
 
- LDY yStore1            \ Set Y to the data block index that we stored above
+ LDY yStore1            \ Set Y to the track vector number that we stored above
 
- LDA xTrackVectorO,Y    \ Set VV to the track data block 4 value for this index
- STA VV
+ LDA xTrackVectorO,Y    \ Set VV to the x-coordinate of the outer track vector
+ STA VV                 \ for the car object
 
- LDA zTrackVectorO,Y    \ Set VV+2 to the track data block 5 value for this
- STA VV+2               \ index
+ LDA zTrackVectorO,Y    \ Set VV+2 to the x-coordinate of the outer track vector
+ STA VV+2               \ for the car object
 
-                        \ Note that VV+1 still contains the track data block 2
-                        \ value for this index
+                        \ Note that VV+1 still contains the y-coordinate for the
+                        \ inner track vector, which we can reuse as the height
+                        \ of the track from side-to-side is always the same,
+                        \ i.e. yTrackVectorI = yTrackVectorO for the same vector
+                        \ which means the track is always level along the y-axis
 
- LDX #0                 \ Set X = 0, to use as a loop counter through the x and
-                        \ z-axes, i.e. 0, 2
+ LDX #0                 \ We are about to work our way through the three axes,
+                        \ so set X = 0 to use as an axis counter, working
+                        \ through the three axes x, y, z using X = 0, 1, 2
+                        \
+                        \ The comments below are for the x-axis
 
  LDA UU                 \ Set U = UU
  STA U                  \       = the car's current racing line
@@ -13959,11 +14029,10 @@ ENDIF
  LDA #0                 \ Set (V A) = 0
  STA V
 
- LDA VV,X               \ Set A to track data block 4, 2 or 5, depending on the
-                        \ value of the loop counter in X
+ LDA VV,X               \ Set A to the x-coordinate of the outer track vector
 
-                        \ We now calculate (A T) = A * U, making sure we get the
-                        \ signs right
+                        \ We now calculate (V A T) = A * U, making sure we get
+                        \ the signs right
 
  BPL bcar6              \ If A is positive, jump to bcar6 to multiply A and U as
                         \ they are
@@ -13983,10 +14052,10 @@ ENDIF
 
  BCS bcar7              \ If the addition just overflowed, then the result is
                         \ now positive, which means V is already the correct
-                        \ high byte for (V A), so jump to bcar7
+                        \ high byte for (V A T), so jump to bcar7
 
  DEC V                  \ Otherwise, decrement V to &FF so it's the correct
-                        \ high byte for (V A)
+                        \ high byte for (V A T)
 
  BCC bcar7              \ Jump to bcar7 (this BCC is effectively a JMP as we
                         \ just passed through a BCS)
@@ -14003,7 +14072,7 @@ ENDIF
                         \           = trackVectorO * carRacingLine
 
  ASL A                  \ Set (V A) = (V A) * 4
- ROL V
+ ROL V                  \           = trackVectorO * carRacingLine * 4
  ASL A
  ROL V
 
@@ -14016,7 +14085,7 @@ ENDIF
  ADC V
  STA xVector4Hi,X
 
- INX                    \ Set X = X + 2
+ INX                    \ Set X = X + 2, so we skip the y-axis
  INX
 
  CPX #4                 \ Loop back to bcar5 until we have processed the x-axis
@@ -14041,29 +14110,65 @@ ENDIF
 \             specified car
 \  Deep dive: Drawing a 3D car from 2D parts
 \
+\ ------------------------------------------------------------------------------
+\
+\ Now that we have the car's 3D coordinates in xVector4, we project this onto
+\ the screen and use that to create either one car object, or four car objects
+\ if this is the four-object car.
+\
+\ If this is the four-object car (i.e. the car is directly in front of us, is
+\ close enough and is visible), then we calculate the coordinates for the three
+\ extra objects as follows:
+\
+\                     [ xVector4 ]   [ xTrackVectorI ]
+\   Front tyres =     [ yVector4 ] + [ yTrackVectorI ] / 2
+\                     [ zVector4 ]   [ zTrackVectorI ]
+\
+\                     [ xVector4 ]   [ xTrackVectorI ]
+\   Body and helmet = [ yVector4 ] + [ yTrackVectorI ] / 4
+\                     [ zVector4 ]   [ zTrackVectorI ]
+\
+\                     [ xVector4 ]   [ xTrackVectorI ]
+\   Rear tyres =      [ yVector4 ] + [ yTrackVectorI ] / 8
+\                     [ zVector4 ]   [ zTrackVectorI ]
+\
 \ ******************************************************************************
 
 .bcar8
 
- LDA #4                 \ Set A = 4, to use as the object type for the
-                        \ one-object car
+ LDA #4                 \ Set A = 4, to use as the object type for the car (we
+                        \ start with the object type of the standard car, and
+                        \ change this later if required)
 
- JSR ProjectObject-2    \ Project the object onto the screen, using xVector4
+ JSR ProjectObject-2    \ Project the car object onto the screen, using xVector4
+                        \ for the object's 3D coordinates, and set the object's
+                        \ visibility, scale and type
 
- LDX L0045
+ LDX L0045              \ Set X = L0045 (driver number of car we are driving)
 
- LDA L0055
+ LDA objectDistance     \ Set A to the distance of the object we just projected
 
- CMP #3                 \ If A >= 3, jump to bcar11
- BCS bcar11
+ CMP #3                 \ If A >= 3, then the car is not close enough to be the
+ BCS bcar11             \ four-object car, so jump to bcar11 to check whether it
+                        \ should be built as a distant car object
 
- LDA thisPosition
- CMP positionAhead
- BNE bcar10
+                        \ If we get here then A <= 2, so the car is close enough
+                        \ to consider building as a four-object car
+
+ LDA thisPosition       \ If the car we are building is not the car just ahead
+ CMP positionAhead      \ of us in the race, then it can't be the four-object
+ BNE bcar10             \ car, jump to bcar10 to return from the subroutine with
+                        \ the car built as a standard car
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
  BMI bcar9              \ the car is not visible, so jump to bcar9 to skip the
-                        \ following instruction
+                        \ following instruction (which leaves the car object as
+                        \ a standard car, but still builds the other three car
+                        \ objects)
+
+                        \ If we get here then the car we are building is the
+                        \ nearest car in front of us, it's close and it is
+                        \ visible, so we draw this car as the four-object car
 
  DEC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
                         \ so this decrements the car's object type from 4 (the
@@ -14072,10 +14177,17 @@ ENDIF
 
 .bcar9
 
- LDY yStore1            \ Set Y to the data block index that we stored above
+ LDY yStore1            \ Set Y to the track vector number that we stored above
 
- JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
-                        \ xTrackVectorI, yTrackVectorI and zTrackVectorI
+ JSR GetTrackData       \ Fetch the inner track vector for the part of the track
+                        \ that the car is on:
+                        \
+                        \   [ (SS T) ]   [ xTrackVectorI ]
+                        \   [ (TT U) ] = [ yTrackVectorI ]
+                        \   [ (UU V) ]   [ yTrackVectorI ]
+                        \
+                        \ So this contains the direction of the track where the
+                        \ car is
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
@@ -14088,6 +14200,9 @@ ENDIF
                         \                         [ (SS T) ]
                         \   xVector3 = xVector4 + [ (TT U) ] / 2
                         \                         [ (UU V) ]
+                        \
+                        \ So xVector3 contains the 3D coordinates of the front
+                        \ tyres of the four-object car
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
@@ -14098,6 +14213,9 @@ ENDIF
                         \                         [ (SS T) ]
                         \   xVector7 = xVector4 + [ (TT U) ] / 4
                         \                         [ (UU V) ]
+                        \
+                        \ So xVector7 contains the 3D coordinates of the helmet
+                        \ and body of the four-object car
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
@@ -14108,6 +14226,15 @@ ENDIF
                         \                         [ (SS T) ]
                         \   xVector4 = xVector4 + [ (TT U) ] / 8
                         \                         [ (UU V) ]
+                        \
+                        \ So xVector4 contains the 3D coordinates of the rear
+                        \ tyres of the four-object car
+
+                        \ Now that we have the 3D coordinates of the extra three
+                        \ parts of the four-object car, we can project them onto
+                        \ the screen and store the details in objects 20, 21 and
+                        \ 22 (for the rear tyres, body/helmet and front tyres
+                        \ respectively)
 
  LDA #20                \ Set objectNumber = 20, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -14115,7 +14242,8 @@ ENDIF
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR ProjectObject-2    \ Project the object onto the screen, using xVector4
+ JSR ProjectObject-2    \ Project the object onto the screen, using the
+                        \ coordinates of the rear tyres in xVector4
 
  LDA #21                \ Set objectNumber = 21, to use as then object number
  STA objectNumber       \ for the body and helmet in the four-object car
@@ -14125,7 +14253,8 @@ ENDIF
 
  LDX #&F4               \ Set X = &F4 so the call to ProjectObject uses xVector7
 
- JSR ProjectObject      \ Project the object onto the screen, using xVector7
+ JSR ProjectObject      \ Project the object onto the screen, using the
+                        \ coordinates of the body and helmet in xVector7
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -14135,7 +14264,8 @@ ENDIF
 
  LDX #&FA               \ Set X = &FA so the call to ProjectObject uses xVector3
 
- JSR ProjectObject      \ Project the object onto the screen, using xVector3
+ JSR ProjectObject      \ Project the object onto the screen, using the
+                        \ coordinates of the front tyres using xVector3
 
 .bcar10
 
@@ -14146,17 +14276,20 @@ ENDIF
 
 .bcar11
 
-                        \ We jump here when A contains L0055 and A >= 3
+                        \ We jump here when A contains objectDistance and A >= 3
+                        \ so we now need to check whether the car is far enough
+                        \ away for us to change it to a distant car object
 
- CMP #5                 \ If A < 5, i.e. A = 4, jump to bcar10 to return from
- BCC bcar10             \ the subroutine
+ CMP #5                 \ If A < 5, i.e. A = 4, then the car is close enough to
+ BCC bcar10             \ stay as a standard car object, so jump to bcar10 to
+                        \ return from the subroutine
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
  BMI bcar10             \ the car is not visible, so jump to bcar10 to return
                         \ from the subroutine
 
                         \ If we get here then A >= 5 and the car is visible, so
-                        \ the car is in the distance
+                        \ the car is far enough away to be a distant car object
 
  INC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
                         \ so this increments the car's object type from 4 (the
@@ -14178,8 +14311,8 @@ ENDIF
 \
 \   A                   Object type
 \
-\   X                   The offset from xVector1 of the variable to use in the
-\                       ProjectObjectX routine:
+\   X                   The offset from xVector1 of the variable to use for the
+\                       object's 3D coordinates in the ProjectObjectX routine:
 \
 \                         * &F4 = xVector7
 \
@@ -14189,7 +14322,8 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObject-2     Use xVector4 in the call to ProjectObjectX
+\   ProjectObject-2     Use xVector4 for the object's 3D coordinates in the call
+\                       to ProjectObjectX
 \
 \ ******************************************************************************
 
@@ -14394,7 +14528,7 @@ ENDIF
  JSR sub_C0CA5
 
  LDA L
- STA L0055
+ STA objectDistance
 
  BNE C2ACA
 
@@ -22441,7 +22575,7 @@ NEXT
 
 .C452D
 
- LDX coordNumber96
+ LDX zIndex96
  LDY dataBlockIndex,X
  LDA L000D
  STA V
@@ -22578,7 +22712,7 @@ NEXT
 
 .C45DF
 
- LDY coordNumber96
+ LDY zIndex96
  CLC
  ADC yVector1Lo,Y
  PHP
@@ -31480,11 +31614,11 @@ ENDIF
                         \ is made up of four objects that can be skewed to make
                         \ it look like the car is steering
 
- LDX #22                \ The four objects are the front tyres, body, rear
-                        \ wheels and rear wing, so set up a counter in X to work
+ LDX #22                \ The four objects are the front tyres, body, rear tyres
+                        \ and rear wing, so set up a counter in X to work
                         \ through the first three in the order 22, 21 and 20, to
                         \ pass to DrawCarOrSign in turn so they get drawn in
-                        \ that order: front tyres, body and rear wheels
+                        \ that order: front tyres, body/helmet and rear tyres
 
 .cars3
 
