@@ -1327,18 +1327,23 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackData719
+\       Name: trackTimerAdjust
 \       Type: Variable
 \   Category: Track
-\    Summary: 
+\    Summary: Adjust the speed of the timers to allow for fine-tuning on a
+\             per-track basis
 \
 \ ------------------------------------------------------------------------------
 \
 \ trackData+&719 = &5A19
-\ Something to do with the lap timer - when L0046 matches this number, the lap
-\ timer is bumped up by 18/100 rather than 9/100 in sub_C17C3
-\ L0046 is incremented in sub_C5052
-\ Used to initialise the value of L0046 in sub_C5052
+\
+\ The value of the timerAdjust variable in the main game code is incremented on
+\ every iteration of the main driving loop. When it reaches the value in
+\ trackTimerAdjust, the timers adds 18/100 of a second rather than 9/100 of
+\ a second. Decreasing this value therefore speeds up the timers, allowing their
+\ speed to be adjusted on a per-track basis.
+\
+\ Setting this value to 255 disables the timer adjustment.
 \
 \ ******************************************************************************
 

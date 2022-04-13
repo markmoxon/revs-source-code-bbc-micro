@@ -532,9 +532,28 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0046
+.timerAdjust
 
- SKIP 1                 \ 
+ SKIP 1                 \ A counter for implementing the clock speed adjustment
+                        \
+                        \ Starts out with the value of trackTimerAdjust from the
+                        \ track data (see the ProcessTime routine)
+                        \
+                        \ Gets decremented on each iteration of the main driving
+                        \ loop, looping back to trackTimerAdjust after reaching
+                        \ zero
+                        \
+                        \ When timerAdjust matches equals trackTimerAdjust, the
+                        \ clock timer adds 18/100 of a second rather than the
+                        \ usual 9/100 of a second, so the clock timer speeds up
+                        \ every time the counter loops round
+                        \
+                        \ Decreasing the value of trackTimerAdjust therefore
+                        \ speeds up the clock timer, allowing the speed of the
+                        \ clock timer to be adjusted on a per-track basis
+                        \
+                        \ The Silverstone track has a trackTimerAdjust value of
+                        \ 24, so timerAdjust wraps around from 0 to 24
 
 .bottomTrackLine
 
@@ -549,9 +568,10 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.driverNumber
+.setSpeedForDriver
 
- SKIP 1                 \ Current driver number (0 to 19)
+ SKIP 1                 \ The driver whose speed will be set on the next call to
+                        \ the SetDriverSpeed routine
 
 .L004B
 
@@ -725,9 +745,13 @@ ORG &0000
                         \
                         \ Zeroed in SetupGame
 
-.L006A
+.mainLoopCounterLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ The main loop counter, which increments on each
+                        \ iteration of the main driving loop
+                        \
+                        \ Stored as a 16-bit value (mainLoopCounterHi
+                        \ mainLoopCounterLo)
 
 .startingStack
 
@@ -742,9 +766,24 @@ ORG &0000
                         \
                         \   * Bit 7 set = the race has started
 
-.L006D
+.raceStarting
 
- SKIP 1                 \ 
+ SKIP 1                 \ Flags that determine whether the race is in the
+                        \ process of starting
+                        \
+                        \ Updated in ShowStartLights
+                        \
+                        \   * 0 = do nothing in ShowStartLights
+                        \
+                        \   * Bit 5 and 7 set = do something in sub_C49CE
+                        \
+                        \   * Bit 7 clear = skip something in sub_C49CE
+                        \
+                        \   * Bit 7 set = do not increment the clock timer in
+                        \                 ProcessTime, do nothing in MoveCars
+                        \
+                        \ Set to %00101000 when heading to the track in
+                        \ HeadToTrack
 
 .numberOfLaps
 
@@ -3537,9 +3576,10 @@ ORG &0B00
                         \ system's volume scale, with -15 being full volume and
                         \ 0 being silent
 
- LDA L006A              \ If bit 0 of L006A is set, jump to shif9
- AND #1
- BNE shif9
+ LDA mainLoopCounterLo  \ If bit 0 of mainLoopCounterLo is set, which is every
+ AND #1                 \ other iteration round the main loop, jump to shif9 to
+ BNE shif9              \ skip the following, so the sound changes more slowly
+                        \ than it would if we did this every loop
 
  LDA configVolume       \ If configVolume = 0, jump to shif10 to return from the
  BEQ shif10             \ subroutine
@@ -4398,8 +4438,8 @@ ORG &0B00
  LDA #0                 \ Set movingCar = 0 to denote that the car is stationary
  STA movingCar
 
- STA L006D              \ Set L006D = 0 so the call to MoveCars below will move
-                        \ the cars round the track
+ STA raceStarting       \ Set raceStarting = 0 so the call to MoveCars below
+                        \ will move the cars round the track
 
  JSR HideAllCars        \ Set all the cars to be hidden
 
@@ -4408,7 +4448,8 @@ ORG &0B00
 
 .C1171
 
- JSR sub_C5052
+ JSR ProcessTime        \ Increment the timers and the main loop counter, and
+                        \ set the speed for the next non-player driver
 
  LDY #0                 \ Check for SHIFT and right arrow
  JSR ProcessShiftedKeys
@@ -4473,7 +4514,7 @@ ORG &0B00
 .sub_C11AB
 
  CPX #20
- BCS sub_C11CE-1
+ BCS BuildPlayerCar-1
 
  LDA carRacingLine,X
  AND #%01111111
@@ -4521,57 +4562,79 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C11CE
+\       Name: BuildPlayerCar
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Build the objects for the player's car
 \
 \ ------------------------------------------------------------------------------
 \
+\ Returns:
+\
+\   xVector5            The 3D coordinates of the player's car
+\
+\   xPlayerScreen       The screen coordinates of the player's car
+\
 \ Other entry points:
 \
-\   sub_C11CE-1         Contains an RTS
+\   BuildPlayerCar-1    Contains an RTS
 \
 \ ******************************************************************************
 
-.sub_C11CE
+.BuildPlayerCar
 
- LDX currentPlayer
- STX L0045
- STX L0042
- LDY zIndex96
- JSR BuildCarObjects
- LDX #2
+ LDX currentPlayer      \ Set X to the driver number of the current player
+
+ STX L0045              \ Set L0045 to the driver number of the current player
+
+ STX L0042              \ Set L0042 to the driver number of the current player
+
+ LDY zIndex96           \ Build the car object for the current player using
+ JSR BuildCarObjects    \ z-index zIndex96, returning the car's 3D coordinates
+                        \ in xVector4
+
+ LDX #2                 \ We are about to copy the three axes of the resulting
+                        \ vectors, so set an axis counter in X
 
 .P11DB
 
- LDA xVector4Lo,X
- STA xVector5Lo,X
+ LDA xVector4Lo,X       \ Copy the car's 3D coordinates from xVector4 into
+ STA xVector5Lo,X       \ xVector5
  LDA xVector4Hi,X
  STA xVector5Hi,X
- DEX
- BPL P11DB
- LDA zIndex96
- CLC
- ADC #3
- CMP #&78
- BCC C11F5
- LDA #0
+
+ DEX                    \ Decrement the axis counter
+
+ BPL P11DB              \ Loop back until we have copied all three axes
+
+ LDA zIndex96           \ Set A = zIndex96 + 3
+ CLC                    \
+ ADC #3                 \ to move on to the next z-index
+
+ CMP #120               \ If A < 120, then we haven't reached the maximum
+ BCC C11F5              \ z-index, so jump to C11F5 to store the updated value
+
+ LDA #0                 \ We just reached the last z-index, so set A = 0 to wrap
+                        \ round to the start
 
 .C11F5
 
- TAY
- LDX L0045
- JSR BuildCarObjects
- LDA xObjectScreenLo,X
- STA xPlayerScreenLo
+ TAY                    \ Set Y to the updated z-index
 
-.C1200
+ LDX L0045              \ Set X to the driver number of the current player
 
- LDA xObjectScreenHi,X
- EOR directionFacing
- STA xPlayerScreenHi
- RTS
+ JSR BuildCarObjects    \ Build the car object for the current player using the
+                        \ updated z-index, returning the projected screen
+                        \ coordinates in xObjectScreen
+
+ LDA xObjectScreenLo,X  \ Copy the low byte of the screen x-coordinate to 
+ STA xPlayerScreenLo    \ xPlayerScreenLo
+
+ LDA xObjectScreenHi,X  \ Copy the low byte of the screen x-coordinate to
+ EOR directionFacing    \ xPlayerScreenHi, flipping the sign of the coordinate
+ STA xPlayerScreenHi    \ if we are facing backwards along the track
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4971,8 +5034,9 @@ ORG &0B00
  STA zIndexPrevious     \ Store A in zIndexPrevious, as we are about to move on
                         \ to the next z-index
 
- CLC                    \ Set A = A + 3 to move on to the next z-index
- ADC #3
+ CLC                    \ Set A = zIndex + 3 
+ ADC #3                 \
+                        \ to move on to the next z-index
 
  CMP #120               \ If A < 120, then we haven't reached the maximum
  BCC C1304              \ z-index, so jump to C1304 to store the updated value
@@ -6460,7 +6524,7 @@ ENDIF
 
                         \ We jump back here when restarting a Novice race
 
- JSR sub_C11CE          \ ??? Sets up the track
+ JSR BuildPlayerCar     \ Build the objects for the player's car
 
 .main4
 
@@ -6484,9 +6548,11 @@ ENDIF
                         \ The main driving loop starts here, and we loop back to
                         \ here from part 5
 
- JSR sub_C5052
+ JSR ProcessTime        \ Increment the timers and the main loop counter, and
+                        \ set the speed for the next non-player driver
 
- JSR sub_C7B4A
+ JSR ShowStartLights    \ If this is a race, show the start lights on the right
+                        \ of the screen
 
  JSR ProcessDrivingKeys \ Check for and process the main driving keys
 
@@ -6790,9 +6856,17 @@ ENDIF
 
  LDA #&09               \ Set A = &09, so we add 9/100 of a second below
 
- LDY L0046              \ If L0046 <> trackData719 (which is 24 for the
- CPY trackData719       \ Silverstone track), jump to time1 to skip the
+ LDY timerAdjust        \ If timerAdjust <> trackTimerAdjust (which is 24 for the
+ CPY trackTimerAdjust   \ Silverstone track), jump to time1 to skip the
  BNE time1              \ following
+
+                        \ If we get here then timerAdjust = trackTimerAdjust, so
+                        \ we need to apply the clock adjustment, as this gets
+                        \ applied every trackTimerAdjust iterations around the
+                        \ main driving loop
+                        \
+                        \ The clock adjustment speeds the clock up by advancing
+                        \ the clock twice as fast as usual, for this tick only
 
  LDA #&18               \ Set A = &18, so we add 18/100 of a second below
 
@@ -13352,10 +13426,6 @@ ENDIF
 \ This part changes the car's speed according to the following algorithm. It
 \ calculates the speed change in (U A), and then applies it to the car's speed.
 \
-\ Arguments:
-\
-\   L006D               If bit 7 is set, this routine does nothing
-\
 \ Other entry points:
 \
 \   MoveCars-1          Contains an RTS
@@ -13364,8 +13434,10 @@ ENDIF
 
 .MoveCars
 
- LDA L006D              \ If bit 7 of L006D is set, return from the subroutine
- BMI MoveCars-1         \ (as MoveCars-1 contains an RTS)
+ LDA raceStarting       \ If bit 7 of raceStarting is set, then the race is in
+ BMI MoveCars-1         \ the process of starting and we are on the starting
+                        \ grid, so the cars are not allowed to move, so return
+                        \ from the subroutine (as MoveCars-1 contains an RTS)
 
  LDX #20                \ Set X = 20 to use as a loop counter as we work through
                         \ all 20 cars
@@ -13742,7 +13814,7 @@ ENDIF
 \
 \       Name: BuildVisibleCar
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Driving model
 \    Summary: Check the distance to the specified car and build the car object
 \             if it is close enough
 \
@@ -13859,7 +13931,7 @@ ENDIF
 \
 \       Name: BuildCarObjects (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Driving model
 \    Summary: Calculate the 3D coordinate of the specified car
 \  Deep dive: Drawing a 3D car from 2D parts
 \
@@ -13901,11 +13973,20 @@ ENDIF
 \
 \   X                   The driver number of the car object to build
 \
-\   Y                   The z-index * 3 of the car object to build
+\   L0045               Same as X
+\
+\   Y                   The z-index * 3 to use for the calculation
 \
 \ Returns:
 \
 \   X                   X is set to the driver number in thisDriver
+\
+\   xVector4            Contains the object's 3D coordinates (for the one-object
+\                       car) or the coordinates of the rear tyres (for the
+\                       four-object car
+\
+\   xObjectScreen       The x-coordinate of the object's projected screen
+\                       coordinates
 \
 \ ******************************************************************************
 
@@ -14043,7 +14124,7 @@ ENDIF
 \
 \       Name: BuildCarObjects (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Driving model
 \    Summary: Add the racing line to the 3D coordinate of the specified car
 \  Deep dive: Drawing a 3D car from 2D parts
 \
@@ -14173,7 +14254,7 @@ ENDIF
 \
 \       Name: BuildCarObjects (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Driving model
 \    Summary: Calculate the screen coordinates of all the objects in the
 \             specified car
 \  Deep dive: Drawing a 3D car from 2D parts
@@ -21782,41 +21863,7 @@ NEXT
 
 .dashData37
 
- SKIP 36
-
-\ ******************************************************************************
-\
-\       Name: L42C0
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ This gets copied to screen memory along with dashData37.
-\
-\ ******************************************************************************
-
-.L42C0
-
- SKIP 2
-
-\ ******************************************************************************
-\
-\       Name: L42C2
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ This gets copied to screen memory along with dashData37.
-\
-\ ******************************************************************************
-
-.L42C2
-
- SKIP 14
+ SKIP 52
 
 \ ******************************************************************************
 \
@@ -23252,9 +23299,9 @@ ENDIF
  AND #%11000000         \ If either of bit 6 or 7 is set in A, jump to C4795 to
  BNE C4795              \ make the tyres squeal
 
- LDA L006A              \ If bit 1 of L006A is set, jump to C4794 to return from
- AND #%00000010         \ the subroutine
- BNE C4794
+ LDA mainLoopCounterLo  \ If bit 1 of mainLoopCounterLo is set, which it is on
+ AND #%00000010         \ two out of every four iterations round the main loop,
+ BNE C4794              \ then jump to C4794 to return from the subroutine
 
 .C478F
 
@@ -23881,15 +23928,15 @@ ENDIF
  CPY #&16
  BCS C4A26
 
- LDY L006D              \ Set Y = L006D
+ LDY raceStarting       \ Set Y = raceStarting
 
- BPL C4A22              \ If bit 7 of L006D is clear, jump to C4A22
+ BPL C4A22              \ If bit 7 of raceStarting is clear, jump to C4A22
 
- CPY #&A0
+ CPY #%10100000
  BNE C4A26
 
  PHA
- LDA L006A
+ LDA mainLoopCounterLo
  AND #&3F
  CMP #&35
  PLA
@@ -24724,8 +24771,8 @@ ENDIF
 
 .InitialiseDrivers
 
- STX driverNumber       \ Set driverNumber = 0, to use as a loop counter when
-                        \ initialising all 20 drivers
+ STX setSpeedForDriver  \ Set setSpeedForDriver = 0, to use as a loop counter
+                        \ when initialising all 20 drivers
 
  STX raceClass          \ Set raceClass = 0 (Novice)
 
@@ -24750,7 +24797,7 @@ ENDIF
  JSR SetDriverSpeed     \ Set the base speed for driver X
                         \
                         \ It also decrements X to the next driver number and
-                        \ updates driverNumber accordingly
+                        \ updates setSpeedForDriver accordingly
 
  LDA #0                 \ Zero (totalPointsTop totalPointsHi totalPointsLo) for
  STA totalPointsLo,X    \ driver X
@@ -26215,59 +26262,85 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C5052
+\       Name: ProcessTime
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Main loop
+\    Summary: Increment the timers and the main loop counter
 \
 \ ******************************************************************************
 
-.sub_C5052
+.ProcessTime
 
- LDX L0046
- BNE C505C
- LDX trackData719
- INX
- BEQ C505F
+                        \ First, we update the timerAdjust counter, which
+                        \ iterates from trackTimerAdjust down to zero and back
+                        \ round again, but only if trackTimerAdjust <> 255
+                        \
+                        \ The timerAdjust counter is used to control the speed
+                        \ of the timers in the AddTimeToTimer routine
+
+ LDX timerAdjust        \ If timerAdjust <> 0, jump to C505C to decrement the
+ BNE C505C              \ counter in timerAdjust, as it hasn't wrapped round yet
+
+                        \ If we get here then timerAdjust = 0, so we need to
+                        \ wrap round to trackTimerAdjust again
+
+ LDX trackTimerAdjust   \ Set X = trackTimerAdjust + 1
+ INX                    \
+                        \ We add the 1 so we can decrement it back to
+                        \ trackTimerAdjust below (assuming timer adjustments are
+                        \ enabled)
+
+ BEQ C505F              \ If X = 0, then trackTimerAdjust must be 255, in which
+                        \ case timer adjustments are disabled, so jump to C505F
+                        \ to leave timerAdjust alone
 
 .C505C
 
- DEX
- STX L0046
+ DEX                    \ Set timerAdjust = X - 1
+ STX timerAdjust        \
+                        \ So the clock adjustment counter decrements on each
+                        \ iteration round the main loop
 
 .C505F
 
- LDA L006D              \ If bit 7 of L006D is set, jump to C5068
- BMI C5068
+ LDA raceStarting       \ If bit 7 of raceStarting is set, then the race is in
+ BMI C5068              \ the process of starting but hasn't started yet, so
+                        \ jump to C5068 to leave the clock timer alone
 
  LDX #0                 \ Increment the clock timer
  JSR AddTimeToTimer
 
 .C5068
 
- INC L006A
- BNE C506F
+ INC mainLoopCounterLo  \ Increment the main loop counter in (mainLoopCounterHi
+                        \ mainLoopCounterLo), starting with the low byte
+
+ BNE C506F              \ And then the high byte, if the low byte overflows
  INC L62DF
 
 .C506F
 
- LDA clockSeconds
+ LDA clockSeconds       \ If clockSeconds = 0, skip the following
  BEQ C507A
- LDA L006A
- AND #&1F
+
+ LDA mainLoopCounterLo  \ If mainLoopCounterLo mod 31 <> 0, jump to C507D to
+ AND #31                \ return from the subroutine
  BNE C507D
 
 .C507A
 
- JSR SetDriverSpeed
+                        \ We only get here when mainLoopCounterLo mod 31 = 0,
+                        \ which is once every 32 iterations of the main driving
+                        \ loop
+
+ JSR SetDriverSpeed     \ Set the speed for the driver number specified in
+                        \ setSpeedForDriver, and increment setSpeedForDriver so
+                        \ the next time we get here (in 32 iterations of the
+                        \ main loop) we set the speed for the next driver
 
 .C507D
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -27679,7 +27752,7 @@ ENDIF
 
  SKIP 1
 
-.trackData719
+.trackTimerAdjust
 
  SKIP 1
 
@@ -29913,17 +29986,20 @@ ENDIF
 \
 \ Arguments:
 \
-\   driverNumber        The number of the driver
+\   setSpeedForDriver   The number of the driver to set the speed for
 \
 \ Returns:
 \
 \   X                   The number of the previous driver
 \
+\   setSpeedForDriver   Points to the next driver, ready for the next call to
+\                       SetDriverSpeed
+\
 \ ******************************************************************************
 
 .SetDriverSpeed
 
- LDX driverNumber       \ Set X to the driver number to initialise
+ LDX setSpeedForDriver  \ Set X to the driver number to initialise
 
                         \ We now start a lengthy calculation of a figure in A
                         \ that we will add to the track's base speed to
@@ -30104,10 +30180,13 @@ ENDIF
  ADC baseSpeed
  STA driverSpeed,X
 
- JSR GetPositionAhead   \ Set X to the number of the position ahead of position
-                        \ X
+ JSR GetPositionAhead   \ Set X to the number of the position ahead of the
+                        \ driver whose speed we just set
 
- STX driverNumber       \ Set driverNumber = X
+ STX setSpeedForDriver  \ Set setSpeedForDriver = X
+                        \
+                        \ So the next call to the routine will set the speed for
+                        \ the next driver ahead
 
  RTS                    \ Return from the subroutine
 
@@ -30921,9 +31000,9 @@ ENDIF
                         \ if this is a race, but is clear for practice or a
                         \ qualifying lap
 
- STA L006D              \ Set L006D to the value of A, so bit 7 gets set if this
-                        \ is a race, but bit 7 is clear and bits 3 and 5 are set
-                        \ for practice or a qualifying lap
+ STA raceStarting       \ Set raceStarting to the value of A, so bit 7 gets set
+                        \ if this is a race, to indicate that the race is now in
+                        \ the process of starting
 
 .race1
 
