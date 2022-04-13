@@ -1111,8 +1111,8 @@ ORG &0100
                         \
                         \   * Bits 0-3 = the object type
                         \
-                        \   * Bit 6: ??? see sub_C1163, ClearTotalRaceTime,
-                        \            MoveCars part 2
+                        \   * Bit 6: 0 = the car is still racing
+                        \            1 = the car has finished the race
                         \
                         \   * Bit 7: 0 = object is visible
                         \            1 = object is hidden
@@ -4441,18 +4441,23 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C1163
+\       Name: FinishRace
 \       Type: Subroutine
-\   Category: Drivers
-\    Summary: 
+\   Category: Main loop
+\    Summary: Continue running the race until all the non-player drivers have
+\             finished and we have a result
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is beavering away in the background when the game displays the
+\ "PLEASE WAIT" message, after we finish qualifying or racing.
+\
+\ It keeps running the simulation in the background until all the other drivers
+\ have finished their race or qualifying laps.
 \
 \ ******************************************************************************
 
-.sub_C1163
+.FinishRace
 
  LDA #0                 \ Set movingCar = 0 to denote that the car is stationary
  STA movingCar
@@ -4465,7 +4470,7 @@ ORG &0B00
  LDX currentPlayer      \ Clear the current player's total race time if this is
  JSR ClearTotalRaceTime \ an incomplete race
 
-.C1171
+.fini1
 
  JSR ProcessTime        \ Increment the timers and the main loop counter, and
                         \ set the speed for the next non-player driver
@@ -4473,49 +4478,84 @@ ORG &0B00
  LDY #0                 \ Check for SHIFT and right arrow
  JSR ProcessShiftedKeys
 
- LDA configStop
- BMI C11AA
+ LDA configStop         \ If bit 7 of configStop is set then we must be pressing
+ BMI fini4              \ either SHIFT-f0 for a pit stop or SHIFT and right
+                        \ arrow to restart the game, so jump to fini4 to return
+                        \ from the subroutine
 
- JSR MoveCars
+                        \ If we get here then the race or qualifying lap has
+                        \ finished naturally, rather than being aborted, and
+                        \ this is not a pit stop
+                        \
+                        \ So we now need to keep running the race or qualifying
+                        \ lap (albeit with everything hidden from the player) to
+                        \ get the final set of results for the whole pack
 
- JSR sub_C2692
+ JSR MoveCars           \ Move the cars around the track, to keep the race going
+
+ JSR sub_C2692          \ ???
 
  JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
 
- LDX #19
+ LDX #19                \ We now loop through the drivers, checking whether they
+                        \ have finshed the race, so set a loop counter in X for
+                        \ the driver number
 
- LDA raceStarted
- BMI C1199
+ LDA raceStarted        \ If bit 7 of raceStarted is set then this is a race
+ BMI fini2              \ rather than practice or qualifying, so jump to fini2
+                        \ to work through the drivers and wait for them all to
+                        \ finish the race
 
- CPX currentPlayer
- BNE C11AA
+                        \ If we get here, then this is a qualifying lap
 
- LDA mainLoopCounterHi
- CMP #14
- BCC C1171
+ CPX currentPlayer      \ If the player is not driver 19, then jump to fini4 to
+ BNE fini4              \ return from the subroutine, as there is more than one
+                        \ human player and this is not the first human to race,
+                        \ so we already have qualifying times for all the
+                        \ drivers
 
- RTS
+                        \ If we get here, then this is a qualifying lap and the
+                        \ current player is driver 19, which means this is
+                        \ either the only human player, or the first human to
+                        \ race
+                        \
+                        \ In any event, we need to make sure that we run the
+                        \ qualifying lap long enough to get lap times for all
+                        \ the other drivers, so we run the race for at least
+                        \ 14 * 256 main loop iterations
+                        \
+                        \ This ensures we get lap times for all the drivers,
+                        \ even if the player decides to quit qualifying early
 
-.C1199
+ LDA mainLoopCounterHi  \ If the high byte main loop counter < 14, loop back to
+ CMP #14                \ fini1 to keep running the race
+ BCC fini1
 
- LDA objectStatus,X
- AND #%01000000
- BNE C11A7
+ RTS                    \ Return from the subroutine
 
- LDA numberOfLaps
- CMP driverLapNumber,X
- BCS C1171
+.fini2
 
-.C11A7
+                        \ If we get here, then this is a race rather than
+                        \ qualifying
 
- DEX
+ LDA objectStatus,X     \ If bit 6 of driver X's objectStatus is set, then
+ AND #%01000000         \ driver X has finished the racem so jump to fini3
+ BNE fini3              \ to check the next driver
 
- BPL C1199
+ LDA numberOfLaps       \ If numberOfLaps >= driver X's lap number, jump to
+ CMP driverLapNumber,X  \ fini1 to keep running the race, as driver X hasn't
+ BCS fini1              \ finished the race yet
 
-.C11AA
+.fini3
 
- RTS
+ DEX                    \ Decrement the driver counter in X
+
+ BPL fini2              \ Loop back until all the drivers have finished the race
+
+.fini4
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -4548,28 +4588,29 @@ ORG &0B00
 \       Name: ClearTotalRaceTime
 \       Type: Subroutine
 \   Category: Drivers
-\    Summary: Clear the current player's total race time following the end of an
+\    Summary: Clear a specified driver's total race time following the end of an
 \             incomplete race
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   This is only called with the current player number in X
+\   X                   The driver number
 \
 \ ******************************************************************************
 
 .ClearTotalRaceTime
 
- LDA numberOfLaps       \ Compare numberOfLaps with the current player's lap
- CMP driverLapNumber,X  \ number
+ LDA numberOfLaps       \ Compare numberOfLaps with the driver X's lap number
+ CMP driverLapNumber,X
 
- LDA #%11000000         \ Set bits 6 and 7 of the status byte for the current
- STA objectStatus,X     \ player's carobject, so it's hidden and ???
+ LDA #%11000000         \ Set bits 6 and 7 of the status byte for driver X's car
+ STA objectStatus,X     \ object, so it's hidden (bit 7) and is no longer racing
+                        \ (bit 6)
 
- BCC clap1              \ If numberOfLaps < current player's lap number, then
-                        \ the player has finished the race, so skip the
-                        \ following instruction
+ BCC clap1              \ If numberOfLaps < driver X's lap number, then the
+                        \ driver has finished the race, so skip the following
+                        \ instruction
 
  STA totalRaceMinutes,X \ The player didn't finish the race, so set the player's
                         \ total race time to &C0 minutes, which is negative and
@@ -6570,8 +6611,8 @@ ENDIF
  JSR ProcessTime        \ Increment the timers and the main loop counter, and
                         \ set the speed for the next non-player driver
 
- JSR ShowStartLights    \ If this is a race, show the start lights on the right
-                        \ of the screen
+ JSR ShowStartLights    \ If this is a race, show the starting lights on the
+                        \ right of the screen
 
  JSR ProcessDrivingKeys \ Check for and process the main driving keys
 
@@ -6738,7 +6779,8 @@ ENDIF
                         \    "                                      "
                         \    "             PLEASE  WAIT             "
 
- JSR sub_C1163          \ ???
+ JSR FinishRace         \ Continue running the race until all the non-player
+                        \ drivers have finished and we have a result
 
  LDA configStop         \ If bit 7 of configStop is set then we must be pressing
  BMI main13             \ either SHIFT-f0 for a pit stop or SHIFT and right
@@ -13442,8 +13484,8 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part changes the car's speed according to the following algorithm. It
-\ calculates the speed change in (U A), and then applies it to the car's speed.
+\ This part changes each car's speed. It calculates the speed change in (U A),
+\ and then applies it to the car's speed.
 \
 \ Other entry points:
 \
@@ -13696,7 +13738,8 @@ ENDIF
  BCS mcar20             \ move on to the next car
 
  BMI mcar17             \ If bit 6 of the driver's car object status byte is
-                        \ set, jump to mcar17 to steer the car
+                        \ set, then the car has finished racing, so jump to
+                        \ mcar17 to steer the car
 
  LDA carSteering,X      \ If bit 6 of the car's carSteering is clear, jump to
  AND #%01000000         \ mcar17 to steer the car
@@ -25898,7 +25941,8 @@ ENDIF
 \
 \   * Bit 7 of updateLapTimes is clear
 \
-\   * Bit 6 of the driver's car's object status byte is clear
+\   * Bit 6 of the driver's car's object status byte is clear (so the car is
+\     still racing)
 \
 \   * If this is the current player, L0030 must be 1 (and it is set to 0)
 \
@@ -25921,8 +25965,9 @@ ENDIF
  BCS ulap1              \ to ulap1 to return from the subroutine
 
  LDA objectStatus,X     \ If bit 6 of the driver's car object status byte is
- ASL A                  \ set, jump to ulap1 to return from the subroutine
- BMI ulap1
+ ASL A                  \ set, the the car has finished racing, so jump to
+ BMI ulap1              \ ulap1 to return from the subroutine without updating
+                        \ the lap number
 
  CPX currentPlayer      \ If driver X is not the current player, jump to ulap3
  BNE ulap3              \ to skip updating the lap number top of the screen
