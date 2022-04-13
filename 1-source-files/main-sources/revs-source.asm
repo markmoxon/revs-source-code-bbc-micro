@@ -282,10 +282,10 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.signSection
+.sectionBehind
 
  SKIP 1                 \ Used to store the number * 8 of the track section
-                        \ containing the road sign
+                        \ behind us when we drive backwards along the track
                         \
                         \ Track sections are numbered from 0 to 23, so this
                         \ ranges from 0 to 184
@@ -4053,64 +4053,98 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C109B
+\       Name: ResetCarsOnTrack
 \       Type: Subroutine
-\   Category: Main loop
-\    Summary: 
+\   Category: Driving model
+\    Summary: Position the cars on the track, ready for a race or qualifying lap
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   A                   Contains:
+\   A                   The distance between each car:
 \
 \                         * 1 if this is a race
 \
-\                         * The value of trackData718 if this is practice or
+\                         * The value of trackCarSpacing if this is practice or
 \                           qualifying (40 for Silverstone)
 \
 \ ******************************************************************************
 
-.sub_C109B
+.ResetCarsOnTrack
 
- STA V                  \ Store the value of A in V, so we can retrieve it later
+ STA V                  \ Store the value of A in V, so V contains the size of
+                        \ the gap that we want to insert between the cars
 
  SEC                    \ Set bit 7 of updateLapTimes, so when we move the cars
  ROR updateLapTimes     \ forward in MoveObjectForward, the lap number and lap
                         \ time are not affected
 
-.P10A1
+                        \ We start by moving all the cars to the end of the
+                        \ track
+                        \
+                        \ In Silverstone, all the cars start at an objProgress
+                        \ value of &034B, so the following loop moves all the
+                        \ cars forwards one step at a time, until objProgress
+                        \ wraps round to 0 (which it does after reaching the
+                        \ value of trackLength, which is &0400 for Silverstone)
+
+.rcar1
 
  LDX #19                \ Set a loop counter in X to loop through the drivers
 
-.P10A3
+.rcar2
 
  JSR MoveObjectForward  \ Move driver X forwards along the track
 
  DEX                    \ Decrement the loop counter
 
- BPL P10A3              \ Loop back until we have processed all 20 drivers
+ BPL rcar2              \ Loop back until we have processed all 20 drivers
 
  LDA objProgressLo      \ If objProgress for driver 0 is non-zero, jump back to
- ORA objProgressHi      \ P10A1 to repeat the above loop
- BNE P10A1
+ ORA objProgressHi      \ rcar1 to repeat the above loop
+ BNE rcar1
 
- LDA #&FF               \ Set G = -1
- STA G
+                        \ All 20 cars are now at the end of the track
 
- BNE C10CF              \ Jump to C10CF (this BNE is effectively a JMP as A is
+ LDA #&FF               \ Set G = -1, so it can be incremented to 0 as the start
+ STA G                  \ of the outer loop at rcar5
+
+                        \ We now jump into a nested loop, with an inner loop
+                        \ between rcar3 and rcar5 an outer loop between rcar3
+                        \ and rcar6
+                        \
+                        \ We iterate round the outer loop with G from 0 to 19,
+                        \ and for each outer iteration, we iterate round the
+                        \ inner loop with X from G to 19
+                        \
+                        \ The outer loop runs through each position, while the
+                        \ inner loop runs through each car behind that position,
+                        \ so the cars get moved backwards around the track as a
+                        \ group, with one car being dropped off after each inner
+                        \ loop in the correct position
+                        \
+                        \ Specifically, the first iteration of the inner loop
+                        \ moves the cars in positions 0 to 19 backwards, then
+                        \ the cars in positions 1 to 19, then 2 to 19 and so on,
+                        \ leaving a trail of cars behind it as it works
+                        \ backwards so position 0 is first, then position 1, and
+                        \ so on to position 19
+
+ BNE rcar5              \ Jump to rcar5 (this BNE is effectively a JMP as A is
                         \ never zero)
 
-                        \ We now do an outer loop of G from -1 to 19, with an
-                        \ inner loop X = G to 19, with a further inner loop of
-                        \ W = V to 0, starting the loop at C10CF
+.rcar3
 
-.C10B7
+                        \ This is the start of the inner loop, which runs
+                        \ through each position from G to 19, moving each car
+                        \ backwards V times (so each car moves backwards by the
+                        \ distance in V)
 
- LDA V                  \ Set W = V
- STA W
+ LDA V                  \ Set W = V, so W contains the size of the gap that we
+ STA W                  \ want to insert between the cars
 
-.P10BB
+.rcar4
 
  TXA                    \ Store X on the stack
  PHA
@@ -4125,105 +4159,136 @@ ORG &0B00
 
  DEC W                  \ Decrement W
 
- BPL P10BB              \ Loop back until we have repeated the above W times
+ BPL rcar4              \ Loop back until we have repeated the above W times
 
  INX                    \ Increment the loop counter
 
  CPX #20                \ Loop back until we have processed all 20 drivers
- BCC C10B7
+ BCC rcar3
 
-.C10CF
+.rcar5
 
                         \ This is where we join the loop with G = -1, so the
-                        \ following increments G to 0
+                        \ following increments G to 0 as soon as we join
+                        \
+                        \ This outer part of the loop runs through each position
+                        \ in G, from 0 to 19, and calls the inner loop above for
+                        \ each value of G
 
  INC G                  \ Increment G
 
  LDX G                  \ Set X = G, so the inner loop does G to 19
 
  CPX #20                \ Loop back until we have done G = 0 to 19
- BCC C10B7
+ BCC rcar3
 
-                        \ Loop until GetObjectDistance returns C flag clear and
-                        \ A = 32
+                        \ At this point the cars are spaced out by the correct
+                        \ distance, working backwards from position 0 at the end
+                        \ of the track (i.e. just before the start line), to
+                        \ position 19 at the back of the pack
 
-.C10D7
+                        \ We now use the currently unused driver 23 to work out
+                        \ the number of z-indexes we need to initialise in front
+                        \ of the current driver, by first moving forwards until
+                        \ we are exactly 32 from the current player, then moving
+                        \ backwards by 49, and then moving backwards to the
+                        \ start of the track section, leaving L0042 set to the
+                        \ total distance moved backwards
 
- LDX #23                \ Set X to the driver number for the road sign
+.rcar6
 
- JSR MoveObjectForward  \ Move the sign forwards along the track
+ LDX #23                \ Set X to driver 23
 
- LDY #23
+ JSR MoveObjectForward  \ Move driver 23 forwards along the track
 
- LDX currentPlayer
+ LDY #23                \ Set Y to driver 23
+
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
                         \ to GetObjectDistance
 
  JSR GetObjectDistance  \ Set A and T to the distance between drivers X and Y
 
- BCS C10D7              \ If the C flag is set then the cars are far apart, so
-                        \ jump to C10D7
+ BCS rcar6              \ If the C flag is set then the cars are far apart, so
+                        \ jump to rcar6 to keep moving driver 23 forwards
 
- CMP #32                \ If A <> 32, jump to C10D7
- BNE C10D7
+ CMP #32                \ If A <> 32, jump to rcar6 to keep moving driver 23
+ BNE rcar6              \ forwards
 
- LDX #23
+                        \ At this point, driver 23 is a distance of exactly 32
+                        \ from the current player
 
-                        \ Loop V = 49 to 1
+                        \ We now move driver 23 back by 49
 
- LDA #49                \ Set V = 49
+ LDX #23                \ Set X to driver 23
+
+ LDA #49                \ Set V = 49, to use as a loop counter from 49 to 1
  STA V
 
  STA L0042              \ Set L0042 = 49
 
-.P10F2
+.rcar7
 
- JSR MoveObjectBack     \ Move the sign backwards along the track
+ JSR MoveObjectBack     \ Move driver 23 backwards along the track
 
- DEC V
+ DEC V                  \ Decrement the loop counter
 
- BNE P10F2
+ BNE rcar7              \ Loop back until we have moved driver 23 backwards by
+                        \ 49
 
-                        \ Loop until C flag set
+                        \ We now move driver 23 backwards until it moves into a
+                        \ new track section, incrementing L0042 by the distance
+                        \ moved
 
-.P10F9
+.rcar8
 
- INC L0042
+ INC L0042              \ Increment L0042
 
- JSR MoveObjectBack     \ Move the sign backwards along the track
+ JSR MoveObjectBack     \ Move driver 23 backwards along the track, setting the
+                        \ C flag if we move into a new track section
 
- BCC P10F9
+ BCC rcar8              \ Loop back to keep moving driver 23 backwards until it
+                        \ moves into a new track section
 
-                        \ Loop, Y = 19 to 0, setting carRacingLine to
-                        \ alternating &50 and &AF
+                        \ We now move the cars to alternating sides of the track
+                        \ so the grid is staggered
 
- LDA #&50
+ LDA #80                \ Set A to 80, which we will flip between 80 and 175 to
+                        \ alternate cars between the right (80) and left (175)
+                        \ side of the track, where 0 is full right and 255 is
+                        \ full left
 
- LDY #19
+ LDY #19                \ Set a loop counter in Y to loop through the positions
 
-.P1104
+.rcar9
 
- LDX driversInOrder,Y
- EOR #&FF
- STA carRacingLine,X
+ LDX driversInOrder,Y   \ Set X to the number of driver in position X
 
- DEY
+ EOR #&FF               \ Flip A between 80 and 175
 
- BPL P1104
+ STA carRacingLine,X    \ Set the racing line of the car on the track (i.e. its
+                        \ left-right position) to the value in A
+
+ DEY                    \ Decrement the loop counter to move on to the next
+                        \ position
+
+ BPL rcar9              \ Loop back until we have staggered the whole pack
 
  LDA #0                 \ Set zIndex = 0
  STA zIndex
 
-                        \ Loop, with L0042 decrementing to 0
+                        \ We now call sub_C12F7 L0042 times, where L0042 is the
+                        \ number of times we moved driver 23 backwards in the
+                        \ above
 
-.P1113
+.rcar10
 
- JSR sub_C12F7
+ JSR sub_C12F7          \ Call sub_C12F7 ???
 
- DEC L0042
+ DEC L0042              \ Decrement the counter in L0042
 
- BNE P1113
+ BNE rcar10             \ Loop back until we have called sub_C12F7 L0042 times
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
                         \ MoveObjectForward will update the lap number and lap
@@ -4548,7 +4613,7 @@ ORG &0B00
 .GetSectionCoord
 
  LDA xTrackSectionILo,Y \ Copy the following 16-bit coordinates:
- STA xVector1Lo,X          \
+ STA xVector1Lo,X       \
  LDA yTrackSectionILo,Y \   * The Y-th xTrackSectionI to the X-th xVector1
  STA yVector1Lo,X       \
  LDA zTrackSectionILo,Y \   * The Y-th yTrackSectionI to the X-th yVector1
@@ -4720,13 +4785,13 @@ ORG &0B00
 
 .C1274
 
- LDA directionFacing    \ If our car is facing fowards, jump to C1284
+ LDA directionFacing    \ If our car is facing backwards, jump to C1284
  BMI C1284
 
  LDY objTrackSection+23
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xVector1 and var27, and set
+                        \ section Y into xVector1 and xVector2, and set
                         \ thisVectorNumber to trackSectionFrom
 
  LDA trackSection0a,Y
@@ -4734,10 +4799,10 @@ ORG &0B00
 
 .C1284
 
- LDY signSection
+ LDY sectionBehind
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xVector1 and var27, and set
+                        \ section Y into xVector1 and xVector2, and set
                         \ thisVectorNumber to trackSectionFrom
 
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
@@ -4901,7 +4966,7 @@ ORG &0B00
 
 .sub_C12F7
 
- LDA zIndex             \ Set A to the z-index of the current coordinate
+ LDA zIndex             \ Set A to the number of the current z-index
 
  STA zIndexPrevious     \ Store A in zIndexPrevious, as we are about to move on
                         \ to the next z-index
@@ -4919,14 +4984,14 @@ ORG &0B00
 
  STA zIndex             \ Store the updated value in zIndex
 
- LDX #23                \ Set X to the driver number for the road sign
+ LDX #23                \ Set X to driver 23
 
- LDA directionFacing    \ If our car is facing fowards, jump to C1236
+ LDA directionFacing    \ If our car is facing backwards, jump to C1236
  BMI C1326
 
  LDA trackSectionCount
  LSR A
- AND #&F8
+ AND #%11111000
  CMP objTrackSection,X
  BNE C131B
 
@@ -4935,7 +5000,7 @@ ORG &0B00
 
 .C131B
 
- JSR MoveObjectForward  \ Move the sign forwards along the track
+ JSR MoveObjectForward  \ Move driver 23 forwards along the track
 
  BCC C1333
  JSR sub_C1267
@@ -4944,9 +5009,9 @@ ORG &0B00
 .C1326
 
  LDA objTrackSection+23
- STA signSection
+ STA sectionBehind
 
- JSR MoveObjectBack     \ Move the sign backwards along the track
+ JSR MoveObjectBack     \ Move driver 23 backwards along the track
 
  BCC C1333
  JSR sub_C1267
@@ -5097,7 +5162,7 @@ ORG &0B00
 
 .UpdateVectorNumber
 
- LDA directionFacing    \ If our car is facing fowards, jump to uvec1
+ LDA directionFacing    \ If our car is facing backwards, jump to uvec1
  BMI uvec1
 
  LDY thisVectorNumber   \ Set Y to the current track vector number
@@ -5251,8 +5316,8 @@ ORG &0B00
  LDX currentPlayer      \ Set X to the driver number of the current player
 
  ROR A                  \ If just one of the C flag and bit 7 of directionFacing
- EOR directionFacing    \ is set (but not both), jump to pcar1 to move the car
- BMI pcar1              \ backwards along the track
+ EOR directionFacing    \ is set (but not both), jump to play1 to move the car
+ BMI play1              \ backwards along the track
                         \
                         \ In other words, we move backwards if:
                         \
@@ -5268,7 +5333,7 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
-.pcar1
+.play1
 
  JSR MoveObjectBack     \ Move current player backwards along the track
 
@@ -5391,7 +5456,7 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   X                   Driver number (0-22, or 23 for road sign)
+\   X                   Driver number (0-23)
 \
 \   updateLapTimes      If bit 7 is set, the call to UpdateLaps has no effect,
 \                       so we do not update the lap number or lap time
@@ -5501,7 +5566,7 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   X                   Object number (0-22, or 23 for road sign)
+\   X                   Object number (0-23)
 \
 \ Returns:
 \
@@ -5645,13 +5710,13 @@ ORG &0B00
 
 .sub_C150E
 
- LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
-                        \ road sign
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
+                        \ driver 23
 
  TYA                    \ Set X = Y / 8
  LSR A                  \
- LSR A                  \ So X contains the number of the track section for the
- LSR A                  \ road sign
+ LSR A                  \ So X contains the number of the track section for
+ LSR A                  \ driver 23
  TAX
 
  LDA L0017
@@ -6874,8 +6939,8 @@ ENDIF
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
- LDA #1                 \ Set A = 1, to pass to sub_C109B below if this is a
-                        \ race
+ LDA #1                 \ Set A = 1, to pass to ResetCarsOnTrack as the spacing
+                        \ for the cars when this is a race
 
  BIT raceStarted        \ If bit 7 of raceStarted is set then this is a race
  BMI rese4              \ rather than practice or qualifying, so jump to rese4
@@ -6897,16 +6962,19 @@ ENDIF
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
- LDA trackData718       \ Set A to trackData718, which is 40 for the Silverstone
-                        \ track
+ LDA trackCarSpacing    \ Set A to trackCarSpacing, to pass to ResetCarsOnTrack
+                        \ as the spacing for the cars when this is a qualifying
+                        \ lap (this value is 40 for the Silverstone track)
 
 .rese4
 
                         \ By this point, A = 1 if this is a race, or the value
-                        \ of trackData718 if this is practice or qualifying
+                        \ of trackCarSpacing if this is practice or qualifying
                         \ (40 for Silverstone)
 
- JSR sub_C109B          \ ???
+ JSR ResetCarsOnTrack   \ Reset the cars on the track, placing them on the
+                        \ starting grid if this is a race, or spread out along
+                        \ the track if this is a qualifying lap
 
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
                         \ carSteering, carProgress, (carSpeedHi carSpeedLo) and
@@ -13699,26 +13767,26 @@ ENDIF
 
  TAX                    \ Set X to the driver number
 
- LDY #23                \ Set Y to the object number of the road sign
+ LDY #23                \ Set Y to driver 23
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
                         \ to GetObjectDistance
 
- JSR GetObjectDistance  \ Set A and T to the distance between driver X and the
-                        \ road sign in object Y
+ JSR GetObjectDistance  \ Set A and T to the distance between driver X and
+                        \ driver 23 in object Y
 
- BCS bvis1              \ If the C flag is set then the car and sign are far
-                        \ apart, so jump to bvis1 to hide the car
+ BCS bvis1              \ If the C flag is set then the two cars are far apart,
+                        \ so jump to bvis1 to hide the car
 
  EOR directionFacing    \ This tests whether bit 7 of directionFacing and bit 7
  BMI bvis1              \ of the distance in A are different, which will happen
                         \ if either of the following is true:
                         \
                         \   * We are facing forwards (0) and driver X is ahead
-                        \     of the sign in object Y by more than 256 (1)
+                        \     of driver 23 by more than 256 (1)
                         \
                         \   * We are facing backwards (1) and driver X is not
-                        \     ahead of the sign in object Y by more than 256 (0)
+                        \     ahead of driver 23 by more than 256 (0)
                         \
                         \ In both cases driver X is too far away from us to be
                         \ seen, and bit 7 of the result of the EOR will be set,
@@ -13727,13 +13795,13 @@ ENDIF
  LDA T                  \ Set T = |T|
  JSR Absolute8Bit       \
  STA T                  \ so A and T contain the absolute value of the distance
-                        \ between the car and sign
+                        \ between the car and driver 23
 
  CMP #40                \ If |A| < 40, jump to bvis2 to skip the following
  BCC bvis2              \ instruction and continue creating the car object
 
-                        \ If we get here then the car and sign are far apart,
-                        \ so we hide the car
+                        \ If we get here then the car and driver 23 are far
+                        \ apart, so we hide the car
 
 .bvis1
 
@@ -13744,7 +13812,7 @@ ENDIF
 .bvis2
 
                         \ If we get here, A and T contain the absolute value of
-                        \ the distance between the car and sign
+                        \ the distance between the car and driver 23
 
  ASL A                  \ Set A = A * 2
                         \       = distance * 2
@@ -22638,7 +22706,7 @@ NEXT
  LSR A
  CLC
  ADC T
- JSR MultiplyBlock2
+ JSR MultiplyHeight
  CLC
  ADC L005D
  CLC
@@ -22706,7 +22774,7 @@ NEXT
  STA V
  LDX currentPlayer
  LDA carProgress,X
- JSR MultiplyBlock2
+ JSR MultiplyHeight
  BPL C45DF
  DEC W
 
@@ -22743,24 +22811,24 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: MultiplyBlock2
+\       Name: MultiplyHeight
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Multiply track data from block 2 by A
+\    Summary: Multiply track height by A
 \
 \ ------------------------------------------------------------------------------
 \
-\ Calculate:
+\ For track vector Y, calculate:
 \
-\   A = A * Y-th yTrackVectorI
+\   A = A * yTrackVectorI
 \
 \ flipping the sign if we are facing backwards.
 \
 \ Arguments:
 \
-\   A                   The number to multiply the data by
+\   A                   The number to multiply the height by
 \
-\   Y                   Offset of the data to multiply in yTrackVectorI
+\   Y                   Index of the track vector to multiply
 \
 \ Returns:
 \
@@ -22768,27 +22836,26 @@ NEXT
 \
 \ ******************************************************************************
 
-.MultiplyBlock2
+.MultiplyHeight
 
  STA U                  \ Set U to the multiplication factor in A
 
- LDA yTrackVectorI,Y    \ Store the sign of the track data * directionFacing on
+ LDA yTrackVectorI,Y    \ Store the sign of the height * directionFacing on
  EOR directionFacing    \ the stack
  PHP
 
- LDA yTrackVectorI,Y    \ Set A to the Y-th data from yTrackVectorI
+ LDA yTrackVectorI,Y    \ Set A to the track height in the Y-th yTrackVectorI
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |track data|
+                        \       = |yTrackVectorI|
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = U * |track data|
+                        \           = U * |yTrackVectorI|
 
- PLP                    \ Set the N flag to the sign of the track data *
-                        \ directionFacing, so this will be set if the coordinate
+ PLP                    \ Set the N flag to the sign of yTrackVectorI *
+                        \ directionFacing, so this will be set if the height
                         \ sign is different to bit 7 of directionFacing, clear
-                        \ if the coordinate sign matches bit 7 of
-                        \ directionFacing
+                        \ if the height sign matches bit 7 of directionFacing
 
  JSR Absolute8Bit       \ Give A the sign in the N flag
 
@@ -24510,14 +24577,14 @@ ENDIF
 
  JSR sub_C4D21
 
- LDA trackRoadSigns,X   \ Set objectType to object type for road sign X, from
- AND #%00000111         \ bits 0-2 of trackRoadSigns
+ LDA trackRoadSigns,X   \ Set objectType to the object type for road sign X,
+ AND #%00000111         \ from bits 0-2 of trackRoadSigns
  CLC
  ADC #7
  STA objectType
 
- LDA trackRoadSigns,X   \ Set Y to track section number for road sign X, from
- AND #%11111000         \ bits 3-7 of trackRoadSigns
+ LDA trackRoadSigns,X   \ Set Y to the track section number for road sign X,
+ AND #%11111000         \ from bits 3-7 of trackRoadSigns
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
@@ -24532,8 +24599,8 @@ ENDIF
  JSR ProjectObjectX     \ Project the object onto the screen and calculate the
                         \ object's screen x-coordinate, returning it in (JJ II)
 
- LDA II                 \ Set the screen x-coordinate for the road sign in
- STA xObjectScreenLo+23 \ (xObjectScreenHi+23 xObjectScreenLo+23) to (JJ II)
+ LDA II                 \ Set the screen x-coordinate in (xObjectScreenHi+23
+ STA xObjectScreenLo+23 \ xObjectScreenLo+23) to (JJ II)
  LDA JJ
  STA xObjectScreenHi+23
 
@@ -27608,7 +27675,7 @@ ENDIF
 
  SKIP 1
 
-.trackData718
+.trackCarSpacing
 
  SKIP 1
 

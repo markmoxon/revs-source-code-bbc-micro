@@ -1311,10 +1311,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackData718
+\       Name: trackCarSpacing
 \       Type: Variable
 \   Category: Track
-\    Summary: 
+\    Summary: The spacing between cars at the start of a qualifying lap
 \
 \ ------------------------------------------------------------------------------
 \
