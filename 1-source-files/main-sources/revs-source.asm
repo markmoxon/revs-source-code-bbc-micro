@@ -685,9 +685,13 @@ ORG &0000
 
  SKIP 1                 \ The current pitch for the revs sound
 
-.L0061
+.engineStatus
 
- SKIP 1                 \ 
+ SKIP 1                 \ Whether or not the engine is on
+                        \
+                        \   * 0 = engine is off
+                        \
+                        \   * &FF = engine is on
 
 .L0062
 
@@ -747,8 +751,8 @@ ORG &0000
 
 .mainLoopCounterLo
 
- SKIP 1                 \ The main loop counter, which increments on each
-                        \ iteration of the main driving loop
+ SKIP 1                 \ Low byte of the main loop counter, which increments on
+                        \ each iteration of the main driving loop
                         \
                         \ Stored as a 16-bit value (mainLoopCounterHi
                         \ mainLoopCounterLo)
@@ -768,22 +772,37 @@ ORG &0000
 
 .raceStarting
 
- SKIP 1                 \ Flags that determine whether the race is in the
-                        \ process of starting
+ SKIP 1                 \ The current stage of the starting lights at the start
+                        \ of the race
                         \
-                        \ Updated in ShowStartLights
+                        \ When a race is about to start, raceStarting is set to
+                        \ 128, and stays on this value until the engine is
+                        \ started, at which point it starts to count down, with
+                        \ one tick per iteration of the main loop, working
+                        \ through the following sequence:
                         \
-                        \   * 0 = do nothing in ShowStartLights
+                        \   * 128 = show black lights, engine not yet started
                         \
-                        \   * Bit 5 and 7 set = do something in sub_C49CE
+                        \   * Start counting down from 240 once engine starts
                         \
-                        \   * Bit 7 clear = skip something in sub_C49CE
+                        \   * 240-192 = show black lights
                         \
-                        \   * Bit 7 set = do not increment the clock timer in
-                        \                 ProcessTime, do nothing in MoveCars
+                        \   * 191-161 = show blue lights
                         \
-                        \ Set to %00101000 when heading to the track in
-                        \ HeadToTrack
+                        \   * 160 = keep showing blue lights and stop counting
+                        \           down until main loop counter is a multiple
+                        \           of 64
+                        \
+                        \   * Start counting down from 40 once loop counter is
+                        \     a multiple of 64
+                        \
+                        \   * 40-1 = show green lights
+                        \
+                        \   * 0 = show no lights (race has started)
+                        \
+                        \ When bit 7 is set (i.e. raceStarting >= 128), we are
+                        \ on the grid, so we do not increment the clock timer in
+                        \ ProcessTime, and the MoveCars routine has no effect
 
 .numberOfLaps
 
@@ -3576,10 +3595,10 @@ ORG &0B00
                         \ system's volume scale, with -15 being full volume and
                         \ 0 being silent
 
- LDA mainLoopCounterLo  \ If bit 0 of mainLoopCounterLo is set, which is every
- AND #1                 \ other iteration round the main loop, jump to shif9 to
- BNE shif9              \ skip the following, so the sound changes more slowly
-                        \ than it would if we did this every loop
+ LDA mainLoopCounterLo  \ If bit 0 of mainLoopCounterLo is set, which it will be
+ AND #1                 \ every other iteration round the main loop, jump to
+ BNE shif9              \ shif9 to skip the following, so the sound changes more
+                        \ slowly than it would if we did this every loop
 
  LDA configVolume       \ If configVolume = 0, jump to shif10 to return from the
  BEQ shif10             \ subroutine
@@ -4402,7 +4421,7 @@ ORG &0B00
  BPL cras2              \ Loop back until we have zeroed all variables from
                         \ var02Lo to var12Hi
 
- STA L0061              \ Set L0061 = 0
+ STA engineStatus       \ Set engineStatus = 0 to turn off the engine
 
  STA L0026              \ Set L0026 = 0
 
@@ -4472,7 +4491,7 @@ ORG &0B00
  CPX currentPlayer
  BNE C11AA
 
- LDA L62DF
+ LDA mainLoopCounterHi
  CMP #14
  BCC C1171
 
@@ -23813,8 +23832,10 @@ ENDIF
 
  LDX #7
  STX L0009
- LDX #&FF
- STX L0061
+
+ LDX #&FF               \ Set engineStatus = &FF to turn on the engine
+ STX engineStatus
+
  BMI C49BB
 
 .C499D
@@ -23881,8 +23902,9 @@ ENDIF
 
 .sub_C49CE
 
- LDA L0061
+ LDA engineStatus
  BEQ C4978
+
  LDA L002D
  BNE C499F
 
@@ -23973,7 +23995,7 @@ ENDIF
 
  CMP #3
  BCS C4A48
- INC L0061
+ INC engineStatus
  JMP C49C9
 
 .C4A48
@@ -26278,8 +26300,8 @@ ENDIF
                         \ The timerAdjust counter is used to control the speed
                         \ of the timers in the AddTimeToTimer routine
 
- LDX timerAdjust        \ If timerAdjust <> 0, jump to C505C to decrement the
- BNE C505C              \ counter in timerAdjust, as it hasn't wrapped round yet
+ LDX timerAdjust        \ If timerAdjust <> 0, jump to tick1 to decrement the
+ BNE tick1              \ counter in timerAdjust, as it hasn't wrapped round yet
 
                         \ If we get here then timerAdjust = 0, so we need to
                         \ wrap round to trackTimerAdjust again
@@ -26290,44 +26312,44 @@ ENDIF
                         \ trackTimerAdjust below (assuming timer adjustments are
                         \ enabled)
 
- BEQ C505F              \ If X = 0, then trackTimerAdjust must be 255, in which
-                        \ case timer adjustments are disabled, so jump to C505F
+ BEQ tick2              \ If X = 0, then trackTimerAdjust must be 255, in which
+                        \ case timer adjustments are disabled, so jump to tick2
                         \ to leave timerAdjust alone
 
-.C505C
+.tick1
 
  DEX                    \ Set timerAdjust = X - 1
  STX timerAdjust        \
                         \ So the clock adjustment counter decrements on each
                         \ iteration round the main loop
 
-.C505F
+.tick2
 
  LDA raceStarting       \ If bit 7 of raceStarting is set, then the race is in
- BMI C5068              \ the process of starting but hasn't started yet, so
-                        \ jump to C5068 to leave the clock timer alone
+ BMI tick3              \ the process of starting but hasn't started yet, so
+                        \ jump to tick3 to leave the clock timer alone
 
  LDX #0                 \ Increment the clock timer
  JSR AddTimeToTimer
 
-.C5068
+.tick3
 
  INC mainLoopCounterLo  \ Increment the main loop counter in (mainLoopCounterHi
                         \ mainLoopCounterLo), starting with the low byte
 
- BNE C506F              \ And then the high byte, if the low byte overflows
- INC L62DF
+ BNE tick4              \ And then the high byte, if the low byte overflowed
+ INC mainLoopCounterHi
 
-.C506F
+.tick4
 
  LDA clockSeconds       \ If clockSeconds = 0, skip the following
- BEQ C507A
+ BEQ tick5
 
- LDA mainLoopCounterLo  \ If mainLoopCounterLo mod 31 <> 0, jump to C507D to
- AND #31                \ return from the subroutine
- BNE C507D
+ LDA mainLoopCounterLo  \ If mainLoopCounterLo mod 32 <> 0, which will be true
+ AND #31                \ for 31 out of 32 iterations round the main loop, jump
+ BNE tick6              \ to tick6 to return from the subroutine
 
-.C507A
+.tick5
 
                         \ We only get here when mainLoopCounterLo mod 31 = 0,
                         \ which is once every 32 iterations of the main driving
@@ -26338,7 +26360,7 @@ ENDIF
                         \ the next time we get here (in 32 iterations of the
                         \ main loop) we set the speed for the next driver
 
-.C507D
+.tick6
 
  RTS                    \ Return from the subroutine
 
@@ -29311,18 +29333,19 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62DF
+\       Name: mainLoopCounterHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Main loop
+\    Summary: High byte of the main loop counter, which increments on each
+\             iteration of the main driving loop
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Stored as a 16-bit value (mainLoopCounterHi mainLoopCounterLo).
 \
 \ ******************************************************************************
 
-.L62DF
+.mainLoopCounterHi
 
  EQUB 0
 
@@ -31000,9 +31023,13 @@ ENDIF
                         \ if this is a race, but is clear for practice or a
                         \ qualifying lap
 
- STA raceStarting       \ Set raceStarting to the value of A, so bit 7 gets set
-                        \ if this is a race, to indicate that the race is now in
-                        \ the process of starting
+ STA raceStarting       \ Set raceStarting to the value of A, which will be 128
+                        \ if this is a race, so the starting lights get shown
+                        \ rand the estrictions of the starting grid (can't move
+                        \ the car, timers are disabled) are applied
+                        \
+                        \ If this not a race then we clear bit 7 of raceStarting
+                        \ so the restrictions are not applied
 
 .race1
 
@@ -31936,89 +31963,252 @@ ORG &7B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C7B4A
+\       Name: ShowStartLights
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Graphics
+\    Summary: Show the lights at the start of the race
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The lights at the start of the race follow this patern:
+\
+\   * The lights are initially off, so they show as three lights with a white
+\     border and black interior.
+\
+\   * Once we have started our engine, the timer starts and after a pause the
+\     lights turn blue. During this time we can't move, but we can rev the
+\     engine.
+\
+\   * After another pause, the lights turn green and we can start the race.
+\
+\   * After another pause, the lights disappear.
+\
+\ This is implemented by the counter in raceStarting, which works like this.
+\
+\ When a race is about to start, raceStarting is set to 128, and stays on this
+\ value until the engine is started, at which point it starts to count down,
+\ with one tick per iteration of the main loop, working through the following
+\ sequence:
+\
+\   * 128 = show black lights, engine not yet started
+\
+\   * Start counting down from 240 once engine starts
+\
+\   * 240-192 = show black lights
+\
+\   * 191-161 = show blue lights
+\
+\   * 160 = keep showing blue lights and stop counting down until main loop
+\           counter is a multiple of 64
+\
+\   * Start counting down from 40 once loop counter is a multiple of 64
+\
+\   * 40-1 = show green lights
+\
+\   * 0 = show no lights (race has started)
 \
 \ ******************************************************************************
 
-.sub_C7B4A
+.ShowStartLights
 
- LDA raceStarted
- BPL L7B9B
- LDX L006D
- BEQ L7B9B
- BPL L7B64
- CPX #&80
- BNE L7B64
- BIT L0061
- BPL L7B5E
- LDX #&F0
+ LDA raceStarted        \ If bit 7 of raceStarted is clear then this is either
+ BPL star9              \ a practice or qualifying lap, so jump to star9 to
+                        \ return from the subroutine, as there is no need for
+                        \ starting lights
 
-.L7B5E
+ LDX raceStarting       \ If raceStarting = 0, then the race is not in the
+ BEQ star9              \ process of starting (i.e. it's already started), so
+                        \ jump to star9 to return from the subroutine, as there
+                        \ is no need for starting lights
 
- LDY #&00
- LDA #&80
- BNE L7B81
+ BPL star2              \ If raceStarting <= 127, jump to star2 to decrement
+                        \ the raceStarting counter (this instruction isn't
+                        \ necessary as the following comparison covers the same
+                        \ test, so this branch could be removed)
 
-.L7B64
+ CPX #128               \ If raceStarting <> 128, jump to star2 to decrement
+ BNE star2              \ the raceStarting counter
 
- CPX #&A0
- BEQ L7B75
- DEX
- BPL L7B7D
- CPX #&C0
- BCS L7B5E
+                        \ If we get here then raceStarting = 128, which means
+                        \ the lights are showing as black, and we are waiting
+                        \ for the engine to start to continue the countdown
 
-.L7B6F
+ BIT engineStatus       \ If bit 7 of engineStatus is clear, then the engine is
+ BPL star1              \ not yet on, so jump to star1 to keep the value of X
+                        \ (and therefore the value of raceStarting) at 128, as
+                        \ we only move on to the second stage once we have
+                        \ started our engine
 
- LDA #&A5
- LDY #&77
- BNE L7B81
+ LDX #240               \ If we get here then the engine has started, so set
+                        \ X = 240 to store as the updated value of raceStarting,
+                        \ which can now start ticking down
 
-.L7B75
+.star1
 
- LDA L006A
- AND #&3F
- BNE L7B6F
- LDX #&28
+                        \ If we get here then the lights are off
 
-.L7B7D
+ LDY #0                 \ Set Y to the EOR pattern that doesn't flip any pixels,
+                        \
+                        \ See star8 below for an explanation of the EOR pattern
 
- LDA #&F2
- LDY #&05
+ LDA #%10000000         \ Set A to a pixel byte containing four pixels with
+                        \ colours 2, 0, 0, 0 (white, black, black, black)
 
-.L7B81
+ BNE star6              \ Jump to star6 to store the updated value of X in
+                        \ raceStarting and draw the lights (this BNE is
+                        \ effectively a JMP as A is never zero)
 
- STX L006D
- PHA
- STY T
- LDA #&F0
- LDX #&09
+.star2
 
-.L7B8A
+                        \ If we get here, then X is non-zero and X <> 128, so
+                        \ the engine has started and the light sequence has
+                        \ started
 
- STA L42C0,X
- DEX
- BPL L7B8A
- PLA
- LDX #&05
+ CPX #160               \ If X = 160, jump to star4 to consider switching from
+ BEQ star4              \ the blue lights to the green lights
 
-.L7B93
+ DEX                    \ Decrement X
 
- STA L42C2,X
- EOR T
- DEX
- BPL L7B93
+ BPL star5              \ If X is positive, jump to star5 to display the green
+                        \ lights
 
-.L7B9B
+ CPX #192               \ If X >= 192, jump to star1
+ BCS star1
 
- RTS
+.star3
+
+                        \ If we get here then the lights are blue (the second
+                        \ stage)
+
+ LDA #%10100101         \ Set A to a pixel byte containing four pixels with
+                        \ colours 2, 1, 2, 1 (white, blue, white, blue)
+
+ LDY #%01110111         \ Set Y to the EOR pattern that flips the above to
+                        \ %11010010, i.e. colours 2, 2, 1, 2 (white, white,
+                        \ blue, white)
+                        \
+                        \ See star8 below for an explanation of the EOR pattern
+
+ BNE star6              \ Jump to star6 to store the updated value of X in
+                        \ raceStarting and draw the lights (this BNE is
+                        \ effectively a JMP as A is never zero)
+
+.star4
+
+ LDA mainLoopCounterLo  \ If mainLoopCounterLo mod 64 <> 0, which will be true
+ AND #63                \ for 63 out of 64 iterations round the main loop, jump
+ BNE star3              \ to star3 to display the blue lights
+
+                        \ Otherwise it is time to switch on the green lights
+
+ LDX #40                \ Set X = 40
+
+.star5
+
+                        \ If we get here then the lights are green (the third
+                        \ and final stage)
+
+ LDA #%11110010         \ Set A to a pixel byte containing four pixels with
+                        \ colours 2, 2, 3, 2 (white, white, green, white)
+
+ LDY #%00000101         \ Set Y to the EOR pattern that flips the above to
+                        \ %11110111, i.e. colours 2, 3, 3, 3 (white, green,
+                        \ green, green)
+                        \
+                        \ See star8 below for an explanation of the EOR pattern
+
+.star6
+
+ STX raceStarting       \ Store the updated value of X in raceStarting
+
+                        \ We now draw the lights, starting with the white border
+                        \ lines, and then the lights themselves using the pixel
+                        \ byte in A and the EOR pattern in Y
+                        \
+                        \ We only need to draw the left set of lights, as the
+                        \ screen buffer will replicate the other two sets to the
+                        \ right
+                        \
+                        \ The whole light takes up ten pixel rows: two rows for
+                        \ the top edge, six rows for the light bulb, and another
+                        \ two rows for the bottom edge
+
+ PHA                    \ Store the pixel byte in A on the stack, so we can
+                        \ retrieve it below when drawing the lights
+
+ STY T                  \ Store the EOR pattern in T, so we can retrieve it when
+                        \ drawing the lights
+
+ LDA #%11110000         \ Set A to a pixel byte containing four pixels with
+                        \ colours 2, 2, 2, 2 (white, white, white, white), for
+                        \ drawing the edges, which we actually draw as a full
+                        \ block of white, and then fill in the centre later
+
+ LDX #9                 \ The light contains ten pixel rows, so set a row
+                        \ counter in X
+
+.star7
+
+ STA dashData37+36,X    \ Store the X-th row of the light in the screen buffer,
+                        \ in dash data block 37 (the screen drawing routine will
+                        \ replicate the light in blocks 38 and 39)
+
+ DEX                    \ Decrement the pixel row counter
+
+ BPL star7              \ Loop back until we have drawn all ten rows of the
+                        \ light
+
+ PLA                    \ Set A to the pixel byte for the lights that we stored
+                        \ on the stack above
+
+ LDX #5                 \ The central bulb of the light is six pixel rows, so
+                        \ set a row counter in X
+
+.star8
+
+ STA dashData37+38,X    \ Store the X-th row of the light in the screen buffer,
+                        \ again in dash data block 37, starting two pixel rows
+                        \ after the edge that we drew above
+
+ EOR T                  \ Flip the pixels by EOR'ing with T, so the pattern of
+                        \ the bulb pixels flips with each row required
+                        \
+                        \ This means the green light looks like this:
+                        \
+                        \    white, white, green, white      ..x.
+                        \    white, green, green, green      .xxx
+                        \    white, white, green, white      ..x.
+                        \    white, green, green, green      .xxx
+                        \    white, white, green, white      ..x.
+                        \    white, green, green, green      .xxx
+                        \
+                        \ and the blue light looks like this:
+                        \
+                        \   white, blue,  white, blue        .x.x
+                        \   white, white, blue,  white       ..x.
+                        \   white, blue,  white, blue        .x.x
+                        \   white, white, blue,  white       ..x.
+                        \   white, blue,  white, blue        .x.x
+                        \   white, white, blue,  white       ..x.
+                        \
+                        \ The EOR pattern for the black lights is 0, so there is
+                        \ no flipping and every row is the same:
+                        \
+                        \   white, black, black, black       .xxx
+                        \   white, black, black, black       .xxx
+                        \   white, black, black, black       .xxx
+                        \   white, black, black, black       .xxx
+                        \   white, black, black, black       .xxx
+                        \   white, black, black, black       .xxx
+
+ DEX                    \ Decrement the pixel row counter
+
+ BPL star8              \ Loop back until we have drawn all six rows of the
+                        \ bulb
+
+.star9
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -33085,8 +33275,10 @@ ENDMACRO
 
                         \ If we get here then N <= Y < RR, so we draw a pixel
                         \ byte of black pixels to represent the car, with the
-                        \ pixels randomised but tending to black, especially
-                        \ with lower values of L0061
+                        \ pixels randomised but tending to black when the
+                        \ engine is on (if the engine is off, then all the
+                        \ pixels are black, so this part simulates the mirror
+                        \ shuddering when the engine is on)
 
  LDX VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which will be a pretty random figure
@@ -33095,8 +33287,10 @@ ENDMACRO
                         \ switches some of the white pixels (colour 2) to black
                         \ (colour 0) in the pixel byte in A
 
- AND L0061              \ Switch more pixels to black, depending on the value of
-                        \ L0061
+ AND engineStatus       \ If our engine is off, then engineStatus is zero and
+                        \ all the pixels are set to black, but if the engine is
+                        \ on, engineStatus is &FF so this instruction has no
+                        \ effect, leaving the image randomised
 
 .mirr2
 
