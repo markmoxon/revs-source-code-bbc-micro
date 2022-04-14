@@ -5843,81 +5843,120 @@ ORG &0B00
  LSR A                  \ driver 23
  TAX
 
- LDA L0017
+ LDA L0017              \ If L0017 is non-zero, jump to C1557
  BNE C1557
- LDA L0001
+
+                        \ We get here if L0017 is zero
+
+ LDA L0001              \ If bit 0 of L0001 is set, jump to C152E
  LSR A
  BCS C152E
 
- LDA objSectionCount+23
- CMP trackSection5a,Y
- BCS C1532
+ LDA objSectionCount+23 \ If driver 23's progress through the track section is
+ CMP trackSection5a,Y   \ >= the trackSection5a for the section, jump to C1532
+ BCS C1532              \ to move on to the next track section
+
+                        \ We get here if L0017 is zero, bit 3 of L0001 is clear,
+                        \ and driver 23's progress through the track section is
+                        \ < the trackSection5a for the section
 
 .C1527
 
- LDA L5FB0,X            \ If bit 6 of L5FB0 for section X is set, jump to C1573
- ORA #&40
- BNE C1573
+ LDA L5FB0,X            \ Set A to L5FB0 for section X, with bit 6 set
+ ORA #%01000000
+
+ BNE C1573              \ Jump to C1573 to store A in dashDataBlock+1 for this
+                        \ section and return from the subroutine (this BNE is
+                        \ effectively a JMP as A is never zero)
 
 .C152E
 
- LDA L0020
- BMI C1538
+ LDA L0020              \ If bit 7 of L0020 is set, then trackMaxSpeed > 127 for
+ BMI C1538              \ this section, so jump to C1538
 
 .C1532
 
- TYA
- CLC
- ADC #8
+ TYA                    \ Set Y = Y + 8
+ CLC                    \
+ ADC #8                 \ So Y contains the number * 8 of the next track section
  TAY
- INX
+
+ INX                    \ Increment X, so X contains the number of the next
+                        \ track section
 
 .C1538
 
- LDA trackSection0b,Y
- AND #1
+ LDA trackSection0b,Y   \ If bit 0 of the track section's trackSection0b is
+ AND #1                 \ clear, jump to C1527
  BEQ C1527
- LDA trackSection5a,Y
+
+ LDA trackSection5a,Y   \ Set L0017 = track section's trackSection5a
  STA L0017
- BEQ C1527
- LDA trackMaxSpeed,Y
- STA L0020
- AND #&7F
- STA L0018
 
- LDA L5FB0,X
- STA L0016
+ BEQ C1527              \ If L0017 = 0, jump to C1527
 
- JMP C1573
+ LDA trackMaxSpeed,Y    \ Set L0020 = track section's maximum speed, including
+ STA L0020              \ bit 7
+
+ AND #%01111111         \ Set L0018 = bits 0-6 of the track section's maximum
+ STA L0018              \ speed
+
+ LDA L5FB0,X            \ Set A = L5FB0 for the track section
+
+ STA L0016              \ Set L0016 = L5FB0 for the track section
+
+ JMP C1573              \ Jump to C1573 to store A in dashDataBlock+1 for this
+                        \ section and return from the subroutine (this BNE is
+                        \ effectively a JMP as A is never zero)
 
 .C1557
 
- DEC L0017
- LDA L0017
+                        \ We get here if L0017 is non-zero
+
+ DEC L0017              \ Decrement L0017
+
+ LDA L0017              \ Set T = L0017 / 8
  LSR A
  LSR A
  LSR A
  STA T
- LDA L0017
+
+ LDA L0017              \ Set A = L0017 - L0018
  SEC
  SBC L0018
- BCS C156D
- ADC T
- LDA #0
- BCS C1573
+
+ BCS C156D              \ If the subtraction didn't underflow, i.e. L0017 >=
+                        \ L0018, jump to C156D to store L0016 in dashDataBlock+1
+                        \ for this section and return from the subroutine
+
+ ADC T                  \ Set A = A + T
+                        \       = L0017 - L0018 + L0017 / 8
+
+ LDA #0                 \ Set A = 0
+
+ BCS C1573              \ If the result above didn't overflow, i.e.
+                        \
+                        \   L0017 - L0018 + L0017 / 8 <= 255
+                        \
+                        \ then jump to C1573 to store 0 in dashDataBlock+1 for
+                        \ this section and return from the subroutine
+                        \
+                        \ Otherwise store -L0016 in dashDataBlock+1 for this
+                        \ section and return from the subroutine
 
 .C156D
 
- LDA L0016
- BCS C1573
- EOR #&80
+ LDA L0016              \ Set A = L0016
+
+ BCS C1573              \ If the C flag is clear, flip bit 7 of A
+ EOR #%10000000
 
 .C1573
 
- LDY zIndex
+ LDY zIndex             \ Set dataBlockIndex+1 for this z-index to A
  STA dataBlockIndex+1,Y
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -24760,7 +24799,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   
+\   A                   Value from trackData0D0, trackData0F0, trackData0E0
 \
 \   W                   Gets decremented each call, 2 then 1 then 0 (z, y, x)
 \
@@ -24808,7 +24847,7 @@ ENDIF
  DEC W                  \ Decrement the axis index in W, ready for the next call
                         \ to sub_C4D21
 
- LDA xVector5Lo,Y       \ Set xVector = xVector5 - (U T)
+ LDA xVector5Lo,Y       \ Set xVector6 = xVector5 - (U T)
  SEC                    \
  SBC T                  \ starting with the low bytes
  STA xVector6Lo,Y
