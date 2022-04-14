@@ -58,9 +58,11 @@ ORG CODE%
 \
 \ Key:
 \   || is a straight, with just two vectors defined (start and end)
-\   {} is a straight, but with multiple vectors
-\   -> is a right turn
-\   <- is a left turn
+\   {} is a very gentle curve
+\   -> is a right corner
+\   <- is a left corner
+\
+\ Bit 0 of trackSectionFlag is clear for ||, set for the others
 \
 \ Section                [road signs]   Description                       Size
 \
@@ -93,7 +95,7 @@ ORG CODE%
 \ trackData      = &5300
 \ Bits 4-7 of trackData+0 (i.e. first digit in hex value) is an index into
 \ trackData+&0D0, trackData+&0E0, trackData+&0F0
-\ Bits 0-3 gets put into L0007 in sub_C1267
+\ Bits 0-2 gets put into L0007 in sub_C1267
 \
 \ .xTrackSectionIHi
 \ High byte of the start x-coordinate of the inside verge of each track section
@@ -701,6 +703,8 @@ ORG CODE%
 \ ------------------------------------------------------------------------------
 \
 \ .trackSectionFlag
+\ Bit 0: 0 = straight section (only one track vector)
+\        1 = curved section (multiple track vectors)
 \ trackData+&600 = &5900
 \
 \ .xTrackSectionILo

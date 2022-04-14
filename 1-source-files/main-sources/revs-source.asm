@@ -118,14 +118,13 @@ ORG &0000
                         \
                         \   * Non-zero = moving
 
-.L0001
+.thisSectionFlags
 
- SKIP 1                 \ 
+ SKIP 1                 \ The track section flags for the current z-stack
 
 .thisVectorNumber
 
- SKIP 1                 \ The number of the track vector currently being
-                        \ processed
+ SKIP 1                 \ The number of the track vector for the current z-stack
 
 .currentPosition
 
@@ -289,7 +288,7 @@ ORG &0000
                         \
                         \ Track sections are numbered from 0 to 23, so this
                         \ ranges from 0 to 184
-                        
+
 .zStack96
 
  SKIP 1                 \ Contains zStack - 96
@@ -369,9 +368,17 @@ ORG &0000
                         \ Set to the current player's position in BCD in
                         \ ResetVariables
 
-.L0030
+.pastHalfway
 
- SKIP 1                 \ 
+ SKIP 1                 \ Stores which half of the track the player is in
+                        \
+                        \   * 0 = the first half of the track
+                        \
+                        \   * 1 = the second half of the track
+                        \
+                        \ The halfway point is defined as the middle track
+                        \ section, or if there is an odd number of track
+                        \ sections, the section before the middle track section
                         \
                         \ Set to 1 in ResetVariables
 
@@ -960,7 +967,7 @@ ORG &0000
  SKIP 1                 \ Temporary storage, used in a number of places
 
 .HH
- 
+
  SKIP 1                 \ This byte does not appear to benused
 
 .II
@@ -2474,6 +2481,9 @@ ORG &0B00
 \
 \   X                   The offset of the vectorX variable to update:
 \
+\                         * Index * 3 of a z-stack entry to use the section
+\                           coordinates for the inner track from this z-stack
+\
 \                         * &F4 = xVector7
 \
 \                         * &FA = xVector3
@@ -2481,6 +2491,9 @@ ORG &0B00
 \                         * &FD = xVector4
 \
 \   Y                   The offset of the vectorY variable to add:
+\
+\                         * Index * 3 of a z-stack entry to use the section
+\                           coordinates for the inner track from this z-stack
 \
 \                         * &F4 = xVector7
 \
@@ -2493,7 +2506,7 @@ ORG &0B00
 \   (TT U)              The value to add to the second axis
 \
 \   (UU V)              The value to add to the third axis
-\   
+\
 \ ******************************************************************************
 
 .AddVectors
@@ -3654,7 +3667,7 @@ ORG &0B00
 
  STY volumeLevel        \ Store the updated volume level in volumeLevel
 
- TYA                    \ Set A = -Y, negated using two's complement 
+ TYA                    \ Set A = -Y, negated using two's complement
  EOR #&FF
  CLC
  ADC #1
@@ -3975,7 +3988,7 @@ ORG &0B00
                         \ If we get here then this is a practice or qualifying
                         \ lap
 
- LDX #1                 \ Add time to the lap timer at (lapMinutes lapSeconds 
+ LDX #1                 \ Add time to the lap timer at (lapMinutes lapSeconds
  JSR AddTimeToTimer     \ lapTenths), setting the C flag if the time has changed
 
  BIT updateDrivingInfo  \ If bit 6 of updateDrivingInfo is set then we have
@@ -4267,9 +4280,9 @@ ORG &0B00
                         \ We now use the currently unused driver 23 to work out
                         \ the number of z-stack entries we need to initialise in
                         \ front of the current driver, by first moving forwards
-                        \ untilwe are exactly 32 from the current player, then
+                        \ until we are exactly 32 from the current player, then
                         \ moving backwards by 49, and then moving backwards to
-                        \ thestart of the track section, leaving L0042 set to
+                        \ the start of the track section, leaving L0042 set to
                         \ the total distance moved backwards
 
 .rcar6
@@ -4355,17 +4368,18 @@ ORG &0B00
  LDA #0                 \ Set zStack = 0
  STA zStack
 
-                        \ We now call sub_C12F7 L0042 times, where L0042 is the
-                        \ number of times we moved driver 23 backwards in the
-                        \ above
+                        \ We now call SetNextZStackEntry L0042 times, where
+                        \ L0042 is the number of times we moved driver 23
+                        \ backwards in the above
 
 .rcar10
 
- JSR sub_C12F7          \ Call sub_C12F7 ???
+ JSR SetNextZStackEntry \ ???
 
  DEC L0042              \ Decrement the counter in L0042
 
- BNE rcar10             \ Loop back until we have called sub_C12F7 L0042 times
+ BNE rcar10             \ Loop back until we have called SetNextZStackEntry
+                        \ L0042 times
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
                         \ MoveObjectForward will update the lap number and lap
@@ -4705,7 +4719,7 @@ ORG &0B00
                         \ updated z-stack entry, returning the projected screen
                         \ coordinates in xObjectScreen
 
- LDA xObjectScreenLo,X  \ Copy the low byte of the screen x-coordinate to 
+ LDA xObjectScreenLo,X  \ Copy the low byte of the screen x-coordinate to
  STA xPlayerScreenLo    \ xPlayerScreenLo
 
  LDA xObjectScreenHi,X  \ Copy the low byte of the screen x-coordinate to
@@ -4794,8 +4808,8 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ This routine is normally called with X as a multiple of 3 in the range 0 to
-\ 117, representing z-stack entry 0 to 39. The routine copies the following track
-\ section coordinates from the track section data for section Y * 8:
+\ 117, representing z-stack entry 0 to 39. The routine copies the following
+\ track section coordinates from the track section data for section Y * 8:
 \
 \   * xTrackSectionI
 \   * yTrackSectionI
@@ -4905,94 +4919,123 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C125A
+\       Name: SetZStack96
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Subtract 96 from the current z-stack index * 3
+\    Summary: Set the zStack96 index to 96 + the current z-stack index * 3
 \
 \ ******************************************************************************
 
-.sub_C125A
+.SetZStack96
 
- LDA zStack             \ Set A = zStack - 96
+ LDA zStack             \ Set A = the current z-stack index * 3 - 96
  SEC
  SBC #96
 
- BPL C1264              \ If A < 0, set A = A + 120
- CLC
+ BPL zsta1              \ If A < 0, set A = A + 120, so the index number wraps
+ CLC                    \ around to the end of the stack
  ADC #120
 
-.C1264
+.zsta1
 
- STA zStack96           \ Set zStack96 = A
+ STA zStack96           \ Set zStack96 to the updated index
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C1267
+\       Name: SetZStackEntry
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Populate the current z-stack entry with track section coordinates
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   sectionBehind       The number * 8 of the track section behind us, for when
+\                       we are facing backwards
+\
+\   zStack              The index * 3 of the current z-stack
+\
+\ Returns:
+\
+\   L0007               Bits 0-2 from trackSection0a, or 2 if we are facing
+\                       backwards
+\
+\   xSectionCoordI      Start coordinates for the inside of the track section,
+\                       stored in the current z-stack
+\
+\   xSectionCoordO      Start coordinates for the outside of the track section,
+\                       stored in the current z-stack
+\
+\   thisVectorNumber    The vector number from the start of the track section
+\
+\   thisSectionFlags    The track section flags for the section containing
+\                       driver 23
+\
+\   zStackFlags         Zeroed for the current z-stack
 \
 \ ******************************************************************************
 
-.sub_C1267
+.SetZStackEntry
 
- LDX zStack
- LDY #6
+ LDX zStack             \ Set X to the index * 3 of the current z-stack
+
+ LDY #6                 \ Set L62F5 = 6
  STY L62F5
- LDA L0062
- BEQ C1274
- STY L0006
 
-.C1274
+ LDA L0062              \ If L0062 = 0, skip the following instruction
+ BEQ setz1
 
- LDA directionFacing    \ If our car is facing backwards, jump to C1284
- BMI C1284
+ STY L0006              \ L0062 <> 0, so set L0006 = 6
+
+.setz1
+
+ LDA directionFacing    \ If our car is facing backwards, jump to setz2
+ BMI setz2
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
 
- JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xSectionCoordI and xSectionCoordO, and
-                        \ set thisVectorNumber to trackSectionFrom
+ JSR GetSectionCoords   \ Copy the start coordinates for the track section
+                        \ into xSectionCoordI and xSectionCoordO, and set
+                        \ thisVectorNumber to trackSectionFrom
 
- LDA trackSection0a,Y
- JMP C128E
+ LDA trackSection0a,Y   \ Set A = trackSection0a for the track section, so
+                        \ bits 0-2 can be set as the value for L0007 below
 
-.C1284
+ JMP setz3              \ Jump to setz3 to skip the following
 
- LDY sectionBehind
+.setz2
 
- JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xSectionCoordI and xSectionCoordO, and
-                        \ set thisVectorNumber to trackSectionFrom
+ LDY sectionBehind      \ Set Y to the number * 8 of the track section in
+                        \ sectionBehind
+
+ JSR GetSectionCoords   \ Copy the start coordinates for the track section
+                        \ into xSectionCoordI and xSectionCoordO, and set
+                        \ thisVectorNumber to trackSectionFrom
 
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
                         \ track in the direction we are facing
 
- LDA #2
+ LDA #2                 \ Set A = 2, so use as the value for L0007 below
 
-.C128E
+.setz3
 
- AND #7
+ AND #%00000111         \ Set L0007 = bits 0-2 from A
  STA L0007
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
 
- LDA trackSectionFlag,Y
- STA L0001
+ LDA trackSectionFlag,Y \ Set thisSectionFlags to the track section flags for
+ STA thisSectionFlags   \ the section containing driver 23
 
- LDA #0
+ LDA #0                 \ Zero the flags for the current z-stack
  STA zStackFlags,X
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5126,215 +5169,442 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C12F7
+\       Name: SetNextZStackEntry (Part 1 of 1)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Set up the next z-stack entry
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part does the following:
+\
+\   * Move the index on to the next z-stack entry
+\
+\   * Initialise the new z-stack entry if we are entering a new track section
+\
+\   * Set pastHalfway
+\
+\   * Set (SS T), (TT U) and (UU V) to the xTrackVectorI, yTrackVectorI and
+\     zTrackVectorI vectors
 \
 \ ******************************************************************************
 
-.sub_C12F7
+.SetNextZStackEntry
 
  LDA zStack             \ Set A to the index * 3 of the current z-stack entry
 
  STA zStackPrevious     \ Store A in zStackPrevious, as we are about to move on
                         \ to the next z-stack entry
 
- CLC                    \ Set A = zStack + 3 
+ CLC                    \ Set A = zStack + 3
  ADC #3                 \
                         \ to move on to the next z-stack entry
 
  CMP #120               \ If A < 120, then we haven't reached the end of the
- BCC C1304              \ z-stack, so jump to C1304 to store the updated value
+ BCC next1              \ z-stack, so jump to next1 to store the updated value
 
  LDA #0                 \ We just reached the end of the z-stack, so set A = 0
                         \ to wrap round to the start
 
-.C1304
+.next1
 
- STA zStack             \ Set zStack to the updated z-stack index * 3
+ STA zStack             \ Set zStack to the index * 3 of the new z-stack entry
 
  LDX #23                \ Set X to driver 23
 
- LDA directionFacing    \ If our car is facing backwards, jump to C1236
- BMI C1326
+ LDA directionFacing    \ If our car is facing backwards, jump to next3
+ BMI next3
 
- LDA trackSectionCount
+ LDA trackSectionCount  \ Set A to half the total number of track sections * 4
  LSR A
- AND #%11111000
- CMP objTrackSection,X
- BNE C131B
 
- LDA #1                 \ Set L0030 = 1
- STA L0030
+ AND #%11111000         \ Reduce A to the nearest multiple of 8
 
-.C131B
+ CMP objTrackSection,X  \ If A <> the number of the track section * 8 for driver
+ BNE next2              \ 23, then we are not halfway through all the track
+                        \ sections, so jump to next2
 
- JSR MoveObjectForward  \ Move driver 23 forwards along the track
+                        \ If we get here then driver 23 is at the halfway point
+                        \ round the track in terms of track section numbers
 
- BCC C1333
- JSR sub_C1267
- JMP C13CC
+ LDA #1                 \ Set pastHalfway = 1, to denote that driver 23 is in
+ STA pastHalfway        \ the second half of the track
 
-.C1326
+.next2
 
- LDA objTrackSection+23
- STA sectionBehind
+ JSR MoveObjectForward  \ Move driver 23 forwards along the track, setting the
+                        \ C flag if this moves the driver into the next track
+                        \ section
 
- JSR MoveObjectBack     \ Move driver 23 backwards along the track
+ BCC next4              \ If driver 23 is still in the same track section, jump
+                        \ to next4
 
- BCC C1333
- JSR sub_C1267
+ JSR SetZStackEntry     \ Otherwise we just moved into a new track section, so
+                        \ populate the current z-stack entry with the new track
+                        \ section coordinates, and set thisVectorNumber to the
+                        \ number of the track vector for the new z-stack
 
-.C1333
+ JMP next13             \ Jump to next13 to finish setting up the z-stack entry,
+                        \ skipping the part that sets the coordinates and flags,
+                        \ as those have just been set when creating the entry
+                        \ for the new track section
 
- LDY thisVectorNumber
+.next3
 
- JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
-                        \ xTrackVectorI, yTrackVectorI and zTrackVectorI
+                        \ If we get here then our car is facing backwards
 
- LDX zStack
- LDA L0001
- LSR A
+ LDA objTrackSection+23 \ Set sectionBehind to the number * 8 of the track
+ STA sectionBehind      \ section for driver 23
+
+ JSR MoveObjectBack     \ Move driver 23 backwards along the track, setting the
+                        \ C flag if this moves the driver into the next track
+                        \ section
+
+ BCC next4              \ If driver 23 is still in the same track section, jump
+                        \ to next4
+
+ JSR SetZStackEntry     \ Otherwise we just moved into a new track section, so
+                        \ populate the current z-stack entry with the new track
+                        \ section coordinates, and set thisVectorNumber to the
+                        \ number of the track vector for the new z-stack
+
+.next4
+
+ LDY thisVectorNumber   \ Set Y to the number of the track vector for the new
+                        \ z-stack
+
+ JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the coordinates of
+                        \ the track vector for the new z-stack entry, so:
+                        \
+                        \   [ (SS T) ]   [ xTrackVectorI ]
+                        \   [ (TT U) ] = [ yTrackVectorI ]
+                        \   [ (UU V) ]   [ zTrackVectorI ]
+                        \
+                        \ In other words, they contain the vector that we need
+                        \ to add to the previous z-stack entry's coordinates in
+                        \ order to get the coordinates for the new z-stack entry
+                        \
+                        \ Or, even simpler, they contain the vector from the
+                        \ previous z-stack entry's coordinates to the new one
+
+\ ******************************************************************************
+\
+\       Name: SetNextZStackEntry (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Set the flags for the new z-stack entry
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part does the following:
+\
+\   * Set the flags for the new z-stack entry
+\
+\ Set the flags for the new z-stack entry to the flags for the track section
+\ from the track data, but with these changes:
+\
+\ Curve:
+\
+\   * If driver 23 is not exactly halfway through the section, clear bits 3-5
+\
+\ Straight:
+\
+\   * If driver 23's progress through the section is not in the range 1 to 9,
+\     clear bits 1, 2
+\
+\   * If the distance yet to cover in this section = 14 or 21, clear bit 5
+\
+\   * If the distance yet to cover in this section <> 7, 14 or 21, clear bits
+\     3, 4, 5
+\
+\ ******************************************************************************
+
+ LDX zStack             \ Set X to the index * 3 of the new z-stack entry
+
+ LDA thisSectionFlags   \ Store bit 0 of the current section's flags on the
+ LSR A                  \ stack using the C flag
  PHP
- LDA L0001
- BCS C134F
- LDY objSectionCount+23
- CPY #1
- BCC C134D
- CPY #&0A
- BCC C134F
 
-.C134D
+ LDA thisSectionFlags   \ Set A to the current section's flags
 
- AND #&F9
+ BCS next6              \ If bit 0 of the current section's flag byte is set,
+                        \ then this is a curved section, so jump to next6 with
+                        \ A set to the current section's flags, so the new
+                        \ z-stack retains the same flags
 
-.C134F
+                        \ If we get here then this is a straight track section
 
- STA W
+ LDY objSectionCount+23 \ Set Y to driver 23's progress through the track
+                        \ section
+
+ CPY #1                 \ If Y < 1, jump to next5
+ BCC next5
+
+ CPY #10                \ If Y < 10, jump to next6 with A set to
+ BCC next6              \ thisSectionFlags
+
+.next5
+
+                        \ If we get here then Y < 1 or Y >= 10
+
+ AND #%11111001         \ Clear bits 1 and 2 of the current section's flags in A
+
+.next6
+
+ STA W                  \ Store A in W, so W contains:
+                        \
+                        \   * The current section's flags if this is a curve, or
+                        \     if this is a straight and driver 23's progress
+                        \     through the track section is in the range 1 to 9
+                        \
+                        \   * The current section's flags with bits 1 and 2
+                        \     cleared otherwise (i.e. if this is a straight and
+                        \     driver 23's progress through the track section is
+                        \     not in the range 1 to 9)
+                        \
+                        \ We use W to build the flags for the new z-stack entry
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
 
- LDA trackSectionSize,Y
+ LDA trackSectionSize,Y \ Set A to the size of the track section for driver 23
 
- PLP
- BCC C1365
- LSR A
- TAY
- LDA W
- CPY objSectionCount+23
- BEQ C137C
- BNE C1378
+ PLP                    \ If bit 0 of the current section's flag byte is clear,
+ BCC next7              \ then this is a straight section, so jump to next7 with
+                        \ A set to the size of the track section for driver 23
 
-.C1365
+                        \ If we get here then this is a curved track section
 
- SEC
- SBC objSectionCount+23
- TAY
- LDA W
- CPY #7
- BEQ C137C
- CPY #&0E
- BEQ C137A
- CPY #&15
- BEQ C137A
+ LSR A                  \ Set Y = A / 2
+ TAY                    \
+                        \ So Y contains half the size of the curved section
 
-.C1378
+ LDA W                  \ Set A = W, which contains the flags we are building
+                        \ for the new z-stack
 
- AND #&E7
+ CPY objSectionCount+23 \ If Y = driver 23's progress through the track section,
+ BEQ next10             \ then the driver is exactly halfway round the curve, so
+                        \ jump to next10 to store A in the z-stack entry's flags
 
-.C137A
+ BNE next8              \ Otherwise jump to next8 to clear bits 3-5 of A before
+                        \ storing it in the z-stack entry's flags
 
- AND #&DF
+.next7
 
-.C137C
+                        \ If we get here then this is a straight section and A
+                        \ is set to the size of the track section for driver 23
 
- AND L0001
- STA zStackFlags,X
- LDY zStackPrevious
+ SEC                    \ Set Y = A - driver 23's progress through the track
+ SBC objSectionCount+23 \ section
+ TAY                    \
+                        \ So Y contains the length of the track section that
+                        \ driver 23 has yet to cover
 
- JSR AddVectors
+ LDA W                  \ Set A = W, which contains the flags we are building
+                        \ for the new z-stack
 
- JSR CopySectionData    \ Copy the X-th ySectionCoordI to ySectionCoordO
+ CPY #7                 \ If Y = 7, jump to next10 to store A in the z-stack
+ BEQ next10             \ entry's flags
 
- LDY thisVectorNumber
- LDA #0
- STA SS
- STA UU
- LDA xTrackVectorO,Y
- BPL C1398
- DEC SS
+ CPY #14                \ If Y = 14 or 21, jump to next9 to clear bit 5 of A
+ BEQ next9              \ and store it in the z-stack entry's flags
+ CPY #21
+ BEQ next9
 
-.C1398
+                        \ Otherwise we clear bits 3-5 of A and store it in the
+                        \ z-stack entry's flags
 
- ASL A
- ROL SS
- ASL A
- ROL SS
- CLC
- ADC xSectionCoordILo,X
- STA xSectionCoordOLo,X
- LDA SS
- ADC xSectionCoordIHi,X
- STA xSectionCoordOHi,X
- LDA zTrackVectorO,Y
- BPL C13B4
- DEC UU
+.next8
 
-.C13B4
+ AND #%11100111         \ Clear bits 3 and 4 of A
 
- ASL A
- ROL UU
- ASL A
- ROL UU
- CLC
- ADC zSectionCoordILo,X
- STA zSectionCoordOLo,X
- LDA UU
- ADC zSectionCoordIHi,X
- STA zSectionCoordOHi,X
- JSR sub_C13DA
+.next9
 
-.C13CC
+ AND #%11011111         \ Clear bit 5 of A
 
- LDX zStack
- LDA thisVectorNumber
- STA zStackVector,X
- JSR sub_C125A
- JSR GetBestRacingLine
- RTS
+.next10
+
+ AND thisSectionFlags   \ Clear any bits in A that are already clear in the
+                        \ current section's flags, to ensure that the z-stack
+                        \ entry's flags only have flags set if they are set in
+                        \ the track section's flags
+
+ STA zStackFlags,X      \ Set the flags for the new z-stack entry to A
 
 \ ******************************************************************************
 \
-\       Name: sub_C13DA
+\       Name: SetNextZStackEntry (Part 3 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Set the inner and outer track coordinates for the new z-stack
+\             entry
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part calculates the inner track section coordinates for the new z-stack
+\ entry, as follows:
+\
+\   [ xSectionCoordI ]   [ previous xSectionCoordI ]   [ xTrackVectorI ]
+\   [ ySectionCoordI ] = [ previous ySectionCoordI ] + [ yTrackVectorI ]
+\   [ zSectionCoordI ]   [ previous zSectionCoordI ]   [ zTrackVectorI ]
+\
+\ It then calculates the outer track section coordinates for the new z-stack
+\ entry, as follows:
+\
+\   [ xSectionCoordO ]   [ xSectionCoordI ]   [ xTrackVectorO ]
+\   [ ySectionCoordO ] = [ ySectionCoordI ] + [       0       ] * 4
+\   [ zSectionCoordO ]   [ zSectionCoordI ]   [ zTrackVectorO ]
 \
 \ ******************************************************************************
 
-.sub_C13DA
+ LDY zStackPrevious     \ Set Y to the index * 3 of the previous z-stack entry
 
- LDA L0001
- AND #1
- BEQ sub_C13FB-1
+ JSR AddVectors         \ Add the (SS T), (TT U) and (UU V) vectors to the
+                        \ inner track section coordinates for the previous
+                        \ z-stack entry and store the result in the current
+                        \ z-stack entry:
+                        \
+                        \                                 [ (SS T) ]
+                        \   this entry = previous entry + [ (TT U) ]
+                        \                                 [ (UU V) ]
+                        \
+                        \ This correctly sets the inner track coordinates for
+                        \ the new z-stack entry, as we set the (SS T), (TT U)
+                        \ and (UU V) vectors at the end of part 1 to the vector
+                        \ from the previous z-stack entry's coordinates to the
+                        \ new one
+                        \
+                        \ In other words, this does the following:
+                        \
+                        \   [ xSectionCoordI ]   [ previous xSectionCoordI ]
+                        \   [ ySectionCoordI ] = [ previous ySectionCoordI ]
+                        \   [ zSectionCoordI ]   [ previous zSectionCoordI ]
+                        \
+                        \                        [ xTrackVectorI ]
+                        \                      + [ yTrackVectorI ]
+                        \                        [ zTrackVectorI ]
+
+ JSR CopySectionData    \ Copy the X-th ySectionCoordI to ySectionCoordO
+
+                        \ We now set the outer track coordinates for the new
+                        \ z-stack entry, as follows:
+                        \ 
+                        \   [ xSectionCoordO ]   [ xSectionCoordI ]   
+                        \   [ ySectionCoordO ] = [ ySectionCoordI ]
+                        \   [ zSectionCoordO ]   [ zSectionCoordI ]
+                        \
+                        \                        [ xTrackVectorO ]
+                        \                      + [       0       ] * 4
+                        \                        [ zTrackVectorO ]
+                        \
+                        \ Note that we don't have to do the y-coordinate
+                        \ addition, as ySectionCoordO was already set to
+                        \ ySectionCoordI when the z-stack entry was set up
+
+ LDY thisVectorNumber   \ Set Y to the number of the track vector for the new
+                        \ z-stack
+
+ LDA #0                 \ Set SS = 0, to use as the high byte in (SS A) below
+ STA SS
+
+ STA UU                 \ Set UU = 0, to use as the high byte in (UU A) below
+
+ LDA xTrackVectorO,Y    \ Set A = the x-coordinate of the outer track vector for
+                        \ the new z-stack
+
+ BPL next11             \ If A is negative, decrement SS to &FF so (SS A) has
+ DEC SS                 \ the correct sign
+
+.next11
+
+ ASL A                  \ Set (SS A) = (SS A) * 4
+ ROL SS                 \            = xTrackVectorO * 4
+ ASL A
+ ROL SS
+
+ CLC                    \ Add the inner track section x-coordinate and the outer
+ ADC xSectionCoordILo,X \ x-coordinate * 4 to get the outer x-coordinate for the
+ STA xSectionCoordOLo,X \ new z-stack entry, starting with the low bytes
+
+ LDA SS                 \ And then the high bytes
+ ADC xSectionCoordIHi,X
+ STA xSectionCoordOHi,X
+
+ LDA zTrackVectorO,Y    \ Set A = the z-coordinate of the outer track vector for
+                        \ the new z-stack
+
+ BPL next12             \ If A is negative, decrement UU to &FF so (UU A) has
+ DEC UU                 \ the correct sign
+
+.next12
+
+ ASL A                  \ Set (UU A) = (UU A) * 4
+ ROL UU                 \            = zTrackVectorO * 4
+ ASL A
+ ROL UU
+
+ CLC                    \ Add the inner track section z-coordinate and the outer
+ ADC zSectionCoordILo,X \ z-coordinate * 4 to get the outer z-coordinate for the
+ STA zSectionCoordOLo,X \ new z-stack entry, starting with the low bytes
+
+ LDA UU                 \ And then the high bytes
+ ADC zSectionCoordIHi,X
+ STA zSectionCoordOHi,X
+
+ JSR UpdateCurveVector  \ If this is a curved track section, update the value of
+                        \ thisVectorNumber to the next track vector along the
+                        \ track in the direction we are facing
+
+.next13
+
+ LDX zStack             \ Set X to the index * 3 of the new z-stack
+
+ LDA thisVectorNumber   \ Set zStackVector for the new z-stack to the number of
+ STA zStackVector,X     \ the track vector for the track section (which will be
+                        \ unchanged from the previous section if this is a
+                        \ straight, or the next track vector if this is a curve)
+
+ JSR SetZStack96        \ Update the zStack96 index to be 96 ahead of zStack
+
+ JSR GetBestRacingLine  \ Set zStackSteering for the new z-stack to the best
+                        \ racing line to take at this point in the section
+
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: UpdateCurveVector
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Move to the next track vector along in the direction we are
+\             facing, but only for curved track sections
+\
+\ ******************************************************************************
+
+.UpdateCurveVector
+
+ LDA thisSectionFlags   \ If bit 0 of the track section's flag byte is clear,
+ AND #1                 \ then this is a straight track section, so return from
+ BEQ sub_C13FB-1        \ the subroutine (as sub_C13FB-1 contains an RTS)
+
+                        \ Otherwise this is a curved track section, so fall
+                        \ through into UpdateVectorNumber to update the value
+                        \ of thisVectorNumber to the number of the next vector
+                        \ along the track
 
 \ ******************************************************************************
 \
 \       Name: UpdateVectorNumber
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Update thisVectorNumber to the next vector along the track in the
-\             direction we are facing
+\    Summary: Move to the next track vector along in the direction we are facing
+\
+\ ------------------------------------------------------------------------------
+\
+\ Returns:
+\
+\   thisVectorNumber    Set to the number of the next track vector along the
+\                       track in the direction in which we are facing
 \
 \ ******************************************************************************
 
@@ -5445,7 +5715,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   
 \
 \ ******************************************************************************
 
@@ -5455,19 +5727,21 @@ ORG &0B00
  EOR #%10000000         \ is facing in the other direction
  STA directionFacing
 
- JSR sub_C13DA
+ JSR UpdateCurveVector  \ If this is a curved track section, update the value of
+                        \ thisVectorNumber to the next track vector along the
+                        \ track in the direction we are facing
 
  STX L0042
 
 .P142B
 
- JSR sub_C12F7
+ JSR SetNextZStackEntry
 
  DEC L0042
 
  BNE P142B
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5878,7 +6152,8 @@ ORG &0B00
 \       Name: GetBestRacingLine
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Calculate the best racing line to take for the current track
+\             section
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5902,7 +6177,7 @@ ORG &0B00
 
                         \ We get here if L0017 is zero
 
- LDA L0001              \ If bit 0 of L0001 is set, jump to C152E
+ LDA thisSectionFlags   \ If bit 0 of thisSectionFlags is set, jump to C152E
  LSR A
  BCS C152E
 
@@ -5910,9 +6185,14 @@ ORG &0B00
  CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to C1532
  BCS C1532              \ to move on to the next track section
 
-                        \ We get here if L0017 is zero, bit 0 of L0001 is clear,
-                        \ and driver 23's progress through the track section is
-                        \ < the trackSectionTurn for the section
+                        \ If we get here, then:
+                        \
+                        \   * L0017 is zero
+                        \
+                        \   * Bit 0 of thisSectionFlags is clear
+                        \
+                        \   * Driver 23's progress through the track section is
+                        \     < the trackSectionTurn for the section
 
 .C1527
 
@@ -6560,7 +6840,7 @@ ENDIF
 
  LDA #&FF               \ Set A = -1 so we change down a gear
 
- BNE keys25             \ Jump to keys25 to change the gear 
+ BNE keys25             \ Jump to keys25 to change the gear
 
 .keys24
 
@@ -7011,8 +7291,8 @@ ENDIF
 
  LDA #&09               \ Set A = &09, so we add 9/100 of a second below
 
- LDY timerAdjust        \ If timerAdjust <> trackTimerAdjust (which is 24 for the
- CPY trackTimerAdjust   \ Silverstone track), jump to time1 to skip the
+ LDY timerAdjust        \ If timerAdjust <> trackTimerAdjust (which is 24 for
+ CPY trackTimerAdjust   \ the Silverstone track), jump to time1 to skip the
  BNE time1              \ following
 
                         \ If we get here then timerAdjust = trackTimerAdjust, so
@@ -7048,7 +7328,7 @@ ENDIF
 
  STA clockSeconds,X     \ Update the seconds value for the timer
 
- LDA clockMinutes,X     \ Finally, we add the minutes 
+ LDA clockMinutes,X     \ Finally, we add the minutes
  ADC #0
  STA clockMinutes,X
 
@@ -7242,7 +7522,9 @@ ENDIF
  LDA #1                 \ Set gearNumber = 1, to set the gears to neutral
  STA gearNumber
 
- STA L0030              \ Set L0030 = 1
+ STA pastHalfway        \ Set pastHalfway = 1, so the player is in the second
+                        \ half of the track (which is true for both practice
+                        \ and qualifying, as well as the starting grid)
 
  LDX #7                 \ Set L0009 = 7
  STX L0009
@@ -7254,7 +7536,7 @@ ENDIF
 
  DEX                    \ We now zero the six bytes at mirrorContents to clear
                         \ all six segments of the wing mirrors, so set X = 5 to
-                        \ use as a loop counter 
+                        \ use as a loop counter
 
 .rese6
 
@@ -7378,8 +7660,7 @@ ENDIF
 
  BEQ bgnd4              \ If it is zero, then this can't be the horizon line (as
                         \ we set that to a non-zero value above), so jump to
-                        \ bgnd4 we have not already set the colour
-                        \ jump to 
+                        \ bgnd4 as we have not already set the colour
 
  TXA                    \ If we get here then X is non-zero, so we must have
                         \ reached the horizon line, so set A to the value we
@@ -7723,7 +8004,7 @@ ENDIF
  ADC L30FC,Y
  STA L004F
 
- LDA var29Hi,Y          \ Modify the following instruction at mod_C2F4E and 
+ LDA var29Hi,Y          \ Modify the following instruction at mod_C2F4E and
  STA mod_C2F4E+2        \ mod_C2F90, depending on the value of Y:
  STA mod_C2F90+2        \
  LDA var29Lo,Y          \   * 0 = STA &7000,Y -> STA leftVergeStart,Y
@@ -8802,7 +9083,7 @@ ENDIF
                         \ In either case, this fills the pixel byte with the
                         \ correct contents to the left of this edge and stores
                         \ them in T
- 
+
  LDA rightOfEdge        \ Set A to a pixel byte with the pixels to the right of
  AND pixelsEdgeRight,X  \ the X-th pixel set to rightOfEdge, so this is the same
                         \ thing but with the bytes to the right of the edge
@@ -10142,7 +10423,7 @@ ELIF _SUPERIOR
  JSR GetTyreDashEdgeS   \ Modify the FillAfterObjectS routine and run it to copy
                         \ the edge bytes into the table at (S R)
 
- LDX #LO(P)             \ Set X so the call to GetTyreDashEdgeS modifies the 
+ LDX #LO(P)             \ Set X so the call to GetTyreDashEdgeS modifies the
                         \ FillAfterObjectS routine at back to drawing to (Q P)
 
  LDY #&09               \ Set Y = &09 so the call to GetTyreDashEdgeS modifies
@@ -10420,7 +10701,7 @@ ENDIF
                         \
                         \ so the bottom line offset is above the top track line,
                         \ which is why we don't do the fill for these two blocks
-                        
+
  CPX #2                 \ If X >= 2, jump to fill8 to move on to the next two
  BCS fill8              \ blocks to the left
 
@@ -10563,7 +10844,7 @@ IF _ACORNSOFT
  JSR gcol8
  JMP gcol4
 
-.gcol3 
+.gcol3
 
  JSR gcol12
 
@@ -10690,7 +10971,7 @@ IF _ACORNSOFT
 
  LDY V                  \ Set Y to the track line number of the pixel byte to
                         \ check
- 
+
  RTS                    \ Return from the subroutine
 
 ENDIF
@@ -12205,7 +12486,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   sub_C22FF-1         Contains an RTS
 \
 \ ******************************************************************************
 
@@ -12221,7 +12504,7 @@ ENDIF
 
  LDY L0005
  CPY #6
- BEQ proy8
+ BEQ sub_C22FF-1
  LDY L0006
  CPY #6
  BEQ C2330
@@ -12710,7 +12993,7 @@ ENDIF
 
  STY L0052              \ Set L0052 to the updated value of L0051
 
- LDA horizonLine        \ If horizonLine < 79, jump to C2535 to skip the 
+ LDA horizonLine        \ If horizonLine < 79, jump to C2535 to skip the
  CMP #79                \ following two instructions
  BCC C2535
 
@@ -13510,7 +13793,7 @@ ENDIF
 
  LDA trackLengthLo      \ Set (A T) = (trackLengthHi trackLengthLo) - (U T)
  SEC                    \           = trackLength - |distance|
- SBC T                  \                       
+ SBC T                  \
  STA T                  \ starting with the high bytes
 
  LDA trackLengthHi      \ And then the low bytes
@@ -14178,7 +14461,8 @@ ENDIF
 
                         \ We now calculate the following:
                         \
-                        \   xVector4 = xSectionCoordI + trackVectorI * carProgress
+                        \   xVector4 =   xSectionCoordI
+                        \              + trackVectorI * carProgress
 
  LDX #0                 \ We are about to work our way through the three axes,
                         \ so set X = 0 to use as an axis counter, working
@@ -14271,11 +14555,11 @@ ENDIF
 
 .bcar4
 
- PLP                    \ Now we can finally add the high bytes 
+ PLP                    \ Now we can finally add the high bytes
  ADC V
  STA xVector4Hi,X
 
- INY                    \ Increment the axis pointer for xSectionCoordI 
+ INY                    \ Increment the axis pointer for xSectionCoordI
 
  INX                    \ Increment the axis pointer for xVector4
 
@@ -14708,7 +14992,8 @@ ENDIF
                         \
                         \   scaleUp / 2 ^ (scaleDown - 10)
                         \
-                        \ where scaleUp and scaleDown were set by the call to 
+                        \ where scaleUp and scaleDown were set by the call to
+                        \ ProjectObjectY
 
  LDA scaleDown          \ Set X = scaleDown - 9
  SEC
@@ -15052,7 +15337,7 @@ ENDIF
                         \ variable
 
  BPL halc1              \ Loop back until we have shifted all three 16-bit
-                        \ variables to the right 
+                        \ variables to the right
 
  RTS                    \ Return from the subroutine
 
@@ -17628,136 +17913,136 @@ ENDIF
 
  EQUB 7 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-4, -5, -22, -18)
-                        
+
  EQUB 7 + 8             \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-4, -5, 18, 22)
-                        
+
  EQUB 6 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
                         \                   Coordinates: (-5, -17, -24, -16)
-                        
+
  EQUB 6 + 8             \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
                         \                   Coordinates: (-5, -17, 16, 24)
-                        
+
  EQUB 5 + 8             \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
                         \                   Coordinates: (-8, -17, -18, 18)
-                        
-                        
+
+
  EQUB 5                 \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
                         \                   Coordinates: (5, 2, -5, 5)
-                        
+
  EQUB 6                 \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
                         \                   Coordinates: (2, -1, -8, 8)
-                        
+
  EQUB 7 + 8             \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 4                 \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
                         \                   Coordinates: (6, 5, -2, 2)
-                        
-                        
+
+
  EQUB 6 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 0                 \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 5 + 8             \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 7 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-2, -3, -24, -18)
-                        
+
  EQUB 7 + 8             \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-2, -3, 18, 24)
-                        
-                        
+
+
  EQUB 2                 \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
                         \                   Coordinates: (6, 4, -16, 16)
-                        
+
  EQUB 3                 \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
                         \                   Coordinates: (4, 3, -16, 16)
-                        
+
  EQUB 4                 \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
                         \                   Coordinates: (3, -10, -1, 1)
-                        
+
  EQUB 1 + 8             \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
                         \                   Coordinates: (-10, -16, -1, 1)
-                        
-                        
+
+
  EQUB 6                 \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
                         \                   Coordinates: (3, -1, -6, 6)
-                        
+
  EQUB 7 + 8             \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 6 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 0                 \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 5 + 8             \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 7                 \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
                         \                   Coordinates: (1, -5, -1, 1)
-                        
+
  EQUB 4                 \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
                         \                   Coordinates: (6, 3, -16, 16)
-                        
-                        
+
+
  EQUB 2 + 8             \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
                         \                   Coordinates: (-3, -17, -26, 26)
-                        
-                        
+
+
  EQUB 0                 \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
                         \                   Coordinates: (16, 1, -10, 10)
-                        
-                        
+
+
  EQUB 1                 \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
                         \                   Coordinates: (20, -8, -28, 28)
-                        
+
  EQUB 4 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
                         \                   Coordinates: (-8, -18, -20, -16)
-                        
+
  EQUB 4 + 8             \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
                         \                   Coordinates: (-8, -18, 16, 20)
-                        
-                        
+
+
  EQUB 2                 \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
                         \                   Coordinates: (3, -18, -2, 2)
-                        
+
  EQUB 1                 \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
                         \                   Coordinates: (16, 3, -2, 16)
-                        
-                        
+
+
  EQUB 1                 \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
                         \                   Coordinates: (12, -10, -16, 16)
-                        
+
  EQUB 2 + 8             \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
                         \                   Coordinates: (-10, -16, -3, 3)
-                        
-                        
+
+
  EQUB 3                 \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
                         \                    Coordinates: (4, 1, -10, 10)
-                        
+
  EQUB 4                 \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
                         \                    Coordinates: (1, -6, -10, -9)
-                        
+
  EQUB 0                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
                         \                    Coordinates: (10, 4, 9, 10)
-                        
-                        
+
+
  EQUB 1                 \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
                         \                    Coordinates: (8, 5, -10, 8)
-                        
+
  EQUB 3                 \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
                         \                    Coordinates: (5, -6, -10, -8)
-                        
-                        
+
+
  EQUB 1                 \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
                         \                    Coordinates: (8, 5, -8, 10)
-                        
+
  EQUB 3                 \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
                         \                    Coordinates: (5, -6, 8, 10)
 
@@ -17871,136 +18156,136 @@ ENDIF
 
  EQUB 6 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-4, -5, -22, -18)
-                        
+
  EQUB 6 + 8             \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-4, -5, 18, 22)
-                        
+
  EQUB 3 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
                         \                   Coordinates: (-5, -17, -24, -16)
-                        
+
  EQUB 3 + 8             \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
                         \                   Coordinates: (-5, -17, 16, 24)
-                        
+
  EQUB 3 + 8             \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
                         \                   Coordinates: (-8, -17, -18, 18)
-                        
-                        
+
+
  EQUB 6                 \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
                         \                   Coordinates: (5, 2, -5, 5)
-                        
+
  EQUB 7 + 8             \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
                         \                   Coordinates: (2, -1, -8, 8)
-                        
+
  EQUB 5 + 8             \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 5                 \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
                         \                   Coordinates: (6, 5, -2, 2)
-                        
-                        
+
+
  EQUB 5 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 7                 \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 3 + 8             \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 6 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-2, -3, -24, -18)
-                        
+
  EQUB 6 + 8             \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-2, -3, 18, 24)
-                        
-                        
+
+
  EQUB 3                 \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
                         \                   Coordinates: (6, 4, -16, 16)
-                        
+
  EQUB 4                 \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
                         \                   Coordinates: (4, 3, -16, 16)
-                        
+
  EQUB 1 + 8             \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
                         \                   Coordinates: (3, -10, -1, 1)
-                        
+
  EQUB 0 + 8             \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
                         \                   Coordinates: (-10, -16, -1, 1)
-                        
-                        
+
+
  EQUB 7 + 8             \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
                         \                   Coordinates: (3, -1, -6, 6)
-                        
+
  EQUB 5 + 8             \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 5 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 7                 \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 1 + 8             \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 5 + 8             \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
                         \                   Coordinates: (1, -5, -1, 1)
-                        
+
  EQUB 6                 \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
                         \                   Coordinates: (6, 3, -16, 16)
-                        
-                        
+
+
  EQUB 1 + 8             \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
                         \                   Coordinates: (-3, -17, -26, 26)
-                        
-                        
+
+
  EQUB 2                 \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
                         \                   Coordinates: (16, 1, -10, 10)
-                        
-                        
+
+
  EQUB 4 + 8             \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
                         \                   Coordinates: (20, -8, -28, 28)
-                        
+
  EQUB 2 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
                         \                   Coordinates: (-8, -18, -20, -16)
-                        
+
  EQUB 2 + 8             \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
                         \                   Coordinates: (-8, -18, 16, 20)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
                         \                   Coordinates: (3, -18, -2, 2)
-                        
+
  EQUB 2                 \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
                         \                   Coordinates: (16, 3, -2, 16)
-                        
-                        
+
+
  EQUB 2 + 8             \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
                         \                   Coordinates: (12, -10, -16, 16)
-                        
+
  EQUB 0 + 8             \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
                         \                   Coordinates: (-10, -16, -3, 3)
-                        
-                        
+
+
  EQUB 4                 \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
                         \                    Coordinates: (4, 1, -10, 10)
-                        
+
  EQUB 2 + 8             \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
                         \                    Coordinates: (1, -6, -10, -9)
-                        
+
  EQUB 3                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
                         \                    Coordinates: (10, 4, 9, 10)
-                        
-                        
+
+
  EQUB 3                 \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
                         \                    Coordinates: (8, 5, -10, 8)
-                        
+
  EQUB 2 + 8             \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
                         \                    Coordinates: (5, -6, -10, -8)
-                        
-                        
+
+
  EQUB 3                 \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
                         \                    Coordinates: (8, 5, -8, 10)
-                        
+
  EQUB 2 + 8             \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
                         \                    Coordinates: (5, -6, 8, 10)
 
@@ -18091,136 +18376,136 @@ ENDIF
 
  EQUB 1 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-4, -5, -22, -18)
-                        
+
  EQUB 2                 \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-4, -5, 18, 22)
-                        
+
  EQUB 0 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
                         \                   Coordinates: (-5, -17, -24, -16)
-                        
+
  EQUB 4                 \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
                         \                   Coordinates: (-5, -17, 16, 24)
-                        
+
  EQUB 2 + 8             \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
                         \                   Coordinates: (-8, -17, -18, 18)
-                        
-                        
+
+
  EQUB 5 + 8             \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
                         \                   Coordinates: (5, 2, -5, 5)
-                        
+
  EQUB 3 + 8             \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
                         \                   Coordinates: (2, -1, -8, 8)
-                        
+
  EQUB 1 + 8             \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 6 + 8             \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
                         \                   Coordinates: (6, 5, -2, 2)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 4                 \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 0 + 8             \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 1 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-2, -3, -24, -18)
-                        
+
  EQUB 2                 \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-2, -3, 18, 24)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
                         \                   Coordinates: (6, 4, -16, 16)
-                        
+
  EQUB 0 + 8             \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
                         \                   Coordinates: (4, 3, -16, 16)
-                        
+
  EQUB 5 + 8             \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
                         \                   Coordinates: (3, -10, -1, 1)
-                        
+
  EQUB 5 + 8             \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
                         \                   Coordinates: (-10, -16, -1, 1)
-                        
-                        
+
+
  EQUB 4 + 8             \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
                         \                   Coordinates: (3, -1, -6, 6)
-                        
+
  EQUB 3 + 8             \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 0 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 2                 \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 0 + 8             \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 7 + 8             \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
                         \                   Coordinates: (1, -5, -1, 1)
-                        
+
  EQUB 2 + 8             \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
                         \                   Coordinates: (6, 3, -16, 16)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
                         \                   Coordinates: (-3, -17, -26, 26)
-                        
-                        
+
+
  EQUB 1 + 8             \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
                         \                   Coordinates: (16, 1, -10, 10)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
                         \                   Coordinates: (20, -8, -28, 28)
-                        
+
  EQUB 1 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
                         \                   Coordinates: (-8, -18, -20, -16)
-                        
+
  EQUB 3                 \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
                         \                   Coordinates: (-8, -18, 16, 20)
-                        
-                        
+
+
  EQUB 3 + 8             \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
                         \                   Coordinates: (3, -18, -2, 2)
-                        
+
  EQUB 3 + 8             \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
                         \                   Coordinates: (16, 3, -2, 16)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
                         \                   Coordinates: (12, -10, -16, 16)
-                        
+
  EQUB 3 + 8             \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
                         \                   Coordinates: (-10, -16, -3, 3)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
                         \                    Coordinates: (4, 1, -10, 10)
-                        
+
  EQUB 0 + 8             \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
                         \                    Coordinates: (1, -6, -10, -9)
-                        
+
  EQUB 1                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
                         \                    Coordinates: (10, 4, 9, 10)
-                        
-                        
+
+
  EQUB 0 + 8             \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
                         \                    Coordinates: (8, 5, -10, 8)
-                        
+
  EQUB 0 + 8             \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
                         \                    Coordinates: (5, -6, -10, -8)
-                        
-                        
+
+
  EQUB 1 + 8             \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
                         \                    Coordinates: (8, 5, -8, 10)
-                        
+
  EQUB 1                 \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
                         \                    Coordinates: (5, -6, 8, 10)
 
@@ -18334,136 +18619,136 @@ ENDIF
 
  EQUB 2 + 8             \ Object 0, Part 0: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-4, -5, -22, -18)
-                        
+
  EQUB 1                 \ Object 0, Part 1: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-4, -5, 18, 22)
-                        
+
  EQUB 4 + 8             \ Object 0, Part 2: Scaffolds: (-6, -3, -0, -4)
                         \                   Coordinates: (-5, -17, -24, -16)
-                        
+
  EQUB 0                 \ Object 0, Part 3: Scaffolds: (-6, -3, 4, 0)
                         \                   Coordinates: (-5, -17, 16, 24)
-                        
+
  EQUB 2                 \ Object 0, Part 4: Scaffolds: (-5, -3, -2, 2)
                         \                   Coordinates: (-8, -17, -18, 18)
-                        
-                        
+
+
  EQUB 5                 \ Object 1, Part 0: Scaffolds: (5, 6, -5, 5)
                         \                   Coordinates: (5, 2, -5, 5)
-                        
+
  EQUB 3                 \ Object 1, Part 1: Scaffolds: (6, -7, -3, 3)
                         \                   Coordinates: (2, -1, -8, 8)
-                        
+
  EQUB 1                 \ Object 1, Part 2: Scaffolds: (-7, -5, -1, 1)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 6                 \ Object 1, Part 3: Scaffolds: (4, 5, -6, 6)
                         \                   Coordinates: (6, 5, -2, 2)
-                        
-                        
+
+
  EQUB 4 + 8             \ Object 2, Part 0: Scaffolds: (-6, -5, -0, -4)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 1 + 8             \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 0                 \ Object 2, Part 2: Scaffolds: (-5, -3, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 2 + 8             \ Object 2, Part 3: Scaffolds: (-7, -6, -1, -2)
                         \                   Coordinates: (-2, -3, -24, -18)
-                        
+
  EQUB 1                 \ Object 2, Part 4: Scaffolds: (-7, -6, 2, 1)
                         \                   Coordinates: (-2, -3, 18, 24)
-                        
-                        
+
+
  EQUB 0                 \ Object 3, Part 0: Scaffolds: (2, 3, -0, 0)
                         \                   Coordinates: (6, 4, -16, 16)
-                        
+
  EQUB 0                 \ Object 3, Part 1: Scaffolds: (3, 4, -0, 0)
                         \                   Coordinates: (4, 3, -16, 16)
-                        
+
  EQUB 5                 \ Object 3, Part 2: Scaffolds: (4, -1, -5, 5)
                         \                   Coordinates: (3, -10, -1, 1)
-                        
+
  EQUB 5                 \ Object 3, Part 3: Scaffolds: (-1, -0, -5, 5)
                         \                   Coordinates: (-10, -16, -1, 1)
-                        
-                        
+
+
  EQUB 4                 \ Object 4, Part 0: Scaffolds: (6, -7, -4, 4)
                         \                   Coordinates: (3, -1, -6, 6)
-                        
+
  EQUB 3                 \ Object 4, Part 1: Scaffolds: (-7, -5, -3, 3)
                         \                   Coordinates: (-1, -5, -12, 12)
-                        
+
  EQUB 2 + 8             \ Object 4, Part 2: Scaffolds: (-6, -5, -0, -2)
                         \                   Coordinates: (-3, -5, -26, -16)
-                        
+
  EQUB 1 + 8             \                   Extra edges: Scaffolds: 0, 4
                         \                                Coordinates: 26, 16
-                        
+
  EQUB 0                 \ Object 4, Part 4: Scaffolds: (-5, -1, -0, 0)
                         \                   Coordinates: (-5, -17, -26, 26)
-                        
+
  EQUB 7                 \ Object 4, Part 5: Scaffolds: (7, -5, -7, 7)
                         \                   Coordinates: (1, -5, -1, 1)
-                        
+
  EQUB 2                 \ Object 4, Part 6: Scaffolds: (4, 6, -2, 2)
                         \                   Coordinates: (6, 3, -16, 16)
-                        
-                        
+
+
  EQUB 0                 \ Object 5, Part 0: Scaffolds: (-2, -1, -0, 0)
                         \                   Coordinates: (-3, -17, -26, 26)
-                        
-                        
+
+
  EQUB 1                 \ Object 6, Part 0: Scaffolds: (0, 2, -1, 1)
                         \                   Coordinates: (16, 1, -10, 10)
-                        
-                        
+
+
  EQUB 0                 \ Object 7, Part 0: Scaffolds: (1, -4, -0, 0)
                         \                   Coordinates: (20, -8, -28, 28)
-                        
+
  EQUB 3 + 8             \ Object 7, Part 1: Scaffolds: (-4, -2, -1, -3)
                         \                   Coordinates: (-8, -18, -20, -16)
-                        
+
  EQUB 1                 \ Object 7, Part 2: Scaffolds: (-4, -2, 3, 1)
                         \                   Coordinates: (-8, -18, 16, 20)
-                        
-                        
+
+
  EQUB 3                 \ Object 8, Part 0: Scaffolds: (2, -0, -3, 3)
                         \                   Coordinates: (3, -18, -2, 2)
-                        
+
  EQUB 1                 \ Object 8, Part 1: Scaffolds: (1, 2, -3, 1)
                         \                   Coordinates: (16, 3, -2, 16)
-                        
-                        
+
+
  EQUB 0                 \ Object 9, Part 0: Scaffolds: (1, -2, -0, 0)
                         \                   Coordinates: (12, -10, -16, 16)
-                        
+
  EQUB 3                 \ Object 9, Part 1: Scaffolds: (-2, -0, -3, 3)
                         \                   Coordinates: (-10, -16, -3, 3)
-                        
-                        
+
+
  EQUB 0                 \ Object 10, Part 0: Scaffolds: (3, 4, -0, 0)
                         \                    Coordinates: (4, 1, -10, 10)
-                        
+
  EQUB 1 + 8             \ Object 10, Part 1: Scaffolds: (4, -2, -0, -1)
                         \                    Coordinates: (1, -6, -10, -9)
-                        
+
  EQUB 0                 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)
                         \                    Coordinates: (10, 4, 9, 10)
-                        
-                        
+
+
  EQUB 1                 \ Object 11, Part 0: Scaffolds: (1, 3, -0, 1)
                         \                    Coordinates: (8, 5, -10, 8)
-                        
+
  EQUB 1 + 8             \ Object 11, Part 1: Scaffolds: (3, -2, -0, -1)
                         \                    Coordinates: (5, -6, -10, -8)
-                        
-                        
+
+
  EQUB 0                 \ Object 12, Part 0: Scaffolds: (1, 3, -1, 0)
                         \                    Coordinates: (8, 5, -8, 10)
-                        
+
  EQUB 0                 \ Object 12, Part 1: Scaffolds: (3, -2, 1, 0)
                         \                    Coordinates: (5, -6, 8, 10)
 
@@ -18591,136 +18876,136 @@ ENDIF
 
  EQUB 10                \ Object 0, Part 0: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 10                \ Object 0, Part 1: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 8                 \ Object 0, Part 2: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 8                 \ Object 0, Part 3: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 5 + 64            \ Object 0, Part 4: Edge: 1 (red), Fill: 1 (red)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 8                 \ Object 1, Part 0: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 8                 \ Object 1, Part 1: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 9                 \ Object 1, Part 2: Edge: 1 (red), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 10 + 64           \ Object 1, Part 3: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 8 + 128           \ Object 2, Part 0: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 1 (yes)
-                        
+
  EQUB 8                 \                   Extra edges: Fill: 1 (red)
-                        
-                        
+
+
  EQUB 8                 \ Object 2, Part 2: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 10                \ Object 2, Part 3: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 10 + 64           \ Object 2, Part 4: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 2                 \ Object 3, Part 0: Edge: 2 (white), Fill: 0 (black)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 0                 \ Object 3, Part 1: Edge: 0 (black), Fill: 0 (black)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 2                 \ Object 3, Part 2: Edge: 2 (white), Fill: 0 (black)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 10 + 64           \ Object 3, Part 3: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 8                 \ Object 4, Part 0: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 5                 \ Object 4, Part 1: Edge: 1 (red), Fill: 1 (red)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 8 + 128           \ Object 4, Part 2: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 1 (yes)
-                        
+
  EQUB 8                 \                   Extra edges: Fill: 1 (red)
-                        
-                        
+
+
  EQUB 8                 \ Object 4, Part 4: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 2                 \ Object 4, Part 5: Edge: 2 (white), Fill: 0 (black)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 2 + 64            \ Object 4, Part 6: Edge: 2 (white), Fill: 0 (black)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 8 + 64            \ Object 5, Part 0: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 2 + 16 + 64       \ Object 6, Part 0: Edge: 2 (white), Fill: 0 (black)
                         \                   Outside: 1 (yes), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 8                 \ Object 7, Part 0: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 1 + 16            \ Object 7, Part 1: Edge: 1 (red), Fill: 0 (black)
                         \                   Outside: 1 (yes), Four-edge: 0 (no)
-                        
+
  EQUB 1 + 16 + 64       \ Object 7, Part 2: Edge: 1 (red), Fill: 0 (black)
                         \                   Outside: 1 (yes), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 0                 \ Object 8, Part 0: Edge: 0 (black), Fill: 0 (black)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 8 + 64            \ Object 8, Part 1: Edge: 0 (black), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 10                \ Object 9, Part 0: Edge: 2 (white), Fill: 2 (white)
                         \                   Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 2 + 16 + 64       \ Object 9, Part 1: Edge: 2 (white), Fill: 0 (black)
                         \                   Outside: 1 (yes), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 0                 \ Object 10, Part 0: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 0                 \ Object 10, Part 1: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 0 + 64            \ Object 10, Part 2: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 0                 \ Object 11, Part 0: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 0 + 64            \ Object 11, Part 1: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
-                        
-                        
+
+
  EQUB 0                 \ Object 12, Part 0: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
-                        
+
  EQUB 0 + 64            \ Object 12, Part 1: Edge: 0 (black), Fill: 0 (black)
                         \                    Outside: 0 (no), Four-edge: 0 (no)
 
@@ -21395,7 +21680,7 @@ ENDIF
 \ ******************************************************************************
 
 .token37
- 
+
  EQUB 31, 5, 18         \ Move text cursor to column 5, row 18
 
  EQUB 132, 157          \ Set background colour to blue
@@ -22153,7 +22438,7 @@ NEXT
  EQUB 200 + 10          \ Print token 10 ("SELECT ")
 
  EQUS "NUMBER OF LAPS"  \ Print "NUMBER OF LAPS"
- 
+
  EQUB 200 + 36          \ Print token 36 (menu option 1 with "PRESS" prompt)
 
  EQUB 200 + 18          \ Print token 18 (" 5")
@@ -22294,7 +22579,7 @@ NEXT
 
  LDA #2                 \ Print two spaces
  JSR PrintSpaces
- 
+
  LDA #%00100000         \ Set G = %00100000, so if we print the high byte and
  STA G                  \ the first digit is 0, it will be replaced by a space
 
@@ -23457,7 +23742,7 @@ ENDIF
  JSR sub_C4A91
 
  LDA L62A6,X            \ Set A to L62A6 (when X = 0) or L62A7 (when X = 1)
-            
+
  AND #%11000000         \ If either of bit 6 or 7 is set in A, jump to C4795 to
  BNE C4795              \ make the tyres squeal
 
@@ -24945,7 +25230,7 @@ ENDIF
 
  JSR SetBestRacingLine  \ Call SetBestRacingLine with X = 0 (Novice) to set up
                         \ the 24 bytes at bestRacingLine, returning with X
-                        \ unchanged 
+                        \ unchanged
 
                         \ The following loop works starts with X = 0, and then
                         \ loops down from 19 to 1, working its way through each
@@ -25279,7 +25564,7 @@ ENDIF
                         \ These values are the same as in standard mode 5, and
                         \ this call finishes the switch to our custom screen
                         \ mode
- 
+
  CLC                    \ Clear the C flag for the additions in the following
                         \ loop
 
@@ -26047,7 +26332,8 @@ ENDIF
 \   * Bit 6 of the driver's car's object status byte is clear (so the car is
 \     still racing)
 \
-\   * If this is the current player, L0030 must be 1 (and it is set to 0)
+\   * If this is the current player, pastHalfway must be 1 (so the player is in
+\     the second half of the track)
 \
 \ If these conditions are met, then the lap is incremented.
 \
@@ -26076,11 +26362,13 @@ ENDIF
  BNE ulap3              \ to skip updating the lap number top of the screen
 
                         \ If we get here then this is the current player, so now
-                        \ we check the value of L0030
+                        \ we check the value of pastHalfway
 
- DEC L0030              \ If L0030 = 1, set L0030 to 0 and jump to ulap2 to
- BEQ ulap2              \ update the lap details
- INC L0030
+ DEC pastHalfway        \ If pastHalfway = 1, then the player is in the second
+ BEQ ulap2              \ half of the track, so set pastHalfway to 0 as the
+ INC pastHalfway        \ player has just passwd the starting line into the
+                        \ first half of the track, and jump to ulap2 to update
+                        \ the lap details
 
 .ulap1
 
@@ -26089,7 +26377,8 @@ ENDIF
 .ulap2
 
                         \ If we get here then this is the current player, and
-                        \ L0030 has just been changed from 1 to 0
+                        \ pastHalfway has just been changed from 1 to 0, to
+                        \ denote a new lap
 
  LDA #%10000000         \ Set bit 7 and clear bit 6 of updateDrivingInfo so the
  STA updateDrivingInfo  \ lap number gets updated at the top of the screen
@@ -26420,7 +26709,7 @@ ENDIF
 
  EOR #&FF               \ Flip the value of A, so the range 128 to 255 flips to
                         \ the range 127 to 0
- 
+
  DEX                    \ Set X = 0 to denote a negative result, so the result
                         \ is in the range -127 to 0
 
@@ -26550,13 +26839,13 @@ ENDIF
 
  INX                    \ Increment X
 
- CPX #20                \ If X < 20, jump to next1 to skip the following
- BCC next1              \ instruction
+ CPX #20                \ If X < 20, jump to getb1 to skip the following
+ BCC getb1              \ instruction
 
  LDX #0                 \ Set X = 0, so repeated calls to this routine will
                         \ increment X up to 19, and then start again at 0
 
-.next1
+.getb1
 
  RTS                    \ Return from the subroutine
 
@@ -27707,7 +27996,7 @@ ENDIF
 
  DEX                    \ Decrement the loop counter
 
- BPL tyre1              \ Loop back to 
+ BPL tyre1              \ Loop back to animate the next tyre segment
 
 .tyre4
 
@@ -27779,11 +28068,11 @@ ENDIF
 .trackSectionTurn
 
  SKIP 1
- 
+
 .zTrackSectionOHi
 
  SKIP 1
- 
+
 .trackMaxSpeed
 
  SKIP 1
@@ -27847,11 +28136,11 @@ ENDIF
 .trackSectionFrom
 
  SKIP 1
- 
+
 .zTrackSectionOLo
 
  SKIP 1
- 
+
 .trackSectionSize
 
  SKIP 1
@@ -27865,7 +28154,7 @@ ENDIF
  SKIP 24
 
  SKIP 2
- 
+
 .trackRoadSigns
 
  SKIP 16
@@ -30017,9 +30306,9 @@ ENDIF
  STA P                  \ Set (Q P) = (Y A)
  STY Q
 
- STX W                  \ Store the required length of input in W 
+ STX W                  \ Store the required length of input in W
 
- LDA #2                 \ Call OSBYTE with A = 2 and X = 0 to select the 
+ LDA #2                 \ Call OSBYTE with A = 2 and X = 0 to select the
  LDX #0                 \ keyboard as the input stream and disable RS423
  JSR OSBYTE
 
@@ -30284,7 +30573,7 @@ ENDIF
 
  BEQ fast5              \ If Y = 0 (Amateur), jump to fast5 to leave A alone
 
- BPL fast4              \ If Y = 1 (Professional), jump to fast4 to 
+ BPL fast4              \ If Y = 1 (Professional), jump to fast4
 
                         \ If we get here, then the race class is Novice
 
@@ -32418,7 +32707,7 @@ ORG &7B00
  JSR Print2DigitBCD     \ time
 
  ASL G                  \ If bit 7 of G is set, we do not want to print tenths
- BCS plap1              \ of a second, so jump to plap1 to return from the 
+ BCS plap1              \ of a second, so jump to plap1 to return from the
                         \ subroutine
 
  LDA #&2E               \ Print "."
