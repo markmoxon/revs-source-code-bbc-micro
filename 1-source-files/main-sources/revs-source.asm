@@ -290,22 +290,22 @@ ORG &0000
                         \ Track sections are numbered from 0 to 23, so this
                         \ ranges from 0 to 184
                         
-.zIndex96
+.zStack96
 
- SKIP 1                 \ Contains zIndex - 96
+ SKIP 1                 \ Contains zStack - 96
 
-.zIndexPrevious
+.zStackPrevious
 
- SKIP 1                 \ Used to store the z-index * 3 of the previous
-                        \ coordinate
+ SKIP 1                 \ Used to store the index * 3 of the previous z-stack
+                        \ entry
 
-.zIndex
+.zStack
 
- SKIP 1                 \ Used to store the z-index * 3 of the coordinate
-                        \ currently being processed
+ SKIP 1                 \ Used to store the index * 3 of the current z-stack
+                        \ entry
                         \
-                        \ Coordinate z-indexes are numbered from 0 to 39, so
-                        \ this ranges from 0 to 117
+                        \ z-stack indexes are numbered from 0 to 39, so this
+                        \ ranges from 0 to 117
 
 .directionFacing
 
@@ -1125,7 +1125,7 @@ ORG &0100
                         \ which is taken from the track data and used to set the
                         \ section's approach speed for non-player drivers
                         \
-                        \ Only applies to sections with bit 7 of trackSection0b
+                        \ Only applies to sections with bit 7 of the flag byte
                         \ set, in which case carSectionSpeed is set to the
                         \ trackMaxSpeed value from the preceding track section
                         \
@@ -1407,10 +1407,25 @@ ORG &0380
                         \ In the Silverstone track there are 24 track sections
                         \ numbered from 0 to 23, so this ranges from 0 to 184
 
-.dataBlockIndex
+.zStackVector
 
- SKIP 128               \ Contains index values into the five track Vector
-                        \ tables in the track data
+ SKIP 1                 \ The track vector number for this z-stack entry
+
+.zStackSteering
+
+ SKIP 1                 \ The carSteering value to steer round the corner for
+                        \ this z-stack entry
+
+.zStackFlags
+
+ SKIP 1                 \ Section flags based on trackSectionFlag for this
+                        \ z-stack entry
+
+ SKIP 39 * 3            \ The next 39 z-stack entries
+                        \
+                        \ Contains 40 batches of three bytes in all
+
+ SKIP 8                 \ ??? Unused
 
 .lineBufferPixel
 
@@ -1431,7 +1446,7 @@ ORG &0880
 
 .objSectionCount
 
- SKIP 24                \ Each object's position within the current track
+ SKIP 24                \ Each object's progress within the current track
                         \ section, counting from the start of the section
                         \
                         \ Increments along with objProgressLo as the object
@@ -1495,35 +1510,37 @@ ORG &0880
                         \
                         \ Stored as a 16-bit value (objProgressHi objProgressLo)
 
-.xVector1Lo
+.xSectionCoordILo
 
  SKIP 1
 
-.yVector1Lo
+.ySectionCoordILo
 
  SKIP 1
 
-.zVector1Lo
+.zSectionCoordILo
 
  SKIP 1
 
- SKIP 39 * 3            \ The next 39 (xVector1, yVector1, zVector1) entries
+ SKIP 39 * 3            \ The next 39 (xSectionCoordI, ySectionCoordI,
+                        \ zSectionCoordI) entries
                         \
                         \ Contains 40 batches of three bytes
 
-.xVector2Lo
+.xSectionCoordOLo
 
  SKIP 1
 
-.yVector2Lo
+.ySectionCoordOLo
 
  SKIP 1
 
-.zVector2Lo
+.zSectionCoordOLo
 
  SKIP 1
 
- SKIP 39 * 3            \ The next 39 (xVector2, yVector2, zVector2) entries
+ SKIP 39 * 3            \ The next 39 (xSectionCoordO, ySectionCoordO,
+                        \ zSectionCoordO) entries
                         \
                         \ Contains 40 batches of three bytes
 
@@ -1567,35 +1584,37 @@ ORG &0880
 
  SKIP 1
 
-.xVector1Hi
+.xSectionCoordIHi
 
  SKIP 1
 
-.yVector1Hi
+.ySectionCoordIHi
 
  SKIP 1
 
-.zVector1Hi
+.zSectionCoordIHi
 
  SKIP 1
 
- SKIP 39 * 3            \ The next 39 (xVector1, yVector1, zVector1) entries
+ SKIP 39 * 3            \ The next 39 (xSectionCoordI, ySectionCoordI,
+                        \ zSectionCoordI) entries
                         \
                         \ Contains 40 batches of three bytes
 
-.xVector2Hi
+.xSectionCoordOHi
 
  SKIP 1
 
-.yVector2Hi
+.ySectionCoordOHi
 
  SKIP 1
 
-.zVector2Hi
+.zSectionCoordOHi
 
  SKIP 1
 
- SKIP 39 * 3            \ The next 39 (xVector2, yVector2, zVector2) entries
+ SKIP 39 * 3            \ The next 39 (xSectionCoordO, ySectionCoordO,
+                        \ zSectionCoordO) entries
                         \
                         \ Contains 40 batches of three bytes
 
@@ -2453,8 +2472,7 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   X                   The offset from xVector1 of the vectorX variable to
-\                       update:
+\   X                   The offset of the vectorX variable to update:
 \
 \                         * &F4 = xVector7
 \
@@ -2462,7 +2480,7 @@ ORG &0B00
 \
 \                         * &FD = xVector4
 \
-\   Y                   The offset from xVector1 of the vectorY variable to add:
+\   Y                   The offset of the vectorY variable to add:
 \
 \                         * &F4 = xVector7
 \
@@ -2480,32 +2498,32 @@ ORG &0B00
 
 .AddVectors
 
- LDA xVector1Lo,Y       \ Set xVectorX = xVectorY + (SS T)
+ LDA xSectionCoordILo,Y \ Set xVectorX = xVectorY + (SS T)
  CLC                    \
  ADC T                  \ starting with the high bytes
- STA xVector1Lo,X
+ STA xSectionCoordILo,X
 
- LDA xVector1Hi,Y       \ And then the low bytes
+ LDA xSectionCoordIHi,Y \ And then the low bytes
  ADC SS
- STA xVector1Hi,X
+ STA xSectionCoordIHi,X
 
- LDA yVector1Lo,Y       \ Set yVectorX = yVectorY + (TT U)
+ LDA ySectionCoordILo,Y \ Set yVectorX = yVectorY + (TT U)
  CLC                    \
  ADC U                  \ starting with the high bytes
- STA yVector1Lo,X
+ STA ySectionCoordILo,X
 
- LDA yVector1Hi,Y       \ And then the low bytes
+ LDA ySectionCoordIHi,Y \ And then the low bytes
  ADC TT
- STA yVector1Hi,X
+ STA ySectionCoordIHi,X
 
- LDA zVector1Lo,Y       \ Set zVectorX = zVectorY + (UU V)
+ LDA zSectionCoordILo,Y \ Set zVectorX = zVectorY + (UU V)
  CLC                    \
  ADC V                  \ starting with the high bytes
- STA zVector1Lo,X
+ STA zSectionCoordILo,X
 
- LDA zVector1Hi,Y       \ And then the low bytes
+ LDA zSectionCoordIHi,Y \ And then the low bytes
  ADC UU
- STA zVector1Hi,X
+ STA zSectionCoordIHi,X
 
  RTS                    \ Return from the subroutine
 
@@ -4247,12 +4265,12 @@ ORG &0B00
                         \ position 19 at the back of the pack
 
                         \ We now use the currently unused driver 23 to work out
-                        \ the number of z-indexes we need to initialise in front
-                        \ of the current driver, by first moving forwards until
-                        \ we are exactly 32 from the current player, then moving
-                        \ backwards by 49, and then moving backwards to the
-                        \ start of the track section, leaving L0042 set to the
-                        \ total distance moved backwards
+                        \ the number of z-stack entries we need to initialise in
+                        \ front of the current driver, by first moving forwards
+                        \ untilwe are exactly 32 from the current player, then
+                        \ moving backwards by 49, and then moving backwards to
+                        \ thestart of the track section, leaving L0042 set to
+                        \ the total distance moved backwards
 
 .rcar6
 
@@ -4334,8 +4352,8 @@ ORG &0B00
 
  BPL rcar9              \ Loop back until we have staggered the whole pack
 
- LDA #0                 \ Set zIndex = 0
- STA zIndex
+ LDA #0                 \ Set zStack = 0
+ STA zStack
 
                         \ We now call sub_C12F7 L0042 times, where L0042 is the
                         \ number of times we moved driver 23 backwards in the
@@ -4649,9 +4667,9 @@ ORG &0B00
 
  STX L0042              \ Set L0042 to the driver number of the current player
 
- LDY zIndex96           \ Build the car object for the current player using
- JSR BuildCarObjects    \ z-index zIndex96, returning the car's 3D coordinates
-                        \ in xVector4
+ LDY zStack96           \ Build the car object for the current player using
+ JSR BuildCarObjects    \ z-stack entry zStack96, returning the car's 3D
+                        \ coordinates in xVector4
 
  LDX #2                 \ We are about to copy the three axes of the resulting
                         \ vectors, so set an axis counter in X
@@ -4667,24 +4685,24 @@ ORG &0B00
 
  BPL P11DB              \ Loop back until we have copied all three axes
 
- LDA zIndex96           \ Set A = zIndex96 + 3
+ LDA zStack96           \ Set A = zStack96 + 3
  CLC                    \
- ADC #3                 \ to move on to the next z-index
+ ADC #3                 \ to move on to the next z-stack entry
 
- CMP #120               \ If A < 120, then we haven't reached the maximum
- BCC C11F5              \ z-index, so jump to C11F5 to store the updated value
+ CMP #120               \ If A < 120, then we haven't reached the end of the
+ BCC C11F5              \ z-stack, so jump to C11F5 to store the updated value
 
- LDA #0                 \ We just reached the last z-index, so set A = 0 to wrap
-                        \ round to the start
+ LDA #0                 \ We just reached the end of the z-stack, so set A = 0
+                        \ to wrap round to the start
 
 .C11F5
 
- TAY                    \ Set Y to the updated z-index
+ TAY                    \ Set Y to the updated z-stack index * 3
 
  LDX L0045              \ Set X to the driver number of the current player
 
  JSR BuildCarObjects    \ Build the car object for the current player using the
-                        \ updated z-index, returning the projected screen
+                        \ updated z-stack entry, returning the projected screen
                         \ coordinates in xObjectScreen
 
  LDA xObjectScreenLo,X  \ Copy the low byte of the screen x-coordinate to 
@@ -4706,47 +4724,63 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ This routine is normally called with X as a multiple of 3 in the range 0 to
-\ 117, representing coordinate 0 to 39. The routine copies the following track
-\ coordinates from the Y-th track section data:
+\ 117, representing z-stack entry 0 to 39. The routine copies the following
+\ section coordinates from the track section data for section Y * 8:
 \
 \   * xTrackSectionI
 \   * yTrackSectionI
 \   * zTrackSectionI
 \
-\ and stores them in the X-th coordinate in (xVector1, yVector1, zVector1).
+\ and stores them in the X-th coordinate in (xSectionCoordI, ySectionCoordI,
+\ zSectionCoordI).
 \
-\ This routine is also called with X = &FD, in which it copies the following:
+\ Specifically, this copies data from the Y-th track section entry:
 \
-\   Y-th (xTrackSectionIHi xTrackSectionILo) to X-th (xVector4Hi xVector4Lo)
-\   Y-th (yTrackSectionIHi yTrackSectionILo) to X-th (yVector4Hi yVector4Lo)
-\   Y-th (zTrackSectionIHi zTrackSectionILo) to X-th (zVector4Hi zVector4Lo)
+\   (xTrackSectionIHi xTrackSectionILo)
+\   (yTrackSectionIHi yTrackSectionILo)
+\   (zTrackSectionIHi zTrackSectionILo)
+\
+\ and stores it in the X-th z-stack entry:
+\
+\   (xSectionCoordIHi xSectionCoordILo)
+\   (ySectionCoordIHi ySectionCoordILo)
+\   (zSectionCoordIHi zSectionCoordILo)
+\
+\ This routine is also called with X = &FD, in which case it copies the
+\ following:
+\
+\   Y-th (xTrackSectionIHi xTrackSectionILo) to (xVector4Hi xVector4Lo)
+\   Y-th (yTrackSectionIHi yTrackSectionILo) to (yVector4Hi yVector4Lo)
+\   Y-th (zTrackSectionIHi zTrackSectionILo) to (zVector4Hi zVector4Lo)
 \
 \ Arguments:
 \
-\   Y                   Copy data from Y-th (xTrackSectionIHi xTrackSectionILo)
-\                                           (yTrackSectionIHi yTrackSectionILo)
-\                                           (zTrackSectionIHi zTrackSectionILo)
+\   Y                   The number of the track section * 8 whose coordinates we
+\                       want to fetch
 \
-\   X                   Copy data to X-th (xVector1Hi xVector1Lo)
-\                                         (yVector1Hi yVector1Lo)
-\                                         (zVector1Hi zVector1Lo)
+\   X                   The place to store the data:
+\
+\                         * 0-117 = The index * 3 of the z-stack entry where we
+\                                   store the coordinates
+\
+\                         * &FD = Copy to (xVector4, yVector4, zVector4)
 \
 \ ******************************************************************************
 
 .GetSectionCoord
 
  LDA xTrackSectionILo,Y \ Copy the following 16-bit coordinates:
- STA xVector1Lo,X       \
- LDA yTrackSectionILo,Y \   * The Y-th xTrackSectionI to the X-th xVector1
- STA yVector1Lo,X       \
- LDA zTrackSectionILo,Y \   * The Y-th yTrackSectionI to the X-th yVector1
- STA zVector1Lo,X       \
- LDA xTrackSectionIHi,Y \   * The Y-th zTrackSectionI to the X-th zVector1
- STA xVector1Hi,X
+ STA xSectionCoordILo,X \
+ LDA yTrackSectionILo,Y \   * The Y-th xTrackSectionI to the X-th xSectionCoordI
+ STA ySectionCoordILo,X \
+ LDA zTrackSectionILo,Y \   * The Y-th yTrackSectionI to the X-th ySectionCoordI
+ STA zSectionCoordILo,X \
+ LDA xTrackSectionIHi,Y \   * The Y-th zTrackSectionI to the X-th zSectionCoordI
+ STA xSectionCoordIHi,X
  LDA yTrackSectionIHi,Y
- STA yVector1Hi,X
+ STA ySectionCoordIHi,X
  LDA zTrackSectionIHi,Y
- STA zVector1Hi,X
+ STA zSectionCoordIHi,X
 
  RTS                    \ Return from the subroutine
 
@@ -4760,44 +4794,54 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ This routine is normally called with X as a multiple of 3 in the range 0 to
-\ 117, representing coordinate 0 to 39. The routine copies the following track
-\ section coordinates from the Y-th track section data:
+\ 117, representing z-stack entry 0 to 39. The routine copies the following track
+\ section coordinates from the track section data for section Y * 8:
 \
 \   * xTrackSectionI
 \   * yTrackSectionI
 \   * zTrackSectionI
 \
-\ and stores them in the X-th coordinate in (xVector1, yVector1, zVector1). It
-\ also copies the following track section coordinates:
+\ and stores them in the X-th coordinate in (xSectionCoordI, ySectionCoordI,
+\ zSectionCoordI). It also copies the following track section coordinates:
 \
 \   * xTrackSectionO
 \   * yTrackSectionI
 \   * zTrackSectionO
 \
-\ and stores them in the X-th coordinate in (xVector2, yVector2, zVector2).
-\ Note that the second coordinate is set to the same value as the second
-\ coordinate from the first copy.
+\ and stores them in the X-th coordinate in (xSectionCoordO, ySectionCoordO,
+\ zSectionCoordO). Note that the y-coordinate is set to the same value as the
+\ y-coordinate from the first copy.
 \
 \ It also sets thisVectorNumber to trackSectionFrom for the Y-th track section
 \ data.
 \
+\ Specifically, this copies data from the Y-th track section entry:
+\
+\   (xTrackSectionIHi xTrackSectionILo)
+\   (yTrackSectionIHi yTrackSectionILo)
+\   (zTrackSectionIHi zTrackSectionILo)
+\   (xTrackSectionOHi xTrackSectionOLo)
+\   (yTrackSectionIHi yTrackSectionILo)
+\   (zTrackSectionOHi zTrackSectionOLo)
+\   trackSectionFrom
+\
+\ and stores it in the X-th z-stack entry:
+\
+\   (xSectionCoordIHi xSectionCoordILo)
+\   (ySectionCoordIHi ySectionCoordILo)
+\   (zSectionCoordIHi zSectionCoordILo)
+\   (xSectionCoordOHi xSectionCoordOLo)
+\   (ySectionCoordOHi ySectionCoordOLo)
+\   (zSectionCoordOHi zSectionCoordOLo)
+\   thisVectorNumber
+\
 \ Arguments:
 \
-\   Y                   Copy data from Y-th (xTrackSectionIHi xTrackSectionILo)
-\                                           (yTrackSectionIHi yTrackSectionILo)
-\                                           (zTrackSectionIHi zTrackSectionILo)
-\                                           (xTrackSectionOHi xTrackSectionOLo)
-\                                           (yTrackSectionIHi yTrackSectionILo)
-\                                           (zTrackSectionOHi zTrackSectionOLo)
-\                                           trackSectionFrom
+\   Y                   The number of the track section * 8 whose coordinates we
+\                       want to fetch
 \
-\   X                   Copy data to X-th (xVector1Hi xVector1Lo)
-\                                         (yVector1Hi yVector1Lo)
-\                                         (zVector1Hi zVector1Lo)
-\                                         (xVector2Hi xVector2Lo)
-\                                         (yVector2Hi yVector2Lo)
-\                                         (zVector2Hi zVector2Lo)
-\                                         thisVectorNumber
+\   X                   The index * 3 of the z-stack entry where we store the
+\                       coordinates
 \
 \ ******************************************************************************
 
@@ -4806,20 +4850,20 @@ ORG &0B00
  JSR GetSectionCoord    \ Call GetSectionCoord to copy the following 16-bit
                         \ coordinate:
                         \
-                        \   * The Y-th xTrackSectionI to the X-th xVector1
+                        \   * The Y-th xTrackSectionI to the X-th xSectionCoordI
                         \
-                        \   * The Y-th yTrackSectionI to the X-th yVector1
+                        \   * The Y-th yTrackSectionI to the X-th ySectionCoordI
                         \
-                        \   * The Y-th zTrackSectionI to the X-th zVector1
+                        \   * The Y-th zTrackSectionI to the X-th zSectionCoordI
 
  LDA xTrackSectionOLo,Y \ Copy the following 16-bit coordinate:
- STA xVector2Lo,X       \
- LDA zTrackSectionOLo,Y \   * The Y-th xTrackSectionO to the X-th xVector2
- STA zVector2Lo,X       \
- LDA xTrackSectionOHi,Y \   * The Y-th zTrackSectionO to the X-th zVector2
- STA xVector2Hi,X
+ STA xSectionCoordOLo,X \
+ LDA zTrackSectionOLo,Y \   * The Y-th xTrackSectionO to the X-th xSectionCoordO
+ STA zSectionCoordOLo,X \
+ LDA xTrackSectionOHi,Y \   * The Y-th zTrackSectionO to the X-th zSectionCoordO
+ STA xSectionCoordOHi,X
  LDA zTrackSectionOHi,Y
- STA zVector2Hi,X
+ STA zSectionCoordOHi,X
 
  LDA trackSectionFrom,Y \ Set thisVectorNumber = the Y-th trackSectionFrom
  STA thisVectorNumber
@@ -4827,35 +4871,35 @@ ORG &0B00
                         \ Fall through into CopySectionData to copy the
                         \ following 16-bit coordinate:
                         \
-                        \   * The Y-th yTrackSectionI to the X-th yVector2
+                        \   * The Y-th yTrackSectionI to the X-th ySectionCoordO
                         \
                         \ This works because the call to GetSectionCoord already
-                        \ stored the Y-th yTrackSectionI in the X-th yVector1,
-                        \ and the following now copies that into the X-th
-                        \ yVector2
+                        \ stored the Y-th yTrackSectionI in the X-th
+                        \ ySectionCoordI, and the following now copies that into
+                        \ the X-th ySectionCoordO
 
 \ ******************************************************************************
 \
 \       Name: CopySectionData
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Copy a 16-bit y-coordinate from the track section data 
+\    Summary: Copy a 16-bit y-coordinate from the track section data
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   Copy X-th (yVector1Hi yVector1Lo) to
-\                       (yVector2Hi yVector2Lo)
+\   X                   Copy X-th (ySectionCoordIHi ySectionCoordILo) to
+\                       (ySectionCoordOHi ySectionCoordOLo)
 \
 \ ******************************************************************************
 
 .CopySectionData
 
- LDA yVector1Lo,X       \ Copy the following 16-bit coordinate:
- STA yVector2Lo,X       \
- LDA yVector1Hi,X       \   * The X-th yVector1 to the X-th yVector2
- STA yVector2Hi,X
+ LDA ySectionCoordILo,X \ Copy the following 16-bit coordinate:
+ STA ySectionCoordOLo,X \
+ LDA ySectionCoordIHi,X \   * The X-th ySectionCoordI to the X-th ySectionCoordO
+ STA ySectionCoordOHi,X
 
  RTS                    \ Return from the subroutine
 
@@ -4864,13 +4908,13 @@ ORG &0B00
 \       Name: sub_C125A
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Subtract 96 from the current z-index
+\    Summary: Subtract 96 from the current z-stack index * 3
 \
 \ ******************************************************************************
 
 .sub_C125A
 
- LDA zIndex             \ Set A = zIndex - 96
+ LDA zStack             \ Set A = zStack - 96
  SEC
  SBC #96
 
@@ -4880,7 +4924,7 @@ ORG &0B00
 
 .C1264
 
- STA zIndex96           \ Set zIndex96 = A
+ STA zStack96           \ Set zStack96 = A
 
  RTS                    \ Return from the subroutine
 
@@ -4899,7 +4943,7 @@ ORG &0B00
 
 .sub_C1267
 
- LDX zIndex
+ LDX zStack
  LDY #6
  STY L62F5
  LDA L0062
@@ -4911,11 +4955,12 @@ ORG &0B00
  LDA directionFacing    \ If our car is facing backwards, jump to C1284
  BMI C1284
 
- LDY objTrackSection+23
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
+                        \ driver 23
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xVector1 and xVector2, and set
-                        \ thisVectorNumber to trackSectionFrom
+                        \ section Y into xSectionCoordI and xSectionCoordO, and
+                        \ set thisVectorNumber to trackSectionFrom
 
  LDA trackSection0a,Y
  JMP C128E
@@ -4925,8 +4970,8 @@ ORG &0B00
  LDY sectionBehind
 
  JSR GetSectionCoords   \ Copy the two trackSection coordinates for track
-                        \ section Y into xVector1 and xVector2, and set
-                        \ thisVectorNumber to trackSectionFrom
+                        \ section Y into xSectionCoordI and xSectionCoordO, and
+                        \ set thisVectorNumber to trackSectionFrom
 
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
                         \ track in the direction we are facing
@@ -4937,11 +4982,16 @@ ORG &0B00
 
  AND #7
  STA L0007
- LDY objTrackSection+23
- LDA trackSection0b,Y
+
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
+                        \ driver 23
+
+ LDA trackSectionFlag,Y
  STA L0001
+
  LDA #0
- STA dataBlockIndex+2,X
+ STA zStackFlags,X
+
  RTS
 
 \ ******************************************************************************
@@ -5089,24 +5139,24 @@ ORG &0B00
 
 .sub_C12F7
 
- LDA zIndex             \ Set A to the number of the current z-index
+ LDA zStack             \ Set A to the index * 3 of the current z-stack entry
 
- STA zIndexPrevious     \ Store A in zIndexPrevious, as we are about to move on
-                        \ to the next z-index
+ STA zStackPrevious     \ Store A in zStackPrevious, as we are about to move on
+                        \ to the next z-stack entry
 
- CLC                    \ Set A = zIndex + 3 
+ CLC                    \ Set A = zStack + 3 
  ADC #3                 \
-                        \ to move on to the next z-index
+                        \ to move on to the next z-stack entry
 
- CMP #120               \ If A < 120, then we haven't reached the maximum
- BCC C1304              \ z-index, so jump to C1304 to store the updated value
+ CMP #120               \ If A < 120, then we haven't reached the end of the
+ BCC C1304              \ z-stack, so jump to C1304 to store the updated value
 
- LDA #0                 \ We just reached the last z-index, so set A = 0 to wrap
-                        \ round to the start
+ LDA #0                 \ We just reached the end of the z-stack, so set A = 0
+                        \ to wrap round to the start
 
 .C1304
 
- STA zIndex             \ Store the updated value in zIndex
+ STA zStack             \ Set zStack to the updated z-stack index * 3
 
  LDX #23                \ Set X to driver 23
 
@@ -5147,7 +5197,7 @@ ORG &0B00
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the Y-th entries from
                         \ xTrackVectorI, yTrackVectorI and zTrackVectorI
 
- LDX zIndex
+ LDX zStack
  LDA L0001
  LSR A
  PHP
@@ -5166,8 +5216,12 @@ ORG &0B00
 .C134F
 
  STA W
- LDY objTrackSection+23
+
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
+                        \ driver 23
+
  LDA trackSectionSize,Y
+
  PLP
  BCC C1365
  LSR A
@@ -5201,12 +5255,12 @@ ORG &0B00
 .C137C
 
  AND L0001
- STA dataBlockIndex+2,X
- LDY zIndexPrevious
+ STA zStackFlags,X
+ LDY zStackPrevious
 
  JSR AddVectors
 
- JSR CopySectionData    \ Copy the X-th yVector1 to yVector2
+ JSR CopySectionData    \ Copy the X-th ySectionCoordI to ySectionCoordO
 
  LDY thisVectorNumber
  LDA #0
@@ -5223,11 +5277,11 @@ ORG &0B00
  ASL A
  ROL SS
  CLC
- ADC xVector1Lo,X
- STA xVector2Lo,X
+ ADC xSectionCoordILo,X
+ STA xSectionCoordOLo,X
  LDA SS
- ADC xVector1Hi,X
- STA xVector2Hi,X
+ ADC xSectionCoordIHi,X
+ STA xSectionCoordOHi,X
  LDA zTrackVectorO,Y
  BPL C13B4
  DEC UU
@@ -5239,20 +5293,20 @@ ORG &0B00
  ASL A
  ROL UU
  CLC
- ADC zVector1Lo,X
- STA zVector2Lo,X
+ ADC zSectionCoordILo,X
+ STA zSectionCoordOLo,X
  LDA UU
- ADC zVector1Hi,X
- STA zVector2Hi,X
+ ADC zSectionCoordIHi,X
+ STA zSectionCoordOHi,X
  JSR sub_C13DA
 
 .C13CC
 
- LDX zIndex
+ LDX zStack
  LDA thisVectorNumber
- STA dataBlockIndex,X
+ STA zStackVector,X
  JSR sub_C125A
- JSR sub_C150E
+ JSR GetBestRacingLine
  RTS
 
 \ ******************************************************************************
@@ -5821,9 +5875,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C150E
+\       Name: GetBestRacingLine
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5832,7 +5886,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C150E
+.GetBestRacingLine
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
@@ -5853,17 +5907,17 @@ ORG &0B00
  BCS C152E
 
  LDA objSectionCount+23 \ If driver 23's progress through the track section is
- CMP trackSection5a,Y   \ >= the trackSection5a for the section, jump to C1532
+ CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to C1532
  BCS C1532              \ to move on to the next track section
 
-                        \ We get here if L0017 is zero, bit 3 of L0001 is clear,
+                        \ We get here if L0017 is zero, bit 0 of L0001 is clear,
                         \ and driver 23's progress through the track section is
-                        \ < the trackSection5a for the section
+                        \ < the trackSectionTurn for the section
 
 .C1527
 
- LDA L5FB0,X            \ Set A to L5FB0 for section X, with bit 6 set
- ORA #%01000000
+ LDA bestRacingLine,X   \ Set A to the best racing line for section X, with
+ ORA #%01000000         \ bit 6 set
 
  BNE C1573              \ Jump to C1573 to store A in dashDataBlock+1 for this
                         \ section and return from the subroutine (this BNE is
@@ -5886,11 +5940,11 @@ ORG &0B00
 
 .C1538
 
- LDA trackSection0b,Y   \ If bit 0 of the track section's trackSection0b is
- AND #1                 \ clear, jump to C1527
+ LDA trackSectionFlag,Y \ If bit 0 of the track section's flag byte is clear,
+ AND #1                 \ jump to C1527
  BEQ C1527
 
- LDA trackSection5a,Y   \ Set L0017 = track section's trackSection5a
+ LDA trackSectionTurn,Y \ Set L0017 = track section's trackSectionTurn
  STA L0017
 
  BEQ C1527              \ If L0017 = 0, jump to C1527
@@ -5901,9 +5955,10 @@ ORG &0B00
  AND #%01111111         \ Set L0018 = bits 0-6 of the track section's maximum
  STA L0018              \ speed
 
- LDA L5FB0,X            \ Set A = L5FB0 for the track section
+ LDA bestRacingLine,X   \ Set A to the best racing line for the track section
 
- STA L0016              \ Set L0016 = L5FB0 for the track section
+ STA L0016              \ Set L0016 to the best racing line for the track
+                        \ section
 
  JMP C1573              \ Jump to C1573 to store A in dashDataBlock+1 for this
                         \ section and return from the subroutine (this BNE is
@@ -5953,8 +6008,8 @@ ORG &0B00
 
 .C1573
 
- LDY zIndex             \ Set dataBlockIndex+1 for this z-index to A
- STA dataBlockIndex+1,Y
+ LDY zStack             \ Set zStackSteering for this z-stack entry to A
+ STA zStackSteering,Y
 
  RTS                    \ Return from the subroutine
 
@@ -10897,7 +10952,7 @@ IF _SUPERIOR
 
  STA V
 
- LDY zIndex96
+ LDY zStack96
 
  LDA #60
  SEC
@@ -10913,7 +10968,7 @@ IF _SUPERIOR
  ADC #32
  STA U
 
- LDA dataBlockIndex+1,Y
+ LDA zStackSteering,Y
 
  AND #%01111111
 
@@ -11775,8 +11830,8 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The offset from xVector1 of the variable to use for the
-\                       object's 3D coordinates
+\   X                   The offset of the variable to use for the object's 3D
+\                       coordinates
 \
 \                         * &F4 = xVector7
 \
@@ -11784,7 +11839,7 @@ ENDIF
 \
 \                         * &FD = xVector4
 \
-\   Y                   The offset from xVector5 of the second variable to use:
+\   Y                   The offset of the second variable to use:
 \
 \                         * 6 = xVector6
 \
@@ -11804,11 +11859,11 @@ ENDIF
 
 .ProjectObjectX
 
- LDA xVector1Lo,X
+ LDA xSectionCoordILo,X
  SEC
  SBC xVector5Lo,Y
  STA PP
- LDA xVector1Hi,X
+ LDA xSectionCoordIHi,X
  SBC xVector5Hi,Y
  STA VV
  BPL prox1
@@ -11822,11 +11877,11 @@ ENDIF
 .prox1
 
  STA SS
- LDA zVector1Lo,X
+ LDA zSectionCoordILo,X
  SEC
  SBC zVector5Lo,Y
  STA RR
- LDA zVector1Hi,X
+ LDA zSectionCoordIHi,X
  SBC zVector5Hi,Y
  STA GG
  BPL prox2
@@ -12050,11 +12105,11 @@ ENDIF
 
 .ProjectObjectY
 
- LDA yVector1Lo,X
+ LDA ySectionCoordILo,X
  SEC
  SBC yVector5Lo,Y
  STA QQ
- LDA yVector1Hi,X
+ LDA ySectionCoordIHi,X
  SBC yVector5Hi,Y
  STA WW
  BPL proy1
@@ -12409,12 +12464,12 @@ ENDIF
 
 .C2410
 
- LDA xVector1Lo,X
+ LDA xSectionCoordILo,X
  SEC
- SBC xVector1Lo,Y
+ SBC xSectionCoordILo,Y
  STA T
- LDA xVector1Hi,X
- SBC xVector1Hi,Y
+ LDA xSectionCoordIHi,X
+ SBC xSectionCoordIHi,Y
  CLC
  BPL C2423
  SEC
@@ -12429,11 +12484,11 @@ ENDIF
  ROR T
  STA V
  LDX U
- LDA xVector1Lo,Y
+ LDA xSectionCoordILo,Y
  CLC
  ADC T
  STA xVector3Lo,X
- LDA xVector1Hi,Y
+ LDA xSectionCoordIHi,Y
  ADC V
  STA xVector3Hi,X
  INX
@@ -12696,7 +12751,7 @@ ENDIF
 
 .sub_C254A
 
- LDX zIndex
+ LDX zStack
  EOR directionFacing
  BPL C255A
  TXA
@@ -12738,12 +12793,12 @@ ENDIF
  LDY L0049
  CPX #120
  BCS C2570
- LDA dataBlockIndex+2,X
+ LDA zStackFlags,X
  BCC C2573
 
 .C2570
 
- LDA dataBlockIndex+2-120,X
+ LDA zStackFlags-120,X
 
 .C2573
 
@@ -13556,12 +13611,12 @@ ENDIF
 
  LDY objTrackSection,X  \ Set Y to the track section number * 8 for driver X
 
- LDA trackSection0b,Y   \ Set A to trackSection0b for the driver's track section
+ LDA trackSectionFlag,Y \ Set A to the flag byte for the driver's track section
 
  BPL mcar2              \ If bit 7 of A is clear, jump to mcar2
 
-                        \ If we get here then bit 7 of this section's
-                        \ trackSection0b is set
+                        \ If we get here then bit 7 of this section's flag byte
+                        \ is set
 
  LDA carSpeedHi,X       \ If the high byte of the car's speed >= the car's
  CMP carSectionSpeed,X  \ carSectionSpeed then jump to mcar11 to skip changing
@@ -13574,8 +13629,8 @@ ENDIF
 
 .mcar2
 
-                        \ If we get here then bit 7 of this section's
-                        \ trackSection0b is clear
+                        \ If we get here then bit 7 of this section's flag byte
+                        \ is clear
 
  LSR A                  \ Set A = A >> 2 and set the C flag to bit 0
 
@@ -13583,7 +13638,7 @@ ENDIF
                         \ the speed calculation
 
                         \ If we get here then bits 0 and 7 of this section's
-                        \ trackSection0b are both clear
+                        \ flag byte are both clear
 
  LDA trackMaxSpeed,Y    \ Set carSectionSpeed for this driver to trackMaxSpeed
  STA carSectionSpeed,X  \ for this track section
@@ -13603,14 +13658,14 @@ ENDIF
                         \   T = A / 4
                         \     = (trackMaxSpeed - carSpeedHi - 1) / 4
 
- LDA objSectionCount,X  \ Set A = objSectionCount - trackSection5a
+ LDA objSectionCount,X  \ Set A = objSectionCount - trackSectionTurn
  SEC                    \
- SBC trackSection5a,Y   \ so this takes the driver's current progress through
-                        \ the track section and subtracts the trackSection5a
+ SBC trackSectionTurn,Y \ so this takes the driver's current progress through
+                        \ the track section and subtracts the trackSectionTurn
                         \ for this track section
 
  BCS mcar11             \ If the subtraction didn't underflow, then
-                        \ objSectionCount >= trackSection5a, so jump to mcar11
+                        \ objSectionCount >= trackSectionTurn, so jump to mcar11
                         \ to skip changing the car's speed
 
  CMP T                  \ If A >= T, jump to mcar8 to apply the brakes
@@ -13994,19 +14049,18 @@ ENDIF
  ADC T                  \       = ~(distance * 2 + distance)
  EOR #&FF               \       = ~(distance * 3)
 
- SEC                    \ Set A = A + 1 + zIndex
- ADC zIndex             \       = ~(distance * 3) + 1 + zIndex
-                        \       = -(distance * 3) + zIndex
-                        \       = zIndex - distance * 3
+ SEC                    \ Set A = A + 1 + zStack
+ ADC zStack             \       = ~(distance * 3) + 1 + zStack
+                        \       = -(distance * 3) + zStack
+                        \       = zStack - distance * 3
                         \
-                        \ zIndex contains the number * 3 of the z-index of the
-                        \ coordinate that was last processed, so this is the
-                        \ same as:
+                        \ zStack contains the index * 3 of the z-stack entry
+                        \ that was last processed, so this is the same as:
                         \
-                        \   (z-index - distance) * 3
+                        \   (z-stack index - distance) * 3
 
- BPL bvis3              \ If the result was positive, i.e. z-index >= distance,
-                        \ jump to bvis3 to skip the following
+ BPL bvis3              \ If the result was positive, i.e. z-stack index >=
+                        \ distance, jump to bvis3 to skip the following
 
  CLC                    \ Otherwise set A = A + 120
  ADC #120
@@ -14014,7 +14068,8 @@ ENDIF
 .bvis3
 
  TAY                    \ Copy the result from A into Y, so Y now contains the
-                        \ z-index of the coordinate of the car object
+                        \ z-stack index * 3 of the z-stack entry for the car
+                        \ object
 
  LDA carStatus,X        \ If bit 4 of driver X's carStatus is set, jump to
  AND #%00010000         \ BuildCarObjects
@@ -14024,8 +14079,8 @@ ENDIF
  CMP #50                \ jump to BuildCarObjects
  BCC BuildCarObjects
 
- LDA dataBlockIndex+1,Y \ Set the driver's carSteering to entry Y from
- STA carSteering,X      \ dataBlockIndex+1, so the car follows the curve of the
+ LDA zStackSteering,Y   \ Set the driver's carSteering to entry Y from
+ STA carSteering,X      \ zStackSteering, so the car follows the curve of the
                         \ track ??? (similar to CAS calculation)
 
 \ ******************************************************************************
@@ -14041,9 +14096,9 @@ ENDIF
 \ This routine calculates the 3D coordinate of the specified car, given its
 \ progress through the current section and the racing line, as follows:
 \
-\   [ xVector4 ]     [ xVector1        ]   [ xTrackVectorI ]
-\   [ yVector4 ]  =  [ yVector1 mod 32 ] + [ yTrackVectorI ] * carProgress
-\   [ zVector4 ]     [ zVector1        ]   [ zTrackVectorI ]
+\   [ xVector4 ]     [ xSectionCoordI        ]   [ xTrackVectorI ]
+\   [ yVector4 ]  =  [ ySectionCoordI mod 32 ] + [ yTrackVectorI ] * carProgress
+\   [ zVector4 ]     [ zSectionCoordI        ]   [ zTrackVectorI ]
 \
 \                    [ xTrackVectorO ]
 \                  + [       0       ] * carRacingLine * 4
@@ -14059,16 +14114,17 @@ ENDIF
 \
 \   * trackVectorO is the outer track vector for the car's position
 \
-\   * xVector1 is the coordinate of the z-index for the car's position ???
+\   * xSectionCoordI is the coordinate for the start of the car's track section
+\     from the current z-stack entry
 \
 \ The routine then projects the car object (or objects) into screen coordinates.
 \
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
 \
-\   [ xVector4 ]   [ xVector1        ]   [ xTrackVectorI ]
-\   [ yVector4 ] = [ yVector1 mod 32 ] + [ yTrackVectorI ] * carProgress
-\   [ zVector4 ]   [ zVector1        ]   [ zTrackVectorI ]
+\   [ xVector4 ]   [ xSectionCoordI        ]   [ xTrackVectorI ]
+\   [ yVector4 ] = [ ySectionCoordI mod 32 ] + [ yTrackVectorI ] * carProgress
+\   [ zVector4 ]   [ zSectionCoordI        ]   [ zTrackVectorI ]
 \
 \ Arguments:
 \
@@ -14076,7 +14132,8 @@ ENDIF
 \
 \   L0045               Same as X
 \
-\   Y                   The z-index * 3 to use for the calculation
+\   Y                   The index * 3 of the z-stack entry to use for the
+\                       calculation
 \
 \ Returns:
 \
@@ -14093,14 +14150,14 @@ ENDIF
 
 .BuildCarObjects
 
- LDA dataBlockIndex,Y   \ Fetch the track vector number for z-index Y, which
-                        \ gives us the track vector number of the car object
-                        \ we want to build
+ LDA zStackVector,Y     \ Fetch the track vector number for z-stack entry Y,
+                        \ which gives us the track vector number of the car
+                        \ object we want to build
 
  STA yStore1            \ Store the track vector number in yStore1 so we can
                         \ retrieve it in parts 2 and 3
 
- STY T                  \ Store the z-index * 3 in T
+ STY T                  \ Store the index * 3 of the z-stack entry in T
 
  TAY                    \ Set Y to the track vector number of the car object
 
@@ -14121,7 +14178,7 @@ ENDIF
 
                         \ We now calculate the following:
                         \
-                        \   xVector4 = xVector1 + trackVectorI * carProgress
+                        \   xVector4 = xSectionCoordI + trackVectorI * carProgress
 
  LDX #0                 \ We are about to work our way through the three axes,
                         \ so set X = 0 to use as an axis counter, working
@@ -14132,7 +14189,8 @@ ENDIF
  LDA TT                 \ Set U = TT
  STA U                  \       = the lowest byte of the car's progress
 
- LDY T                  \ Set Y to the z-index * 3 that we stored above
+ LDY T                  \ Set Y to the index * 3 of the z-stack entry that we
+                        \ stored above
 
 .bcar1
 
@@ -14181,31 +14239,34 @@ ENDIF
                         \   (V A T) = A * U
                         \           = trackVectorI * carProgress
                         \
-                        \ We now add (V A) to the Y-th entry in xVector1, which
-                        \ is the xVector1 entry for the z-index passed to the
-                        \ routine (Y contains the z-index * 3), and store the
-                        \ result in the three-axis variable in xVector4
+                        \ We now add (V A) to the Y-th entry in xSectionCoordI,
+                        \ which is the xSectionCoordI entry for the z-stack
+                        \ entry passed to the routine (Y contains the index * 3
+                        \ of the z-stack entry), and store the result in
+                        \ xVector4
                         \
                         \ For the y-axis of the coordinate, i.e. for the
                         \ multiplication:
                         \
-                        \   yVector4 = yVector1 + (V A)
+                        \   yVector4 = ySectionCoordI + (V A)
                         \
-                        \ then we add yVector1Hi mod 32 instead of yVector1Hi
+                        \ then we add ySectionCoordIHi mod 32 instead of
+                        \ ySectionCoordIHi
 
- CLC                    \ Set (xVector4Hi xVector4Lo) = (xVector1Hi xVector1Lo)
- ADC xVector1Lo,Y       \                                + (V A)
+ CLC                    \ Set (xVector4Hi xVector4Lo)
+ ADC xSectionCoordILo,Y \     = (xSectionCoordIHi xSectionCoordILo) + (V A)
  STA xVector4Lo,X       \
                         \ starting with the low bytes
 
- LDA xVector1Hi,Y       \ And then the high bytes (though with a short interlude
-                        \ for when X = 1, to add yVector1Hi mod 32 instead)
+ LDA xSectionCoordIHi,Y \ And then the high bytes (though with a short interlude
+                        \ for when X = 1, when we add ySectionCoordIHi mod 32
+                        \ instead)
 
  PHP                    \ Store the C flag on the stack so we can retrieve it
                         \ when adding the high bytes below
 
  CPX #1                 \ If X = 1, set A = A mod 32
- BNE bcar4              \                 = yVector1Hi mod 32
+ BNE bcar4              \                 = ySectionCoordIHi mod 32
  AND #31
 
 .bcar4
@@ -14214,9 +14275,9 @@ ENDIF
  ADC V
  STA xVector4Hi,X
 
- INY                    \ Increment the z-index pointer
+ INY                    \ Increment the axis pointer for xSectionCoordI 
 
- INX                    \ Increment the axis pointer
+ INX                    \ Increment the axis pointer for xVector4
 
  CPX #3                 \ Loop back until X has looped through all three axes
  BNE bcar1
@@ -14246,7 +14307,7 @@ ENDIF
 
                         \ We start by calculating the following:
                         \
-                        \   xVector4 =   xVector1
+                        \   xVector4 =   xSectionCoordI
                         \              + trackVectorO * carRacingLine * 4
                         \
                         \ for the x-axis and z-axis only
@@ -14561,8 +14622,8 @@ ENDIF
 \
 \   A                   Object type
 \
-\   X                   The offset from xVector1 of the variable to use for the
-\                       object's 3D coordinates in the ProjectObjectX routine:
+\   X                   The offset of the variable to use for the object's 3D
+\                       coordinates in the ProjectObjectX routine:
 \
 \                         * &F4 = xVector7
 \
@@ -22630,9 +22691,9 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: Set5FB0
+\       Name: SetBestRacingLine
 \       Type: Subroutine
-\   Category: Track
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -22653,7 +22714,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.Set5FB0
+.SetBestRacingLine
 
  LDA trackBaseSpeed,X   \ Set baseSpeed = the X-th byte of trackBaseSpeed
  STA baseSpeed          \
@@ -22675,9 +22736,9 @@ NEXT
  TAY
 
                         \ Now we copy Y bytes (one per track section) from
-                        \ trackData6D0 to L5FB0, processing each byte as we go:
-                        \ (i.e. taking the input from trackData6D0 and storing
-                        \ the result in L5FB0):
+                        \ trackSteering to bestRacingLine, processing each byte
+                        \ as we go (i.e. taking the input from trackSteering and
+                        \ storing the result in bestRacingLine):
                         \
                         \   * Bit 7 of the result = bit 0 of the input
                         \
@@ -22688,12 +22749,12 @@ NEXT
                         \     * A >> 2 * U / 256 if bit 1 of the input is clear
                         \     * A >> 2           if bit 1 of the input is set
                         \
-                        \ where A is the input from trackData6D0 and U is the
+                        \ where A is the input from trackSteering and U is the
                         \ base speed from above
 
 .P44D5
 
- LDA trackData6D0,Y     \ Fetch the Y-th byte from trackData6D0 as the input
+ LDA trackSteering,Y    \ Fetch the Y-th byte from trackSteering as the input
 
  LSR A                  \ Shift bit 0 of the input into the C flag and store it
  PHP                    \ on the stack so we can put it into bit 7 of the result
@@ -22713,7 +22774,7 @@ NEXT
  PLP
  ROR A
 
- STA L5FB0,Y            \ Store the result in the Y-th byte of L5FB0
+ STA bestRacingLine,Y   \ Store the result in the Y-th byte of bestRacingLine
 
  DEY                    \ Decrement the loop counter
 
@@ -22791,8 +22852,8 @@ NEXT
 
 .C452D
 
- LDX zIndex96
- LDY dataBlockIndex,X
+ LDX zStack96
+ LDY zStackVector,X
  LDA L000D
  STA V
  LDA xTrackVectorI,Y
@@ -22928,9 +22989,9 @@ NEXT
 
 .C45DF
 
- LDY zIndex96
+ LDY zStack96
  CLC
- ADC yVector1Lo,Y
+ ADC ySectionCoordILo,Y
  PHP
  CLC
  ADC #&AC
@@ -22938,7 +22999,7 @@ NEXT
  CLC
  ADC V
  STA yVector5Lo
- LDA yVector1Hi,Y
+ LDA ySectionCoordIHi,Y
  ADC W
  PLP
  ADC #0
@@ -24707,24 +24768,25 @@ ENDIF
 
 .sign1
 
- TAX                    \ Set X to the trackData0D0 offset of the section
+ TAX                    \ Set X to the index of the track sign vector for the
+                        \ section
 
  LDY #2                 \ Set W = 2
  STY W
 
- LDA trackData0E0,X
+ LDA zTrackSignVector,X
 
  JSR sub_C4D21
 
  LDY #4
 
- LDA trackData0F0,X
+ LDA yTrackSignVector,X
 
  JSR sub_C4D21
 
  LDY #2
 
- LDA trackData0D0,X
+ LDA xTrackSignVector,X
 
  JSR sub_C4D21
 
@@ -24799,7 +24861,8 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   Value from trackData0D0, trackData0F0, trackData0E0
+\   A                   Value from xTrackSignVector, yTrackSignVector,
+\                       zTrackSignVector
 \
 \   W                   Gets decremented each call, 2 then 1 then 0 (z, y, x)
 \
@@ -24880,8 +24943,9 @@ ENDIF
 
  STX raceClass          \ Set raceClass = 0 (Novice)
 
- JSR Set5FB0            \ Call Set5FB0 with X = 0 (Novice) to set up the 24
-                        \ bytes at L5FB0, returning with X unchanged 
+ JSR SetBestRacingLine  \ Call SetBestRacingLine with X = 0 (Novice) to set up
+                        \ the 24 bytes at bestRacingLine, returning with X
+                        \ unchanged 
 
                         \ The following loop works starts with X = 0, and then
                         \ loops down from 19 to 1, working its way through each
@@ -27712,7 +27776,7 @@ ENDIF
 
  SKIP 1
 
-.trackSection5a
+.trackSectionTurn
 
  SKIP 1
  
@@ -27728,15 +27792,15 @@ ENDIF
 
  SKIP 16
 
-.trackData0D0
+.xTrackSignVector
 
  SKIP 16
 
-.trackData0E0
+.zTrackSignVector
 
  SKIP 16
 
-.trackData0F0
+.yTrackSignVector
 
  SKIP 16
 
@@ -27760,7 +27824,7 @@ ENDIF
 
  SKIP 256
 
-.trackSection0b
+.trackSectionFlag
 
  SKIP 1
 
@@ -27796,7 +27860,7 @@ ENDIF
 
  SKIP 16
 
-.trackData6D0
+.trackSteering
 
  SKIP 24
 
@@ -28477,9 +28541,9 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5FB0
+\       Name: bestRacingLine
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -28488,7 +28552,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5FB0
+.bestRacingLine
 
  SKIP 32
 
@@ -30652,8 +30716,8 @@ ENDIF
 
  STX raceClass          \ Set raceClass to the chosen race class (0 to 2)
 
- JSR Set5FB0            \ Call Set5FB0 to set up the 24 bytes at L5FB0 according
-                        \ to the race class
+ JSR SetBestRacingLine  \ Call SetBestRacingLine to set up the 24 bytes at
+                        \ bestRacingLine according to the race class
 
 .game2
 
@@ -30894,8 +30958,8 @@ ENDIF
 
  LDX raceClass          \ Set X to the race class
 
- JSR Set5FB0            \ Call Set5FB0 to set up the 24 bytes at L5FB0 according
-                        \ to the race class
+ JSR SetBestRacingLine  \ Call SetBestRacingLine to set up the 24 bytes at
+                        \ bestRacingLine according to the race class
 
  LDX #26                \ Print token 26, which is a double-height header with
  JSR PrintToken         \ the text "STANDARD OF RACE"
