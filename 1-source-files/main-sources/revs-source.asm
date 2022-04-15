@@ -2821,7 +2821,7 @@ ORG &0B00
 \
 \       Name: sub_C0D01
 \       Type: Subroutine
-\   Category: 
+\   Category: Maths
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -2953,7 +2953,7 @@ ORG &0B00
 \
 \       Name: sub_C0DB3
 \       Type: Subroutine
-\   Category: 
+\   Category: Maths
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -3027,7 +3027,7 @@ ORG &0B00
 \
 \       Name: sub_C0DD7
 \       Type: Subroutine
-\   Category: 
+\   Category: Maths
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -4656,7 +4656,7 @@ ORG &0B00
 \
 \       Name: BuildPlayerCar
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Build the objects for the player's car
 \
 \ ------------------------------------------------------------------------------
@@ -4688,7 +4688,7 @@ ORG &0B00
  LDX #2                 \ We are about to copy the three axes of the resulting
                         \ vectors, so set an axis counter in X
 
-.P11DB
+.bpla1
 
  LDA xVector4Lo,X       \ Copy the car's 3D coordinates from xVector4 into
  STA xVector5Lo,X       \ xVector5
@@ -4697,19 +4697,19 @@ ORG &0B00
 
  DEX                    \ Decrement the axis counter
 
- BPL P11DB              \ Loop back until we have copied all three axes
+ BPL bpla1              \ Loop back until we have copied all three axes
 
  LDA zStack96           \ Set A = zStack96 + 3
  CLC                    \
  ADC #3                 \ to move on to the next z-stack entry
 
  CMP #120               \ If A < 120, then we haven't reached the end of the
- BCC C11F5              \ z-stack, so jump to C11F5 to store the updated value
+ BCC bpla2              \ z-stack, so jump to bpla2 to store the updated value
 
  LDA #0                 \ We just reached the end of the z-stack, so set A = 0
                         \ to wrap round to the start
 
-.C11F5
+.bpla2
 
  TAY                    \ Set Y to the updated z-stack index * 3
 
@@ -4789,7 +4789,11 @@ ORG &0B00
  STA ySectionCoordILo,X \
  LDA zTrackSectionILo,Y \   * The Y-th yTrackSectionI to the X-th ySectionCoordI
  STA zSectionCoordILo,X \
- LDA xTrackSectionIHi,Y \   * The Y-th zTrackSectionI to the X-th zSectionCoordI
+                        \   * The Y-th zTrackSectionI to the X-th zSectionCoordI
+                        \
+                        \ starting with the low bytes
+
+ LDA xTrackSectionIHi,Y \ And then the high bytes
  STA xSectionCoordIHi,X
  LDA yTrackSectionIHi,Y
  STA ySectionCoordIHi,X
@@ -4874,7 +4878,11 @@ ORG &0B00
  STA xSectionCoordOLo,X \
  LDA zTrackSectionOLo,Y \   * The Y-th xTrackSectionO to the X-th xSectionCoordO
  STA zSectionCoordOLo,X \
- LDA xTrackSectionOHi,Y \   * The Y-th zTrackSectionO to the X-th zSectionCoordO
+                        \   * The Y-th zTrackSectionO to the X-th zSectionCoordO
+                        \
+                        \ starting with the low bytes
+
+ LDA xTrackSectionOHi,Y \ And then the high bytes
  STA xSectionCoordOHi,X
  LDA zTrackSectionOHi,Y
  STA zSectionCoordOHi,X
@@ -4912,7 +4920,11 @@ ORG &0B00
 
  LDA ySectionCoordILo,X \ Copy the following 16-bit coordinate:
  STA ySectionCoordOLo,X \
- LDA ySectionCoordIHi,X \   * The X-th ySectionCoordI to the X-th ySectionCoordO
+                        \   * The X-th ySectionCoordI to the X-th ySectionCoordO
+                        \
+                        \ starting with the low byte
+
+ LDA ySectionCoordIHi,X \ And then the high byte
  STA ySectionCoordOHi,X
 
  RTS                    \ Return from the subroutine
@@ -5151,9 +5163,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C12F3
+\       Name: MovePlayerForward
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5162,10 +5174,10 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C12F3
+.MovePlayerForward
 
  CLC
- JSR MovePlayerCar
+ JSR MovePlayer
 
 \ ******************************************************************************
 \
@@ -5658,7 +5670,7 @@ ORG &0B00
 \
 \       Name: sub_C13FB
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5675,16 +5687,16 @@ ORG &0B00
  STA L0006
  LDX #&40
  STX L001A
- JSR sub_C1420
+ JSR TurnPlayerAround
  LDA #0
  STA L001A
  RTS
 
 \ ******************************************************************************
 \
-\       Name: sub_C140B
+\       Name: MovePlayerBack
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5693,24 +5705,24 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C140B
+.MovePlayerBack
 
  SEC
- JSR MovePlayerCar
+ JSR MovePlayer
  LDX #&28
  STX L0062
- JSR sub_C1420
+ JSR TurnPlayerAround
  LDX #&27
- JSR sub_C1420
+ JSR TurnPlayerAround
  LDA #0
  STA L0062
  RTS
 
 \ ******************************************************************************
 \
-\       Name: sub_C1420
+\       Name: TurnPlayerAround
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5721,7 +5733,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C1420
+.TurnPlayerAround
 
  LDA directionFacing    \ Flip bit 7 of directionFacing to denote that our car
  EOR #%10000000         \ is facing in the other direction
@@ -5729,7 +5741,7 @@ ORG &0B00
 
  JSR UpdateCurveVector  \ If this is a curved track section, update the value of
                         \ thisVectorNumber to the next track vector along the
-                        \ track in the direction we are facing
+                        \ track in the new direction we are facing
 
  STX L0042
 
@@ -5745,7 +5757,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: MovePlayerCar
+\       Name: MovePlayer
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Drive the player's car forwards or backwards
@@ -5763,7 +5775,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.MovePlayerCar
+.MovePlayer
 
  LDX currentPlayer      \ Set X to the driver number of the current player
 
@@ -5897,7 +5909,7 @@ ORG &0B00
 \
 \       Name: MoveObjectForward
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Move a specified object forwards along the track
 \
 \ ------------------------------------------------------------------------------
@@ -6008,7 +6020,7 @@ ORG &0B00
 \
 \       Name: MoveObjectBack
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Move a specified object backwards along the track
 \
 \ ------------------------------------------------------------------------------
@@ -6172,18 +6184,18 @@ ORG &0B00
  LSR A                  \ driver 23
  TAX
 
- LDA L0017              \ If L0017 is non-zero, jump to C1557
- BNE C1557
+ LDA L0017              \ If L0017 is non-zero, jump to rlin5
+ BNE rlin5
 
                         \ We get here if L0017 is zero
 
- LDA thisSectionFlags   \ If bit 0 of thisSectionFlags is set, jump to C152E
+ LDA thisSectionFlags   \ If bit 0 of thisSectionFlags is set, jump to rlin2
  LSR A
- BCS C152E
+ BCS rlin2
 
  LDA objSectionCount+23 \ If driver 23's progress through the track section is
- CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to C1532
- BCS C1532              \ to move on to the next track section
+ CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to rlin3
+ BCS rlin3              \ to move on to the next track section
 
                         \ If we get here, then:
                         \
@@ -6194,21 +6206,21 @@ ORG &0B00
                         \   * Driver 23's progress through the track section is
                         \     < the trackSectionTurn for the section
 
-.C1527
+.rlin1
 
  LDA bestRacingLine,X   \ Set A to the best racing line for section X, with
  ORA #%01000000         \ bit 6 set
 
- BNE C1573              \ Jump to C1573 to store A in dashDataBlock+1 for this
+ BNE rlin7              \ Jump to rlin7 to store A in dashDataBlock+1 for this
                         \ section and return from the subroutine (this BNE is
                         \ effectively a JMP as A is never zero)
 
-.C152E
+.rlin2
 
  LDA L0020              \ If bit 7 of L0020 is set, then trackMaxSpeed > 127 for
- BMI C1538              \ this section, so jump to C1538
+ BMI rlin4              \ this section, so jump to rlin4
 
-.C1532
+.rlin3
 
  TYA                    \ Set Y = Y + 8
  CLC                    \
@@ -6218,16 +6230,16 @@ ORG &0B00
  INX                    \ Increment X, so X contains the number of the next
                         \ track section
 
-.C1538
+.rlin4
 
  LDA trackSectionFlag,Y \ If bit 0 of the track section's flag byte is clear,
- AND #1                 \ jump to C1527
- BEQ C1527
+ AND #1                 \ jump to rlin1
+ BEQ rlin1
 
  LDA trackSectionTurn,Y \ Set L0017 = track section's trackSectionTurn
  STA L0017
 
- BEQ C1527              \ If L0017 = 0, jump to C1527
+ BEQ rlin1              \ If L0017 = 0, jump to rlin1
 
  LDA trackMaxSpeed,Y    \ Set L0020 = track section's maximum speed, including
  STA L0020              \ bit 7
@@ -6240,11 +6252,11 @@ ORG &0B00
  STA L0016              \ Set L0016 to the best racing line for the track
                         \ section
 
- JMP C1573              \ Jump to C1573 to store A in dashDataBlock+1 for this
+ JMP rlin7              \ Jump to rlin7 to store A in dashDataBlock+1 for this
                         \ section and return from the subroutine (this BNE is
                         \ effectively a JMP as A is never zero)
 
-.C1557
+.rlin5
 
                         \ We get here if L0017 is non-zero
 
@@ -6260,8 +6272,8 @@ ORG &0B00
  SEC
  SBC L0018
 
- BCS C156D              \ If the subtraction didn't underflow, i.e. L0017 >=
-                        \ L0018, jump to C156D to store L0016 in dashDataBlock+1
+ BCS rlin6              \ If the subtraction didn't underflow, i.e. L0017 >=
+                        \ L0018, jump to rlin6 to store L0016 in dashDataBlock+1
                         \ for this section and return from the subroutine
 
  ADC T                  \ Set A = A + T
@@ -6269,24 +6281,24 @@ ORG &0B00
 
  LDA #0                 \ Set A = 0
 
- BCS C1573              \ If the result above didn't overflow, i.e.
+ BCS rlin7              \ If the result above didn't overflow, i.e.
                         \
                         \   L0017 - L0018 + L0017 / 8 <= 255
                         \
-                        \ then jump to C1573 to store 0 in dashDataBlock+1 for
+                        \ then jump to rlin7 to store 0 in dashDataBlock+1 for
                         \ this section and return from the subroutine
                         \
                         \ Otherwise store -L0016 in dashDataBlock+1 for this
                         \ section and return from the subroutine
 
-.C156D
+.rlin6
 
  LDA L0016              \ Set A = L0016
 
- BCS C1573              \ If the C flag is clear, flip bit 7 of A
+ BCS rlin7              \ If the C flag is clear, flip bit 7 of A
  EOR #%10000000
 
-.C1573
+.rlin7
 
  LDY zStack             \ Set zStackSteering for this z-stack entry to A
  STA zStackSteering,Y
@@ -6996,7 +7008,7 @@ ENDIF
 
  JSR sub_C4626
 
- JSR sub_C24B9
+ JSR MovePlayerCar      \ Move the player's car in the correct direction
 
  JSR UpdateLapTimers    \ Update the lap timers and display timer-related
                         \ messages at the top of the screen
@@ -8091,10 +8103,10 @@ ENDIF
  ADC #&28
  TAX
  CMP #&31
- BCS C1A30
+ BCS dtra1
  LDA #&31
 
-.C1A30
+.dtra1
 
  STA L0050
  LDA #LO(L0400)
@@ -8122,10 +8134,10 @@ ENDIF
  LDA L0051
  TAX
  CMP #9
- BCS C1A69
+ BCS dtra2
  LDA #9
 
-.C1A69
+.dtra2
 
  STA L0050
  LDX L0051
@@ -8467,7 +8479,7 @@ ENDIF
 .CheckForContact
 
  LDA L0068
- BEQ C1C1B
+ BEQ DrawObjectEdge-1
  LDA #0
  STA L0068
  SEC
@@ -8475,22 +8487,22 @@ ENDIF
  LDA #&25
  SEC
  SBC L0041
- BCS C1BCD
+ BCS cont1
  LDA #5
 
-.C1BCD
+.cont1
 
  ASL A
  STA U
  LDX L0067
  LDY currentPlayer
  CMP #&28
- BCC C1BDF
+ BCC cont2
  LDA raceStarted
- BPL C1BDF
+ BPL cont2
  JSR sub_C11AB
 
-.C1BDF
+.cont2
 
  LDA xObjectScreenHi,X
  SEC
@@ -8500,26 +8512,26 @@ ENDIF
  PHP
  LDA carSpeedHi,Y
  CPX #&14
- BCS C1BFE
+ BCS cont4
  CMP carSpeedHi,X
- BCS C1BF9
+ BCS cont3
  LDA carSpeedHi,X
- BNE C1BFE
+ BNE cont4
 
-.C1BF9
+.cont3
 
  ADC #&0B
  STA carSpeedHi,X
 
-.C1BFE
+.cont4
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
  CMP #&10
- BCC C1C07
+ BCC cont5
  LDA #&10
 
-.C1C07
+.cont5
 
  PLP
 
@@ -8554,15 +8566,13 @@ ENDIF
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
 
-.C1C1B
-
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: DrawObjectEdge (Part 1 of 5)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Draw the specified edge of an object part
 \  Deep dive: Creating objects from edges
 \
@@ -8693,6 +8703,10 @@ ENDIF
 \                           DrawObjectEdge needs to insert the next edge into
 \                           the pixel byte in rightOfEdge, using the pixel
 \                           mask in edgePixelMask)
+\
+\ Other entry points:
+\
+\   DrawObjectEdge-1    Contains an RTS
 \
 \ ******************************************************************************
 
@@ -8885,7 +8899,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 2 of 5)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Calculate the screen address for the edge we want to draw
 \  Deep dive: Creating objects from edges
 \
@@ -8991,7 +9005,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 3 of 5)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Construct a pixel byte for the edge we want to draw
 \  Deep dive: Creating objects from edges
 \
@@ -9319,7 +9333,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 4 of 5)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Draw the edge into the screen buffer, merging with any content
 \             already in the buffer
 \  Deep dive: Creating objects from edges
@@ -9659,7 +9673,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 5 of 5)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Fill the object if required and loop back for the next edge
 \  Deep dive: Creating objects from edges
 \
@@ -9817,7 +9831,7 @@ ENDIF
 \
 \       Name: FillAfterObject
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Fill the block to the right of an object
 \  Deep dive: Creating objects from edges
 \
@@ -10111,7 +10125,7 @@ ENDIF
 \
 \       Name: FillAfterObjectS
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Fill the block to the right of an object
 \  Deep dive: Creating objects from edges
 \
@@ -10295,7 +10309,7 @@ ENDIF
 \
 \       Name: DrawEdge
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Draw an edge, overwriting whatever is already on-screen
 \
 \ ------------------------------------------------------------------------------
@@ -10505,7 +10519,7 @@ ENDIF
 \
 \       Name: FillInsideObject
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Fill the object part from the previous edge to the current edge
 \  Deep dive: Creating objects from edges
 \
@@ -11384,7 +11398,7 @@ ENDIF
 \
 \       Name: DrawObject
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Draw an object of a specific type
 \
 \ ------------------------------------------------------------------------------
@@ -11611,7 +11625,7 @@ ENDIF
 \
 \       Name: ScaleObject
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Scale an object's scaffold by the scale factors in scaleUp and
 \             scaleDown
 \  Deep dive: Scaling objects with scaffolds
@@ -11845,7 +11859,7 @@ ENDIF
 \
 \       Name: DrawObjectEdges
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Draw all the parts of an object by drawing edges into the screen
 \             buffer
 \  Deep dive: Creating objects from edges
@@ -12103,7 +12117,7 @@ ENDIF
 \
 \       Name: ProjectObjectX
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Project an object onto the screen and calculate the object's
 \             screen x-coordinate
 \
@@ -12362,7 +12376,7 @@ ENDIF
 \
 \       Name: ProjectObjectY
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Project an object onto the screen and calculate the object's
 \             screen y-coordinate
 \
@@ -12873,10 +12887,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C24B9
+\       Name: MovePlayerCar
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Move the player's car in the correct direction
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12884,57 +12898,57 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C24B9
+.MovePlayerCar
 
  LDA L0044
  SEC
  SBC var03Hi
- BPL C24C3
+ BPL mpla1
  EOR #&FF
 
-.C24C3
+.mpla1
 
  ASL A
  CMP #&80
  EOR directionFacing
- BPL C24D6
- BCC C24CE
+ BPL mpla3
+ BCC mpla2
  EOR #&7F
 
-.C24CE
+.mpla2
 
  CMP #&FC
- BCS C24D6
+ BCS mpla3
  JSR sub_C13FB
  RTS
 
-.C24D6
+.mpla3
 
  LDA L0013
  CMP #&0C
- BEQ C24E1
- BCS C24E9
- JSR sub_C12F3
+ BEQ mpla4
+ BCS mpla5
+ JSR MovePlayerForward
 
-.C24E1
+.mpla4
 
  BIT L0043
- BPL C24F5
- JSR sub_C12F3
+ BPL mpla7
+ JSR MovePlayerForward
  RTS
 
-.C24E9
+.mpla5
 
  CMP #&0E
- BCC C24F5
- BEQ C24F2
- JSR sub_C140B
+ BCC mpla7
+ BEQ mpla6
+ JSR MovePlayerBack
 
-.C24F2
+.mpla6
 
- JSR sub_C140B
+ JSR MovePlayerBack
 
-.C24F5
+.mpla7
 
  RTS
 
@@ -13278,7 +13292,7 @@ ENDIF
 \
 \       Name: MoveAndDrawCars
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Driving model
 \    Summary: Move the cars around the track and draw any that are visible, up
 \             to a maximum of five
 \
@@ -13410,7 +13424,7 @@ ENDIF
 \
 \       Name: sub_C2692
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13685,7 +13699,7 @@ ENDIF
 \
 \       Name: GetObjectDistance
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Calculate the distance between two objects
 \
 \ ------------------------------------------------------------------------------
@@ -14253,7 +14267,7 @@ ENDIF
 \
 \       Name: BuildVisibleCar
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Check the distance to the specified car and build the car object
 \             if it is close enough
 \
@@ -14370,7 +14384,7 @@ ENDIF
 \
 \       Name: BuildCarObjects (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Calculate the 3D coordinate of the specified car
 \  Deep dive: Drawing a 3D car from 2D parts
 \
@@ -14570,7 +14584,7 @@ ENDIF
 \
 \       Name: BuildCarObjects (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Add the racing line to the 3D coordinate of the specified car
 \  Deep dive: Drawing a 3D car from 2D parts
 \
@@ -14700,7 +14714,7 @@ ENDIF
 \
 \       Name: BuildCarObjects (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Calculate the screen coordinates of all the objects in the
 \             specified car
 \  Deep dive: Drawing a 3D car from 2D parts
@@ -14896,7 +14910,7 @@ ENDIF
 \
 \       Name: ProjectObject
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Project an object onto the screen and calculate the object's
 \             screen coordinates
 \
@@ -14951,7 +14965,7 @@ ENDIF
 \
 \       Name: SetObjectDetails
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Set an object's visibility, scale and type
 \
 \ ------------------------------------------------------------------------------
@@ -15050,7 +15064,7 @@ ENDIF
 \
 \       Name: HideObject
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Set an object to be hidden
 \
 \ ------------------------------------------------------------------------------
@@ -15077,7 +15091,7 @@ ENDIF
 \
 \       Name: SetObjectStatus
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: 3D objects
 \    Summary: Set an object's status byte
 \
 \ ------------------------------------------------------------------------------
@@ -15100,7 +15114,7 @@ ENDIF
 \
 \       Name: sub_C2AB3
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -16466,13 +16480,13 @@ ENDIF
                         \
                         \   * C flag clear if Y < dashDataOffset,X
 
- BNE C2FFB              \ If Y <> the dashDataOffset of block X, skip the
+ BNE cdas1              \ If Y <> the dashDataOffset of block X, skip the
                         \ following instruction
 
  CLC                    \ If we get here then Y = the dashDataOffset of block X,
                         \ so clear the C flag
 
-.C2FFB
+.cdas1
 
  LDA T                  \ Restore the values of A and X that we stored above
  LDX U
@@ -17286,7 +17300,7 @@ ENDIF
 \
 \       Name: startDialLo
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: The low byte of the screen address of the start of the dial hand
 \             on the rev counter
 \
@@ -17800,7 +17814,7 @@ ENDIF
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
 
- BEQ C34F7              \ If SPACE is being pressed, jump to C34F7 to return
+ BEQ wait3              \ If SPACE is being pressed, jump to wait3 to return
                         \ from the subroutine
 
  JSR CheckRestartKeys   \ Check whether the restart keys are being pressed, and
@@ -17818,7 +17832,7 @@ ENDIF
 
  LSR G                  \ Clear bit 7 of G
 
-.C34F7
+.wait3
 
  RTS                    \ Return from the subroutine
 
@@ -17896,7 +17910,7 @@ ENDIF
 \
 \       Name: objectTop
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Scaffold measurements for the top of each object part
 \  Deep dive: Object definitions
 \             Scaling objects with scaffolds
@@ -18139,7 +18153,7 @@ ENDIF
 \
 \       Name: objectBottom
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Scaffold measurements for the bottom of each object part
 \  Deep dive: Object definitions
 \             Scaling objects with scaffolds
@@ -18359,7 +18373,7 @@ ENDIF
 \
 \       Name: objectLeft
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Scaffold measurements for the left of each object part
 \  Deep dive: Object definitions
 \             Scaling objects with scaffolds
@@ -18602,7 +18616,7 @@ ENDIF
 \
 \       Name: objectRight
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Scaffold measurements for the right of each object part
 \  Deep dive: Object definitions
 \             Scaling objects with scaffolds
@@ -18859,7 +18873,7 @@ ENDIF
 \
 \       Name: objectColour
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Data for the colour of each object part
 \  Deep dive: Object definitions
 \
@@ -19679,7 +19693,7 @@ ENDIF
 \
 \       Name: startDialHi
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: The high byte of the screen address of the start of the dial hand
 \             on the rev counter
 \
@@ -20857,7 +20871,7 @@ NEXT
 \
 \       Name: objectIndex
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Index range of an object's data in the object data tables
 \  Deep dive: Object definitions
 \
@@ -20889,7 +20903,7 @@ NEXT
 \
 \       Name: scaffoldIndex
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Index of an object's scaffold in the objectScaffold table
 \  Deep dive: Scaling objects with scaffolds
 \
@@ -22739,7 +22753,7 @@ NEXT
 \
 \       Name: objectScaffold
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: The scaffold used to construct each object, in a scalable format
 \  Deep dive: Scaling objects with scaffolds
 \
@@ -23037,7 +23051,7 @@ NEXT
                         \ where A is the input from trackSteering and U is the
                         \ base speed from above
 
-.P44D5
+.slin1
 
  LDA trackSteering,Y    \ Fetch the Y-th byte from trackSteering as the input
 
@@ -23046,14 +23060,14 @@ NEXT
 
  LSR A                  \ Shift bit 1 of the input into the C flag
 
- BCS C44E0              \ If bit 1 of the input is set, skip the following
+ BCS slin2              \ If bit 1 of the input is set, skip the following
                         \ instruction
 
  JSR Multiply8x8        \ Bit 1 of the input is clear, so set (A T) = A * U
                         \
                         \ i.e. A = A * U / 256
 
-.C44E0
+.slin2
 
  ASL A                  \ Set bit 7 of the result to bit 0 of the input
  PLP
@@ -23063,7 +23077,7 @@ NEXT
 
  DEY                    \ Decrement the loop counter
 
- BPL P44D5              \ Loop back until we have processed all Y bytes
+ BPL slin1              \ Loop back until we have processed all Y bytes
 
  RTS                    \ Return from the subroutine
 
@@ -24219,7 +24233,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: C4978
+\       Name: sub_C4978
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -24230,7 +24244,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.C4978
+.sub_C4978
 
  LDX #&DC               \ Scan the keyboard to see if "T" is being pressed
  JSR ScanKeyboard
@@ -24331,7 +24345,7 @@ ENDIF
 .sub_C49CE
 
  LDA engineStatus
- BEQ C4978
+ BEQ sub_C4978
 
  LDA L002D
  BNE C499F
@@ -25025,7 +25039,7 @@ ENDIF
 \
 \       Name: BuildRoadSign
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Create an object for the road sign
 \
 \ ------------------------------------------------------------------------------
@@ -25228,9 +25242,8 @@ ENDIF
 
  STX raceClass          \ Set raceClass = 0 (Novice)
 
- JSR SetBestRacingLine  \ Call SetBestRacingLine with X = 0 (Novice) to set up
-                        \ the 24 bytes at bestRacingLine, returning with X
-                        \ unchanged
+ JSR SetBestRacingLine  \ Set up the 24 bytes at bestRacingLine for a Novice
+                        \ race, returning with X unchanged
 
                         \ The following loop works starts with X = 0, and then
                         \ loops down from 19 to 1, working its way through each
@@ -25314,8 +25327,6 @@ ENDIF
  LDA #24                \ Set A = 24 to use as the value for yCursor below, so
                         \ we print the text token on the first line of the two
                         \ text lines at the top of the driving screen
-
-.C4D76
 
  STA yCursor            \ Move the cursor to pixel row A (which will either be
                         \ the first or the second text line at the top of the
@@ -27120,7 +27131,7 @@ ENDIF
 \
 \       Name: EraseRevCounter
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Erase a line by replacing each pixel in the line with its original
 \             contents
 \
@@ -27390,7 +27401,7 @@ ENDIF
 \
 \       Name: DrawRevCounter
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Draw the hand on the rev counter
 \
 \ ******************************************************************************
@@ -27578,7 +27589,7 @@ ENDIF
 \
 \       Name: DrawDashboardLine
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Draw a hand on the rev counter or a line on the steering wheel
 \
 \ ------------------------------------------------------------------------------
@@ -27933,7 +27944,7 @@ ENDIF
 \
 \       Name: AnimateTyres
 \       Type: Subroutine
-\   Category: Screen mode
+\   Category: Graphics
 \    Summary: Update screen memory to animate the tyres
 \
 \ ******************************************************************************
@@ -28006,7 +28017,7 @@ ENDIF
 \
 \       Name: tyreTread1
 \       Type: Variable
-\   Category: Screen mode
+\   Category: Graphics
 \    Summary: Tyre tread pattern
 \
 \ ******************************************************************************
@@ -28019,7 +28030,7 @@ ENDIF
 \
 \       Name: tyreTread2
 \       Type: Variable
-\   Category: Screen mode
+\   Category: Graphics
 \    Summary: Tyre tread pattern
 \
 \ ******************************************************************************
@@ -28581,7 +28592,7 @@ ORG &5E40
 \
 \       Name: scaledScaffold
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Storage for an object's scaled scaffold
 \  Deep dive: Scaling objects with scaffolds
 \
@@ -28871,7 +28882,7 @@ ORG &5E40
 \
 \       Name: scaleRange
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: Storage for scale factors when scaling objects
 \
 \ ******************************************************************************
@@ -29190,7 +29201,7 @@ ENDIF
 \
 \       Name: objectPalette
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: The object colour palette that maps logical colours 0 to 3 to
 \             physical colours
 \
@@ -30072,7 +30083,7 @@ ENDIF
 \
 \       Name: thisObjectType
 \       Type: Variable
-\   Category: Graphics
+\   Category: 3D objects
 \    Summary: The type of object we are currently drawing
 \
 \ ******************************************************************************
@@ -30177,7 +30188,7 @@ ENDIF
 \
 \       Name: tyreTravel
 \       Type: Variable
-\   Category: Screen mode
+\   Category: Graphics
 \    Summary: Keeps track of how far we have travelled so we know when to
 \             animate the tyres
 \
@@ -31005,8 +31016,8 @@ ENDIF
 
  STX raceClass          \ Set raceClass to the chosen race class (0 to 2)
 
- JSR SetBestRacingLine  \ Call SetBestRacingLine to set up the 24 bytes at
-                        \ bestRacingLine according to the race class
+ JSR SetBestRacingLine  \ Set up the 24 bytes at bestRacingLine according to the
+                        \ race class
 
 .game2
 
@@ -31247,8 +31258,8 @@ ENDIF
 
  LDX raceClass          \ Set X to the race class
 
- JSR SetBestRacingLine  \ Call SetBestRacingLine to set up the 24 bytes at
-                        \ bestRacingLine according to the race class
+ JSR SetBestRacingLine  \ Set up the 24 bytes at bestRacingLine according to the
+                        \ race class
 
  LDX #26                \ Print token 26, which is a double-height header with
  JSR PrintToken         \ the text "STANDARD OF RACE"
