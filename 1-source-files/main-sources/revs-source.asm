@@ -509,6 +509,10 @@ ORG &0000
 
  SKIP 0                 \ The object number of the four-part car we are drawing
 
+.stackCounter
+
+ SKIP 0                 \ A counter for the z-stack entry we are processing
+
 .L0042
 
  SKIP 1                 \ 
@@ -4282,8 +4286,8 @@ ORG &0B00
                         \ front of the current driver, by first moving forwards
                         \ until we are exactly 32 from the current player, then
                         \ moving backwards by 49, and then moving backwards to
-                        \ the start of the track section, leaving L0042 set to
-                        \ the total distance moved backwards
+                        \ the start of the track section, leaving stackCounter
+                        \ set to the total distance moved backwards
 
 .rcar6
 
@@ -4316,7 +4320,7 @@ ORG &0B00
  LDA #49                \ Set V = 49, to use as a loop counter from 49 to 1
  STA V
 
- STA L0042              \ Set L0042 = 49
+ STA stackCounter       \ Set stackCounter = 49
 
 .rcar7
 
@@ -4328,12 +4332,12 @@ ORG &0B00
                         \ 49
 
                         \ We now move driver 23 backwards until it moves into a
-                        \ new track section, incrementing L0042 by the distance
-                        \ moved
+                        \ new track section, incrementing stackCounter by the
+                        \ distance moved
 
 .rcar8
 
- INC L0042              \ Increment L0042
+ INC stackCounter       \ Increment stackCounter
 
  JSR MoveObjectBack     \ Move driver 23 backwards along the track, setting the
                         \ C flag if we move into a new track section
@@ -4368,18 +4372,18 @@ ORG &0B00
  LDA #0                 \ Set zStack = 0
  STA zStack
 
-                        \ We now call SetNextZStackEntry L0042 times, where
-                        \ L0042 is the number of times we moved driver 23
-                        \ backwards in the above
+                        \ We now call SetNextZStackEntry stackCounter times,
+                        \ where stackCounter is the number of times we moved
+                        \ driver 23 backwards in the above
 
 .rcar10
 
- JSR SetNextZStackEntry \ ???
+ JSR SetNextZStackEntry \ Initialise the next z-stack entry
 
- DEC L0042              \ Decrement the counter in L0042
+ DEC stackCounter       \ Decrement the counter in stackCounter
 
  BNE rcar10             \ Loop back until we have called SetNextZStackEntry
-                        \ L0042 times
+                        \ stackCounter times
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
                         \ MoveObjectForward will update the lap number and lap
@@ -4865,8 +4869,7 @@ ORG &0B00
 
 .GetSectionCoords
 
- JSR GetSectionCoord    \ Call GetSectionCoord to copy the following 16-bit
-                        \ coordinate:
+ JSR GetSectionCoord    \ Copy the following 16-bit coordinate:
                         \
                         \   * The Y-th xTrackSectionI to the X-th xSectionCoordI
                         \
@@ -4969,6 +4972,8 @@ ORG &0B00
 \                       we are facing backwards
 \
 \   zStack              The index * 3 of the current z-stack
+\
+\   L0062               If non-zero, set L0006 = 6
 \
 \ Returns:
 \
@@ -5104,23 +5109,26 @@ ORG &0B00
 
 .sub_C12C8
 
- LDX L0006
+ LDX L0006              \ Set X = L0006 + 1
  INX
- CPX #6
 
+ CPX #6                 \ If X < 6, jump to C12D1 to skip the following
  BCC C12D1
- LDX #6
+
+ LDX #6                 \ Set X = 6, so the maximum value of X is 6
 
 .C12D1
 
- CPX L0005
+ CPX L0005              \ If X >= L0005, jump to C12D7 to skip the following
  BCS C12D7
- LDX L0005
+
+ LDX L0005              \ Set X = L0005, so the minimum value of X is L0005
 
 .C12D7
 
- STX L0006
- LDX L0008
+ STX L0006              \ Store the updated value of X in L0006
+
+ LDX L0008              \ Set X = L0008 + 1
  INX
 
 \ ******************************************************************************
@@ -5138,46 +5146,56 @@ ORG &0B00
 
 .sub_C12DC
 
- INX
- CPX L0006
+ INX                    \ Set X = X + 1
+
+ CPX L0006              \ If X >= L0006, jump to C12E3 to skip the following
  BCS C12E3
- STX L0006
+
+ STX L0006              \ X < L0006, so set L0006 = X, so the minimum value of
+                        \ L0006 is X
 
 .C12E3
 
- DEX
- CPX L0005
+ DEX                    \ Set X = X - 1
+                        \
+                        \ so if we came from sub_C12C8 above, X = L0008 + 1
+
+ CPX L0005              \ If X >= L0005, jump to C12EA to skip the following
  BCS C12EA
- LDX #5
+
+ LDX #5                 \ X < L0005, so set X = 5
 
 .C12EA
 
- CPX #6
+ CPX #6                 \ If X < 6, jump to C12F0 to skip the following
  BCC C12F0
- LDX #5
+
+ LDX #5                 \ X >= 6, so set X = 5, so the maximum value of X is 5
 
 .C12F0
 
- STX L0008
- RTS
+ STX L0008              \ Store the updated value of X in L0008
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: MovePlayerForward
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Move the player's car forwards
 \
 \ ******************************************************************************
 
 .MovePlayerForward
 
- CLC
- JSR MovePlayer
+ CLC                    \ Clear the C flag so the call to MovePlayer moves the
+                        \ player's car in the direction it is pointing
+
+ JSR MovePlayer         \ Drive the player's car forwards
+
+                        \ Fall through into SetNextZStackEntry to set up the
+                        \ next z-stack entry
 
 \ ******************************************************************************
 \
@@ -5683,53 +5701,82 @@ ORG &0B00
 
 .sub_C13FB
 
- LDA #6
+ LDA #6                 \ Set L0005 = 6
  STA L0006
- LDX #&40
- STX L001A
- JSR TurnPlayerAround
- LDA #0
+
+ LDX #64                \ Set X = 64, so the call to TurnPlayerAround
+                        \ initialises 64 z-stack entries in the new direction
+
+ STX L001A              \ Set L001A = 64
+
+ JSR TurnPlayerAround   \ Turn the player around and initialise 64 z-stack
+                        \ entries in the new direction
+
+ LDA #0                 \ Set L001A = 0
  STA L001A
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: MovePlayerBack
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Move the player's car backwards (i.e. in reverse gear)
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine reverses the player, updating the z-stack entries in both
+\ directions.
 \
 \ ******************************************************************************
 
 .MovePlayerBack
 
- SEC
- JSR MovePlayer
- LDX #&28
- STX L0062
- JSR TurnPlayerAround
- LDX #&27
- JSR TurnPlayerAround
- LDA #0
+ SEC                    \ Set the C flag so the call to MovePlayer moves the
+                        \ player's car in the opposite direction to which it is
+                        \ pointing
+
+ JSR MovePlayer         \ Drive the player's car backwards (i.e. reverse it)
+
+ LDX #40                \ Set X = 40, so the call to TurnPlayerAround
+                        \ initialises 64 z-stack entries in the new direction
+
+ STX L0062              \ Set L0062 to a non-zero value, so the following calls
+                        \ set L0006 to 6
+
+ JSR TurnPlayerAround   \ Turn the player around and initialise 40 z-stack
+                        \ entries in the new direction
+
+ LDX #39                \ Set X = 39, so the call to TurnPlayerAround
+                        \ initialises 64 z-stack entries in the new direction
+
+ JSR TurnPlayerAround   \ Turn the player back around and initialise 39 z-stack
+                        \ entries in the new direction
+
+ LDA #0                 \ Set L0062 = 0
  STA L0062
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: TurnPlayerAround
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Turn the player around and initialise the specified number of
+\             z-stack entries in the new direction
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   
+\   X                   The number of z-stack entries to initialise in the new
+\                       direction
+\
+\ Returns:
+\
+\   directionFacing     Bit 7 is flipped to point us in the opposite direction
 \
 \ ******************************************************************************
 
@@ -5743,15 +5790,17 @@ ORG &0B00
                         \ thisVectorNumber to the next track vector along the
                         \ track in the new direction we are facing
 
- STX L0042
+ STX stackCounter       \ We now want to initialise X z-stack entries in the new
+                        \ direction, so set a loop counter in stackCounter that
+                        \ starts from X and counts down
 
-.P142B
+.turn1
 
- JSR SetNextZStackEntry
+ JSR SetNextZStackEntry \ Initialise the next z-stack entry
 
- DEC L0042
+ DEC stackCounter       \ Decrement the look counter
 
- BNE P142B
+ BNE turn1              \ Loop back until we have set all the stack entries
 
  RTS                    \ Return from the subroutine
 
@@ -5760,7 +5809,7 @@ ORG &0B00
 \       Name: MovePlayer
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Drive the player's car forwards or backwards
+\    Summary: Move the player's car forwards or backwards
 \
 \ ------------------------------------------------------------------------------
 \
