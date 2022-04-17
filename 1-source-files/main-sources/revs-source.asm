@@ -110,22 +110,23 @@ row24_column5 = &7FC5   \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
 
 ORG &0000
 
-.movingCar
+.playerMoving
 
- SKIP 1                 \ Flag to denote whether the car is moving
+ SKIP 1                 \ Flag to denote whether the player's car is moving
                         \
-                        \   * 0 = not moving
+                        \   * 0 = player's car is not moving
                         \
-                        \   * Non-zero = moving
+                        \   * Non-zero = player's car is moving
 
 .thisSectionFlags
 
- SKIP 1                 \ The track section flags for the current track segment
+ SKIP 1                 \ The track section flags for the current track section
 
 .thisVectorNumber
 
  SKIP 1                 \ The number of the track vector for the current track
-                        \ segment
+                        \ segment, ready to store in the track segment buffer
+                        \ as segmentVector
 
 .currentPosition
 
@@ -510,7 +511,7 @@ ORG &0000
 
  SKIP 0                 \ The object number of the four-part car we are drawing
 
-.stackCounter
+.segmentCounter
 
  SKIP 0                 \ A counter for the track segment we are processing
 
@@ -751,9 +752,15 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0068
+.checkForContact
 
- SKIP 1                 \ 
+ SKIP 1                 \ Another car is close enough to the player's car for us
+                        \ to check for contact
+                        \
+                        \   * 0 = no car is close enough
+                        \
+                        \   * Non-zero = a car is close enough to check for
+                        \                contact
 
 .lineBufferSize
 
@@ -1030,7 +1037,7 @@ ORG &0100
 
 .carStatus
 
- SKIP 20                \ The car's status byte
+ SKIP 20                \ Each car's status byte
                         \
                         \   * Bit 0 = ???
                         \
@@ -1046,7 +1053,8 @@ ORG &0100
                         \
                         \   * Bits 0-5 = the amount of steering
                         \
-                        \   * Bit 6 = ???
+                        \   * Bit 6 = 0 = apply steering in MoveCars
+                        \             1 = do not apply steering in MoveCars
                         \
                         \   * Bit 7 = the direction (0 = left, 1 = right)
                         \
@@ -1060,7 +1068,8 @@ ORG &0100
 
 .driverSpeed
 
- SKIP 20                \ The speed of this driver in the race (88 to 162)
+ SKIP 20                \ The average speed of this driver in the race (88 to
+                        \ 162)
                         \
                         \ The speed for each driver depends on a number of
                         \ factors, and is calculated in the SetDriverSpeed
@@ -1421,37 +1430,38 @@ ORG &0380
 
 .segmentVector
 
- SKIP 1                 \ The track vector number for this track segment
+ SKIP 1                 \ The track vector number for a track segment in the
+                        \ track segment buffer
 
 .segmentSteering
 
- SKIP 1                 \ The carSteering value to steer round the corner for
-                        \ this track segment
-
+ SKIP 1                 \ The carSteering value to steer round the corner for a
+                        \ track segment in the track segment buffer
+                        
 .segmentFlags
 
- SKIP 1                 \ Section flags based on trackSectionFlag for this
-                        \ track segment
+ SKIP 1                 \ Section flags based on trackSectionFlag for a track
+                        \ segment in the track segment buffer
 
- SKIP 39 * 3            \ The next 39 track segments
-                        \
-                        \ Contains 40 batches of three bytes in all
+ SKIP 39 * 3            \ The track segment buffer contains data for 40 track
+                        \ segments, with three bytes per segment, so this
+                        \ reserves space for the other 39
 
  SKIP 8                 \ ??? Unused
 
 .lineBufferPixel
 
- SKIP 40                \ The original screen contents of this pixel in the line
+ SKIP 40                \ The original screen contents of each pixel in the line
                         \ buffer
 
 .lineBufferAddrLo
 
- SKIP 40                \ The low byte of the screen address of this pixel in
+ SKIP 40                \ The low byte of the screen address of each pixel in
                         \ the line buffer
 
 .lineBufferAddrHi
 
- SKIP 40                \ The low byte of the screen address of this pixel in
+ SKIP 40                \ The low byte of the screen address of each pixel in
                         \ the line buffer
 
 ORG &0880
@@ -1524,37 +1534,41 @@ ORG &0880
 
 .xSegmentCoordILo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the x-coordinate for an inner track
+                        \ segment in the track segment buffer
 
 .ySegmentCoordILo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the y-coordinate for an inner track
+                        \ segment in the track segment buffer
 
 .zSegmentCoordILo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the z-coordinate for an inner track
+                        \ segment in the track segment buffer
 
- SKIP 39 * 3            \ The next 39 (xSegmentCoordI, ySegmentCoordI,
-                        \ zSegmentCoordI) entries
-                        \
-                        \ Contains 40 batches of three bytes
+ SKIP 39 * 3            \ The track segment buffer contains data for 40 track
+                        \ segments, with three bytes per segment, so this
+                        \ reserves space for the other 39
 
 .xSegmentCoordOLo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the x-coordinate for an outer track
+                        \ segment in the track segment buffer
 
 .ySegmentCoordOLo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the y-coordinate for an outer track
+                        \ segment in the track segment buffer
 
 .zSegmentCoordOLo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the z-coordinate for an outer track
+                        \ segment in the track segment buffer
 
- SKIP 39 * 3            \ The next 39 (xSegmentCoordO, ySegmentCoordO,
-                        \ zSegmentCoordO) entries
-                        \
-                        \ Contains 40 batches of three bytes
+ SKIP 39 * 3            \ The track segment buffer contains data for 40 track
+                        \ segments, with three bytes per segment, so this
+                        \ reserves space for the other 39
 
  SKIP 4                 \ These bytes appear to be unused
 
@@ -1598,37 +1612,41 @@ ORG &0880
 
 .xSegmentCoordIHi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the x-coordinate for an inner track
+                        \ segment in the track segment buffer
 
 .ySegmentCoordIHi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the y-coordinate for an inner track
+                        \ segment in the track segment buffer
 
 .zSegmentCoordIHi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the z-coordinate for an inner track
+                        \ segment in the track segment buffer
 
- SKIP 39 * 3            \ The next 39 (xSegmentCoordI, ySegmentCoordI,
-                        \ zSegmentCoordI) entries
-                        \
-                        \ Contains 40 batches of three bytes
+ SKIP 39 * 3            \ The track segment buffer contains data for 40 track
+                        \ segments, with three bytes per segment, so this
+                        \ reserves space for the other 39
 
 .xSegmentCoordOHi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the x-coordinate for an outer track
+                        \ segment in the track segment buffer
 
 .ySegmentCoordOHi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the y-coordinate for an outer track
+                        \ segment in the track segment buffer
 
 .zSegmentCoordOHi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the z-coordinate for an outer track
+                        \ segment in the track segment buffer
 
- SKIP 39 * 3            \ The next 39 (xSegmentCoordO, ySegmentCoordO,
-                        \ zSegmentCoordO) entries
-                        \
-                        \ Contains 40 batches of three bytes
+ SKIP 39 * 3            \ The track segment buffer contains data for 40 track
+                        \ segments, with three bytes per segment, so this
+                        \ reserves space for the other 39
 
  SKIP 4                 \ These bytes appear to be unused
 
@@ -4287,7 +4305,7 @@ ORG &0B00
                         \ front of the current driver, by first moving forwards
                         \ until we are exactly 32 from the current player, then
                         \ moving backwards by 49, and then moving backwards to
-                        \ the start of the track section, leaving stackCounter
+                        \ the start of the track section, leaving segmentCounter
                         \ set to the total distance moved backwards
 
 .rcar6
@@ -4321,7 +4339,7 @@ ORG &0B00
  LDA #49                \ Set V = 49, to use as a loop counter from 49 to 1
  STA V
 
- STA stackCounter       \ Set stackCounter = 49
+ STA segmentCounter     \ Set segmentCounter = 49
 
 .rcar7
 
@@ -4333,12 +4351,12 @@ ORG &0B00
                         \ 49
 
                         \ We now move driver 23 backwards until it moves into a
-                        \ new track section, incrementing stackCounter by the
+                        \ new track section, incrementing segmentCounter by the
                         \ distance moved
 
 .rcar8
 
- INC stackCounter       \ Increment stackCounter
+ INC segmentCounter     \ Increment segmentCounter
 
  JSR MoveObjectBack     \ Move driver 23 backwards along the track, setting the
                         \ C flag if we move into a new track section
@@ -4373,18 +4391,18 @@ ORG &0B00
  LDA #0                 \ Set segmentIndex = 0
  STA segmentIndex
 
-                        \ We now call SetTrackSegment stackCounter times,
-                        \ where stackCounter is the number of times we moved
+                        \ We now call SetTrackSegment segmentCounter times,
+                        \ where segmentCounter is the number of times we moved
                         \ driver 23 backwards in the above
 
 .rcar10
 
  JSR SetTrackSegment    \ Initialise the next track segment
 
- DEC stackCounter       \ Decrement the counter in stackCounter
+ DEC segmentCounter     \ Decrement the counter in segmentCounter
 
  BNE rcar10             \ Loop back until we have called SetTrackSegment
-                        \ stackCounter times
+                        \ segmentCounter times
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
                         \ MoveObjectForward will update the lap number and lap
@@ -4496,8 +4514,8 @@ ORG &0B00
 
 .FinishRace
 
- LDA #0                 \ Set movingCar = 0 to denote that the car is stationary
- STA movingCar
+ LDA #0                 \ Set playerMoving = 0 to denote that the player's car
+ STA playerMoving       \ is stationary
 
  STA raceStarting       \ Set raceStarting = 0 so the call to MoveCars below
                         \ will move the cars round the track
@@ -5011,14 +5029,14 @@ ORG &0B00
  STY L62F5
 
  LDA L0062              \ If L0062 = 0, skip the following instruction
- BEQ setz1
+ BEQ gets1
 
  STY L0006              \ L0062 <> 0, so set L0006 = 6
 
-.setz1
+.gets1
 
- LDA directionFacing    \ If our car is facing backwards, jump to setz2
- BMI setz2
+ LDA directionFacing    \ If our car is facing backwards, jump to gets2
+ BMI gets2
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
@@ -5030,9 +5048,9 @@ ORG &0B00
  LDA trackSection0a,Y   \ Set A = trackSection0a for the track section, so
                         \ bits 0-2 can be set as the value for L0007 below
 
- JMP setz3              \ Jump to setz3 to skip the following
+ JMP gets3              \ Jump to gets3 to skip the following
 
-.setz2
+.gets2
 
  LDY sectionBehind      \ Set Y to the number * 8 of the track section in
                         \ sectionBehind
@@ -5046,7 +5064,7 @@ ORG &0B00
 
  LDA #2                 \ Set A = 2, so use as the value for L0007 below
 
-.setz3
+.gets3
 
  AND #%00000111         \ Set L0007 = bits 0-2 from A
  STA L0007
@@ -5250,21 +5268,21 @@ ORG &0B00
                         \ to move on to the next track segment
 
  CMP #120               \ If A < 120, then we haven't reached the end of the
- BCC next1              \ track segment buffer, so jump to next1 to store the
+ BCC sets1              \ track segment buffer, so jump to sets1 to store the
                         \ updated value
 
  LDA #0                 \ We just reached the end of the track segment buffer,
                         \ so set A = 0 to wrap round to the start
 
-.next1
+.sets1
 
  STA segmentIndex       \ Set segmentIndex to the index * 3 of the new track
                         \ segment
 
  LDX #23                \ Set X to driver 23
 
- LDA directionFacing    \ If our car is facing backwards, jump to next3
- BMI next3
+ LDA directionFacing    \ If our car is facing backwards, jump to sets3
+ BMI sets3
 
  LDA trackSectionCount  \ Set A to half the total number of track sections * 4
  LSR A
@@ -5272,8 +5290,8 @@ ORG &0B00
  AND #%11111000         \ Reduce A to the nearest multiple of 8
 
  CMP objTrackSection,X  \ If A <> the number of the track section * 8 for driver
- BNE next2              \ 23, then we are not halfway through all the track
-                        \ sections, so jump to next2
+ BNE sets2              \ 23, then we are not halfway through all the track
+                        \ sections, so jump to sets2
 
                         \ If we get here then driver 23 is at the halfway point
                         \ round the track in terms of track section numbers
@@ -5281,14 +5299,14 @@ ORG &0B00
  LDA #1                 \ Set pastHalfway = 1, to denote that driver 23 is in
  STA pastHalfway        \ the second half of the track
 
-.next2
+.sets2
 
  JSR MoveObjectForward  \ Move driver 23 forwards along the track, setting the
                         \ C flag if this moves the driver into the next track
                         \ section
 
- BCC next4              \ If driver 23 is still in the same track section, jump
-                        \ to next4
+ BCC sets4              \ If driver 23 is still in the same track section, jump
+                        \ to sets4
 
  JSR GetTrackSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
@@ -5296,12 +5314,12 @@ ORG &0B00
                         \ setting thisVectorNumber to the number of the track
                         \ vector for the new track segment
 
- JMP next13             \ Jump to next13 to finish setting up the track segment,
+ JMP sets13             \ Jump to sets13 to finish setting up the track segment,
                         \ skipping the part that sets the coordinates and flags,
                         \ as those have just been set when creating the entry
                         \ for the new track section
 
-.next3
+.sets3
 
                         \ If we get here then our car is facing backwards
 
@@ -5312,8 +5330,8 @@ ORG &0B00
                         \ C flag if this moves the driver into the next track
                         \ section
 
- BCC next4              \ If driver 23 is still in the same track section, jump
-                        \ to next4
+ BCC sets4              \ If driver 23 is still in the same track section, jump
+                        \ to sets4
 
  JSR GetTrackSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
@@ -5321,7 +5339,7 @@ ORG &0B00
                         \ setting thisVectorNumber to the number of the track
                         \ vector for the new track segment
 
-.next4
+.sets4
 
  LDY thisVectorNumber   \ Set Y to the number of the track vector for the new
                         \ track segment
@@ -5380,8 +5398,8 @@ ORG &0B00
 
  LDA thisSectionFlags   \ Set A to the current section's flags
 
- BCS next6              \ If bit 0 of the current section's flag byte is set,
-                        \ then this is a curved section, so jump to next6 with
+ BCS sets6              \ If bit 0 of the current section's flag byte is set,
+                        \ then this is a curved section, so jump to sets6 with
                         \ A set to the current section's flags, so the new
                         \ track segment retains the same flags
 
@@ -5390,19 +5408,19 @@ ORG &0B00
  LDY objSectionCount+23 \ Set Y to driver 23's progress through the track
                         \ section
 
- CPY #1                 \ If Y < 1, jump to next5
- BCC next5
+ CPY #1                 \ If Y < 1, jump to sets5
+ BCC sets5
 
- CPY #10                \ If Y < 10, jump to next6 with A set to
- BCC next6              \ thisSectionFlags
+ CPY #10                \ If Y < 10, jump to sets6 with A set to
+ BCC sets6              \ thisSectionFlags
 
-.next5
+.sets5
 
                         \ If we get here then Y < 1 or Y >= 10
 
  AND #%11111001         \ Clear bits 1 and 2 of the current section's flags in A
 
-.next6
+.sets6
 
  STA W                  \ Store A in W, so W contains:
                         \
@@ -5423,7 +5441,7 @@ ORG &0B00
  LDA trackSectionSize,Y \ Set A to the size of the track section for driver 23
 
  PLP                    \ If bit 0 of the current section's flag byte is clear,
- BCC next7              \ then this is a straight section, so jump to next7 with
+ BCC sets7              \ then this is a straight section, so jump to sets7 with
                         \ A set to the size of the track section for driver 23
 
                         \ If we get here then this is a curved track section
@@ -5436,13 +5454,13 @@ ORG &0B00
                         \ for the new track segment
 
  CPY objSectionCount+23 \ If Y = driver 23's progress through the track section,
- BEQ next10             \ then the driver is exactly halfway round the curve, so
-                        \ jump to next10 to store A in the track segment's flags
+ BEQ sets10             \ then the driver is exactly halfway round the curve, so
+                        \ jump to sets10 to store A in the track segment's flags
 
- BNE next8              \ Otherwise jump to next8 to clear bits 3-5 of A before
+ BNE sets8              \ Otherwise jump to sets8 to clear bits 3-5 of A before
                         \ storing it in the track segment's flags
 
-.next7
+.sets7
 
                         \ If we get here then this is a straight section and A
                         \ is set to the size of the track section for driver 23
@@ -5456,26 +5474,26 @@ ORG &0B00
  LDA W                  \ Set A = W, which contains the flags we are building
                         \ for the new track segment
 
- CPY #7                 \ If Y = 7, jump to next10 to store A in the track
- BEQ next10             \ segment's flags
+ CPY #7                 \ If Y = 7, jump to sets10 to store A in the track
+ BEQ sets10             \ segment's flags
 
- CPY #14                \ If Y = 14 or 21, jump to next9 to clear bit 5 of A
- BEQ next9              \ and store it in the track segment's flags
+ CPY #14                \ If Y = 14 or 21, jump to sets9 to clear bit 5 of A
+ BEQ sets9              \ and store it in the track segment's flags
  CPY #21
- BEQ next9
+ BEQ sets9
 
                         \ Otherwise we clear bits 3-5 of A and store it in the
                         \ track segment's flags
 
-.next8
+.sets8
 
  AND #%11100111         \ Clear bits 3 and 4 of A
 
-.next9
+.sets9
 
  AND #%11011111         \ Clear bit 5 of A
 
-.next10
+.sets10
 
  AND thisSectionFlags   \ Clear any bits in A that are already clear in the
                         \ current section's flags, to ensure that the track
@@ -5565,10 +5583,10 @@ ORG &0B00
  LDA xTrackVectorO,Y    \ Set A = the x-coordinate of the outer track vector for
                         \ the new track segment
 
- BPL next11             \ If A is negative, decrement SS to &FF so (SS A) has
+ BPL sets11             \ If A is negative, decrement SS to &FF so (SS A) has
  DEC SS                 \ the correct sign
 
-.next11
+.sets11
 
  ASL A                  \ Set (SS A) = (SS A) * 4
  ROL SS                 \            = xTrackVectorO * 4
@@ -5586,10 +5604,10 @@ ORG &0B00
  LDA zTrackVectorO,Y    \ Set A = the z-coordinate of the outer track vector for
                         \ the new track segment
 
- BPL next12             \ If A is negative, decrement UU to &FF so (UU A) has
+ BPL sets12             \ If A is negative, decrement UU to &FF so (UU A) has
  DEC UU                 \ the correct sign
 
-.next12
+.sets12
 
  ASL A                  \ Set (UU A) = (UU A) * 4
  ROL UU                 \            = zTrackVectorO * 4
@@ -5608,7 +5626,7 @@ ORG &0B00
                         \ thisVectorNumber to the next track vector along the
                         \ track in the direction we are facing
 
-.next13
+.sets13
 
  LDX segmentIndex       \ Set X to the index * 3 of the new track segment
 
@@ -5815,15 +5833,15 @@ ORG &0B00
                         \ thisVectorNumber to the next track vector along the
                         \ track in the new direction we are facing
 
- STX stackCounter       \ We now want to initialise X track segments in the new
-                        \ direction, so set a loop counter in stackCounter that
-                        \ starts from X and counts down
+ STX segmentCounter     \ We now want to initialise X track segments in the new
+                        \ direction, so set a loop counter in segmentCounter
+                        \ that starts from X and counts down
 
 .turn1
 
  JSR SetTrackSegment    \ Initialise the next track segment
 
- DEC stackCounter       \ Decrement the look counter
+ DEC segmentCounter     \ Decrement the look counter
 
  BNE turn1              \ Loop back until we have set all the stack entries
 
@@ -7297,8 +7315,9 @@ ENDIF
                         \ be set, so we must be pressing SHIFT-f0 to return to
                         \ the pits
 
- LDA movingCar          \ If movingCar = 0 then the car is stationary, so jump
- BEQ main13             \ to main13 to leave the track and return to the pits
+ LDA playerMoving       \ If playerMoving = 0 then the player's car is
+ BEQ main13             \ stationary, so jump to main13 to leave the track and
+                        \ return to the pits
 
  LDA #0                 \ We can't enter the pits if the car is moving, so set
  STA configStop         \ configStop = 0 so we clear out the SHIFT-f4 key press
@@ -7481,16 +7500,17 @@ ENDIF
                         \ in the following loops
 
  LDX #&68               \ We start by zeroing all zero-page variables from
-                        \ movingCar to L0068, so set up a loop counter in X
+                        \ playerMoving to checkForContact, so set up a loop
+                        \ counter in X
 
 .rese1
 
- STA movingCar,X        \ Zero the X-th byte from movingCar
+ STA playerMoving,X     \ Zero the X-th byte from playerMoving
 
  DEX                    \ Decrement the loop counter
 
  BPL rese1              \ Loop back until we have zeroed all variables from
-                        \ movingCar to L0068
+                        \ playerMoving to checkForContact
 
  LDX #&7F               \ We now zero all variables from xVector5Lo to L62FF, so
                         \ set up a loop counter in X
@@ -8546,34 +8566,50 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   V                   
 \
 \ ******************************************************************************
 
 .CheckForContact
 
- LDA L0068
- BEQ DrawObjectEdge-1
- LDA #0
- STA L0068
- SEC
+ LDA checkForContact    \ If checkForContact is zero then there no other cars
+ BEQ DrawObjectEdge-1   \ close enough to the player's car for there to be any
+                        \ contact, so return from the subroutine (as
+                        \ DrawObjectEdge-1 contains an RTS)
+
+ LDA #0                 \ Set checkForContact = 0 to reset the flag, as we are
+ STA checkForContact    \ about to check for contact
+
+ SEC                    \ Set bit 7 of V
  ROR V
- LDA #&25
+
+ LDA #37                \ Set A = 37 - L0041
  SEC
  SBC L0041
- BCS cont1
- LDA #5
+
+ BCS cont1              \ If the above subtraction didn't underflow jump to
+                        \ cont1 to skip the following instruction
+
+ LDA #5                 \ The subtraction underflowed, i.e. L0041 > 37, so set
+                        \ A = 5 so A is never negative
 
 .cont1
 
- ASL A
+ ASL A                  \ Set U = A * 2
  STA U
- LDX L0067
- LDY currentPlayer
- CMP #&28
+
+ LDX L0067              \ Set X = L0067
+
+ LDY currentPlayer      \ Set Y to the driver number of the current player
+
+ CMP #40                \ If A < 40, jump to cont2
  BCC cont2
- LDA raceStarted
- BPL cont2
+
+ LDA raceStarted        \ If bit 7 of raceStarted is clear then this is either
+ BPL cont2              \ a practice or qualifying lap, so jump to cont2
+
  JSR sub_C11AB
 
 .cont2
@@ -8585,7 +8621,7 @@ ENDIF
  ASL A
  PHP
  LDA carSpeedHi,Y
- CPX #&14
+ CPX #20
  BCS cont4
  CMP carSpeedHi,X
  BCS cont3
@@ -8594,16 +8630,16 @@ ENDIF
 
 .cont3
 
- ADC #&0B
+ ADC #11
  STA carSpeedHi,X
 
 .cont4
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
- CMP #&10
+ CMP #16
  BCC cont5
- LDA #&10
+ LDA #16
 
 .cont5
 
@@ -15219,7 +15255,9 @@ ENDIF
  CPY K
  BCC C2ACA
 
- DEC L0068
+ DEC checkForContact    \ Decrement checkForContact so it is non-zero, so we
+                        \ check for contact between this car and the player's
+                        \ car in the CheckForContact routine
 
  LDA K
  STA L0041
@@ -21214,8 +21252,8 @@ NEXT
 
 .DrawFence
 
- LDA #0                 \ Set movingCar = 0 to denote that the car is not moving
- STA movingCar
+ LDA #0                 \ Set playerMoving = 0 to denote that the player's car
+ STA playerMoving       \ is not moving
 
  STA T                  \ Set T = 0, to use as a counter as we work our way
                         \ through the 40 dash data blocks that contain the track
@@ -23664,7 +23702,7 @@ ENDIF
 
 .C46CD
 
- STY movingCar
+ STY playerMoving
  JSR sub_C4729
  JSR sub_C4BCF
  JSR sub_C49CE
@@ -28038,9 +28076,9 @@ ENDIF
  BCC tyre4              \ If the addition didn't overflow, jump to tyre4 to
                         \ return from the subroutine
 
- LDA movingCar          \ If movingCar = 0 then the car is not moving and we
- BEQ tyre4              \ don't need to animate the tyres, so jump to tyre4 to
-                        \ return from the subroutine
+ LDA playerMoving       \ If playerMoving = 0 then the player's car is not
+ BEQ tyre4              \ moving so we don't need to animate the tyres, so jump
+                        \ to tyre4 to return from the subroutine
 
  LDX #4                 \ Set a loop counter to go from 4 to 0
 
