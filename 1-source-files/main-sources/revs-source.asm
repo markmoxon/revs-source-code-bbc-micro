@@ -485,9 +485,9 @@ ORG &0000
                         \
                         \  * 2-7 = 1 to 5
 
-.L0041
+.objectDistanceLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ The low byte of the distance to the current object
 
 .colourScheme
 
@@ -632,12 +632,12 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.objectDistance
+.objectDistanceHi
 
- SKIP 1                 \ The distance of the current object
+ SKIP 1                 \ The high byte of the distance to the current object
                         \
-                        \ If a car's distance is >= 5, then it is drawn as a
-                        \ distant car
+                        \ If a car's objectDistanceHi is >= 5, then it is drawn
+                        \ as a distant car
 
 .temp1
 
@@ -748,9 +748,9 @@ ORG &0000
                         \
                         \ Set to %10000000 in ResetVariables for race laps only
 
-.L0067
+.collisionDriver
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of the driver being hit by the player's car
 
 .checkForContact
 
@@ -1185,8 +1185,7 @@ ORG &0380
  SKIP 24                \ The scaleUp factor for each of the objects (i.e. the
                         \ object's size)
 
- SKIP 32                \ These bytes appear to be unused ???
-                        \ (not yet added to deep dive)
+ SKIP 32                \ These bytes appear to be unused
 
 .L0400
 
@@ -1447,7 +1446,7 @@ ORG &0380
                         \ segments, with three bytes per segment, so this
                         \ reserves space for the other 39
 
- SKIP 8                 \ ??? Unused
+ SKIP 8                 \ These bytes appear to be unused
 
 .lineBufferPixel
 
@@ -2772,6 +2771,12 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
+\ Arguments:
+\
+\   (J I)               
+\
+\   (H G)               
+\
 \ If M < 103, set (L K) = (J I) + (H G) / 8
 \
 \ If M >= 103, set (L K) = (J I) * 7/8 + (H G) / 2
@@ -2837,8 +2842,14 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
- EQUB &F1, &0C, &E5, &74, &8D, &F6, &0C, &60
- EQUB &00, &00, &00, &00, &00, &00, &40
+ EQUB &F1, &0C          \ These bytes appear to be unused
+ EQUB &E5, &74
+ EQUB &8D, &F6
+ EQUB &0C, &60
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &40
 
 \ ******************************************************************************
 \
@@ -3147,9 +3158,25 @@ ORG &0B00
 \
 \ This routine sets (A T) = |A T|.
 \
+\ It can also return (A T) * abs(n), where A is given the sign of n.
+\
 \ Arguments:
 \
 \   (A T)               The number to make positive
+\
+\   N flag              Controls the sign to be applied:
+\
+\                         * If we want to calculate |A T|, do an LDA or
+\                           equivalent before calling the routine
+\
+\                         * If we want to calculate (A T) * abs(n), do a BIT n
+\                           before calling the routine
+\
+\                         * If we want to set the sign of (A T), then call with:
+\
+\                           * N flag clear to calculate (A T) * 1
+\
+\                           * N flag set to calculate (A T) * -1
 \
 \ ******************************************************************************
 
@@ -4614,29 +4641,52 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C11AB
+\       Name: PushCarOffTrack
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Push a car off the track and out of the race
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The driver number of the car to push off the track
 \
 \ ******************************************************************************
 
-.sub_C11AB
+.PushCarOffTrack
 
- CPX #20
- BCS BuildPlayerCar-1
+ CPX #20                \ If X >= 20 then this is not a valud driver, so return
+ BCS BuildPlayerCar-1   \ from the subroutine (as BuildPlayerCar-1 contains an
+                        \ RTS)
 
- LDA carRacingLine,X
- AND #%01111111
+ LDA carRacingLine,X    \ Fetch the car's current racing line
+
+ AND #%01111111         \ Clear bit 7 and set bits 0, 2 and 6
  ORA #%01000101
- STA carSteering,X
 
- LDA #%10010001
- STA carStatus,X
+ STA carSteering,X      \ Update the car's steering byte, so the car does the
+                        \ following:
+                        \
+                        \   * Bit 7 clear = veer to the left
+                        \
+                        \   * Bit 6 set = do not apply steering in MoveCars,
+                        \                 just keep the car on the track
+                        \
+                        \   * Bits 0-5 = set steering amount to at least 5
+                        \                (%101)
+
+ LDA #%10010001         \ Set bits 0, 4 and 7 of the car's status byte, so:
+ STA carStatus,X        \
+                        \   * Bit 0 set = ???
+                        \
+                        \   * Bit 4 set = ???
+                        \
+                        \   * Bit 7 set = car is braking
+
+                        \ Fall through into ClearTotalRaceTime to set the car
+                        \ object to be hidden and no longer racing, and reset
+                        \ the car's total race time
 
 \ ******************************************************************************
 \
@@ -8561,14 +8611,14 @@ ENDIF
 \
 \       Name: CheckForContact
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Process collosions between the player and the other cars
 \
 \ ------------------------------------------------------------------------------
 \
-\ Arguments:
+\ Returns:
 \
-\   V                   
+\   V                   Bit 7 is set if there is a collision
 \
 \ ******************************************************************************
 
@@ -8579,73 +8629,149 @@ ENDIF
                         \ contact, so return from the subroutine (as
                         \ DrawObjectEdge-1 contains an RTS)
 
- LDA #0                 \ Set checkForContact = 0 to reset the flag, as we are
- STA checkForContact    \ about to check for contact
+ LDA #0                 \ Set checkForContact = 0 to reset the flag, so we only
+ STA checkForContact    \ check for contact when a car is flagged as being close
 
  SEC                    \ Set bit 7 of V
  ROR V
 
- LDA #37                \ Set A = 37 - L0041
- SEC
- SBC L0041
+ LDA #37                \ Set A = 37 - objectDistanceLo
+ SEC                    \
+ SBC objectDistanceLo   \ The value of (objectDistanceHi objectDistanceLo) is
+                        \ left over from the last call to sub_C2AB3, which was
+                        \ last called for the nearest car in front of us when
+                        \ projecting the five cars in front of us, from furthest
+                        \ to nearest, as part of this chain of routines:
+                        \
+                        \   MoveAndDrawCars > BuildVisibleCar > BuildCarObjects
+                        \                   > ProjectObject > sub_C2AB3
+                        \
+                        \ Note that BuildVisibleCar does get called once more at
+                        \ the end of MoveAndDrawCars, for the car behind us, but
+                        \ as that car is not visible, it doesn't set the object
+                        \ distance
+                        \
+                        \ So, in short, objectDistanceLo is the low byte of the
+                        \ distance between the player and the nearest car, which
+                        \ is the car we want to process for a collision
+                        \
+                        \ This means that a higher value of A means a closer
+                        \ collision, so this is effectively a measure of how
+                        \ dangerous this collision is, in the range 0 to 37
 
- BCS cont1              \ If the above subtraction didn't underflow jump to
+ BCS cont1              \ If the above subtraction didn't underflow then the
+                        \ other car is at a distance of 37 or less, so jump to
                         \ cont1 to skip the following instruction
 
- LDA #5                 \ The subtraction underflowed, i.e. L0041 > 37, so set
-                        \ A = 5 so A is never negative
+ LDA #5                 \ The subtraction underflowed, so the other car is a bit
+                        \ of a distance away, so set A = 5 so have a minor
+                        \ collision
 
 .cont1
 
- ASL A                  \ Set U = A * 2
- STA U
+ ASL A                  \ Set A = A * 2
+                        \
+                        \ so the damage measure is now in the range 0 to 74
 
- LDX L0067              \ Set X = L0067
+ STA U                  \ Set U = A, so U now contains the damage measure in the
+                        \ range 0 to 74
+
+ LDX collisionDriver    \ Set X to the driver number of the car being hit (the
+                        \ "other car")
 
  LDY currentPlayer      \ Set Y to the driver number of the current player
 
- CMP #40                \ If A < 40, jump to cont2
- BCC cont2
+ CMP #40                \ If A < 40, then the collision is not bad enough to
+ BCC cont2              \ push the other car off the track, so jump to cont2
 
  LDA raceStarted        \ If bit 7 of raceStarted is clear then this is either
- BPL cont2              \ a practice or qualifying lap, so jump to cont2
+ BPL cont2              \ a practice or qualifying lap, so jump to cont2 to skip
+                        \ the following instruction
 
- JSR sub_C11AB
+ JSR PushCarOffTrack    \ If we get here then the collision is close enough to
+                        \ push the other car off the track, and this is a race,
+                        \ so we push the other car off the track and out of the
+                        \ race
 
 .cont2
 
- LDA xObjectScreenHi,X
- SEC
- SBC xPlayerScreenHi
- ASL A
- ASL A
- PHP
- LDA carSpeedHi,Y
- CPX #20
- BCS cont4
- CMP carSpeedHi,X
- BCS cont3
- LDA carSpeedHi,X
- BNE cont4
+ LDA xObjectScreenHi,X  \ Set A to the screen x-coordinate for the other car
+ SEC                    \ minus the screen x-coordinate for the player, let's
+ SBC xPlayerScreenHi    \ call this x-delta
+
+ ASL A                  \ Set A = A * 4
+ ASL A                  \       = x-delta * 4
+
+ PHP                    \ Push the N flag onto the stack, which contains the
+                        \ sign of x-delta
+
+ LDA carSpeedHi,Y       \ Set A to the high byte of the player's speed
+
+ CPX #20                \ If the driver number of the other car is >= 20, then
+ BCS cont4              \ jump to cont4 as this is not a computer-controlled
+                        \ driver, so we do not adjust its speed
+
+ CMP carSpeedHi,X       \ If the high byte of the player's speed is >= the high
+ BCS cont3              \ byte of the other driver's speed, jump to cont3 with
+                        \ A containing the higher of the two speeds, so the
+                        \ other car gets bumped to a slightly higher speed than
+                        \ the faster car (by adding 12, as the C flag is set)
+
+ LDA carSpeedHi,X       \ Set A to the high byte of the other driver's speed, so
+                        \ A now contains the higher of the two speeds
+
+ BNE cont4              \ Jump to cont4 to leave the speed of the other car
+                        \ alone, as it is going faster than the player (this BNE
+                        \ is efftively a JMP, as we know from the above that
+                        \ carSpeedHi,Y < carSpeedHi,X, which implies that the
+                        \ value of carSpeedHi,X must be non-zero)
 
 .cont3
 
- ADC #11
- STA carSpeedHi,X
+                        \ If we get here, it's because the player is going
+                        \ faster than the other car, and we jumped here via a
+                        \ BCS, so the C flag is set, which means the following
+                        \ adds 12 to the other car's speed
+
+ ADC #11                \ Increase the high byte of the other driver's speed by
+ STA carSpeedHi,X       \ 12, to speed it up after being hit by the faster
+                        \ player's car
 
 .cont4
 
- JSR Multiply8x8        \ Set (A T) = A * U
+                        \ By this point, A contains the speed of the faster car
+                        \ following the collision, as the high byte of the speed
 
- CMP #16
+ JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = carSpeedHi * damage measurement (0 to 74)
+                        \
+                        \ So (A T) is higher with closer and faster collisions
+
+ CMP #16                \ If A < 16, jump to cont5 to skip the following
  BCC cont5
- LDA #16
+
+ LDA #16                \ A >= 16, so set A to 16 as the maximum value of A
 
 .cont5
 
- PLP
+                        \ By this point, (A T) is a measurement of how dangerous
+                        \ the collision was, on a scale of 0 to 16
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
+ PLP                    \ Restore the sign of x-delta, which we stored on the
+                        \ stack above, so the N flag is positive if the other
+                        \ car's x-coordinate is larger (i.e. the other car is
+                        \ to the right of the player's car), or negative if the
+                        \ other car's x-coordinate is smaller (i.e. the other
+                        \ car is to the left of the player's car)
+
+ JSR Absolute16Bit      \ Set the sign of (A T) to match the result of the
+                        \ subtraction above, so A is now in the range -16 to
+                        \ +16, with the sign reflecting the position of the
+                        \ other car:
+                        \
+                        \   * -16 to 0 if the other car is to the left
+                        \
+                        \   * 0 to +16 if the other car is to the right
 
                         \ Fall through into SquealTyres to set var03Hi and make
                         \ the sound of squealing tyres
@@ -14487,9 +14613,9 @@ ENDIF
  CMP #50                \ jump to BuildCarObjects
  BCC BuildCarObjects
 
- LDA segmentSteering,Y  \ Set the driver's carSteering to entry Y from
- STA carSteering,X      \ segmentSteering, so the car follows the curve of the
-                        \ track ??? (similar to CAS calculation)
+ LDA segmentSteering,Y  \ Set the driver's carSteering to the segmentSteering
+ STA carSteering,X      \ value for this track segment, so the car follows the
+                        \ curve of the track
 
 \ ******************************************************************************
 \
@@ -14865,7 +14991,8 @@ ENDIF
 
  LDX L0045              \ Set X = L0045 (driver number of car we are driving)
 
- LDA objectDistance     \ Set A to the distance of the object we just projected
+ LDA objectDistanceHi   \ Set A to the high byte of the distance of the object
+                        \ we just projected
 
  CMP #3                 \ If A >= 3, then the car is not close enough to be the
  BCS bcar11             \ four-object car, so jump to bcar11 to check whether it
@@ -14995,20 +15122,23 @@ ENDIF
 
 .bcar11
 
-                        \ We jump here when A contains objectDistance and A >= 3
-                        \ so we now need to check whether the car is far enough
-                        \ away for us to change it to a distant car object
+                        \ We jump here when objectDistanceHi >= 3, so we now
+                        \ need to check whether the car is far enough away for
+                        \ us to change it to a distant car object
+                        \
+                        \ We jump here with A set to objectDistanceHi
 
- CMP #5                 \ If A < 5, i.e. A = 4, then the car is close enough to
- BCC bcar10             \ stay as a standard car object, so jump to bcar10 to
-                        \ return from the subroutine
+ CMP #5                 \ If A < 5, i.e. objectDistanceHi = 4, then the car is
+ BCC bcar10             \ close enough to stay as a standard car object, so jump
+                        \ to bcar10 to return from the subroutine
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
  BMI bcar10             \ the car is not visible, so jump to bcar10 to return
                         \ from the subroutine
 
-                        \ If we get here then A >= 5 and the car is visible, so
-                        \ the car is far enough away to be a distant car object
+                        \ If we get here then objectDistanceHi >= 5 and the car
+                        \ is visible, so the car is far enough away to be a
+                        \ distant car object
 
  INC objectStatus,X     \ The object type is stored in bits 0-3 of objectStatus,
                         \ so this increments the car's object type from 4 (the
@@ -15233,7 +15363,9 @@ ENDIF
 \
 \   Y                   
 \
-\   K                   
+\   (J I)               
+\
+\   (H G)               
 \
 \ Other entry points:
 \
@@ -15248,7 +15380,7 @@ ENDIF
  JSR sub_C0CA5
 
  LDA L
- STA objectDistance
+ STA objectDistanceHi
 
  BNE C2ACA
 
@@ -15260,10 +15392,10 @@ ENDIF
                         \ car in the CheckForContact routine
 
  LDA K
- STA L0041
+ STA objectDistanceLo
 
  LDA L0042
- STA L0067
+ STA collisionDriver
 
 .C2ACA
 
@@ -30662,12 +30794,12 @@ ENDIF
                         \ value that we put on the stack above, which sets the
                         \ N flag randomly (amongst others)
 
- JSR Absolute8Bit       \ The first instruction of Absolute8Bit  is a BPL,
-                        \ which normally skips negation for positive numbers,
-                        \ but in this case it means the Absolute8Bit  routine
-                        \ randomly changes the sign of A, so A is now in the
-                        \ range -7 to +7, with -3 to +3 more likely than -7 to
-                        \ -4 or 4 to 7
+ JSR Absolute8Bit       \ The first instruction of Absolute8Bit is a BPL, which
+                        \ normally skips negation for positive numbers, but in
+                        \ this case it means the Absolute8Bit routine randomly
+                        \ changes the sign of A, so A is now in the range
+                        \ -7 to +7, with -3 to +3 more likely than -7 to -4 or
+                        \ 4 to 7
 
  ASL A                  \ Set A = A << 1, so A is now in the range -14 to +14,
                         \ with -6 to +6 more likely than -14 to -7 or 7 to 14
