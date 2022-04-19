@@ -2803,6 +2803,8 @@ ORG &0B00
 \
 \ Arguments:
 \
+\   M
+\
 \   (J I)               
 \
 \   (H G)               
@@ -4708,11 +4710,15 @@ ORG &0B00
 
  LDA #%10010001         \ Set bits 0, 4 and 7 of the car's status byte, so:
  STA carStatus,X        \
-                        \   * Bit 0 set = ???
+                        \   * Bit 0 set = update this carStatus byte when
+                        \                 applying tactics in the
+                        \                 ApplyDriverTactics routine
                         \
-                        \   * Bit 4 set = ???
+                        \   * Bit 4 set = do not follow the segment's steering
+                        \                 line in segmentSteering, so the car
+                        \                 doesn't steer around corners
                         \
-                        \   * Bit 7 set = car is braking
+                        \   * Bit 7 set = apply brakes
 
                         \ Fall through into ClearTotalRaceTime to set the car
                         \ object to be hidden and no longer racing, and reset
@@ -12381,7 +12387,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObjectX
+\       Name: ProjectObjectX (Part 1 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Project an object onto the screen and calculate the object's
@@ -12402,11 +12408,17 @@ ENDIF
 \
 \   Y                   The offset of the second variable to use:
 \
+\                         * 0 = xVector5
+\
 \                         * 6 = xVector6
 \
 \ Returns:
 \
 \   (JJ II)             The projected screen x-coordinate of the object
+\
+\   (J I)               
+\
+\   (H G)               
 \
 \   M                   
 \
@@ -12416,79 +12428,158 @@ ENDIF
 \
 \ ******************************************************************************
 
- LDY #0
+ LDY #0                 \ Use xVector5 for the second variable when calling the
+                        \ routine via ProjectObjectX-2
 
 .ProjectObjectX
 
- LDA xSegmentCoordILo,X
- SEC
- SBC xVector5Lo,Y
+                        \ The vectors used in this routine are configured by the
+                        \ values of X and Y, but for the purposes of simplicity,
+                        \ the comments will assume the following:
+                        \
+                        \   * X = &FD, xVector4
+                        \
+                        \   * Y = 0, xVector5
+
+ LDA xSegmentCoordILo,X \ Set (VV PP) = xVector4 - xVector5
+ SEC                    \
+ SBC xVector5Lo,Y       \ starting with the low bytes
  STA PP
- LDA xSegmentCoordIHi,X
+
+ LDA xSegmentCoordIHi,X \ And then the high bytes
  SBC xVector5Hi,Y
  STA VV
- BPL prox1
- LDA #0
- SEC
- SBC PP
+
+ BPL prox1              \ If (VV PP) is positive, jump to prox1 to skip the
+                        \ following
+
+ LDA #0                 \ Set (VV PP) = 0 - (VV PP)
+ SEC                    \
+ SBC PP                 \ starting with the low bytes
  STA PP
- LDA #0
+
+ LDA #0                 \ And then the high bytes
  SBC VV
+
+                        \ So (VV PP) is now positive, in other words:
+                        \
+                        \   (VV PP) = |xVector4 - xVector5|
 
 .prox1
 
- STA SS
- LDA zSegmentCoordILo,X
- SEC
- SBC zVector5Lo,Y
+ STA SS                 \ Set (SS PP) = (VV PP)
+                        \             = |xVector4 - xVector5|
+
+ LDA zSegmentCoordILo,X \ Set (GG RR) = zVector4 - zVector5
+ SEC                    \
+ SBC zVector5Lo,Y       \ starting with the low bytes
  STA RR
- LDA zSegmentCoordIHi,X
+
+ LDA zSegmentCoordIHi,X \ And then the high bytes
  SBC zVector5Hi,Y
  STA GG
- BPL prox2
- LDA #0
- SEC
- SBC RR
+
+ BPL prox2              \ If (GG RR) is positive, jump to prox2 to skip the
+                        \ following
+
+ LDA #0                 \ Set (GG RR) = 0 - (GG RR)
+ SEC                    \
+ SBC RR                 \ starting with the low bytes
  STA RR
- LDA #0
+
+ LDA #0                 \ And then the high bytes
  SBC GG
+
+                        \ So (GG RR) is now positive, in other words:
+                        \
+                        \   (GG RR) = |zVector4 - zVector5|
 
 .prox2
 
- STA UU
- CMP SS
+ STA UU                 \ Set (UU RR) = (GG RR)
+                        \             = |zVector4 - zVector5|
+
+                        \ At this point we have the following:
+                        \
+                        \   (SS PP) = |xVector4 - xVector5|
+                        \
+                        \   (UU RR) = |zVector4 - zVector5|
+                        \
+                        \ We now compare these two 16-bit values, starting with
+                        \ the high bytes, and then the low bytes (if the high
+                        \ bytes are the same)
+
+ CMP SS                 \ If UU < SS, then (UU RR) < (SS PP), so jump to prox3
  BCC prox3
- BNE prox4
- LDA RR
- CMP PP
+
+ BNE prox4              \ If UU <> SS, i.e. UU > SS, then (UU RR) > (SS PP), so
+                        \ jump to prox4 with the C flag clear
+
+                        \ The high bytes are equal, so now we compare the low
+                        \ bytes
+
+ LDA RR                 \ If RR >= PP, then (UU RR) >= (SS PP), so jump to prox4
+ CMP PP                 \ with the C flag set
  BCS prox4
+
+                        \ Otherwise (UU RR) < (SS PP), so fall through into
+                        \ prox3
 
 .prox3
 
- LDA UU
- STA H
- LDA RR
- STA G
- LDA PP
- STA I
- LDA SS
- STA J
- JMP prox6
+                        \ If we get here then (UU RR) < (SS PP), so:
+                        \
+                        \   |zVector4 - zVector5| < |xVector4 - xVector5|
+
+ LDA UU                 \ Set (H G) = (UU RR)
+ STA H                  \           = |zVector4 - zVector5|
+ LDA RR                 \
+ STA G                  \ and (H G) contains the smaller value
+
+ LDA PP                 \ Set (J I) = (SS PP)
+ STA I                  \           = |xVector4 - xVector5|
+ LDA SS                 \
+ STA J                  \ and (J I) contains the larger value
+
+ JMP prox6              \ Jump to prox6
 
 .prox4
 
- PHP
- LDA SS
- STA H
- LDA PP
- STA G
- LDA RR
- STA I
- LDA UU
- STA J
- PLP
- BEQ prox9
- JMP prox14
+                        \ If we get here then (UU RR) >= (SS PP), so:
+                        \
+                        \   |zVector4 - zVector5| >= |xVector4 - xVector5|
+
+ PHP                    \ Store the status flags on the stack, and in particular
+                        \ the Z flag, which which will be set if the two match,
+                        \ i.e. (UU RR) = (SS PP)
+                        \      |zVector4 - zVector5| = |xVector4 - xVector5|
+                        \
+                        \ In other words, a BEQ would branch with these flags
+
+ LDA SS                 \ Set (H G) = (SS PP)
+ STA H                  \           = |xVector4 - xVector5|
+ LDA PP                 \
+ STA G                  \ and (H G) contains the smaller value
+
+ LDA RR                 \ Set (J I) = (UU RR)
+ STA I                  \           = |zVector4 - zVector5|
+ LDA UU                 \
+ STA J                  \ and (J I) contains the larger value
+
+ PLP                    \ Retrieve the status flags we stored above
+
+ BEQ prox9              \ If (UU RR) = (SS PP), jump to prox9
+
+ JMP prox14             \ Jump to prox14
+
+\ ******************************************************************************
+\
+\       Name: ProjectObjectX (Part 2 of 4)
+\       Type: Subroutine
+\   Category: 3D objects
+\    Summary: 
+\
+\ ******************************************************************************
 
 .prox5
 
@@ -12497,13 +12588,25 @@ ENDIF
 
 .prox6
 
+                        \ If we get here, then:
+                        \
+                        \   (H G) = (UU RR) = |zVector4 - zVector5|
+                        \
+                        \   (J I) = (SS PP) = |xVector4 - xVector5|
+                        \
+                        \ and (J I) > (H G)
+
  ASL PP
  ROL A
+
  BCC prox5
+
  ROR A
  STA V
+
  LDA RR
  STA T
+
  LDA UU
  CMP V
  BEQ prox9
@@ -12512,9 +12615,12 @@ ENDIF
 
  LDA #0
  STA II
+
  LDY T
+
  LDA L6100,Y
  STA M
+
  LSR A
  ROR II
  LSR A
@@ -12522,13 +12628,16 @@ ENDIF
  LSR A
  ROR II
  STA JJ
+
  LDA VV
  EOR GG
  BMI prox7
+
  LDA #0
  SEC
  SBC II
  STA II
+
  LDA #0
  SBC JJ
  STA JJ
@@ -12536,8 +12645,10 @@ ENDIF
 .prox7
 
  LDA #&40
+
  BIT VV
  BPL prox8
+
  LDA #&C0
 
 .prox8
@@ -12545,41 +12656,77 @@ ENDIF
  CLC
  ADC JJ
  STA JJ
+
  RTS
+
+\ ******************************************************************************
+\
+\       Name: ProjectObjectX (Part 3 of 4)
+\       Type: Subroutine
+\   Category: 3D objects
+\    Summary: 
+\
+\ ******************************************************************************
 
 .prox9
 
+                        \ If we get here, then:
+                        \
+                        \   (H G) = (SS PP) = |xVector4 - xVector5|
+                        \
+                        \   (J I) = (UU RR) = |zVector4 - zVector5|
+                        \
+                        \ and (J I) = (H G)
+
  LDA #&FF
  STA M
+
  LDA #0
  STA II
+
  BIT VV
  BPL prox11
+
  BIT GG
  BPL prox10
+
  LDA #&A0
  STA JJ
+
  RTS
 
 .prox10
 
  LDA #&E0
  STA JJ
+
  RTS
 
 .prox11
 
  BIT GG
  BPL prox12
+
  LDA #&60
  STA JJ
+
  RTS
 
 .prox12
 
  LDA #&20
  STA JJ
+
  RTS
+
+\ ******************************************************************************
+\
+\       Name: ProjectObjectX (Part 4 of 4)
+\       Type: Subroutine
+\   Category: 3D objects
+\    Summary: 
+\
+\ ******************************************************************************
 
 .prox13
 
@@ -12588,13 +12735,25 @@ ENDIF
 
 .prox14
 
+                        \ If we get here, then:
+                        \
+                        \   (H G) = (SS PP) = |xVector4 - xVector5|
+                        \
+                        \   (J I) = (UU RR) = |zVector4 - zVector5|
+                        \
+                        \ and (J I) > (H G)
+
  ASL RR
  ROL A
+
  BCC prox13
+
  ROR A
  STA V
+
  LDA PP
  STA T
+
  LDA SS
  CMP V
  BEQ prox9
@@ -12603,9 +12762,12 @@ ENDIF
 
  LDA #0
  STA II
+
  LDY T
+
  LDA L6100,Y
  STA M
+
  LSR A
  ROR II
  LSR A
@@ -12613,13 +12775,16 @@ ENDIF
  LSR A
  ROR II
  STA JJ
+
  LDA VV
  EOR GG
  BPL prox15
+
  LDA #0
  SEC
  SBC II
  STA II
+
  LDA #0
  SBC JJ
  STA JJ
@@ -12627,8 +12792,10 @@ ENDIF
 .prox15
 
  LDA #0
+
  BIT GG
  BPL prox16
+
  LDA #&80
 
 .prox16
@@ -12636,6 +12803,7 @@ ENDIF
  CLC
  ADC JJ
  STA JJ
+
  RTS
 
 \ ******************************************************************************
@@ -12647,6 +12815,23 @@ ENDIF
 \             screen y-coordinate
 \
 \ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   X                   The offset of the variable to use for the object's 3D
+\                       coordinates
+\
+\                         * &F4 = xVector7
+\
+\                         * &FA = xVector3
+\
+\                         * &FD = xVector4
+\
+\   Y                   The offset of the second variable to use:
+\
+\                         * 0 = xVector5
+\
+\                         * 6 = xVector6
 \
 \ Returns:
 \
@@ -14169,7 +14354,9 @@ ENDIF
 \       Name: GetCarDistance
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate the distance between two cars
+\    Summary: Calculate the distance between two cars, in terms of forward
+\             distance along the track
+\             
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14202,7 +14389,8 @@ ENDIF
 \       Name: GetObjectDistance
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the distance between two objects
+\    Summary: Calculate the distance between two objects, in terms of forward
+\             distance along the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15443,7 +15631,8 @@ ENDIF
 \ ******************************************************************************
 
  LDX #&FD               \ Set X = &FD so the calls to ProjectObjectX and
-                        \ ProjectObjectY use xVector4 and yVector4
+                        \ ProjectObjectY use xVector4 and yVector4 for the
+                        \ object's 3D coordinates
 
 .ProjectObject
 
@@ -15459,7 +15648,7 @@ ENDIF
  LDA JJ
  STA xObjectScreenHi,Y
 
- JSR sub_C2AB3-2        \ ???
+ JSR sub_C2AB3-2        \ ??? Check for collisions in 3D
 
  JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
                         \ object's screen y-coordinate, returning it in A
@@ -15627,7 +15816,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   Y                   
+\   Y                   Contact is made if objectDistanceLo <= Y
 \
 \   (J I)               
 \
@@ -15639,33 +15828,41 @@ ENDIF
 \
 \ ******************************************************************************
 
- LDY #37
+ LDY #37                \ Set Y = 37, so we make contact if K <= 37
 
 .sub_C2AB3
 
- JSR sub_C0CA5
+ JSR sub_C0CA5          \ Set (L K) to the distance between the two projected
+                        \ objects
 
- LDA L
+ LDA L                  \ Set objectDistanceHi to the high byte of (L K)
  STA objectDistanceHi
 
- BNE C2ACA
+ BNE C2ACA              \ If objectDistanceHi is non-zero then the objects are
+                        \ too far apart for a collision, so jump to C2ACA to
+                        \ return from the subroutine
 
- CPY K
- BCC C2ACA
+ CPY K                  \ If K > Y, then the objects are too far apart for a
+ BCC C2ACA              \ collision, this time in terms of the low byte of the
+                        \ distance, so jump to C2ACA to return from the
+                        \ subroutine
+
+                        \ If we get here then K <= Y, so the objects are close
+                        \ enough for a collision
 
  DEC checkForContact    \ Decrement checkForContact so it is non-zero, so we
                         \ check for contact between this car and the player's
                         \ car in the CheckForContact routine
 
- LDA K
+ LDA K                  \ Set (objectDistanceHi objectDistanceLo) = (L K)
  STA objectDistanceLo
 
- LDA L0042
+ LDA L0042              \ Set the number of the other driver to L0042
  STA collisionDriver
 
 .C2ACA
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -25648,7 +25845,7 @@ ENDIF
  LDA #23
  STA L0042
 
- JSR sub_C2AB3
+ JSR sub_C2AB3          \ ??? Check for collisions in 3D
 
  LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses xVector6
 
