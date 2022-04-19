@@ -360,7 +360,7 @@ ORG &0000
                         \
                         \ In mph? This looks like the fractional part
 
-.positionChange
+.positionChangeBCD
 
  SKIP 1                 \ Some kind of delta in BCD for the player's race
                         \ position ???
@@ -1039,24 +1039,54 @@ ORG &0100
 
  SKIP 20                \ Each car's status byte
                         \
-                        \   * Bit 0 = ???
+                        \   * Bit 0 = update this carStatus byte when applying
+                        \             tactics in the ApplyDriverTactics routine
                         \
-                        \   * Bit 4 = ??? also affects movement
+                        \       * Clear = do update carStatus
                         \
-                        \   * Bit 6 = car is accelerating?
+                        \       * Set = do not update carStatus
                         \
-                        \   * Bit 7 = car is braking?
+                        \   * Bit 4 = affects driving round corners for visible
+                        \             cars (see BuildVisibleCar)
+                        \
+                        \       * Clear = follow the segment's steering line in
+                        \                 segmentSteering when going fast enough
+                        \                 (carSpeedHi >= 50)
+                        \
+                        \       * Set = do not follow the segment's steering
+                        \               line in segmentSteering
+                        \
+                        \   * Bit 6 = acceleration status
+                        \
+                        \       * Clear = do not acclerate car
+                        \
+                        \       * Set = acclerate car
+                        \
+                        \   * Bit 7 = braking status
+                        \
+                        \       * Clear = do not apply brakes
+                        \
+                        \       * Set = apply brakes
 
 .carSteering
 
  SKIP 20                \ Contains the steering to apply to each car
                         \
-                        \   * Bits 0-5 = the amount of steering
+                        \   * Bits 0-5 = the amount of steering as a positive
+                        \                value (0 to 31)
                         \
-                        \   * Bit 6 = 0 = apply steering in MoveCars
-                        \             1 = do not apply steering in MoveCars
+                        \   * Bit 6 = controls whether to apply steering in the
+                        \             MoveCars routine
                         \
-                        \   * Bit 7 = the direction (0 = left, 1 = right)
+                        \       * Clear = apply steering
+                        \
+                        \       * Set = do not apply steering
+                        \
+                        \   * Bit 7 = the direction of the steering
+                        \
+                        \       * Clear = steer left
+                        \
+                        \       * Set = steer right
                         \
                         \ The steering is stored as a sign-magnitude number,
                         \ where the sign is in bit 7 and the magnitude is in
@@ -4575,7 +4605,7 @@ ORG &0B00
 
  JSR MoveCars           \ Move the cars around the track, to keep the race going
 
- JSR sub_C2692          \ ???
+ JSR ApplyDriverTactics \ Apply driving tactics to all the non-player drivers
 
  JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
@@ -7748,8 +7778,8 @@ ENDIF
  JSR ConvertNumberToBCD \ Convert the number in A into binary coded decimal
                         \ (BCD), adding 1 in the process
 
- STA positionChange     \ Set positionChange to the current player's position in
-                        \ BCD
+ STA positionChangeBCD  \ Set positionChangeBCD to the current player's position
+                        \ in BCD
 
  RTS                    \ Return from the subroutine
 
@@ -8548,7 +8578,7 @@ ENDIF
 
 .UpdatePositionInfo
 
- LDA positionChange     \ Set A = positionChange
+ LDA positionChangeBCD  \ Set A = positionChangeBCD
 
  BEQ posi1              \ If A = 0 then the race position has not changed, so
                         \ jump to posi1 to skip updating the position number
@@ -8561,7 +8591,7 @@ ENDIF
                         \ Decimal (BCD)
 
  CLC                    \ Set A = currentPositionBCD + A
- ADC currentPositionBCD \       = currentPositionBCD + positionChange
+ ADC currentPositionBCD \       = currentPositionBCD + positionChangeBCD
 
  STA currentPositionBCD \ Set currentPositionBCD = A
 
@@ -8572,8 +8602,8 @@ ENDIF
  CMP #&21               \ If A >= &21, jump to posi1
  BCS posi1
 
- LDX #0                 \ Set positionChange = 0, as we have now applied the
- STX positionChange     \ change of position to currentPositionBCD
+ LDX #0                 \ Set positionChangeBCD = 0, as we have now applied the
+ STX positionChangeBCD  \ change of position to currentPositionBCD
 
  STX G                  \ Set G = 0 so the call to Print2DigitBCD below will
                         \ print the second digit and will not print leading
@@ -13554,7 +13584,7 @@ ENDIF
 
  JSR MoveCars           \ Move the cars around the track
 
- JSR sub_C2692          \ ???
+ JSR ApplyDriverTactics \ Apply driving tactics to all the non-player drivers
 
  JSR HideAllCars        \ Set all the cars to be hidden
 
@@ -13658,229 +13688,465 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2692
+\       Name: ApplyDriverTactics (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Process all cars, checking first to see if the car we are
+\             processing has just overtaken the car in front of it
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Returns:
+\
+\   H                   Gets a 1 rotated left into bit 0 each time we process
+\                       one car overtaking another
 \
 \ ******************************************************************************
 
-.sub_C2692
+.ApplyDriverTactics
 
  LDX currentPosition    \ Set X to the current player's position, to use as a
                         \ loop counter in the following as we work backwards
                         \ through the field from this position
 
-.C2694
+.tact1
 
  STX W                  \ Store the position number in W, so we can retrieve it
-                        \ at the end of the loop
+                        \ during the loop
 
- LDA driversInOrder,X   \ Set T to the number of the driver in position X ("this
- STA T                  \ driver")
+ LDA driversInOrder,X   \ Set T to the number of the driver in position X
+ STA T
 
  JSR GetPositionAhead   \ Set X to the number of the position ahead of position
                         \ X
 
  LDA driversInOrder,X   \ Set G to the number of the driver in position X, i.e.
- STX G                  \ the number of the driver ahead of driver T ("the
-                        \ driver ahead")
+                        \ the number of the driver ahead of driver T
 
- TAY                    \ Set Y to the number of the driver ahead
+ STX G                  \ Store the position number of the driver ahead in G, so
+                        \ we can retrieve it during the loop
 
- LDX T                  \ Set X to the number of this driver
+ TAY                    \ Set Y to the number of the driver ahead of driver T
 
- LDA #0                 \ Set N = 0, which we will use to build our flags
- STA N
+ LDX T                  \ Set X to the number of the driver we are currently
+                        \ processing
 
- STA carSteering,X      \ Set this driver's carSteering to 0
+                        \ So in the following, we are applying driving tactics
+                        \ to driver X (aka driver T)
+                        \
+                        \ We start by comparing driver X with the driver ahead,
+                        \ driver Y
+                        \
+                        \ Drivers X and Y are in positions W and G respectively
 
- JSR GetCarDistance     \ Set A and T to the distance between drivers X and Y
+ LDA #0                 \ Set N = 0, which we will use to build the car status
+ STA N                  \ flags for driver X
 
- BCS C26E6              \ If the C flag is set then the cars are far apart, so
-                        \ jump to C26E6
+ STA carSteering,X      \ Set this driver's carSteering to 0, so by default
+                        \ driver X will drive straight (though we may change
+                        \ this below)
 
- BPL C26E9              \ If the distance in A is positive then driver Y is
-                        \ ahead, so jump to C26E9
+ JSR GetCarDistance     \ Set A to the distance between drivers X and Y
 
- CMP #&F6               \ If A < -10, jump to C26E6
- BCC C26E6
+ BCS tact4              \ If the C flag is set then the cars are far apart, so
+                        \ jump to tact18 via tact4 to update the car status byte
+                        \ for driver X to N = 0, and then move on to the next
+                        \ driver
 
- LDX W
- LDY G
- JSR SwapDriverPosition
+ BPL tact5              \ If the distance in A is positive then driver Y is
+                        \ still ahead of driver X, so jump to tact5 to apply
+                        \ tactics to driver X in part 2
+
+                        \ If we get here then driver Y is not actually in front
+                        \ of this driver, despite being in a higher position, so
+                        \ we now need to check how far ahead driver X is
+
+ CMP #&F6               \ If A < -10, driver X is not very far ahead of driver
+ BCC tact4              \ Y, so we don't yet consider this a passing move, so
+                        \ jump to tact18 via tact4 to update the car status byte
+                        \ for driver X to N = 0, and then move on to the next
+                        \ driver
+
+                        \ If we get here then driver X has overtaken driver Y,
+                        \ and the distance between the cars is >= 10, so we need
+                        \ to swap their positions, as driver X has pulled far
+                        \ enough away for this to be considered a passing move
+
+ LDX W                  \ Swap the drivers between positions W and G, i.e. swap
+ LDY G                  \ the positions of driver X and Y, so driver X moves
+ JSR SwapDriverPosition \ into a higher position, and set:
+                        \
+                        \   * X = the number of the driver now at position W,
+                        \         i.e. the driver behind, previously referred to
+                        \         as driver Y
+                        \
+                        \   * Y = the number of the driver now at position G,
+                        \         i.e. the driver ahead, previously referred to
+                        \         as driver X
+                        \
+                        \ So now X and Y have swapped, so driver Y just passed
+                        \ driver X
 
  SEC                    \ Set bit 7 of updateDriverInfo so the driver names get
- ROR updateDriverInfo   \ updated at the top of the screen
+ ROR updateDriverInfo   \ updated at the top of the screen, to reflect the new
+                        \ race positions
 
- CPY currentPlayer
- BNE C26CB
- LDA #&99
- BNE C26D1
+ CPY currentPlayer      \ If driver Y (the one that just did the overtaking)
+ BNE tact2              \ is not the current player, jump to tact2 to skip the
+                        \ following two instructions
 
-.C26CB
+                        \ If we get here then the C flag is set, as the above
+                        \ comparison is equal
 
- CPX currentPlayer
- BNE C26E6
- LDA #1
+                        \ Driver Y (the one that just did the overtaking) is the
+                        \ current player, so we now need to reduce the current
+                        \ player's position by 1 to move them into a higher
+                        \ position
 
-.C26D1
+ LDA #&99               \ Set A = -1 in BCD, which we can use to decrement the
+                        \ BCD number in positionChangeBCD below, so the current
+                        \ player's position will go down by 1
 
- STA T
- LDA driverLapNumber,Y
- ROL H
- SBC driverLapNumber,X
- BNE C26E6
+ BNE tact3              \ Jump to tact3 (this BNE is effectively a JMP as A is
+                        \ never zero)
+
+.tact2
+
+ CPX currentPlayer      \ If driver X (the one that just got overtaken) is not
+ BNE tact4              \ the current player, jump to tact18 via tact4 to update
+                        \ the car status byte for this driver to N = 0, and then
+                        \ move on to the next driver
+
+                        \ If we get here then the C flag is set, as the above
+                        \ comparison is equal
+
+                        \ Driver Y (the one that just did the overtaking) is the
+                        \ current player, so we now need to reduce the current
+                        \ player's position by 1 to move them into a higher
+                        \ position
+
+ LDA #&01               \ Set A = 1 in BCD, which we can use to increment the
+                        \ BCD number in positionChangeBCD below, so the current
+                        \ player's position will go up by 1
+
+.tact3
+
+ STA T                  \ Set T = A, so A contains the position change in BCD
+
+ LDA driverLapNumber,Y  \ Set A to the lap number for the driver ahead
+
+ ROL H                  \ Rotate the C flag into bit 0 of H, which we know is
+                        \ set from the comparisons above, so this rotates a 1
+                        \ into bit 0 of H (though this doesn't appear to be used
+                        \ anywhere, so this instruction is a bit of a mystery)
+
+ SBC driverLapNumber,X  \ Subtract the lap number for this driver
+
+ BNE tact4              \ If the drivers are on different laps, jump to tact18
+                        \ via tact4 to update the car status byte for this
+                        \ driver to N = 0, and then move on to the next driver
 
  SED                    \ Set the D flag to switch arithmetic to Binary Coded
                         \ Decimal (BCD)
 
- CLC                    \ Set positionChange = positionChange + T
- LDA T
- ADC positionChange
- STA positionChange
+ CLC                    \ Set positionChangeBCD = positionChangeBCD + T
+ LDA T                  \
+ ADC positionChangeBCD  \ so this applies the position change we calculated
+ STA positionChangeBCD  \ above to positionChangeBCD
 
  CLD                    \ Clear the D flag to switch arithmetic to normal
 
-.C26E6
+.tact4
 
- JMP C278C
+ JMP tact18             \ Jump to tact18 to update the car status byte for
+                        \ driver X to N = 0, and then move on to the next driver
 
-.C26E9
+\ ******************************************************************************
+\
+\       Name: ApplyDriverTactics (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: The car we are processing has not overtaken the car in front of
+\             it, so apply driving tactics
+\
+\ ******************************************************************************
 
- CMP #5
- BCS C26E6
- LDA carSpeedLo,X
- CLC
- SBC carSpeedLo,Y
+.tact5
+
+                        \ We jump here with the distance between driver X and
+                        \ driver Y in A, which is positive as driver Y is ahead
+                        \ of driver X
+
+ CMP #5                 \ If A >= 5, then the cars are not very close, so jump 
+ BCS tact4              \ to tact18 via tact4 to update the car status byte for
+                        \ this driver to N = 0, and then move on to the next
+                        \ driver
+
+ LDA carSpeedLo,X       \ Set A to the high byte of the following subtraction:
+ CLC                    \
+ SBC carSpeedLo,Y       \   driver X speed - driver Y speed - 1
  LDA carSpeedHi,X
  SBC carSpeedHi,Y
- ROR V
- BPL C26E6
- LSR A
- CMP #&1E
- BCC C2705
- LDA #&1E
 
-.C2705
+ ROR V                  \ Rotate the C flag into bit 7 of V, so bit 7 is set if
+                        \ driver X is going faster than driver Y (so driver X is
+                        \ catching up), and it's clear if driver Y is running
+                        \ away with it
 
- CMP #4
- BCS C270B
- LDA #4
+ BPL tact4              \ If bit 7 of the ROR result is clear, i.e. the C flag
+                        \ is clear, i.e. if driver Y is driving as fast as or
+                        \ faster than driver X, jump to tact18 via tact4 to
+                        \ update the car status byte for this driver to N = 0,
+                        \ and then move on to the next driver
 
-.C270B
+                        \ If we get here then driver X is behind driver Y but is
+                        \ driving faster than driver Y, so we need to think
+                        \ about steering driver X
+                        \
+                        \ We also know that A is positive, as the above
+                        \ subtraction didn't underflow
 
- STA SS
- LDA T
- CMP #4
- LDA carStatus,Y
- AND #%01000000
- BEQ C2729
- BCS C271C
- ORA #&80
+ LSR A                  \ Set A = A / 2
 
-.C271C
+ CMP #30                \ If A < 30, jump to tact6 to skip the following
+ BCC tact6              \ instruction
 
- STA N
- LDA carRacingLine,X
- CMP carRacingLine,Y
- ROR T
- JMP C277D
+ LDA #30                \ Set A = 30, so A is a maximum of 30
 
-.C2729
+.tact6
 
- BCS C2742
+ CMP #4                 \ If A >= 4, jump to tact7 to skip the following
+ BCS tact7              \ instruction
 
- LDA #%01000000
- STA N
+ LDA #4                 \ Set A = 4, so A is a minimum of 4
 
- LDA carRacingLine,Y
- CMP carRacingLine,X
- ROR T
- AND #&FF
+.tact7
+
+ STA SS                 \ Store A in SS, which we will use below as the amount
+                        \ of steering to apply, in the range 4 to 30, with more
+                        \ steering being applied when the cars have a bigger
+                        \ speed gap
+
+ LDA T                  \ Set A to the number of the driver we are currently
+                        \ processing, which we stored in T in part 1 (though the
+                        \ same number is still in X, so this could be done more
+                        \ efficiently with a TXA instruction)
+
+ CMP #4                 \ Set the C flag if A >= 4, clear the C flag if A < 4
+
+ LDA carStatus,Y        \ Set A to just bit 6 of driver Y's car status byte,
+ AND #%01000000         \ which is the acceleration flag
+
+ BEQ tact9              \ If bit 6 of driver Y's car status byte is clear, then
+                        \ driver Y is not accelerating, so jump to tact9
+
+                        \ If we get here then driver Y is accelerating, so we
+                        \ get driver X to follow driver Y's racing line
+
+ BCS tact8              \ If the C flag is set, then the driver number of the
+                        \ driver we are currently processing is 4 or greater, so
+                        \ jump to tact8 to skip the following instruction
+
+ ORA #%10000000         \ We are currently processing one of drivers 0 to 3, who
+                        \ are the four best drivers, so set bit 7 of A to apply
+                        \ the brakes, overriding the acceleration flag in bit 6
+
+.tact8
+
+ STA N                  \ Store the updated flags in N, so bit 6 of driver X
+                        \ matches driver Y's bit 6 (so their acceleration status
+                        \ matches), and bit 7 (braking) set if X = 0 to 3
+
+ LDA carRacingLine,X    \ If the racing line for driver X >= the racing line for
+ CMP carRacingLine,Y    \ driver Y, set the C flag, otherwise clear it
+                        \
+                        \ In other words, the C flag is set if driver X is to
+                        \ the left of driver Y
+
+ ROR T                  \ Rotate the C flag into bit 7 of T, so we can use this
+                        \ bit to determine the direction that driver X should
+                        \ steer
+                        \
+                        \ This steers driver X to the right (bit 7 set) when
+                        \ driver X is to the left of driver Y - in other words,
+                        \ it steers driver X towards driver Y's racing line,
+                        \ into driver Y's slipstream
+
+ JMP tact15             \ Jump to tact15 to apply the steering direction in T to
+                        \ the amount of steering in SS
+
+.tact9
+
+                        \ If we get here then driver Y is not accelerating, so
+                        \ we get driver X to move to overtake driver Y
+
+ BCS tact10             \ If the C flag is set, then the driver number of the
+                        \ driver we are currently processing is 4 or greater, so
+                        \ jump to tact10
+
+ LDA #%01000000         \ Set N so it only has bit 6 set (so driver X will be
+ STA N                  \ set to accelerate)
+
+ LDA carRacingLine,Y    \ If the racing line for driver Y >= the racing line for
+ CMP carRacingLine,X    \ driver X, set the C flag, otherwise clear it
+                        \
+                        \ In other words, the C flag is set if driver X is to
+                        \ the right of driver Y
+
+ ROR T                  \ Rotate the C flag into bit 7 of T, so we can use this
+                        \ bit to determine the direction that driver X should
+                        \ steer
+                        \
+                        \ This steers driver X to the right (bit 7 set) when
+                        \ driver X is to the right of driver Y - in other words,
+                        \ it steers driver X away from driver Y's racing line,
+                        \ into an overtaking position
+
+ AND #&FF               \ This instruction doesn't change any values, but it
+                        \ does set the N flag according to the current value of
+                        \ A, so the call to Absolute8Bit will return |A| rather
+                        \ than being affected by the result of the ROR
+                        \ instruction
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \
+                        \ As A is the racing line, this gives the distance of
+                        \ driver Y from the edge of the track, with 0 being on
+                        \ the verge, and 127 being in the centre
 
- CMP #&3C
- BCC C2744
- BCS C2749
+ CMP #60                \ If A < 60, then driver Y is close to the verge, so
+ BCC tact11             \ jump to tact11 to steer driver X into the other half
+                        \ of the track to driver Y
 
-.C2742
+ BCS tact12             \ Otherwise we steer driver X away from driver Y's
+                        \ racing line, by jumping to tact12 (this BCS is
+                        \ effectively a JMP as we just passed through a BCC)
 
- LSR V
+.tact10
 
-.C2744
+ LSR V                  \ Clear bit 7 of V, so we never end up applying the
+                        \ brakes in tact12 or tact14 below
 
- LDA carRacingLine,Y
- STA T
+.tact11
 
-.C2749
+ LDA carRacingLine,Y    \ Set T to the racing line for driver Y, specifically
+ STA T                  \ so we can extract the top bit to determine which side
+                        \ of the track driver Y is on (0 = right, 1 = left),
+                        \ and to steer in the opposite direction
 
- LDA objectStatus,X
- BPL C275E
+.tact12
+
+ LDA objectStatus,X     \ If bit 7 of driver X's object status byte is clear,
+ BPL tact13             \ then the car is visible, so jump to tact13
+
+                        \ If we get here then driver X is not visible
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which will be a pretty random figure
 
- AND #&1F
- BNE C278C
- LDA V
- AND #%10000000
- ORA N
- JMP C278A
+ AND #31                \ Reduce the random number to the range 0 to 31
 
-.C275E
+ BNE tact18             \ If A is non-zero, jump to tact18 to update the car
+                        \ status byte for this driver to N, and then move on
+                        \ to the next driver
 
- LDA carRacingLine,Y
- SEC
+                        \ If we get here then A is zero, which has a 3.125%
+                        \ chance of happening
+
+ LDA V                  \ Set A to N, but with bit 7 set to bit 7 of V, so bit 7
+ AND #%10000000         \ of N gets set if driver X is going faster than driver
+ ORA N                  \ Y, which means driver X slams on the brakes
+
+ JMP tact17             \ Jump to tact17 to update the car status byte for this
+                        \ driver to the value of A, and then move on to the next
+                        \ driver
+
+.tact13
+
+                        \ If we get here then driver X is visible
+
+ LDA carRacingLine,Y    \ Set A to the difference between the racing lines for
+ SEC                    \ driver X and driver Y
  SBC carRacingLine,X
- BCS C2769
- EOR #&FF
 
-.C2769
+ BCS tact14             \ If the subtraction didn't underflow, jump to tact14 to
+                        \ skip the following instruction
 
- CMP #&64
- BCS C278C
- CMP #&50
- BCS C2786
- CMP #&3C
- BCS C277D
+ EOR #&FF               \ The subtraction underflowed, so flip all the bits in
+                        \ the result to change it from negative to positive, so
+                        \ A contains the difference between the two drivers'
+                        \ racing lines, made positive
 
- LDA V
- AND #%10000000
- ORA N
+.tact14
+
+ CMP #100               \ If A >= 100, then the cars are far apart in terms of
+ BCS tact18             \ left-right spacing, so jump to tact18 to update the
+                        \ car status byte for this driver to N, and then move on
+                        \ to the next driver
+
+ CMP #80                \ If A >= 80, then the cars are slightly closer, so jump
+ BCS tact16             \ to tact16 to set bit 4 of driver X's car status byte
+
+ CMP #60                \ If A >= 60, then the cars are even closer, so jump to
+ BCS tact15             \ tact15 to steer driver X in the direction in T, which
+                        \ we set above to the side of the track driver Y is on
+                        \ (0 = right, 1 = left)
+                        \
+                        \ This therefore steers driver X away from driver Y, as
+                        \ in terms of steering 0 = steer left, 1 = steer right
+
+                        \ If we get here then the cars are really close, so we
+                        \ get driver X to slam on the brakes, as well as
+                        \ steering away from driver Y
+
+ LDA V                  \ Store the bit 7 of V in bit 7 of the car status flag
+ AND #%10000000         \ byte we are building in N, so driver X applies the
+ ORA N                  \ brakes when bit 7 of V is set
  STA N
 
-.C277D
+.tact15
 
- LDA T
- AND #%10000000
- ORA SS
+ LDA T                  \ Set the steering for this driver to SS, with the top
+ AND #%10000000         \ bit (i.e. the direction of the steering) set to the
+ ORA SS                 \ sign bit of T (0 = steer left, 1 = steer right)
  STA carSteering,X
 
-.C2786
+.tact16
 
- LDA N
- ORA #%00010000
+ LDA N                  \ Set bit 4 of the car status flag byte we are building
+ ORA #%00010000         \ in N
 
-.C278A
+.tact17
 
- STA N
+ STA N                  \ Store A in N to use as the car status flags for this
+                        \ driver
 
-.C278C
+\ ******************************************************************************
+\
+\       Name: ApplyDriverTactics (Part 3 of 3)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Update the car status and loop back for the next car
+\
+\ ******************************************************************************
 
- LDA carStatus,X
- LSR A
+.tact18
 
- LDA N
- BCS C2797
- STA carStatus,X
+ LDA carStatus,X        \ Set the C flag to bit 0 of the car status flags for
+ LSR A                  \ this driver
 
-.C2797
+ LDA N                  \ Set A = N, to use as the new car status flags for this
+                        \ driver, but only when bit 0 of the current flag byte
+                        \ is set
+
+ BCS tact19             \ If the C flag is set, i.e. bit 0 of the car status
+                        \ flags for this driver is set, jump to tact19 to skip
+                        \ the following instruction
+
+ STA carStatus,X        \ Set the car status flags for this driver to A (i.e. to
+                        \ the flags in N)
+
+.tact19
 
  LDX W                  \ Set X to the position that we just checked, which we
                         \ stored in W at the start of the loop
@@ -13888,13 +14154,13 @@ ENDIF
  JSR GetPositionBehind  \ Set X to the number of the position behind position X,
                         \ so we work backwards through the field
 
- CPX currentPosition    \ If X = the current player's position, jump to C27A3 to
- BEQ C27A3              \ return from the subroutine
+ CPX currentPosition    \ If X = the current player's position, jump to tact20
+ BEQ tact20             \ to return from the subroutine
 
- JMP C2694              \ Otherwise jump back to C2694 to process the next
+ JMP tact1              \ Otherwise jump back to tact1 to process the next
                         \ driver in X
 
-.C27A3
+.tact20
 
  RTS                    \ Return from the subroutine
 
@@ -14361,7 +14627,7 @@ ENDIF
  BPL mcar12             \ Loop back until we have added carSpeedHi twice
 
  LDA objectStatus,X     \ If bit 7 of the driver's car object status byte is
- ASL A                  \ set, then the car is not visibie, so jump to mar20 to
+ ASL A                  \ set, then the car is not visible, so jump to mar20 to
  BCS mcar20             \ move on to the next car
 
  BMI mcar17             \ If bit 6 of the driver's car object status byte is
