@@ -2694,7 +2694,7 @@ ORG &0B00
 \       Name: Divide8x8
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: Calculate T = A * 256 / V
+\    Summary: Calculate T = 256 * A / V
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12148,6 +12148,8 @@ ENDIF
 \                       for this this object (i.e. the index of the data for the
 \                       object's first part)
 \
+\   xCoord              The pixel x-coordinate of the centre of the object
+\
 \   yCoord              The object's y-coordinate (for the centre of the object)
 \                       in terms of track lines, so 80 is the top of the track
 \                       view and 0 is the bottom of the track view
@@ -12416,11 +12418,11 @@ ENDIF
 \
 \   (JJ II)             The projected screen x-coordinate of the object
 \
-\   (J I)               
+\   (J I)               The larger |delta|
 \
-\   (H G)               
+\   (H G)               The smaller |delta|
 \
-\   M                   
+\   M                   ???
 \
 \ Other entry points:
 \
@@ -12450,6 +12452,11 @@ ENDIF
  SBC xVector5Hi,Y
  STA VV
 
+                        \ Let's call this difference in x-coordinates x-delta,
+                        \ so:
+                        \
+                        \   (VV PP) = x-delta
+
  BPL prox1              \ If (VV PP) is positive, jump to prox1 to skip the
                         \ following
 
@@ -12463,12 +12470,12 @@ ENDIF
 
                         \ So (VV PP) is now positive, in other words:
                         \
-                        \   (VV PP) = |xVector4 - xVector5|
+                        \   (VV PP) = |x-delta|
 
 .prox1
 
  STA SS                 \ Set (SS PP) = (VV PP)
-                        \             = |xVector4 - xVector5|
+                        \             = |x-delta|
 
  LDA zSegmentCoordILo,X \ Set (GG RR) = zVector4 - zVector5
  SEC                    \
@@ -12478,6 +12485,11 @@ ENDIF
  LDA zSegmentCoordIHi,X \ And then the high bytes
  SBC zVector5Hi,Y
  STA GG
+
+                        \ Let's call this difference in z-coordinates z-delta,
+                        \ so:
+                        \
+                        \   (GG RR) = z-delta
 
  BPL prox2              \ If (GG RR) is positive, jump to prox2 to skip the
                         \ following
@@ -12492,18 +12504,18 @@ ENDIF
 
                         \ So (GG RR) is now positive, in other words:
                         \
-                        \   (GG RR) = |zVector4 - zVector5|
+                        \   (GG RR) = |z-delta|
 
 .prox2
 
  STA UU                 \ Set (UU RR) = (GG RR)
-                        \             = |zVector4 - zVector5|
+                        \             = |z-delta|
 
                         \ At this point we have the following:
                         \
-                        \   (SS PP) = |xVector4 - xVector5|
+                        \   (SS PP) = |x-delta|
                         \
-                        \   (UU RR) = |zVector4 - zVector5|
+                        \   (UU RR) = |z-delta|
                         \
                         \ We now compare these two 16-bit values, starting with
                         \ the high bytes, and then the low bytes (if the high
@@ -12529,15 +12541,15 @@ ENDIF
 
                         \ If we get here then (UU RR) < (SS PP), so:
                         \
-                        \   |zVector4 - zVector5| < |xVector4 - xVector5|
+                        \   |z-delta| < |x-delta|
 
  LDA UU                 \ Set (H G) = (UU RR)
- STA H                  \           = |zVector4 - zVector5|
+ STA H                  \           = |z-delta|
  LDA RR                 \
  STA G                  \ and (H G) contains the smaller value
 
  LDA PP                 \ Set (J I) = (SS PP)
- STA I                  \           = |xVector4 - xVector5|
+ STA I                  \           = |x-delta|
  LDA SS                 \
  STA J                  \ and (J I) contains the larger value
 
@@ -12547,22 +12559,21 @@ ENDIF
 
                         \ If we get here then (UU RR) >= (SS PP), so:
                         \
-                        \   |zVector4 - zVector5| >= |xVector4 - xVector5|
+                        \   |z-delta| >= |x-delta|
 
  PHP                    \ Store the status flags on the stack, and in particular
                         \ the Z flag, which which will be set if the two match,
-                        \ i.e. (UU RR) = (SS PP)
-                        \      |zVector4 - zVector5| = |xVector4 - xVector5|
+                        \ i.e. if |z-delta| = |x-delta|
                         \
                         \ In other words, a BEQ would branch with these flags
 
  LDA SS                 \ Set (H G) = (SS PP)
- STA H                  \           = |xVector4 - xVector5|
+ STA H                  \           = |x-delta|
  LDA PP                 \
  STA G                  \ and (H G) contains the smaller value
 
  LDA RR                 \ Set (J I) = (UU RR)
- STA I                  \           = |zVector4 - zVector5|
+ STA I                  \           = |z-delta|
  LDA UU                 \
  STA J                  \ and (J I) contains the larger value
 
@@ -12583,81 +12594,127 @@ ENDIF
 
 .prox5
 
- ASL RR
+                        \ This part is called from below, if we want to scale
+                        \ the division
+
+ ASL RR                 \ Set (UU RR) = (UU RR) << 1
  ROL UU
 
 .prox6
 
                         \ If we get here, then:
                         \
-                        \   (H G) = (UU RR) = |zVector4 - zVector5|
+                        \   * (J I) = (A PP) = |x-delta|
                         \
-                        \   (J I) = (SS PP) = |xVector4 - xVector5|
+                        \   * VV is the high byte of x-delta
                         \
-                        \ and (J I) > (H G)
+                        \   * (H G) = (UU RR) = |z-delta|
+                        \
+                        \   * GG is the high byte of z-delta
+                        \
+                        \   * |x-delta| > |z-delta|
+                        \
+                        \ We now do the following division to calculate the
+                        \ projected x-coordinate:
+                        \
+                        \   |z-delta| / |x-delta|
+                        \
+                        \ To get started, we shift both 16-bit values to the
+                        \ left as far as possible, which we can do without
+                        \ affecting the result as we are going to divide the two
+                        \ values, so any mutual shifts will cancel each other
+                        \ out in the division
+                        \
+                        \ Once that's done, we can drop the low bytes and just
+                        \ divide the high bytes, which retains as much accuracy
+                        \ as possible while avoiding the need for full 16-bit
+                        \ division
+                        \
+                        \ So we keep shifting left until we get a 1 in bit 7 of
+                        \ (A PP), as that's the larger of the two values
 
- ASL PP
+ ASL PP                 \ Set (A PP) = (A PP) << 1
  ROL A
 
- BCC prox5
+ BCC prox5              \ If we just shifted a 0 out of the top byte of (A PP),
+                        \ then we can keep shifting, so loop back to prox6 to
+                        \ keep shifting both values
 
- ROR A
- STA V
+ ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
+                        \ shift so A contains the correct top byte (we don't
+                        \ care about the low byte any more)
+                        
+                        \ So by this point, (A PP) and (UU RR) have both been
+                        \ scaled by the same number of shifts
 
- LDA RR
- STA T
+ STA V                  \ Set V = A, the top byte of the scaled |x-delta|
 
- LDA UU
- CMP V
- BEQ prox9
+ LDA RR                 \ Set T = RR, the low byte of the scaled |z-delta|, to
+ STA T                  \ use for rounding the result in Divide8x8 ???
 
- JSR Divide8x8          \ Set T = A * 256 / V
+ LDA UU                 \ Set A = UU, the top byte of the scaled |z-delta|
 
- LDA #0
- STA II
+ CMP V                  \ If A = V then the top bytes of the scaled values
+ BEQ prox9              \ match, so jump to prox9, which deals with the case
+                        \ when the xVector and zVector values are equal
 
- LDY T
+                        \ We have scaled both values, so now for the division of
+                        \ the high bytes
 
- LDA L6100,Y
- STA M
+ JSR Divide8x8          \ Set T = 256 * A / V
+                        \       = 256 * |z-delta| / |x-delta|
+                        \
+                        \ using the lower byte of the z-delta divisor for
+                        \ rounding ???
 
- LSR A
- ROR II
- LSR A
- ROR II
+ LDA #0                 \ Set II = 0 to use as the low byte for the final
+ STA II                 \ x-coordinate result
+
+ LDY T                  \ Set A = L6100(T)
+ LDA L6100,Y            \       = L6100(|z-delta| / |x-delta|)
+
+ STA M                  \ Set M = A
+                        \       = L6100(|z-delta| / |x-delta|)
+
+ LSR A                  \ Set (JJ II) = (A 0) >> 3
+ ROR II                 \             = A * 256 / 8
+ LSR A                  \             = A * 32
+ ROR II                 \             = L6100(|z-delta| / |x-delta|) * 32
  LSR A
  ROR II
  STA JJ
 
- LDA VV
- EOR GG
+ LDA VV                 \ If VV and GG have different signs, then so do x-delta
+ EOR GG                 \ and z-delta, so jump to prox7
  BMI prox7
 
- LDA #0
- SEC
- SBC II
+ LDA #0                 \ Negate (JJ II)
+ SEC                    \
+ SBC II                 \ starting with the low bytes
  STA II
 
- LDA #0
+ LDA #0                 \ And then the high bytes
  SBC JJ
  STA JJ
 
 .prox7
 
- LDA #&40
+ LDA #64                \ Set A = 64, to add to the high byte below
 
- BIT VV
- BPL prox8
+ BIT VV                 \ If x-delta is positive, jump to prox8 to skip the
+ BPL prox8              \ following instruction
 
- LDA #&C0
+                        \ If we get here then x-delta is negative
+
+ LDA #&C0               \ Set A = -64, to add to the high byte below
 
 .prox8
 
- CLC
+ CLC                    \ Set (JJ II) = (JJ II) + (A 0)
  ADC JJ
  STA JJ
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12672,11 +12729,11 @@ ENDIF
 
                         \ If we get here, then:
                         \
-                        \   (H G) = (SS PP) = |xVector4 - xVector5|
+                        \   * VV is the high byte of x-delta
                         \
-                        \   (J I) = (UU RR) = |zVector4 - zVector5|
+                        \   * GG is the high byte of z-delta
                         \
-                        \ and (J I) = (H G)
+                        \   * |x-delta| = |z-delta|
 
  LDA #&FF
  STA M
@@ -12737,11 +12794,15 @@ ENDIF
 
                         \ If we get here, then:
                         \
-                        \   (H G) = (SS PP) = |xVector4 - xVector5|
+                        \   * (H G) = (SS PP) = |x-delta|
                         \
-                        \   (J I) = (UU RR) = |zVector4 - zVector5|
+                        \   * VV is the high byte of x-delta
                         \
-                        \ and (J I) > (H G)
+                        \   * (J I) = (A RR) = |z-delta|
+                        \
+                        \   * GG is the high byte of z-delta
+                        \
+                        \   * |x-delta| < |z-delta|
 
  ASL RR
  ROL A
@@ -12749,16 +12810,19 @@ ENDIF
  BCC prox13
 
  ROR A
- STA V
+
+ STA V                  \ Set V = A, the top byte of the scaled |z-delta|
 
  LDA PP
  STA T
 
- LDA SS
+ LDA SS                 \ Set A = SS, the top byte of the scaled |x-delta|
+
  CMP V
  BEQ prox9
 
- JSR Divide8x8          \ Set T = A * 256 / V
+ JSR Divide8x8          \ Set T = 256 * A / V
+                        \       = 256 * |x-delta| / |z-delta|
 
  LDA #0
  STA II
@@ -12914,7 +12978,7 @@ ENDIF
  STA T
  LDA TT
 
- JSR Divide8x8          \ Set T = A * 256 / V
+ JSR Divide8x8          \ Set T = 256 * A / V
 
  LDA T
  CMP #&80
