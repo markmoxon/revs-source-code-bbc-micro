@@ -752,10 +752,10 @@ ORG &0000
 
  SKIP 1                 \ The number of the driver being hit by the player's car
 
-.checkForContact
+.processContact
 
  SKIP 1                 \ Another car is close enough to the player's car for us
-                        \ to check for contact
+                        \ to process car-on-car contact
                         \
                         \   * 0 = no car is close enough
                         \
@@ -1523,7 +1523,7 @@ ORG &0880
 
 .objProgressLo
 
- SKIP 24                \ High byte of each object's progress around the track
+ SKIP 24                \ Low byte of each object's progress around the track
                         \
                         \ This is the object's position on the track, in terms
                         \ of progress from the starting line, and is typically
@@ -1543,7 +1543,7 @@ ORG &0880
 
 .objProgressHi
 
- SKIP 24                \ Top byte of each object's progress around the track
+ SKIP 24                \ High byte of each object's progress around the track
                         \
                         \ This is the object's position on the track, in terms
                         \ of progress from the starting line, and is typically
@@ -2794,28 +2794,45 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0CA5
+\       Name: GetObjectDistance
 \       Type: Subroutine
-\   Category: Maths
-\    Summary: 
+\   Category: 3D objects
+\    Summary: Calculate the distance between two objects, for collision purposes
 \
 \ ------------------------------------------------------------------------------
 \
+\ If the viewing angle is < 18.2 degrees:
+\
+\   * Set (L K) = (J I) + (H G) / 8
+\               = max + min / 8
+\
+\ If the viewing angle is >= 18.2 degrees
+\
+\   * Set (L K) = (J I) * 7/8 + (H G) / 2
+\               = max * 7/8 + min / 2
+\
+\ This appears to set the distance between the two objects, for the purposes of
+\ determining whether contact has been made.
+\
+\ I suspect the calculation is designed to take the long shape of the cars into
+\ consideration, given the viewing angle of the car.
+\
 \ Arguments:
 \
-\   M
+\   (J I)               max(|x-delta|, |z-delta|)
 \
-\   (J I)               
+\   (H G)               min(|x-delta|, |z-delta|)
 \
-\   (H G)               
+\   M                   The smaller viewing angle of the object, where 0 to 255
+\                       represents 0 to 45 degrees, so 103 = 18.2 degrees
 \
-\ If M < 103, set (L K) = (J I) + (H G) / 8
+\ Returns:
 \
-\ If M >= 103, set (L K) = (J I) * 7/8 + (H G) / 2
+\   (L K)               The distance between the objects
 \
 \ ******************************************************************************
 
-.sub_C0CA5
+.GetObjectDistance
 
  LDA M                  \ If M >= 103, jump to C0CC2
  CMP #103
@@ -3867,13 +3884,13 @@ ORG &0B00
  LDA bestLapTenths,Y    \ Set (A H U) =   this driver's best lap time
  SBC bestLapTenths,X    \               - best lap time of the driver ahead
  STA U                  \
-                        \ starting with the low bytes
+                        \ starting with the tenths of a second
 
- LDA bestLapSeconds,Y   \ Then the high bytes
+ LDA bestLapSeconds,Y   \ Then the seconds
  SBC bestLapSeconds,X
  STA H
 
- LDA bestLapMinutes,Y   \ And then the top bytes
+ LDA bestLapMinutes,Y   \ And then the minutes
  SBC bestLapMinutes,X
 
  BCC sort7              \ If the subtraction underflowed, then this driver's
@@ -3948,13 +3965,13 @@ ORG &0B00
  LDA totalRaceTenths,Y  \ Set (A H U) =   this driver's total race time
  SBC totalRaceTenths,X  \               - total race time of the driver ahead
  STA U                  \
-                        \ starting with the low bytes
+                        \ starting with the tenths of a second
 
- LDA totalRaceSeconds,Y \ Then the high bytes
+ LDA totalRaceSeconds,Y \ Then the seconds
  SBC totalRaceSeconds,X
  STA H
 
- LDA totalRaceMinutes,Y \ And then the top bytes
+ LDA totalRaceMinutes,Y \ And then the minutes
  SBC totalRaceMinutes,X
 
  BCS sort4              \ If the subtraction didn't underflow then the drivers
@@ -4378,9 +4395,9 @@ ORG &0B00
  LDX currentPlayer      \ Set X to the driver number of the current player
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
-                        \ to GetObjectDistance
+                        \ to GetObjectProgress
 
- JSR GetObjectDistance  \ Set A and T to the distance between drivers X and Y
+ JSR GetObjectProgress  \ Set A and T to the distance between drivers X and Y
 
  BCS rcar6              \ If the C flag is set then the cars are far apart, so
                         \ jump to rcar6 to keep moving driver 23 forwards
@@ -7227,7 +7244,7 @@ ENDIF
  JSR MoveHorizon        \ Move the position of the horizon palette switch up or
                         \ down, depending on the current track height
 
- JSR CheckForContact    \ Check for any car-on-car contact
+ JSR ProcessContact     \ Process any car-on-car contact, if there has been any
 
  JSR CheckForCrash      \ Check to see if we have crashed into the fence, and if
                         \ so, display the fence, make the crash sound and set
@@ -7586,7 +7603,7 @@ ENDIF
                         \ in the following loops
 
  LDX #&68               \ We start by zeroing all zero-page variables from
-                        \ playerMoving to checkForContact, so set up a loop
+                        \ playerMoving to processContact, so set up a loop
                         \ counter in X
 
 .rese1
@@ -7596,7 +7613,7 @@ ENDIF
  DEX                    \ Decrement the loop counter
 
  BPL rese1              \ Loop back until we have zeroed all variables from
-                        \ playerMoving to checkForContact
+                        \ playerMoving to processContact
 
  LDX #&7F               \ We now zero all variables from xVector5Lo to L62FF, so
                         \ set up a loop counter in X
@@ -8645,7 +8662,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: CheckForContact
+\       Name: ProcessContact
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Process collosions between the player and the other cars
@@ -8658,15 +8675,15 @@ ENDIF
 \
 \ ******************************************************************************
 
-.CheckForContact
+.ProcessContact
 
- LDA checkForContact    \ If checkForContact is zero then there no other cars
+ LDA processContact     \ If processContact is zero then there no other cars
  BEQ DrawObjectEdge-1   \ close enough to the player's car for there to be any
                         \ contact, so return from the subroutine (as
                         \ DrawObjectEdge-1 contains an RTS)
 
- LDA #0                 \ Set checkForContact = 0 to reset the flag, so we only
- STA checkForContact    \ check for contact when a car is flagged as being close
+ LDA #0                 \ Set processContact = 0 to reset the flag, so we only
+ STA processContact     \ check for contact when a car is flagged as being close
 
  SEC                    \ Set bit 7 of V
  ROR V
@@ -8674,13 +8691,14 @@ ENDIF
  LDA #37                \ Set A = 37 - objectDistanceLo
  SEC                    \
  SBC objectDistanceLo   \ The value of (objectDistanceHi objectDistanceLo) is
-                        \ left over from the last call to sub_C2AB3, which was
-                        \ last called for the nearest car in front of us when
-                        \ projecting the five cars in front of us, from furthest
-                        \ to nearest, as part of this chain of routines:
+                        \ left over from the last call to CheckForContact, which
+                        \ was last called for the nearest car in front of us
+                        \ when projecting the five cars in front of us, from
+                        \ furthest to nearest, as part of this chain of
+                        \ routines:
                         \
                         \   MoveAndDrawCars > BuildVisibleCar > BuildCarObjects
-                        \                   > ProjectObject > sub_C2AB3
+                        \                   > ProjectObject > CheckForContact
                         \
                         \ Note that BuildVisibleCar does get called once more at
                         \ the end of MoveAndDrawCars, for the car behind us, but
@@ -12397,6 +12415,12 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ The projection equation appears to be the standard 3D projection thet divides
+\ the x-coordinate by the z-coordinate.
+\
+\ The routine also returns the viewing angle, which is used in collision
+\ detection.
+\
 \ Arguments:
 \
 \   X                   The offset of the variable to use for the object's 3D
@@ -12418,11 +12442,12 @@ ENDIF
 \
 \   (JJ II)             The projected screen x-coordinate of the object
 \
-\   (J I)               The larger |delta|
+\   (J I)               max(|x-delta|, |z-delta|)
 \
-\   (H G)               The smaller |delta|
+\   (H G)               min(|x-delta|, |z-delta|)
 \
-\   M                   ???
+\   M                   The smaller viewing angle of the object, where 0 to 255
+\                       represents 0 to 45 degrees
 \
 \ Other entry points:
 \
@@ -12588,7 +12613,7 @@ ENDIF
 \       Name: ProjectObjectX (Part 2 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: 
+\    Summary: Calculate projection for when |x-delta| > |z-delta|
 \
 \ ******************************************************************************
 
@@ -12636,25 +12661,25 @@ ENDIF
  ASL PP                 \ Set (A PP) = (A PP) << 1
  ROL A
 
- BCC prox5              \ If we just shifted a 0 out of the top byte of (A PP),
+ BCC prox5              \ If we just shifted a 0 out of the high byte of (A PP),
                         \ then we can keep shifting, so loop back to prox6 to
                         \ keep shifting both values
 
  ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
-                        \ shift so A contains the correct top byte (we don't
+                        \ shift so A contains the correct high byte (we don't
                         \ care about the low byte any more)
                         
                         \ So by this point, (A PP) and (UU RR) have both been
                         \ scaled by the same number of shifts
 
- STA V                  \ Set V = A, the top byte of the scaled |x-delta|
+ STA V                  \ Set V = A, the high byte of the scaled |x-delta|
 
  LDA RR                 \ Set T = RR, the low byte of the scaled |z-delta|, to
  STA T                  \ use for rounding the result in Divide8x8 ???
 
- LDA UU                 \ Set A = UU, the top byte of the scaled |z-delta|
+ LDA UU                 \ Set A = UU, the high byte of the scaled |z-delta|
 
- CMP V                  \ If A = V then the top bytes of the scaled values
+ CMP V                  \ If A = V then the high bytes of the scaled values
  BEQ prox9              \ match, so jump to prox9, which deals with the case
                         \ when the xVector and zVector values are equal
 
@@ -12664,22 +12689,24 @@ ENDIF
  JSR Divide8x8          \ Set T = 256 * A / V
                         \       = 256 * |z-delta| / |x-delta|
                         \
-                        \ using the lower byte of the z-delta divisor for
+                        \ using the lower byte of the |z-delta| numerator for
                         \ rounding ???
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final
  STA II                 \ x-coordinate result
 
- LDY T                  \ Set A = L6100(T)
- LDA L6100,Y            \       = L6100(|z-delta| / |x-delta|)
+ LDY T                  \ Set A = arcTan(T)
+ LDA arcTan,Y           \       = arcTan(|z-delta| / |x-delta|)
+                        \
+                        \ So this is the viewing angle of the object
 
- STA M                  \ Set M = A
-                        \       = L6100(|z-delta| / |x-delta|)
+ STA M                  \ Store the viewing angle in M, to return from the
+                        \ subroutine
 
  LSR A                  \ Set (JJ II) = (A 0) >> 3
  ROR II                 \             = A * 256 / 8
  LSR A                  \             = A * 32
- ROR II                 \             = L6100(|z-delta| / |x-delta|) * 32
+ ROR II                 \             = arcTan(|z-delta| / |x-delta|) * 32
  LSR A
  ROR II
  STA JJ
@@ -12711,8 +12738,14 @@ ENDIF
 .prox8
 
  CLC                    \ Set (JJ II) = (JJ II) + (A 0)
- ADC JJ
- STA JJ
+ ADC JJ                 \
+ STA JJ                 \ which is one of the following:
+                        \
+                        \   (JJ II) = (JJ II) + 64 * 256
+                        \
+                        \   (JJ II) = (JJ II) - 64 * 256
+                        \
+                        \ depending on the sign of x-delta
 
  RTS                    \ Return from the subroutine
 
@@ -12721,7 +12754,7 @@ ENDIF
 \       Name: ProjectObjectX (Part 3 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: 
+\    Summary: Calculate projection for when |x-delta| = |z-delta|
 \
 \ ******************************************************************************
 
@@ -12735,59 +12768,78 @@ ENDIF
                         \
                         \   * |x-delta| = |z-delta|
 
- LDA #&FF
- STA M
+ LDA #255               \ Set M = 255, to represent a viewing angle of 45
+ STA M                  \ degrees
 
- LDA #0
- STA II
+ LDA #0                 \ Set II = 0 to use as the low byte for the final
+ STA II                 \ x-coordinate result
 
- BIT VV
+ BIT VV                 \ If x-delta is positive, jump to prox11
  BPL prox11
 
- BIT GG
+                        \ If we get here then x-delta is negative
+
+ BIT GG                 \ If z-delta is positive, jump to prox10
  BPL prox10
 
- LDA #&A0
+                        \ If we get here then both x-delta and z-delta are
+                        \ negative
+
+ LDA #&A0               \ Set (JJ II) = -96 * 256
  STA JJ
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .prox10
 
- LDA #&E0
+                        \ If we get here then x-delta is negative and y-delta
+                        \ is positive
+
+ LDA #&E0               \ Set (JJ II) = -32 * 256
  STA JJ
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .prox11
 
- BIT GG
+                        \ If we get here then x-delta is positive
+
+ BIT GG                 \ If z-delta is positive, jump to prox12
  BPL prox12
 
- LDA #&60
+                        \ If we get here then x-delta is positive and y-delta
+                        \ is negative
+
+ LDA #&60               \ Set (JJ II) = 96 * 256
  STA JJ
 
- RTS
+ RTS                    \ Return from the subroutine
 
 .prox12
 
- LDA #&20
+                        \ If we get here then both x-delta and z-delta are
+                        \ positive
+
+ LDA #&20               \ Set (JJ II) = 32 * 256
  STA JJ
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: ProjectObjectX (Part 4 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: 
+\    Summary: Calculate projection for when |x-delta| < |z-delta|
 \
 \ ******************************************************************************
 
 .prox13
 
- ASL PP
+                        \ This part is called from below, if we want to scale
+                        \ the division
+
+ ASL PP                 \ Set (SS PP) = (SS PP) << 1
  ROL SS
 
 .prox14
@@ -12803,72 +12855,116 @@ ENDIF
                         \   * GG is the high byte of z-delta
                         \
                         \   * |x-delta| < |z-delta|
+                        \
+                        \ We now do the following division to calculate the
+                        \ projected x-coordinate:
+                        \
+                        \   |x-delta| / |z-delta|
+                        \
+                        \ To get started, we shift both 16-bit values to the
+                        \ left as far as possible, which we can do without
+                        \ affecting the result as we are going to divide the two
+                        \ values, so any mutual shifts will cancel each other
+                        \ out in the division
+                        \
+                        \ Once that's done, we can drop the low bytes and just
+                        \ divide the high bytes, which retains as much accuracy
+                        \ as possible while avoiding the need for full 16-bit
+                        \ division
+                        \
+                        \ So we keep shifting left until we get a 1 in bit 7 of
+                        \ (A RR), as that's the larger of the two values
 
- ASL RR
+ ASL RR                 \ Set (A RR) = (A RR) << 1
  ROL A
 
- BCC prox13
+ BCC prox13             \ If we just shifted a 0 out of the high byte of (A RR),
+                        \ then we can keep shifting, so loop back to prox13 to
+                        \ keep shifting both values
 
- ROR A
+ ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
+                        \ shift so A contains the correct high byte (we don't
+                        \ care about the low byte any more)
+                        
+                        \ So by this point, (A RR) and (SS PP) have both been
+                        \ scaled by the same number of shifts
 
- STA V                  \ Set V = A, the top byte of the scaled |z-delta|
+ STA V                  \ Set V = A, the high byte of the scaled |z-delta|
 
- LDA PP
- STA T
+ LDA PP                 \ Set T = PP, the low byte of the scaled |x-delta|, to
+ STA T                  \ use for rounding the result in Divide8x8 ???
 
- LDA SS                 \ Set A = SS, the top byte of the scaled |x-delta|
+ LDA SS                 \ Set A = SS, the high byte of the scaled |x-delta|
 
- CMP V
- BEQ prox9
+ CMP V                  \ If A = V then the high bytes of the scaled values
+ BEQ prox9              \ match, so jump to prox9, which deals with the case
+                        \ when the xVector and zVector values are equal
+
+                        \ We have scaled both values, so now for the division of
+                        \ the high bytes
 
  JSR Divide8x8          \ Set T = 256 * A / V
                         \       = 256 * |x-delta| / |z-delta|
+                        \
+                        \ using the lower byte of the |x-delta| numerator for
+                        \ rounding ???
 
- LDA #0
- STA II
+ LDA #0                 \ Set II = 0 to use as the low byte for the final
+ STA II                 \ x-coordinate result
 
- LDY T
+ LDY T                  \ Set A = arcTan(T)
+ LDA arcTan,Y           \       = arcTan(|x-delta| / |z-delta|)
+                        \
+                        \ So this is the viewing angle of the object
 
- LDA L6100,Y
- STA M
+ STA M                  \ Store the viewing angle in M, to return from the
+                        \ subroutine
 
- LSR A
- ROR II
- LSR A
- ROR II
+ LSR A                  \ Set (JJ II) = (A 0) >> 3
+ ROR II                 \             = A * 256 / 8
+ LSR A                  \             = A * 32
+ ROR II                 \             = arcTan(|x-delta| / |z-delta|) * 32
  LSR A
  ROR II
  STA JJ
 
- LDA VV
- EOR GG
+ LDA VV                 \ If VV and GG have different signs, then so do x-delta
+ EOR GG                 \ and z-delta, so jump to prox15
  BPL prox15
 
- LDA #0
- SEC
- SBC II
+ LDA #0                 \ Negate (JJ II)
+ SEC                    \
+ SBC II                 \ starting with the low bytes
  STA II
 
- LDA #0
+ LDA #0                 \ And then the high bytes
  SBC JJ
  STA JJ
 
 .prox15
 
- LDA #0
+ LDA #0                 \ Set A = 0, to add to the high byte below
 
- BIT GG
- BPL prox16
+ BIT GG                 \ If z-delta is positive, jump to prox16 to skip the
+ BPL prox16             \ following instruction
 
- LDA #&80
+                        \ If we get here then z-delta is negative
+
+ LDA #&80               \ Set A = -128, to add to the high byte below
 
 .prox16
 
- CLC
- ADC JJ
- STA JJ
+ CLC                    \ Set (JJ II) = (JJ II) + (A 0)
+ ADC JJ                 \
+ STA JJ                 \ which is one of the following:
+                        \
+                        \   (JJ II) = (JJ II)
+                        \
+                        \   (JJ II) = (JJ II) - 128 * 256
+                        \
+                        \ depending on the sign of z-delta
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -12880,131 +12976,252 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ The projection equation appears to be the standard 3D projection thet divides
+\ the x-coordinate by the z-coordinate.
+\
 \ Arguments:
 \
 \   X                   The offset of the variable to use for the object's 3D
 \                       coordinates
 \
-\                         * &F4 = xVector7
+\                         * &F4 = yVector7
 \
-\                         * &FA = xVector3
+\                         * &FA = yVector3
 \
-\                         * &FD = xVector4
+\                         * &FD = yVector4
 \
 \   Y                   The offset of the second variable to use:
 \
-\                         * 0 = xVector5
+\                         * 0 = yVector5
 \
-\                         * 6 = xVector6
+\                         * 6 = yVector6
+\
+\   (L K)               The result from GetObjectDistance, which is called
+\                       between ProjectObjectX and ProjectObjectY
 \
 \ Returns:
 \
-\   A                   The projected y-coordinate of the object
+\   LL                  The projected y-coordinate of the object
 \
-\   scaleUp             The scale up factor
+\   A                   The projected y-coordinate of the object (same as LL)
 \
-\   scaleDown           The scale down factor
+\   scaleUp             The scale up factor for the object
+\
+\   scaleDown           The scale down factor for the object
+\
+\   C flag              Is the projected object visible on-screen:
+\
+\                         * Clear if the object is on-screen
+\
+\                         * Set if it isn't on-screen
+\
+\   N flag              Set according to the y-coordinate, so a BPL following
+\                       the call will branch if the y-coordinate is positive
 \
 \ Other entry points:
 \
-\   ProjectObjectY-2    Use var21 (Y = 0)
+\   ProjectObjectY-2    Use yVector5 (Y = 0)
 \
 \ ******************************************************************************
 
- LDY #0
+ LDY #0                 \ Use xVector5 for the second variable when calling the
+                        \ routine via ProjectObjectY-2
 
 .ProjectObjectY
 
- LDA ySegmentCoordILo,X
- SEC
- SBC yVector5Lo,Y
+                        \ The vectors used in this routine are configured by the
+                        \ values of X and Y, but for the purposes of simplicity,
+                        \ the comments will assume the following:
+                        \
+                        \   * X = &FD, yVector4
+                        \
+                        \   * Y = 0, yVector5
+
+ LDA ySegmentCoordILo,X \ Set (WW QQ) = yVector4 - yVector5
+ SEC                    \
+ SBC yVector5Lo,Y       \ starting with the low bytes
  STA QQ
- LDA ySegmentCoordIHi,X
+
+ LDA ySegmentCoordIHi,X \ And then the high bytes
  SBC yVector5Hi,Y
  STA WW
- BPL proy1
- LDA #0
- SEC
- SBC QQ
+
+                        \ Let's call this difference in y-coordinates y-delta,
+                        \ so:
+                        \
+                        \   (WW QQ) = (A QQ) = y-delta
+
+ BPL proy1              \ If (A QQ) is positive, jump to proy1 to skip the
+                        \ following
+
+ LDA #0                 \ Set (A QQ) = 0 - (WW QQ)
+ SEC                    \
+ SBC QQ                 \ starting with the low bytes
  STA QQ
- LDA #0
+
+ LDA #0                 \ And then the high bytes
  SBC WW
+
+                        \ So (A QQ) is now positive, in other words:
+                        \
+                        \   (A QQ) = |y-delta|
 
 .proy1
 
+ LSR A                  \ Set (A QQ) = (A QQ) >> 3
+ ROR QQ                 \            = |y-delta| / 8
  LSR A
  ROR QQ
  LSR A
  ROR QQ
- LSR A
- ROR QQ
- STA TT
- CMP L
+
+ STA TT                 \ Set (TT QQ) = (A QQ)
+                        \             = |y-delta| / 8
+
+                        \ We now compare the two 16-bit values in (A QQ) and
+                        \ (L K)
+
+ CMP L                  \ If A < L, then (A QQ) < (L K), so jump to proy3
  BCC proy3
- BNE proy2
- LDA QQ
+
+ BNE proy2              \ If A <> L, i.e. A > L, then (A QQ) > (L K), so jump
+                        \ to proy2 to return from the subroutine with the C flag
+                        \ set
+
+                        \ The high bytes are equal, so now we compare the low
+                        \ bytes
+
+ LDA QQ                 \ If QQ < K, then (A QQ) < (L K), so jump to proy3
  CMP K
  BCC proy3
 
 .proy2
 
- SEC
- RTS
+                        \ If we get here then (A QQ) >= (L K), so:
+                        \
+                        \   |y-delta| / 8 >= (L K)
+
+ SEC                    \ Set the C flag
+
+ RTS                    \ Return from the subroutine
 
 .proy3
 
- LDY #0
- LDA L
- JMP proy5
+ LDY #0                 \ Set Y = 0, which we use to count the number of shifts
+                        \ in the following calculation
+
+ LDA L                  \ Set (A K) = (L K)
+
+ JMP proy5              \ Jump to proy5
 
 .proy4
 
- ASL QQ
+                        \ This part is called from below, if we want to scale
+                        \ the division
+
+ ASL QQ                 \ Set (TT QQ) = (TT QQ) << 1
  ROL TT
- INY
+
+ INY                    \ Increment Y
 
 .proy5
 
- ASL K
+                        \ If we get here, then:
+                        \
+                        \   * (TT QQ) = |y-delta| / 8
+                        \
+                        \   * WW is the high byte of y-delta
+                        \
+                        \   * (A K) = |x-delta|
+                        \
+                        \   * |x-delta| > |y-delta| / 8
+                        \
+                        \   * Y = 0
+                        \
+                        \ We now do the following division to calculate the
+                        \ projected x-coordinate:
+                        \
+                        \   (|y-delta| / 8) / |x-delta|
+                        \
+                        \ To get started, we shift both 16-bit values to the
+                        \ left as far as possible, which we can do without
+                        \ affecting the result as we are going to divide the two
+                        \ values, so any mutual shifts will cancel each other
+                        \ out in the division
+                        \
+                        \ We count the number of shifts we do in Y
+                        \
+                        \ Once that's done, we can drop the low bytes and just
+                        \ divide the high bytes, which retains as much accuracy
+                        \ as possible while avoiding the need for full 16-bit
+                        \ division
+                        \
+                        \ So we keep shifting left until we get a 1 in bit 7 of
+                        \ (A K), as that's the larger of the two values
+
+ ASL K                  \ Set (A K) = (A K) << 1
  ROL A
- BCC proy4
- ROR A
- STA V
- STY scaleDown
- TAY
- LDA L6180,Y
+
+ BCC proy4              \ If we just shifted a 0 out of the high byte of (A K),
+                        \ then we can keep shifting, so loop back to prox6 to
+                        \ keep shifting both values
+
+ ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
+                        \ shift so A contains the correct high byte (we don't
+                        \ care about the low byte any more)
+
+                        \ So by this point, (A K) and (TT QQ) have both been
+                        \ scaled by the same number of shifts
+
+ STA V                  \ Set V = A, the high byte of the scaled |x-delta|,
+                        \ which we know is at least 128 (as bit 7 is set)
+
+ STY scaleDown          \ Set scaleDown to the number of shifts in Y
+
+ TAY                    \ Set scaleUp = L6200(A)
+ LDA L6200-128,Y        \             = L6200(|x-delta|)
  STA scaleUp
- LDA QQ
- STA T
- LDA TT
+
+ LDA QQ                 \ Set T = QQ, the low byte of the scaled |y-delta|, to
+ STA T                  \ use for rounding the result in Divide8x8 ???
+
+ LDA TT                 \ Set A = TT, the high byte of the scaled |y-delta|
 
  JSR Divide8x8          \ Set T = 256 * A / V
+                        \       = 256 * (|y-delta| / 8) / |x-delta|
+                        \
+                        \ using the lower byte of the |y-delta| numerator for
+                        \ rounding ???
 
- LDA T
- CMP #&80
+ LDA T                  \ If T >= 128, jump to proy8 to return from the 
+ CMP #128               \ subroutine with the C flag set
  BCS proy8
- BIT WW
- BPL proy6
- LDA #&3C
+
+ BIT WW                 \ If y-delta is positive, jump to proy6 to skip the
+ BPL proy6              \ following and add 60 to T
+
+ LDA #60                \ Set A = 60 - T
  SEC
  SBC T
- JMP proy7
+
+ JMP proy7              \ Jump to proy7
 
 .proy6
 
- CLC
- ADC #&3C
+ CLC                    \ Set A = T + 60
+ ADC #60
 
 .proy7
 
- SEC
+ SEC                    \ Set LL = A - L000D
  SBC L000D
  STA LL
- CLC
+
+ CLC                    \ Clear the C flag to indicate success
 
 .proy8
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13122,7 +13339,7 @@ ENDIF
  LDX #&FD
 
  JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A
+                        \ object's screen y-coordinate, returning it in A and LL
 
  LDX L0042
  LDA LL
@@ -13209,7 +13426,7 @@ ENDIF
  LDA JJ
  SBC xPlayerScreenHi
  STA var24Hi,Y
- JMP sub_C0CA5
+ JMP GetObjectDistance
 
 \ ******************************************************************************
 \
@@ -13256,10 +13473,14 @@ ENDIF
 .C23FC
 
  JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A
+                        \ object's screen y-coordinate, returning it in A and LL
+                        \
+                        \ If the object is not visible on-screen, the C flag is
+                        \ set, otherwise it will be clear
 
- BCS C2403
- BPL C246A
+ BCS C2403              \ If the object is not visible on-screen, jump to C2403
+
+ BPL C246A              \ If the y-coordinate is positive, jump to C246A
 
 .C2403
 
@@ -13319,9 +13540,14 @@ ENDIF
  JSR sub_C23BB
 
  JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A
+                        \ object's screen y-coordinate, returning it in A and LL
+                        \
+                        \ If the object is not visible on-screen, the C flag is
+                        \ set, otherwise it will be clear
 
- BCS C2469
+ BCS C2469              \ If the object is not visible on-screen, jump to C2469
+                        \ to return from the subroutine
+
  LDX L0014
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
@@ -13995,7 +14221,7 @@ ENDIF
                         \ driver X will drive straight (though we may change
                         \ this below)
 
- JSR GetCarDistance     \ Set A to the distance between drivers X and Y
+ JSR GetCarProgress     \ Set A to the distance between drivers X and Y
 
  BCS tact4              \ If the C flag is set then the cars are far apart, so
                         \ jump to tact18 via tact4 to update the car status byte
@@ -14415,11 +14641,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetCarDistance
+\       Name: GetCarProgress
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate the distance between two cars, in terms of forward
-\             distance along the track
+\    Summary: Calculate the distance between two cars, in terms of progress
+\             along the track
 \             
 \
 \ ------------------------------------------------------------------------------
@@ -14432,7 +14658,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetCarDistance
+.GetCarProgress
 
  LDA carProgress,Y      \ Set the C flag according to the subtraction:
  SEC                    \
@@ -14445,16 +14671,16 @@ ENDIF
                         \ only serve to round the result to the nearest integer,
                         \ rather than giving a full 24-bit result
 
-                        \ Fall through into GetObjectDistance to calculate the
+                        \ Fall through into GetObjectProgress to calculate the
                         \ distance between the two cars
 
 \ ******************************************************************************
 \
-\       Name: GetObjectDistance
+\       Name: GetObjectProgress
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the distance between two objects, in terms of forward
-\             distance along the track
+\    Summary: Calculate the distance between two objects, in terms of progress
+\             along the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14471,7 +14697,7 @@ ENDIF
 \                         * Clear for a 16-bit calculation using objProgress
 \
 \                         * For a 24-bit calculation, contains the carry from
-\                           GetCarDistance above
+\                           GetCarProgress above
 \
 \ Returns:
 \
@@ -14502,7 +14728,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetObjectDistance
+.GetObjectProgress
 
  LDA objProgressLo,Y    \ Set (A T) =   objProgress for object Y
  SBC objProgressLo,X    \             - objProgress for object X
@@ -15049,9 +15275,9 @@ ENDIF
  LDY #23                \ Set Y to driver 23
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
-                        \ to GetObjectDistance
+                        \ to GetObjectProgress
 
- JSR GetObjectDistance  \ Set A and T to the distance between driver X and
+ JSR GetObjectProgress  \ Set A and T to the distance between driver X and
                         \ driver 23 in object Y
 
  BCS bvis1              \ If the C flag is set then the two cars are far apart,
@@ -15712,10 +15938,16 @@ ENDIF
  LDA JJ
  STA xObjectScreenHi,Y
 
- JSR sub_C2AB3-2        \ ??? Check for collisions in 3D
+ JSR CheckForContact-2  \ Check to see if the objects are close enough for
+                        \ contact, specifically if they are within 37 projected
+                        \ units of each other
 
  JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A
+                        \ object's screen y-coordinate, returning it in A and LL
+                        \
+                        \ If the object is not visible on-screen, the C flag is
+                        \ set, which will hide the object in the following
+                        \ routine
 
                         \ Fall through into SetObjectDetails to set the object's
                         \ visibility, scale and type
@@ -15871,10 +16103,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2AB3
+\       Name: CheckForContact
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: 3D objects
+\    Summary: Check to see if two objects are close enough to make contact
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15882,49 +16114,54 @@ ENDIF
 \
 \   Y                   Contact is made if objectDistanceLo <= Y
 \
-\   (J I)               
+\   (J I)               max(|x-delta|, |z-delta|)
 \
-\   (H G)               
+\   (H G)               min(|x-delta|, |z-delta|)
+\
+\   M                   The smaller viewing angle of the object, where 0 to 255
+\                       represents 0 to 45 degrees
+\
+\   L0042               The number of the object being checked for contact
 \
 \ Other entry points:
 \
-\   sub_C2AB3-2         Y = 37
+\   CheckForContact-2   Set Y = 37, so we make contact if (L K) <= 37
 \
 \ ******************************************************************************
 
- LDY #37                \ Set Y = 37, so we make contact if K <= 37
+ LDY #37                \ Set Y = 37, so we make contact if (L K) <= 37
 
-.sub_C2AB3
+.CheckForContact
 
- JSR sub_C0CA5          \ Set (L K) to the distance between the two projected
+ JSR GetObjectDistance  \ Set (L K) to the distance between the two projected
                         \ objects
 
  LDA L                  \ Set objectDistanceHi to the high byte of (L K)
  STA objectDistanceHi
 
- BNE C2ACA              \ If objectDistanceHi is non-zero then the objects are
-                        \ too far apart for a collision, so jump to C2ACA to
+ BNE ccon1              \ If objectDistanceHi is non-zero then the objects are
+                        \ too far apart for a collision, so jump to ccon1 to
                         \ return from the subroutine
 
  CPY K                  \ If K > Y, then the objects are too far apart for a
- BCC C2ACA              \ collision, this time in terms of the low byte of the
-                        \ distance, so jump to C2ACA to return from the
+ BCC ccon1              \ collision, this time in terms of the low byte of the
+                        \ distance, so jump to ccon1 to return from the
                         \ subroutine
 
                         \ If we get here then K <= Y, so the objects are close
                         \ enough for a collision
 
- DEC checkForContact    \ Decrement checkForContact so it is non-zero, so we
+ DEC processContact     \ Decrement processContact so it is non-zero, so we
                         \ check for contact between this car and the player's
-                        \ car in the CheckForContact routine
+                        \ car in the ProcessContact routine
 
  LDA K                  \ Set (objectDistanceHi objectDistanceLo) = (L K)
  STA objectDistanceLo
 
- LDA L0042              \ Set the number of the other driver to L0042
- STA collisionDriver
+ LDA L0042              \ Store the number of the other object in
+ STA collisionDriver    \ collisionDriver, so we know who's crashing
 
-.C2ACA
+.ccon1
 
  RTS                    \ Return from the subroutine
 
@@ -25909,12 +26146,18 @@ ENDIF
  LDA #23
  STA L0042
 
- JSR sub_C2AB3          \ ??? Check for collisions in 3D
+ JSR CheckForContact    \ Check to see if the objects are close enough for
+                        \ contact, specifically if they are within Y projected
+                        \ units of each other
 
  LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses xVector6
 
  JSR ProjectObjectY     \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A
+                        \ object's screen y-coordinate, returning it in A and LL
+                        \
+                        \ If the object is not visible on-screen, the C flag is
+                        \ set, which will hide the object in the following call
+                        \ to SetObjectDetails
 
  JSR SetObjectDetails   \ Set the object's visibility, scale and type
 
@@ -29695,9 +29938,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L6100
+\       Name: arcTan
 \       Type: Variable
-\   Category: 
+\   Category: Maths
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -29706,46 +29949,28 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6100
+.arcTan
 
- EQUB &00, &01, &03, &04, &05, &06, &08, &09, &0A, &0B, &0D, &0E
- EQUB &0F, &11, &12, &13, &14, &16, &17, &18, &19, &1B, &1C, &1D
- EQUB &1E, &20, &21, &22, &24, &25, &26, &27, &29, &2A, &2B, &2C
- EQUB &2E, &2F, &30, &31, &33, &34, &35, &36, &37, &39, &3A, &3B
- EQUB &3C, &3E, &3F, &40, &41, &43, &44, &45, &46, &47, &49, &4A
- EQUB &4B, &4C, &4D, &4F, &50, &51, &52, &53, &55, &56, &57, &58
- EQUB &59, &5B, &5C, &5D, &5E, &5F, &60, &62, &63, &64, &65, &66
- EQUB &67, &68, &6A, &6B, &6C, &6D, &6E, &6F, &70, &72, &73, &74
- EQUB &75, &76, &77, &78, &79, &7A, &7C, &7D, &7E, &7F, &80, &81
- EQUB &82, &83, &84, &85, &86, &87, &89, &8A, &8B, &8C, &8D, &8E
- EQUB &8F, &90, &91, &92, &93, &94, &95, &96
+ FOR I%, 0, 255
+  EQUB INT(0.5 + ATN(I% / 256) * 325.95)
+ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L6180
+\       Name: L6200
 \       Type: Variable
 \   Category: 
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This is very close to the following calculation:
+\
+\ FOR I%, 0, 127
+\  EQUB INT(0.5 + 776 - 512 * ATN(3.2595 * (I% + 128) / 256))
+\ NEXT
 \
 \ ******************************************************************************
-
-.L6180
-
- EQUB &97, &98, &99, &9A, &9B, &9C, &9D, &9E, &9F, &A0, &A1, &A2
- EQUB &A3, &A4, &A5, &A6, &A7, &A8, &A9, &AA, &AB, &AC, &AD, &AE
- EQUB &AF, &B0, &B1, &B1, &B2, &B3, &B4, &B5, &B6, &B7, &B8, &B9
- EQUB &BA, &BB, &BC, &BC, &BD, &BE, &BF, &C0, &C1, &C2, &C3, &C3
- EQUB &C4, &C5, &C6, &C7, &C8, &C9, &C9, &CA, &CB, &CC, &CD, &CE
- EQUB &CE, &CF, &D0, &D1, &D2, &D3, &D3, &D4, &D5, &D6, &D7, &D7
- EQUB &D8, &D9, &DA, &DB, &DB, &DC, &DD, &DE, &DE, &DF, &E0, &E1
- EQUB &E1, &E2, &E3, &E4, &E4, &E5, &E6, &E7, &E7, &E8, &E9, &EA
- EQUB &EA, &EB, &EC, &EC, &ED, &EE, &EF, &EF, &F0, &F1, &F1, &F2
- EQUB &F3, &F3, &F4, &F5, &F5, &F6, &F7, &F8, &F8, &F9, &FA, &FA
- EQUB &FB, &FB, &FC, &FD, &FD, &FE, &FF, &FF
 
 .L6200
 
