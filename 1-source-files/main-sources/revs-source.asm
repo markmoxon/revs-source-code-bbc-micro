@@ -4789,7 +4789,7 @@ ORG &0B00
 \
 \ Returns:
 \
-\   xVector5            The 3D coordinates of the player's car
+\   xPlayerCoord        The 3D coordinates of the player's car
 \
 \   xPlayerScreen       The screen coordinates of the player's car
 \
@@ -4817,9 +4817,9 @@ ORG &0B00
 .bpla1
 
  LDA xVector4Lo,X       \ Copy the car's 3D coordinates from xVector4 into
- STA xVector5Lo,X       \ xVector5
+ STA xPlayerCoordLo,X   \ xPlayerCoord
  LDA xVector4Hi,X
- STA xVector5Hi,X
+ STA xPlayerCoordHi,X
 
  DEX                    \ Decrement the axis counter
 
@@ -5165,7 +5165,7 @@ ORG &0B00
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
                         \ track in the direction we are facing
 
- LDA #2                 \ Set A = 2, so use as the value for L0007 below
+ LDA #2                 \ Set A = 2, to use as the value for L0007 below
 
 .gets3
 
@@ -7220,8 +7220,7 @@ ENDIF
  JSR DrawBackground     \ Set the background colour for all the track lines in
                         \ the track view
 
- JSR BuildRoadSign      \ Build the road sign (if one is visible) in object
-                        \ number 23
+ JSR BuildRoadSign      \ Build the road sign (if one is visible) in driver 23
 
  LDX #23                \ Draw any visible road signs
  JSR DrawCarOrSign
@@ -7615,17 +7614,17 @@ ENDIF
  BPL rese1              \ Loop back until we have zeroed all variables from
                         \ playerMoving to processContact
 
- LDX #&7F               \ We now zero all variables from xVector5Lo to L62FF, so
-                        \ set up a loop counter in X
+ LDX #&7F               \ We now zero all variables from xPlayerCoordLo to
+                        \ L62FF, so set up a loop counter in X
 
 .rese2
 
- STA xVector5Lo,X       \ Zero the X-th byte from xVector5Lo
+ STA xPlayerCoordLo,X   \ Zero the X-th byte from xPlayerCoordLo
 
  DEX                    \ Decrement the loop counter
 
  BPL rese2              \ Loop back until we have zeroed all variables from
-                        \ xVector5Lo to L62FF
+                        \ xPlayerCoordLo to L62FF
 
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
@@ -7634,7 +7633,7 @@ ENDIF
                         \ (objProgressHi objProgressLo), so set up a loop
                         \ counter in X
 
- STX L62F9              \ Set L62F9 = 23
+ STX signVectorIndex    \ Set signVectorIndex = 23
 
 .rese3
 
@@ -12434,7 +12433,7 @@ ENDIF
 \
 \   Y                   The offset of the second variable to use:
 \
-\                         * 0 = xVector5
+\                         * 0 = xPlayerCoord
 \
 \                         * 6 = xVector6
 \
@@ -12451,12 +12450,12 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObjectX-2    Use xVector5 (Y = 0)
+\   ProjectObjectX-2    Use xPlayerCoord (Y = 0)
 \
 \ ******************************************************************************
 
- LDY #0                 \ Use xVector5 for the second variable when calling the
-                        \ routine via ProjectObjectX-2
+ LDY #0                 \ Use xPlayerCoord for the second variable when calling
+                        \ the routine via ProjectObjectX-2
 
 .ProjectObjectX
 
@@ -12466,15 +12465,15 @@ ENDIF
                         \
                         \   * X = &FD, xVector4
                         \
-                        \   * Y = 0, xVector5
+                        \   * Y = 0, xPlayerCoord
 
- LDA xSegmentCoordILo,X \ Set (VV PP) = xVector4 - xVector5
+ LDA xSegmentCoordILo,X \ Set (VV PP) = xVector4 - xPlayerCoord
  SEC                    \
- SBC xVector5Lo,Y       \ starting with the low bytes
+ SBC xPlayerCoordLo,Y   \ starting with the low bytes
  STA PP
 
  LDA xSegmentCoordIHi,X \ And then the high bytes
- SBC xVector5Hi,Y
+ SBC xPlayerCoordHi,Y
  STA VV
 
                         \ Let's call this difference in x-coordinates x-delta,
@@ -12502,13 +12501,13 @@ ENDIF
  STA SS                 \ Set (SS PP) = (VV PP)
                         \             = |x-delta|
 
- LDA zSegmentCoordILo,X \ Set (GG RR) = zVector4 - zVector5
+ LDA zSegmentCoordILo,X \ Set (GG RR) = zVector4 - zPlayerCoord
  SEC                    \
- SBC zVector5Lo,Y       \ starting with the low bytes
+ SBC zPlayerCoordLo,Y   \ starting with the low bytes
  STA RR
 
  LDA zSegmentCoordIHi,X \ And then the high bytes
- SBC zVector5Hi,Y
+ SBC zPlayerCoordHi,Y
  STA GG
 
                         \ Let's call this difference in z-coordinates z-delta,
@@ -12992,7 +12991,7 @@ ENDIF
 \
 \   Y                   The offset of the second variable to use:
 \
-\                         * 0 = yVector5
+\                         * 0 = yPlayerCoord
 \
 \                         * 6 = yVector6
 \
@@ -13020,12 +13019,12 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObjectY-2    Use yVector5 (Y = 0)
+\   ProjectObjectY-2    Use yPlayerCoord (Y = 0)
 \
 \ ******************************************************************************
 
- LDY #0                 \ Use xVector5 for the second variable when calling the
-                        \ routine via ProjectObjectY-2
+ LDY #0                 \ Use xPlayerCoord for the second variable when calling
+                        \ the routine via ProjectObjectY-2
 
 .ProjectObjectY
 
@@ -13035,15 +13034,15 @@ ENDIF
                         \
                         \   * X = &FD, yVector4
                         \
-                        \   * Y = 0, yVector5
+                        \   * Y = 0, yPlayerCoord
 
- LDA ySegmentCoordILo,X \ Set (WW QQ) = yVector4 - yVector5
+ LDA ySegmentCoordILo,X \ Set (WW QQ) = yVector4 - yPlayerCoord
  SEC                    \
- SBC yVector5Lo,Y       \ starting with the low bytes
+ SBC yPlayerCoordLo,Y   \ starting with the low bytes
  STA QQ
 
  LDA ySegmentCoordIHi,X \ And then the high bytes
- SBC yVector5Hi,Y
+ SBC yPlayerCoordHi,Y
  STA WW
 
                         \ Let's call this difference in y-coordinates y-delta,
@@ -24305,14 +24304,14 @@ NEXT
  PHP
  CLC
  ADC V
- STA yVector5Lo
+ STA yPlayerCoordLo
  LDA ySegmentCoordIHi,Y
  ADC W
  PLP
  ADC #0
  PLP
  ADC #0
- STA yVector5Hi
+ STA yPlayerCoordHi
  LDA speedHi
  STA U
  LDA #&21
@@ -25164,12 +25163,12 @@ ENDIF
  LDA L62B1,Y
  ADC T
  STA L62B1,Y
- LDA xVector5Lo,Y
+ LDA xPlayerCoordLo,Y
  ADC U
- STA xVector5Lo,Y
- LDA xVector5Hi,Y
+ STA xPlayerCoordLo,Y
+ LDA xPlayerCoordHi,Y
  ADC V
- STA xVector5Hi,Y
+ STA xPlayerCoordHi,Y
  DEY
  DEY
  DEX
@@ -26052,99 +26051,159 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine supports multiple signs in a single track section.
 \
 \ ******************************************************************************
 
 .BuildRoadSign
 
- LDX currentPlayer
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
- LDY objTrackSection,X  \ Set Y to the track section number * 8 for driver X
+ LDY objTrackSection,X  \ Set Y to the track section number * 8 for the current
+                        \ player
 
- LDA trackSection0a,Y
+ LDA trackSection0a,Y   \ Set A to bits 4-7 of the trackSection0a for the track
+ LSR A                  \ section, shifted into bits 0-3, so A contains the
+ LSR A                  \ index of the track sign vector for this section
  LSR A
  LSR A
- LSR A
- LSR A
- STA L0045
- CMP L62F9
- BNE sign1
- ADC #0
- AND #&0F
+
+ STA L0045              \ Store the sign's track vector index in L0045, so we
+                        \ can retrieve it below
+
+ CMP signVectorIndex    \ If signVectorIndex doesn't already contain the sign's
+ BNE sign1              \ track vector index, jump to sign1 to skip the
+                        \ following
+
+                        \ We get here if we are calling BuildRoadSign again
+                        \ for the same track vector index, as we set
+                        \ signVectorIndex to the track vector index later in
+                        \ the routine
+
+ ADC #0                 \ Increment the track vector index in A (we know the C
+                        \ flag is set, as the above comparison was equal)
+
+ AND #15                \ Restrict the result to the range 0 to 15, i.e. set A
+                        \ to A mod 16
 
 .sign1
 
  TAX                    \ Set X to the index of the track sign vector for the
                         \ section
 
- LDY #2                 \ Set W = 2
- STY W
+ LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
+                        \ 2 ^ (8 - Y) = 2 ^ 6
 
- LDA zTrackSignVector,X
+ STY W                  \ Set W = 2, which gets decremented through each call
+                        \ to AddScaledVector as we work through each axis, so it
+                        \ stores the results in each axis of xVector6 in turn
 
- JSR sub_C4D21
+ LDA zTrackSignVector,X \ Set A to the z-coordinate of the track sign vector
 
- LDY #4
+ JSR AddScaledVector    \ Set zVector6 = zPlayerCoord - zTrackSignVector * 2 ^ 6
 
- LDA yTrackSignVector,X
+ LDY #4                 \ Set Y = 4, so the call to AddScaledVector scales by
+                        \ 2 ^ (8 - Y) = 2 ^ 4
 
- JSR sub_C4D21
+ LDA yTrackSignVector,X \ Set A to the y-coordinate of the track sign vector
 
- LDY #2
+ JSR AddScaledVector    \ Set yVector6 = yPlayerCoord - yTrackSignVector * 2 ^ 4
 
- LDA xTrackSignVector,X
+ LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
+                        \ 2 ^ (8 - Y) = 2 ^ 6
 
- JSR sub_C4D21
+ LDA xTrackSignVector,X \ Set A to the x-coordinate of the track sign vector
+
+ JSR AddScaledVector    \ Set xVector6 = xPlayerCoord - xTrackSignVector * 2 ^ 6
+
+                        \ We now have:
+                        \
+                        \   [ xVector6 ]   [ xPlayerCoord ]
+                        \   [ yVector6 ] = [ yPlayerCoord ]
+                        \   [ zVector6 ]   [ zPlayerCoord ]
+                        \
+                        \                  [ xTrackSignVector * 2 ^ 6 ]
+                        \                - [ yTrackSignVector * 2 ^ 4 ]
+                        \                  [ zTrackSignVector * 2 ^ 6 ]
 
  LDA trackRoadSigns,X   \ Set objectType to the object type for road sign X,
- AND #%00000111         \ from bits 0-2 of trackRoadSigns
- CLC
+ AND #%00000111         \ which comes from bits 0-2 of trackRoadSigns, and
+ CLC                    \ gets 7 added to get the range 7 to 12
  ADC #7
  STA objectType
 
  LDA trackRoadSigns,X   \ Set Y to the track section number for road sign X,
- AND #%11111000         \ from bits 3-7 of trackRoadSigns
+ AND #%11111000         \ which comes from bits 3-7 of trackRoadSigns
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
-                        \ ProjectObjectX and ProjectObjectY use xVector4 and
-                        \ yVector4
+                        \ ProjectObjectX and ProjectObjectY use xVector4,
+                        \ yVector4 and zVector4
 
  JSR GetSectionCoord    \ Copy the first trackSection coordinate for track
-                        \ section Y into xVector4
+                        \ section Y into xVector4, so xVector4 contains the 3D
+                        \ coordinates of the inside track for the start of this
+                        \ track section
 
  LDY #6                 \ Set Y = 6 so the call to ProjectObjectX uses xVector6
+                        \ for the second variable, so we project the object at
+                        \ x-coordinates xVector4 - xVector6, i.e.
+                        \
+                        \    section start - (xPlayerCoord - xTrackSignVector)
+                        \  = section start - xPlayerCoord + xTrackSignVector
+                        \  = section start + xTrackSignVector - xPlayerCoord
+                        \
+                        \ The xPlayerCoord vector contains the 3D coordinates
+                        \ of the player's car, so the above gives us the vector
+                        \ from the player's car to the sign
+                        \
+                        \ So this is the vector we project onto the screen to
+                        \ show the sign in the correct place by the side of the
+                        \ track from the viewpoint of the player
 
  JSR ProjectObjectX     \ Project the object onto the screen and calculate the
                         \ object's screen x-coordinate, returning it in (JJ II)
 
  LDA II                 \ Set the screen x-coordinate in (xObjectScreenHi+23
- STA xObjectScreenLo+23 \ xObjectScreenLo+23) to (JJ II)
- LDA JJ
+ STA xObjectScreenLo+23 \ xObjectScreenLo+23) to (JJ II), so we use driver 23 to
+ LDA JJ                 \ store the sign's object
  STA xObjectScreenHi+23
 
- SEC
+ SEC                    \ Set A = JJ - xPlayerScreenHi
  SBC xPlayerScreenHi
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |JJ - xPlayerScreenHi|
+                        \
+                        \ So A contains the screen distance between the player
+                        \ and the sign in the x-axis
 
- CMP #&40
+ CMP #64                \ If A < 64, jump to sign2 to skip the following
  BCC sign2
- LDY L0045
- STY L62F9
+
+ LDY L0045              \ Set signVectorIndex to sign's track vector index, so
+ STY signVectorIndex    \ the next time we call this routine for the same sign,
+                        \ we increment the sign's track vector index above
+                        \
+                        \ This lets us have multiple signs in a single track
+                        \ section, as in track section 14 at Silverstone, which
+                        \ contains three signs
 
 .sign2
 
- LDY #&25
- CMP #&6E
+ LDY #37                \ Set Y = 37 to use as the collision distance in the
+                        \ call to CheckForContact below
+
+ CMP #110               \ If A < 110, jump to sign3 to skip the following
  BCC sign3
- LDY #&50
+
+ LDY #80                \ Set Y = 80 to use as the collision distance in the
+                        \ call to CheckForContact below
 
 .sign3
 
- LDA #23
- STA L0042
+ LDA #23                \ Set L0042 = 23, so if we are colliding with the sign,
+ STA L0042              \ CheckForContact sets collisionDriver to object 23
 
  JSR CheckForContact    \ Check to see if the objects are close enough for
                         \ contact, specifically if they are within Y projected
@@ -26165,25 +26224,35 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4D21
+\       Name: AddScaledVector
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Add a scaled vector to another vector, one axis at a time
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine does the following calculation, one axis at a time (starting with
+\ the z-axis, then the y-axis and x-axis):
+\
+\   [ xVector6 ]   [ xPlayerCoord ]   [ xTrackSignVector * 2 ^ (8 - Y) ]
+\   [ yVector6 ] = [ yPlayerCoord ] - [ yTrackSignVector * 2 ^ (8 - Y) ]
+\   [ zVector6 ]   [ zPlayerCoord ]   [ zTrackSignVector * 2 ^ (8 - Y) ]
+\
+\ The value of Y can be varied between calls to change the scale factor on a
+\ per-axis basis.
+\
 \ Arguments:
 \
-\   A                   Value from xTrackSignVector, yTrackSignVector,
+\   A                   The relevant from xTrackSignVector, yTrackSignVector,
 \                       zTrackSignVector
 \
-\   W                   Gets decremented each call, 2 then 1 then 0 (z, y, x)
+\   W                   Set to 2 for the first call
 \
-\   Y                   Shift counter
+\   Y                   The scale factor for this axis
 \
 \ ******************************************************************************
 
-.sub_C4D21
+.AddScaledVector
 
  PHA                    \ Set (V A T) = (0 A 0)
  LDA #0                 \             = A * 256
@@ -26217,18 +26286,19 @@ ENDIF
                         \ bits, so this means:
                         \
                         \   (U T) = A * 2 ^ (8 - Y)
+                        \         = xTrackSignVector * 2 ^ (8 - Y)
 
  LDY W                  \ Fetch the axis index from W
 
  DEC W                  \ Decrement the axis index in W, ready for the next call
-                        \ to sub_C4D21
+                        \ to AddScaledVector
 
- LDA xVector5Lo,Y       \ Set xVector6 = xVector5 - (U T)
+ LDA xPlayerCoordLo,Y   \ Set xVector6 = xPlayerCoord - (U T)
  SEC                    \
  SBC T                  \ starting with the low bytes
  STA xVector6Lo,Y
 
- LDA xVector5Hi,Y       \ And then the high bytes
+ LDA xPlayerCoordHi,Y   \ And then the high bytes
  SBC U
  STA xVector6Hi,Y
 
@@ -29989,103 +30059,79 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xVector5Lo
+\       Name: xPlayerCoordLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The low byte of the x-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
 
-.xVector5Lo
+.xPlayerCoordLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: yVector5Lo
+\       Name: yPlayerCoordLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The low byte of the y-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
 
-.yVector5Lo
+.yPlayerCoordLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zVector5Lo
+\       Name: zPlayerCoordLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The low byte of the z-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
 
-.zVector5Lo
+.zPlayerCoordLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: xVector5Hi
+\       Name: xPlayerCoordHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The high byte of the x-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
 
-.xVector5Hi
+.xPlayerCoordHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: yVector5Hi
+\       Name: yPlayerCoordHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The high byte of the y-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
 
-.yVector5Hi
+.yPlayerCoordHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zVector5Hi
+\       Name: zPlayerCoordHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The high byte of the z-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
 
-.zVector5Hi
+.zPlayerCoordHi
 
  EQUB 0
 
@@ -31165,10 +31211,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F9
+\       Name: signVectorIndex
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Stores the track vector index of the current sign, so we can
+\             support multiple signs in a single track section
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31176,7 +31223,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62F9
+.signVectorIndex
 
  EQUB 0
 
