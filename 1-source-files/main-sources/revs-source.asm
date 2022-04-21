@@ -503,10 +503,6 @@ ORG &0000
                         \ Scheme 8: Even rows: 131 on 132 (yellow on blue)
                         \           Odd rows:  129 on 135 (red on white)
 
-.temp2
-
- SKIP 0                 \ Temporary storage
-
 .objectNumber
 
  SKIP 0                 \ The object number of the four-part car we are drawing
@@ -514,6 +510,10 @@ ORG &0000
 .segmentCounter
 
  SKIP 0                 \ A counter for the track segment we are processing
+
+.temp2
+
+ SKIP 0                 \ Temporary storage
 
 .L0042
 
@@ -540,6 +540,10 @@ ORG &0000
 
  SKIP 0                 \ Temporary storage for X so it can be preserved through
                         \ calls to DrawCarInPosition and DrawCarOrSign
+
+.temp4
+
+ SKIP 0                 \ Temporary storage
 
 .L0045
 
@@ -5106,7 +5110,7 @@ ORG &0B00
 \
 \ Returns:
 \
-\   L0007               Bits 0-2 from trackSection0a, or 2 if we are facing
+\   L0007               Bits 0-2 from trackSectionData, or 2 if we are facing
 \                       backwards
 \
 \   xSegmentCoordI      Start coordinates for the inside of the track section,
@@ -5148,7 +5152,7 @@ ORG &0B00
                         \ into xSegmentCoordI and xSegmentCoordO, and set
                         \ thisVectorNumber to trackSectionFrom
 
- LDA trackSection0a,Y   \ Set A = trackSection0a for the track section, so
+ LDA trackSectionData,Y \ Set A = trackSectionData for the track section, so
                         \ bits 0-2 can be set as the value for L0007 below
 
  JMP gets3              \ Jump to gets3 to skip the following
@@ -6428,7 +6432,7 @@ ORG &0B00
 .rlin4
 
  LDA trackSectionFlag,Y \ If bit 0 of the track section's flag byte is clear,
- AND #1                 \ jump to rlin1
+ AND #1                 \ then this is a straight section, so jump to rlin1
  BEQ rlin1
 
  LDA trackSectionTurn,Y \ Set L0017 = track section's trackSectionTurn
@@ -7633,7 +7637,7 @@ ENDIF
                         \ (objProgressHi objProgressLo), so set up a loop
                         \ counter in X
 
- STX signVectorIndex    \ Set signVectorIndex = 23
+ STX previousSignNumber \ Set previousSignNumber = 23
 
 .rese3
 
@@ -26062,34 +26066,43 @@ ENDIF
  LDY objTrackSection,X  \ Set Y to the track section number * 8 for the current
                         \ player
 
- LDA trackSection0a,Y   \ Set A to bits 4-7 of the trackSection0a for the track
- LSR A                  \ section, shifted into bits 0-3, so A contains the
- LSR A                  \ index of the track sign vector for this section
+ LDA trackSectionData,Y \ Set A to bits 4-7 of the trackSectionData for the
+ LSR A                  \ track section, shifted into bits 0-3, so A contains
+ LSR A                  \ the number of the sign for this section (0 to 15)
  LSR A
  LSR A
 
- STA L0045              \ Store the sign's track vector index in L0045, so we
-                        \ can retrieve it below
+ STA temp4              \ Store the sign number in temp4, so we can retrieve it
+                        \ below
 
- CMP signVectorIndex    \ If signVectorIndex doesn't already contain the sign's
- BNE sign1              \ track vector index, jump to sign1 to skip the
-                        \ following
+ CMP previousSignNumber \ If previousSignNumber doesn't already contain this
+ BNE sign1              \ sign number, jump to sign1 to skip the following
 
-                        \ We get here if we are calling BuildRoadSign again
-                        \ for the same track vector index, as we set
-                        \ signVectorIndex to the track vector index later in
-                        \ the routine
+                        \ We get here if we are calling BuildRoadSign again for
+                        \ the same sign number (we set previousSignNumber to
+                        \ the current sign number later in the routine)
 
- ADC #0                 \ Increment the track vector index in A (we know the C
-                        \ flag is set, as the above comparison was equal)
+ ADC #0                 \ Increment the sign number in A (we know the C flag is
+                        \ set, as the above comparison was equal)
 
  AND #15                \ Restrict the result to the range 0 to 15, i.e. set A
                         \ to A mod 16
 
 .sign1
 
- TAX                    \ Set X to the index of the track sign vector for the
-                        \ section
+ TAX                    \ Set X to the sign number, which will either be the
+                        \ sign number from trackSectionData for this section, or
+                        \ the sign number plus 1
+
+                        \ We now draw sign number X, by fetching the track sign
+                        \ vector, adding it to the track section coordinate to
+                        \ get the sign's 3D coordinates, and subtracting the
+                        \ player's coordinates to get the sign's vector relative
+                        \ to the player (i.e. relative to the camera)
+                        \
+                        \ We then project this coordinate into driver 23, so it
+                        \ can be drawn by the call to DrawCarOrSign from the
+                        \ main driving loop
 
  LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 6
@@ -26169,6 +26182,10 @@ ENDIF
  LDA JJ                 \ store the sign's object
  STA xObjectScreenHi+23
 
+                        \ Now that the sign object has been built and projected
+                        \ in the x-axis, we can check for any collisions between
+                        \ the player and the sign
+
  SEC                    \ Set A = JJ - xPlayerScreenHi
  SBC xPlayerScreenHi
 
@@ -26181,13 +26198,9 @@ ENDIF
  CMP #64                \ If A < 64, jump to sign2 to skip the following
  BCC sign2
 
- LDY L0045              \ Set signVectorIndex to sign's track vector index, so
- STY signVectorIndex    \ the next time we call this routine for the same sign,
-                        \ we increment the sign's track vector index above
-                        \
-                        \ This lets us have multiple signs in a single track
-                        \ section, as in track section 14 at Silverstone, which
-                        \ contains three signs
+ LDY temp4              \ Set previousSignNumber to the sign number from the
+ STY previousSignNumber \ trackSectionData, so the next time we call this routine
+                        \ for the same sign, we increment the sign number above
 
 .sign2
 
@@ -26208,6 +26221,9 @@ ENDIF
  JSR CheckForContact    \ Check to see if the objects are close enough for
                         \ contact, specifically if they are within Y projected
                         \ units of each other
+
+                        \ The final step is to project the sign in the y-axis,
+                        \ and then we are done building the sign object
 
  LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses xVector6
 
@@ -29140,7 +29156,7 @@ ENDIF
 
 .trackData
 
-.trackSection0a
+.trackSectionData
 
  SKIP 1
 
@@ -31211,11 +31227,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: signVectorIndex
+\       Name: previousSignNumber
 \       Type: Variable
 \   Category: Track
-\    Summary: Stores the track vector index of the current sign, so we can
-\             support multiple signs in a single track section
+\    Summary: Stores the number of the sign from the previous call to the
+\             BuildRoadSign routine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31223,7 +31239,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.signVectorIndex
+.previousSignNumber
 
  EQUB 0
 

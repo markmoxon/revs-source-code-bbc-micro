@@ -49,7 +49,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: Track section data (high bytes)
+\       Name: Track section data (Part 1 of 2)
 \       Type: Variable
 \   Category: Track
 \    Summary: Data for the track sections
@@ -91,315 +91,308 @@ ORG CODE%
 \ Track section 22   <-  [left]         Abbey Curve                         18
 \ Track section 23   {}  [straight]     Abbey Curve to Woodcote Corner      38
 \
-\ .trackSection0a
-\ trackData      = &5300
-\ Bits 4-7 of trackData+0 (i.e. first digit in hex value) is an index into
-\ trackData+&0D0, trackData+&0E0, trackData+&0F0
-\ Bits 0-2 gets put into L0007 in sub_C1267
+\ trackSectionData      Various data for the track section
 \
-\ .xTrackSectionIHi
-\ High byte of the start x-coordinate of the inside verge of each track section
-\ trackData+&001 = &5301
+\                       Bits 4-7: sign number (0 to 15)
 \
-\ .yTrackSectionIHi
-\ High byte of the start y-coordinate of the inside verge of each track section
-\ trackData+&002 = &5302
+\                       Bits 0-2: gets put into L0007 in sub_C1267
 \
-\ .zTrackSectionIHi
-\ High byte of the start z-coordinate of the inside verge of each track section
-\ trackData+&003 = &5303
+\ xTrackSectionIHi      High byte of the start x-coordinate of the inside verge
+\                       of each track section
 \
-\ .xTrackSectionOHi
-\ High byte of the start x-coordinate of the outside verge of each track section
-\ trackData+&004 = &5304
+\ yTrackSectionIHi      High byte of the start y-coordinate of the inside verge
+\                       of each track section
 \
-\ .trackSectionTurn
-\ Progress range within the section where cars should turn into the corner
-\ trackData+&005 = &5305
+\ zTrackSectionIHi      High byte of the start z-coordinate of the inside verge
+\                       of each track section
 \
-\ .zTrackSectionOHi
-\ High byte of the start z-coordinate of the outside verge of each track section
-\ trackData+&006 = &5306
+\ xTrackSectionOHi      High byte of the start x-coordinate of the outside verge
+\                       of each track section
 \
-\ .trackMaxSpeed
-\ The maximum speed for non-player drivers on this section of the track
-\ trackData+&007 = &5307
+\ trackSectionTurn      Progress range within the section where cars should turn
+\                       into the corner
+\
+\ zTrackSectionOHi      High byte of the start z-coordinate of the outside verge
+\                       of each track section
+\
+\ trackMaxSpeed         The maximum speed for non-player drivers on this section
+\                       of the track
 \
 \ ******************************************************************************
 
                         \ Track section 0
 
- EQUB &03               \ trackSection0a
- EQUB &D1               \ xTrackSectionIHi (xTrackSectionI = &D120)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &0F               \ zTrackSectionIHi (zTrackSectionI = &0FA0)
- EQUB &CF               \ xTrackSectionOHi (xTrackSectionO = &CFC0)
+ EQUB &03               \ trackSectionData (sign = 0, L0007 = 3)
+ EQUB &D1               \ xTrackSectionIHi (xTrackSectionI = &D120 = -12000)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &0F               \ zTrackSectionIHi (zTrackSectionI = &0FA0 =   4000)
+ EQUB &CF               \ xTrackSectionOHi (xTrackSectionO = &CFC0 = -12352)
  EQUB 96                \ trackSectionTurn
- EQUB &0F               \ zTrackSectionOHi (zTrackSectionO = &0F94)
+ EQUB &0F               \ zTrackSectionOHi (zTrackSectionO = &0F94 =   3988)
  EQUB 136               \ trackMaxSpeed
 
                         \ Track section 1
 
- EQUB &13               \ trackSection0a
- EQUB &CF               \ xTrackSectionIHi (xTrackSectionI = &CF94)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &3E               \ zTrackSectionIHi (zTrackSectionI = &3E08)
- EQUB &CE               \ xTrackSectionOHi (xTrackSectionO = &CE34)
+ EQUB &13               \ trackSectionData (sign = 1, L0007 = 3)
+ EQUB &CF               \ xTrackSectionIHi (xTrackSectionI = &CF94 = -12396)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &3E               \ zTrackSectionIHi (zTrackSectionI = &3E08 =  15880)
+ EQUB &CE               \ xTrackSectionOHi (xTrackSectionO = &CE34 = -12748)
  EQUB 18                \ trackSectionTurn
- EQUB &3D               \ zTrackSectionOHi (zTrackSectionO = &3DFC)
- EQUB 0                 \ trackMaxSpeed
+ EQUB &3D               \ zTrackSectionOHi (zTrackSectionO = &3DFC =  15868)
+ EQUB 00                \ trackMaxSpeed
 
                         \ Track section 2
 
- EQUB &12               \ trackSection0a
- EQUB &D3               \ xTrackSectionIHi (xTrackSectionI = &D325)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &46               \ zTrackSectionIHi (zTrackSectionI = &4696)
- EQUB &D2               \ xTrackSectionOHi (xTrackSectionO = &D2C5)
+ EQUB &12               \ trackSectionData (sign = 1, L0007 = 2)
+ EQUB &D3               \ xTrackSectionIHi (xTrackSectionI = &D325 = -11483)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &46               \ zTrackSectionIHi (zTrackSectionI = &4696 =  18070)
+ EQUB &D2               \ xTrackSectionOHi (xTrackSectionO = &D2C5 = -11579)
  EQUB 20                \ trackSectionTurn
- EQUB &47               \ zTrackSectionOHi (zTrackSectionO = &47E8)
+ EQUB &47               \ zTrackSectionOHi (zTrackSectionO = &47E8 =  18408)
  EQUB 138               \ trackMaxSpeed
 
                         \ Track section 3
 
- EQUB &22               \ trackSection0a
- EQUB &D6               \ xTrackSectionIHi (xTrackSectionI = &D6B2)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &4A               \ zTrackSectionIHi (zTrackSectionI = &4A91)
- EQUB &D5               \ xTrackSectionOHi (xTrackSectionO = &D556)
+ EQUB &22               \ trackSectionData (sign = 2, L0007 = 2)
+ EQUB &D6               \ xTrackSectionIHi (xTrackSectionI = &D6B2 = -10574)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &4A               \ zTrackSectionIHi (zTrackSectionI = &4A91 =  19089)
+ EQUB &D5               \ xTrackSectionOHi (xTrackSectionO = &D556 = -10922)
  EQUB 30                \ trackSectionTurn
- EQUB &4A               \ zTrackSectionOHi (zTrackSectionO = &4AC9)
+ EQUB &4A               \ zTrackSectionOHi (zTrackSectionO = &4AC9 =  19145)
  EQUB 33                \ trackMaxSpeed
 
                         \ Track section 4
 
- EQUB &22               \ trackSection0a
- EQUB &DE               \ xTrackSectionIHi (xTrackSectionI = &DEAF)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &4F               \ zTrackSectionIHi (zTrackSectionI = &4F4F)
- EQUB &DE               \ xTrackSectionOHi (xTrackSectionO = &DE9F)
+ EQUB &22               \ trackSectionData (sign = 2, L0007 = 2)
+ EQUB &DE               \ xTrackSectionIHi (xTrackSectionI = &DEAF =  -8529)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &4F               \ zTrackSectionIHi (zTrackSectionI = &4F4F =  20303)
+ EQUB &DE               \ xTrackSectionOHi (xTrackSectionO = &DE9F =  -8545)
  EQUB 98                \ trackSectionTurn
- EQUB &50               \ zTrackSectionOHi (zTrackSectionO = &50AE)
+ EQUB &50               \ zTrackSectionOHi (zTrackSectionO = &50AE =  20654)
  EQUB 125               \ trackMaxSpeed
 
                         \ Track section 5
 
- EQUB &33               \ trackSection0a
- EQUB &0F               \ xTrackSectionIHi (xTrackSectionI = &0FE7)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &51               \ zTrackSectionIHi (zTrackSectionI = &515C)
- EQUB &0F               \ xTrackSectionOHi (xTrackSectionO = &0FD7)
+ EQUB &33               \ trackSectionData (sign = 3, L0007 = 3)
+ EQUB &0F               \ xTrackSectionIHi (xTrackSectionI = &0FE7 =   4071)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &51               \ zTrackSectionIHi (zTrackSectionI = &515C =  20828)
+ EQUB &0F               \ xTrackSectionOHi (xTrackSectionO = &0FD7 =   4055)
  EQUB 40                \ trackSectionTurn
- EQUB &52               \ zTrackSectionOHi (zTrackSectionO = &52BB)
+ EQUB &52               \ zTrackSectionOHi (zTrackSectionO = &52BB =  21179)
  EQUB 26                \ trackMaxSpeed
 
                         \ Track section 6
 
- EQUB &42               \ trackSection0a
- EQUB &17               \ xTrackSectionIHi (xTrackSectionI = &17D8)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0CCB)
- EQUB &4B               \ zTrackSectionIHi (zTrackSectionI = &4B09)
- EQUB &19               \ xTrackSectionOHi (xTrackSectionO = &1937)
+ EQUB &42               \ trackSectionData (sign = 4, L0007 = 2)
+ EQUB &17               \ xTrackSectionIHi (xTrackSectionI = &17D8 =   6104)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0CCB =   3275)
+ EQUB &4B               \ zTrackSectionIHi (zTrackSectionI = &4B09 =  19209)
+ EQUB &19               \ xTrackSectionOHi (xTrackSectionO = &1937 =   6455)
  EQUB 255               \ trackSectionTurn
- EQUB &4B               \ zTrackSectionOHi (zTrackSectionO = &4B17)
+ EQUB &4B               \ zTrackSectionOHi (zTrackSectionO = &4B17 =  19223)
  EQUB 255               \ trackMaxSpeed
 
                         \ Track section 7
 
- EQUB &53               \ trackSection0a
- EQUB &18               \ xTrackSectionIHi (xTrackSectionI = &1864)
- EQUB &0E               \ yTrackSectionIHi (yTrackSectionI = &0E53)
- EQUB &3D               \ zTrackSectionIHi (zTrackSectionI = &3DE9)
- EQUB &19               \ xTrackSectionOHi (xTrackSectionO = &19C3)
- EQUB 0                 \ trackSectionTurn
- EQUB &3D               \ zTrackSectionOHi (zTrackSectionO = &3DF7)
- EQUB 0                 \ trackMaxSpeed
+ EQUB &53               \ trackSectionData (sign = 5, L0007 = 3)
+ EQUB &18               \ xTrackSectionIHi (xTrackSectionI = &1864 =   6244)
+ EQUB &0E               \ yTrackSectionIHi (yTrackSectionI = &0E53 =   3667)
+ EQUB &3D               \ zTrackSectionIHi (zTrackSectionI = &3DE9 =  15849)
+ EQUB &19               \ xTrackSectionOHi (xTrackSectionO = &19C3 =   6595)
+ EQUB 00                \ trackSectionTurn
+ EQUB &3D               \ zTrackSectionOHi (zTrackSectionO = &3DF7 =  15863)
+ EQUB 00                \ trackMaxSpeed
 
                         \ Track section 8
 
- EQUB &53               \ trackSection0a
- EQUB &18               \ xTrackSectionIHi (xTrackSectionI = &1891)
- EQUB &0E               \ yTrackSectionIHi (yTrackSectionI = &0E77)
- EQUB &39               \ zTrackSectionIHi (zTrackSectionI = &39B1)
- EQUB &19               \ xTrackSectionOHi (xTrackSectionO = &19F0)
+ EQUB &53               \ trackSectionData (sign = 5, L0007 = 3)
+ EQUB &18               \ xTrackSectionIHi (xTrackSectionI = &1891 =   6289)
+ EQUB &0E               \ yTrackSectionIHi (yTrackSectionI = &0E77 =   3703)
+ EQUB &39               \ zTrackSectionIHi (zTrackSectionI = &39B1 =  14769)
+ EQUB &19               \ xTrackSectionOHi (xTrackSectionO = &19F0 =   6640)
  EQUB 33                \ trackSectionTurn
- EQUB &39               \ zTrackSectionOHi (zTrackSectionO = &39BF)
+ EQUB &39               \ zTrackSectionOHi (zTrackSectionO = &39BF =  14783)
  EQUB 255               \ trackMaxSpeed
 
                         \ Track section 9
 
- EQUB &64               \ trackSection0a
- EQUB &19               \ xTrackSectionIHi (xTrackSectionI = &199F)
- EQUB &0D               \ yTrackSectionIHi (yTrackSectionI = &0D9F)
- EQUB &20               \ zTrackSectionIHi (zTrackSectionI = &2061)
- EQUB &1A               \ xTrackSectionOHi (xTrackSectionO = &1AFE)
+ EQUB &64               \ trackSectionData (sign = 6, L0007 = 4)
+ EQUB &19               \ xTrackSectionIHi (xTrackSectionI = &199F =   6559)
+ EQUB &0D               \ yTrackSectionIHi (yTrackSectionI = &0D9F =   3487)
+ EQUB &20               \ zTrackSectionIHi (zTrackSectionI = &2061 =   8289)
+ EQUB &1A               \ xTrackSectionOHi (xTrackSectionO = &1AFE =   6910)
  EQUB 40                \ trackSectionTurn
- EQUB &20               \ zTrackSectionOHi (zTrackSectionO = &206F)
+ EQUB &20               \ zTrackSectionOHi (zTrackSectionO = &206F =   8303)
  EQUB 12                \ trackMaxSpeed
 
                         \ Track section 10
 
- EQUB &64               \ trackSection0a
- EQUB &1B               \ xTrackSectionIHi (xTrackSectionI = &1BFA)
- EQUB &0D               \ yTrackSectionIHi (yTrackSectionI = &0D5F)
- EQUB &19               \ zTrackSectionIHi (zTrackSectionI = &195D)
- EQUB &1D               \ xTrackSectionOHi (xTrackSectionO = &1D1B)
+ EQUB &64               \ trackSectionData (sign = 6, L0007 = 4)
+ EQUB &1B               \ xTrackSectionIHi (xTrackSectionI = &1BFA =   7162)
+ EQUB &0D               \ yTrackSectionIHi (yTrackSectionI = &0D5F =   3423)
+ EQUB &19               \ zTrackSectionIHi (zTrackSectionI = &195D =   6493)
+ EQUB &1D               \ xTrackSectionOHi (xTrackSectionO = &1D1B =   7451)
  EQUB 255               \ trackSectionTurn
- EQUB &1A               \ zTrackSectionOHi (zTrackSectionO = &1A25)
+ EQUB &1A               \ zTrackSectionOHi (zTrackSectionO = &1A25 =   6693)
  EQUB 255               \ trackMaxSpeed
 
                         \ Track section 11
 
- EQUB &73               \ trackSection0a
- EQUB &26               \ xTrackSectionIHi (xTrackSectionI = &2612)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0CC7)
- EQUB &0A               \ zTrackSectionIHi (zTrackSectionI = &0AAB)
- EQUB &27               \ xTrackSectionOHi (xTrackSectionO = &2733)
+ EQUB &73               \ trackSectionData (sign = 7, L0007 = 3)
+ EQUB &26               \ xTrackSectionIHi (xTrackSectionI = &2612 =   9746)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0CC7 =   3271)
+ EQUB &0A               \ zTrackSectionIHi (zTrackSectionI = &0AAB =   2731)
+ EQUB &27               \ xTrackSectionOHi (xTrackSectionO = &2733 =  10035)
  EQUB 21                \ trackSectionTurn
- EQUB &0B               \ zTrackSectionOHi (zTrackSectionO = &0B73)
+ EQUB &0B               \ zTrackSectionOHi (zTrackSectionO = &0B73 =   2931)
  EQUB 116               \ trackMaxSpeed
 
                         \ Track section 12
 
- EQUB &72               \ trackSection0a
- EQUB &2D               \ xTrackSectionIHi (xTrackSectionI = &2DC5)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C5B)
- EQUB &00               \ zTrackSectionIHi (zTrackSectionI = &008B)
- EQUB &2E               \ xTrackSectionOHi (xTrackSectionO = &2EDD)
+ EQUB &72               \ trackSectionData (sign = 7, L0007 = 2)
+ EQUB &2D               \ xTrackSectionIHi (xTrackSectionI = &2DC5 =  11717)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C5B =   3163)
+ EQUB &00               \ zTrackSectionIHi (zTrackSectionI = &008B = 139)
+ EQUB &2E               \ xTrackSectionOHi (xTrackSectionO = &2EDD =  11997)
  EQUB 39                \ trackSectionTurn
- EQUB &01               \ zTrackSectionOHi (zTrackSectionO = &015F)
+ EQUB &01               \ zTrackSectionOHi (zTrackSectionO = &015F = 351)
  EQUB 25                \ trackMaxSpeed
 
                         \ Track section 13
 
- EQUB &72               \ trackSection0a
- EQUB &29               \ xTrackSectionIHi (xTrackSectionI = &2965)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C4D)
- EQUB &F6               \ zTrackSectionIHi (zTrackSectionI = &F67E)
- EQUB &29               \ xTrackSectionOHi (xTrackSectionO = &29D3)
+ EQUB &72               \ trackSectionData (sign = 7, L0007 = 2)
+ EQUB &29               \ xTrackSectionIHi (xTrackSectionI = &2965 =  10597)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C4D =   3149)
+ EQUB &F6               \ zTrackSectionIHi (zTrackSectionI = &F67E =  -2434)
+ EQUB &29               \ xTrackSectionOHi (xTrackSectionO = &29D3 =  10707)
  EQUB 24                \ trackSectionTurn
- EQUB &F5               \ zTrackSectionOHi (zTrackSectionO = &F52F)
+ EQUB &F5               \ zTrackSectionOHi (zTrackSectionO = &F52F =  -2769)
  EQUB 255               \ trackMaxSpeed
 
                         \ Track section 14
 
- EQUB &84               \ trackSection0a
- EQUB &17               \ xTrackSectionIHi (xTrackSectionI = &1795)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C4D)
- EQUB &F0               \ zTrackSectionIHi (zTrackSectionI = &F08E)
- EQUB &18               \ xTrackSectionOHi (xTrackSectionO = &1803)
+ EQUB &84               \ trackSectionData (sign = 8, L0007 = 4)
+ EQUB &17               \ xTrackSectionIHi (xTrackSectionI = &1795 =   6037)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C4D =   3149)
+ EQUB &F0               \ zTrackSectionIHi (zTrackSectionI = &F08E =  -3954)
+ EQUB &18               \ xTrackSectionOHi (xTrackSectionO = &1803 =   6147)
  EQUB 40                \ trackSectionTurn
- EQUB &EF               \ zTrackSectionOHi (zTrackSectionO = &EF3F)
+ EQUB &EF               \ zTrackSectionOHi (zTrackSectionO = &EF3F =  -4289)
  EQUB 20                \ trackMaxSpeed
 
                         \ Track section 15
 
- EQUB &93               \ trackSection0a
- EQUB &11               \ xTrackSectionIHi (xTrackSectionI = &11D8)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C0D)
- EQUB &EB               \ zTrackSectionIHi (zTrackSectionI = &EBFA)
- EQUB &13               \ xTrackSectionOHi (xTrackSectionO = &1305)
+ EQUB &93               \ trackSectionData (sign = 9, L0007 = 3)
+ EQUB &11               \ xTrackSectionIHi (xTrackSectionI = &11D8 =   4568)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C0D =   3085)
+ EQUB &EB               \ zTrackSectionIHi (zTrackSectionI = &EBFA =  -5126)
+ EQUB &13               \ xTrackSectionOHi (xTrackSectionO = &1305 =   4869)
  EQUB 255               \ trackSectionTurn
- EQUB &EB               \ zTrackSectionOHi (zTrackSectionO = &EB44)
+ EQUB &EB               \ zTrackSectionOHi (zTrackSectionO = &EB44 =  -5308)
  EQUB 255               \ trackMaxSpeed
 
                         \ Track section 16
 
- EQUB &A2               \ trackSection0a
- EQUB &F1               \ xTrackSectionIHi (xTrackSectionI = &F126)
- EQUB &07               \ yTrackSectionIHi (yTrackSectionI = &07D5)
- EQUB &B5               \ zTrackSectionIHi (zTrackSectionI = &B5A9)
- EQUB &F2               \ xTrackSectionOHi (xTrackSectionO = &F253)
- EQUB 0                 \ trackSectionTurn
- EQUB &B4               \ zTrackSectionOHi (zTrackSectionO = &B4F3)
- EQUB 0                 \ trackMaxSpeed
+ EQUB &A2               \ trackSectionData (sign = 10, L0007 = 2)
+ EQUB &F1               \ xTrackSectionIHi (xTrackSectionI = &F126 =  -3802)
+ EQUB &07               \ yTrackSectionIHi (yTrackSectionI = &07D5 =   2005)
+ EQUB &B5               \ zTrackSectionIHi (zTrackSectionI = &B5A9 = -19031)
+ EQUB &F2               \ xTrackSectionOHi (xTrackSectionO = &F253 =  -3501)
+ EQUB 00                \ trackSectionTurn
+ EQUB &B4               \ zTrackSectionOHi (zTrackSectionO = &B4F3 = -19213)
+ EQUB 00                \ trackMaxSpeed
 
                         \ Track section 17
 
- EQUB &B1               \ trackSection0a
- EQUB &EF               \ xTrackSectionIHi (xTrackSectionI = &EFB2)
- EQUB &07               \ yTrackSectionIHi (yTrackSectionI = &07F7)
- EQUB &B3               \ zTrackSectionIHi (zTrackSectionI = &B33F)
- EQUB &F0               \ xTrackSectionOHi (xTrackSectionO = &F0DF)
+ EQUB &B1               \ trackSectionData (sign = 11, L0007 = 1)
+ EQUB &EF               \ xTrackSectionIHi (xTrackSectionI = &EFB2 =  -4174)
+ EQUB &07               \ yTrackSectionIHi (yTrackSectionI = &07F7 =   2039)
+ EQUB &B3               \ zTrackSectionIHi (zTrackSectionI = &B33F = -19649)
+ EQUB &F0               \ xTrackSectionOHi (xTrackSectionO = &F0DF =  -3873)
  EQUB 22                \ trackSectionTurn
- EQUB &B2               \ zTrackSectionOHi (zTrackSectionO = &B289)
+ EQUB &B2               \ zTrackSectionOHi (zTrackSectionO = &B289 = -19831)
  EQUB 139               \ trackMaxSpeed
 
                         \ Track section 18
 
- EQUB &B4               \ trackSection0a
- EQUB &E8               \ xTrackSectionIHi (xTrackSectionI = &E8EA)
- EQUB &09               \ yTrackSectionIHi (yTrackSectionI = &099B)
- EQUB &A7               \ zTrackSectionIHi (zTrackSectionI = &A7FB)
- EQUB &EA               \ xTrackSectionOHi (xTrackSectionO = &EA17)
+ EQUB &B4               \ trackSectionData (sign = 11, L0007 = 4)
+ EQUB &E8               \ xTrackSectionIHi (xTrackSectionI = &E8EA =  -5910)
+ EQUB &09               \ yTrackSectionIHi (yTrackSectionI = &099B =   2459)
+ EQUB &A7               \ zTrackSectionIHi (zTrackSectionI = &A7FB = -22533)
+ EQUB &EA               \ xTrackSectionOHi (xTrackSectionO = &EA17 =  -5609)
  EQUB 52                \ trackSectionTurn
- EQUB &A7               \ zTrackSectionOHi (zTrackSectionO = &A745)
+ EQUB &A7               \ zTrackSectionOHi (zTrackSectionO = &A745 = -22715)
  EQUB 24                \ trackMaxSpeed
 
                         \ Track section 19
 
- EQUB &C3               \ trackSection0a
- EQUB &D8               \ xTrackSectionIHi (xTrackSectionI = &D849)
- EQUB &0A               \ yTrackSectionIHi (yTrackSectionI = &0A64)
- EQUB &A5               \ zTrackSectionIHi (zTrackSectionI = &A5A2)
- EQUB &D7               \ xTrackSectionOHi (xTrackSectionO = &D74A)
+ EQUB &C3               \ trackSectionData (sign = 12, L0007 = 3)
+ EQUB &D8               \ xTrackSectionIHi (xTrackSectionI = &D849 = -10167)
+ EQUB &0A               \ yTrackSectionIHi (yTrackSectionI = &0A64 =   2660)
+ EQUB &A5               \ zTrackSectionIHi (zTrackSectionI = &A5A2 = -23134)
+ EQUB &D7               \ xTrackSectionOHi (xTrackSectionO = &D74A = -10422)
  EQUB 96                \ trackSectionTurn
- EQUB &A4               \ zTrackSectionOHi (zTrackSectionO = &A4AE)
+ EQUB &A4               \ zTrackSectionOHi (zTrackSectionO = &A4AE = -23378)
  EQUB 151               \ trackMaxSpeed
 
                         \ Track section 20
 
- EQUB &D2               \ trackSection0a
- EQUB &B6               \ xTrackSectionIHi (xTrackSectionI = &B691)
- EQUB &07               \ yTrackSectionIHi (yTrackSectionI = &07F4)
- EQUB &C8               \ zTrackSectionIHi (zTrackSectionI = &C8FA)
- EQUB &B5               \ xTrackSectionOHi (xTrackSectionO = &B592)
+ EQUB &D2               \ trackSectionData (sign = 13, L0007 = 2)
+ EQUB &B6               \ xTrackSectionIHi (xTrackSectionI = &B691 = -18799)
+ EQUB &07               \ yTrackSectionIHi (yTrackSectionI = &07F4 =   2036)
+ EQUB &C8               \ zTrackSectionIHi (zTrackSectionI = &C8FA = -14086)
+ EQUB &B5               \ xTrackSectionOHi (xTrackSectionO = &B592 = -19054)
  EQUB 49                \ trackSectionTurn
- EQUB &C8               \ zTrackSectionOHi (zTrackSectionO = &C806)
+ EQUB &C8               \ zTrackSectionOHi (zTrackSectionO = &C806 = -14330)
  EQUB 28                \ trackMaxSpeed
 
                         \ Track section 21
 
- EQUB &E2               \ trackSection0a
- EQUB &B6               \ xTrackSectionIHi (xTrackSectionI = &B603)
- EQUB &08               \ yTrackSectionIHi (yTrackSectionI = &083E)
- EQUB &D7               \ zTrackSectionIHi (zTrackSectionI = &D71E)
- EQUB &B4               \ xTrackSectionOHi (xTrackSectionO = &B4F2)
+ EQUB &E2               \ trackSectionData (sign = 14, L0007 = 2)
+ EQUB &B6               \ xTrackSectionIHi (xTrackSectionI = &B603 = -18941)
+ EQUB &08               \ yTrackSectionIHi (yTrackSectionI = &083E =   2110)
+ EQUB &D7               \ zTrackSectionIHi (zTrackSectionI = &D71E = -10466)
+ EQUB &B4               \ xTrackSectionOHi (xTrackSectionO = &B4F2 = -19214)
  EQUB 69                \ trackSectionTurn
- EQUB &D7               \ zTrackSectionOHi (zTrackSectionO = &D7FC)
+ EQUB &D7               \ zTrackSectionOHi (zTrackSectionO = &D7FC = -10244)
  EQUB 255               \ trackMaxSpeed
 
                         \ Track section 22
 
- EQUB &F2               \ trackSection0a
- EQUB &CF               \ xTrackSectionIHi (xTrackSectionI = &CF3F)
- EQUB &0B               \ yTrackSectionIHi (yTrackSectionI = &0B90)
- EQUB &F5               \ zTrackSectionIHi (zTrackSectionI = &F5FF)
- EQUB &CE               \ xTrackSectionOHi (xTrackSectionO = &CE2E)
+ EQUB &F2               \ trackSectionData (sign = 15, L0007 = 2)
+ EQUB &CF               \ xTrackSectionIHi (xTrackSectionI = &CF3F = -12481)
+ EQUB &0B               \ yTrackSectionIHi (yTrackSectionI = &0B90 =   2960)
+ EQUB &F5               \ zTrackSectionIHi (zTrackSectionI = &F5FF =  -2561)
+ EQUB &CE               \ xTrackSectionOHi (xTrackSectionO = &CE2E = -12754)
  EQUB 36                \ trackSectionTurn
- EQUB &F6               \ zTrackSectionOHi (zTrackSectionO = &F6DD)
+ EQUB &F6               \ zTrackSectionOHi (zTrackSectionO = &F6DD =  -2339)
  EQUB 11                \ trackMaxSpeed
 
                         \ Track section 23
 
- EQUB &F2               \ trackSection0a
- EQUB &D1               \ xTrackSectionIHi (xTrackSectionI = &D1DE)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C7D)
- EQUB &FD               \ zTrackSectionIHi (zTrackSectionI = &FDD2)
- EQUB &D0               \ xTrackSectionOHi (xTrackSectionO = &D07E)
+ EQUB &F2               \ trackSectionData (sign = 15, L0007 = 2)
+ EQUB &D1               \ xTrackSectionIHi (xTrackSectionI = &D1DE = -11810)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C7D =   3197)
+ EQUB &FD               \ zTrackSectionIHi (zTrackSectionI = &FDD2 =   -558)
+ EQUB &D0               \ xTrackSectionOHi (xTrackSectionO = &D07E = -12162)
  EQUB 255               \ trackSectionTurn
- EQUB &FD               \ zTrackSectionOHi (zTrackSectionO = &FDC5)
+ EQUB &FD               \ zTrackSectionOHi (zTrackSectionO = &FDC5 =   -571)
  EQUB 255               \ trackMaxSpeed
 
                         \ Same as track section 0
 
- EQUB &03               \ trackSection0a
- EQUB &D1               \ xTrackSectionIHi (xTrackSectionI = &D120)
- EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80)
- EQUB &0F               \ zTrackSectionIHi (zTrackSectionI = &0FA0)
- EQUB &CF               \ xTrackSectionOHi (xTrackSectionO = &CFC0)
+ EQUB &03               \ trackSectionData (sign = 0, L0007 = 3)
+ EQUB &D1               \ xTrackSectionIHi (xTrackSectionI = &D120 = -12000)
+ EQUB &0C               \ yTrackSectionIHi (yTrackSectionI = &0C80 =   3200)
+ EQUB &0F               \ zTrackSectionIHi (zTrackSectionI = &0FA0 =   4000)
+ EQUB &CF               \ xTrackSectionOHi (xTrackSectionO = &CFC0 = -12352)
  EQUB 96                \ trackSectionTurn
- EQUB &0F               \ zTrackSectionOHi (zTrackSectionO = &0F94)
+ EQUB &0F               \ zTrackSectionOHi (zTrackSectionO = &0F94 =   3988)
  EQUB 136               \ trackMaxSpeed
 
  EQUB &00, &8E          \ These bytes appear to be unused
@@ -416,7 +409,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&0D0 = &53D0
+\ 
 \
 \ ******************************************************************************
 
@@ -432,7 +425,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&0E0 = &53E0
+\ 
 \
 \ ******************************************************************************
 
@@ -448,7 +441,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&0F0 = &53F0
+\ 
 \
 \ ******************************************************************************
 
@@ -465,8 +458,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&100 = &5400
-\ i.e. left-right on the screen
+\ 
 \
 \ ******************************************************************************
 
@@ -513,8 +505,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&200 = &5500
-\ i.e. up-down on the screen (track height)
+\ 
 \
 \ ******************************************************************************
 
@@ -561,8 +552,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&300 = &5600
-\ i.e. in-out of the screen
+\ 
 \
 \ ******************************************************************************
 
@@ -608,8 +598,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&400 = &5700
-\ i.e. left-right on the screen
+\ 
 \
 \ ******************************************************************************
 
@@ -655,8 +644,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&500 = &5800
-\ i.e. in-out of the screen
+\ 
 \
 \ ******************************************************************************
 
@@ -695,321 +683,334 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: Track section data (low bytes)
+\       Name: Track section data (Part 2 of 2)
 \       Type: Variable
 \   Category: Track
 \    Summary: Data for the track sections
 \
 \ ------------------------------------------------------------------------------
 \
-\ .trackSectionFlag
-\ Bit 0: 0 = straight section (only one track vector)
-\        1 = curved section (multiple track vectors)
-\ trackData+&600 = &5900
+\ trackSectionFlag      Various flags for the track section
 \
-\ .xTrackSectionILo
-\ Low byte of the start x-coordinate of the inside verge of each track section
-\ trackData+&601 = &5901
+\                       Bit 0: 0 = straight section (only one track vector)
+\                              1 = curved section (multiple track vectors)
 \
-\ .yTrackSectionILo
-\ Low byte of the start y-coordinate of the inside verge of each track section
-\ trackData+&602 = &5902
+\                       Bit 1: 0 = 
+\                              1 = 
 \
-\ .zTrackSectionILo
-\ Low byte of the start z-coordinate of the inside verge of each track section
-\ trackData+&603 = &5903
+\                       Bit 2: 0 = 
+\                              1 = 
 \
-\ .xTrackSectionOLo
-\ Low byte of the start x-coordinate of the outside verge of each track section
-\ trackData+&604 = &5904
+\                       Bit 3: 0 = 
+\                              1 = 
 \
-\ .trackSectionFrom
-\ The number of the first track vector in each section
-\ trackData+&605 = &5905
+\                       Bit 4: 0 = 
+\                              1 = 
 \
-\ .zTrackSectionOLo
-\ Low byte of the start z-coordinate of the outside verge of each track section
-\ trackData+&606 = &5906
+\                       Bit 5: 0 = 
+\                              1 = 
 \
-\ .trackSectionSize
-\ The length of each track section in terms of progress in objProgressLo
-\ trackData+&607 = &5907
+\                       Bit 6: 0 = 
+\                              1 = 
+\
+\                       Bit 7: 0 = 
+\                              1 = 
+\
+\ xTrackSectionILo      Low byte of the start x-coordinate of the inside verge
+\                       of each track section
+\
+\ yTrackSectionILo      Low byte of the start y-coordinate of the inside verge
+\                       of each track section
+\
+\ zTrackSectionILo      Low byte of the start z-coordinate of the inside verge
+\                       of each track section
+\
+\ xTrackSectionOLo      Low byte of the start x-coordinate of the outside verge
+\                       of each track section
+\
+\ trackSectionFrom      The number of the first track vector in each section
+\
+\ zTrackSectionOLo      Low byte of the start z-coordinate of the outside verge
+\                       of each track section
+\
+\ trackSectionSize      The length of each track section in terms of progress in
+\                       objProgressLo
 \
 \ ******************************************************************************
 
                         \ Track section 0
 
  EQUB %00110000         \ trackSectionFlag
- EQUB &20               \ xTrackSectionILo (xTrackSectionI = &D120)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &A0               \ zTrackSectionILo (zTrackSectionI = &0FA0)
- EQUB &C0               \ xTrackSectionOLo (xTrackSectionO = &CFC0)
- EQUB 0                 \ trackSectionFrom
- EQUB &94               \ zTrackSectionOLo (zTrackSectionO = &0F94)
+ EQUB &20               \ xTrackSectionILo (xTrackSectionI = &D120 = -12000)
+ EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80 =   3200)
+ EQUB &A0               \ zTrackSectionILo (zTrackSectionI = &0FA0 =   4000)
+ EQUB &C0               \ xTrackSectionOLo (xTrackSectionO = &CFC0 = -12352)
+ EQUB 00                \ trackSectionFrom
+ EQUB &94               \ zTrackSectionOLo (zTrackSectionO = &0F94 =   3988)
  EQUB 99                \ trackSectionSize
 
                         \ Track section 1
 
  EQUB %10101101         \ trackSectionFlag
- EQUB &94               \ xTrackSectionILo (xTrackSectionI = &CF94)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &08               \ zTrackSectionILo (zTrackSectionI = &3E08)
- EQUB &34               \ xTrackSectionOLo (xTrackSectionO = &CE34)
- EQUB 1                 \ trackSectionFrom
- EQUB &FC               \ zTrackSectionOLo (zTrackSectionO = &3DFC)
+ EQUB &94               \ xTrackSectionILo (xTrackSectionI = &CF94 = -12396)
+ EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80 =   3200)
+ EQUB &08               \ zTrackSectionILo (zTrackSectionI = &3E08 =  15880)
+ EQUB &34               \ xTrackSectionOLo (xTrackSectionO = &CE34 = -12748)
+ EQUB 01                \ trackSectionFrom
+ EQUB &FC               \ zTrackSectionOLo (zTrackSectionO = &3DFC =  15868)
  EQUB 21                \ trackSectionSize
 
                         \ Track section 2
 
  EQUB %00110011         \ trackSectionFlag
- EQUB &25               \ xTrackSectionILo (xTrackSectionI = &D325)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &96               \ zTrackSectionILo (zTrackSectionI = &4696)
- EQUB &C5               \ xTrackSectionOLo (xTrackSectionO = &D2C5)
+ EQUB &25               \ xTrackSectionILo (xTrackSectionI = &D325 = -11483)
+ EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80 =   3200)
+ EQUB &96               \ zTrackSectionILo (zTrackSectionI = &4696 =  18070)
+ EQUB &C5               \ xTrackSectionOLo (xTrackSectionO = &D2C5 = -11579)
  EQUB 22                \ trackSectionFrom
- EQUB &E8               \ zTrackSectionOLo (zTrackSectionO = &47E8)
+ EQUB &E8               \ zTrackSectionOLo (zTrackSectionO = &47E8 =  18408)
  EQUB 12                \ trackSectionSize
 
                         \ Track section 3
 
  EQUB %00101101         \ trackSectionFlag
- EQUB &B2               \ xTrackSectionILo (xTrackSectionI = &D6B2)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &91               \ zTrackSectionILo (zTrackSectionI = &4A91)
- EQUB &56               \ xTrackSectionOLo (xTrackSectionO = &D556)
+ EQUB &B2               \ xTrackSectionILo (xTrackSectionI = &D6B2 = -10574)
+ EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80 =   3200)
+ EQUB &91               \ zTrackSectionILo (zTrackSectionI = &4A91 =  19089)
+ EQUB &56               \ xTrackSectionOLo (xTrackSectionO = &D556 = -10922)
  EQUB 34                \ trackSectionFrom
- EQUB &C9               \ zTrackSectionOLo (zTrackSectionO = &4AC9)
+ EQUB &C9               \ zTrackSectionOLo (zTrackSectionO = &4AC9 =  19145)
  EQUB 21                \ trackSectionSize
 
                         \ Track section 4
 
  EQUB %00110010         \ trackSectionFlag
- EQUB &AF               \ xTrackSectionILo (xTrackSectionI = &DEAF)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &4F               \ zTrackSectionILo (zTrackSectionI = &4F4F)
- EQUB &9F               \ xTrackSectionOLo (xTrackSectionO = &DE9F)
+ EQUB &AF               \ xTrackSectionILo (xTrackSectionI = &DEAF =  -8529)
+ EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80 =   3200)
+ EQUB &4F               \ zTrackSectionILo (zTrackSectionI = &4F4F =  20303)
+ EQUB &9F               \ xTrackSectionOLo (xTrackSectionO = &DE9F =  -8545)
  EQUB 55                \ trackSectionFrom
- EQUB &AE               \ zTrackSectionOLo (zTrackSectionO = &50AE)
+ EQUB &AE               \ zTrackSectionOLo (zTrackSectionO = &50AE =  20654)
  EQUB 105               \ trackSectionSize
 
                         \ Track section 5
 
  EQUB %10101101         \ trackSectionFlag
- EQUB &E7               \ xTrackSectionILo (xTrackSectionI = &0FE7)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &5C               \ zTrackSectionILo (zTrackSectionI = &515C)
- EQUB &D7               \ xTrackSectionOLo (xTrackSectionO = &0FD7)
+ EQUB &E7               \ xTrackSectionILo (xTrackSectionI = &0FE7 =   4071)
+ EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80 =   3200)
+ EQUB &5C               \ zTrackSectionILo (zTrackSectionI = &515C =  20828)
+ EQUB &D7               \ xTrackSectionOLo (xTrackSectionO = &0FD7 =   4055)
  EQUB 56                \ trackSectionFrom
- EQUB &BB               \ zTrackSectionOLo (zTrackSectionO = &52BB)
+ EQUB &BB               \ zTrackSectionOLo (zTrackSectionO = &52BB =  21179)
  EQUB 24                \ trackSectionSize
 
                         \ Track section 6
 
  EQUB %00000010         \ trackSectionFlag
- EQUB &D8               \ xTrackSectionILo (xTrackSectionI = &17D8)
- EQUB &CB               \ yTrackSectionILo (yTrackSectionI = &0CCB)
- EQUB &09               \ zTrackSectionILo (zTrackSectionI = &4B09)
- EQUB &37               \ xTrackSectionOLo (xTrackSectionO = &1937)
+ EQUB &D8               \ xTrackSectionILo (xTrackSectionI = &17D8 =   6104)
+ EQUB &CB               \ yTrackSectionILo (yTrackSectionI = &0CCB =   3275)
+ EQUB &09               \ zTrackSectionILo (zTrackSectionI = &4B09 =  19209)
+ EQUB &37               \ xTrackSectionOLo (xTrackSectionO = &1937 =   6455)
  EQUB 80                \ trackSectionFrom
- EQUB &17               \ zTrackSectionOLo (zTrackSectionO = &4B17)
+ EQUB &17               \ zTrackSectionOLo (zTrackSectionO = &4B17 =  19223)
  EQUB 28                \ trackSectionSize
 
                         \ Track section 7
 
  EQUB %00000001         \ trackSectionFlag
- EQUB &64               \ xTrackSectionILo (xTrackSectionI = &1864)
- EQUB &53               \ yTrackSectionILo (yTrackSectionI = &0E53)
- EQUB &E9               \ zTrackSectionILo (zTrackSectionI = &3DE9)
- EQUB &C3               \ xTrackSectionOLo (xTrackSectionO = &19C3)
+ EQUB &64               \ xTrackSectionILo (xTrackSectionI = &1864 =   6244)
+ EQUB &53               \ yTrackSectionILo (yTrackSectionI = &0E53 =   3667)
+ EQUB &E9               \ zTrackSectionILo (zTrackSectionI = &3DE9 =  15849)
+ EQUB &C3               \ xTrackSectionOLo (xTrackSectionO = &19C3 =   6595)
  EQUB 81                \ trackSectionFrom
- EQUB &F7               \ zTrackSectionOLo (zTrackSectionO = &3DF7)
- EQUB 9                 \ trackSectionSize
+ EQUB &F7               \ zTrackSectionOLo (zTrackSectionO = &3DF7 =  15863)
+ EQUB 09                \ trackSectionSize
 
                         \ Track section 8
 
  EQUB %00101000         \ trackSectionFlag
- EQUB &91               \ xTrackSectionILo (xTrackSectionI = &1891)
- EQUB &77               \ yTrackSectionILo (yTrackSectionI = &0E77)
- EQUB &B1               \ zTrackSectionILo (zTrackSectionI = &39B1)
- EQUB &F0               \ xTrackSectionOLo (xTrackSectionO = &19F0)
+ EQUB &91               \ xTrackSectionILo (xTrackSectionI = &1891 =   6289)
+ EQUB &77               \ yTrackSectionILo (yTrackSectionI = &0E77 =   3703)
+ EQUB &B1               \ zTrackSectionILo (zTrackSectionI = &39B1 =  14769)
+ EQUB &F0               \ xTrackSectionOLo (xTrackSectionO = &19F0 =   6640)
  EQUB 90                \ trackSectionFrom
- EQUB &BF               \ zTrackSectionOLo (zTrackSectionO = &39BF)
+ EQUB &BF               \ zTrackSectionOLo (zTrackSectionO = &39BF =  14783)
  EQUB 54                \ trackSectionSize
 
                         \ Track section 9
 
  EQUB %00110011         \ trackSectionFlag
- EQUB &9F               \ xTrackSectionILo (xTrackSectionI = &199F)
- EQUB &9F               \ yTrackSectionILo (yTrackSectionI = &0D9F)
- EQUB &61               \ zTrackSectionILo (zTrackSectionI = &2061)
- EQUB &FE               \ xTrackSectionOLo (xTrackSectionO = &1AFE)
+ EQUB &9F               \ xTrackSectionILo (xTrackSectionI = &199F =   6559)
+ EQUB &9F               \ yTrackSectionILo (yTrackSectionI = &0D9F =   3487)
+ EQUB &61               \ zTrackSectionILo (zTrackSectionI = &2061 =   8289)
+ EQUB &FE               \ xTrackSectionOLo (xTrackSectionO = &1AFE =   6910)
  EQUB 91                \ trackSectionFrom
- EQUB &6F               \ zTrackSectionOLo (zTrackSectionO = &206F)
+ EQUB &6F               \ zTrackSectionOLo (zTrackSectionO = &206F =   8303)
  EQUB 16                \ trackSectionSize
 
                         \ Track section 10
 
  EQUB %00000000         \ trackSectionFlag
- EQUB &FA               \ xTrackSectionILo (xTrackSectionI = &1BFA)
- EQUB &5F               \ yTrackSectionILo (yTrackSectionI = &0D5F)
- EQUB &5D               \ zTrackSectionILo (zTrackSectionI = &195D)
- EQUB &1B               \ xTrackSectionOLo (xTrackSectionO = &1D1B)
+ EQUB &FA               \ xTrackSectionILo (xTrackSectionI = &1BFA =   7162)
+ EQUB &5F               \ yTrackSectionILo (yTrackSectionI = &0D5F =   3423)
+ EQUB &5D               \ zTrackSectionILo (zTrackSectionI = &195D =   6493)
+ EQUB &1B               \ xTrackSectionOLo (xTrackSectionO = &1D1B =   7451)
  EQUB 107               \ trackSectionFrom
- EQUB &25               \ zTrackSectionOLo (zTrackSectionO = &1A25)
+ EQUB &25               \ zTrackSectionOLo (zTrackSectionO = &1A25 =   6693)
  EQUB 38                \ trackSectionSize
 
                         \ Track section 11
 
  EQUB %00110000         \ trackSectionFlag
- EQUB &12               \ xTrackSectionILo (xTrackSectionI = &2612)
- EQUB &C7               \ yTrackSectionILo (yTrackSectionI = &0CC7)
- EQUB &AB               \ zTrackSectionILo (zTrackSectionI = &0AAB)
- EQUB &33               \ xTrackSectionOLo (xTrackSectionO = &2733)
+ EQUB &12               \ xTrackSectionILo (xTrackSectionI = &2612 =   9746)
+ EQUB &C7               \ yTrackSectionILo (yTrackSectionI = &0CC7 =   3271)
+ EQUB &AB               \ zTrackSectionILo (zTrackSectionI = &0AAB =   2731)
+ EQUB &33               \ xTrackSectionOLo (xTrackSectionO = &2733 =  10035)
  EQUB 108               \ trackSectionFrom
- EQUB &73               \ zTrackSectionOLo (zTrackSectionO = &0B73)
+ EQUB &73               \ zTrackSectionOLo (zTrackSectionO = &0B73 =   2931)
  EQUB 27                \ trackSectionSize
 
                         \ Track section 12
 
  EQUB %10101101         \ trackSectionFlag
- EQUB &C5               \ xTrackSectionILo (xTrackSectionI = &2DC5)
- EQUB &5B               \ yTrackSectionILo (yTrackSectionI = &0C5B)
- EQUB &8B               \ zTrackSectionILo (zTrackSectionI = &008B)
- EQUB &DD               \ xTrackSectionOLo (xTrackSectionO = &2EDD)
+ EQUB &C5               \ xTrackSectionILo (xTrackSectionI = &2DC5 =  11717)
+ EQUB &5B               \ yTrackSectionILo (yTrackSectionI = &0C5B =   3163)
+ EQUB &8B               \ zTrackSectionILo (zTrackSectionI = &008B = 139)
+ EQUB &DD               \ xTrackSectionOLo (xTrackSectionO = &2EDD =  11997)
  EQUB 109               \ trackSectionFrom
- EQUB &5F               \ zTrackSectionOLo (zTrackSectionO = &015F)
+ EQUB &5F               \ zTrackSectionOLo (zTrackSectionO = &015F = 351)
  EQUB 27                \ trackSectionSize
 
                         \ Track section 13
 
  EQUB %00101010         \ trackSectionFlag
- EQUB &65               \ xTrackSectionILo (xTrackSectionI = &2965)
- EQUB &4D               \ yTrackSectionILo (yTrackSectionI = &0C4D)
- EQUB &7E               \ zTrackSectionILo (zTrackSectionI = &F67E)
- EQUB &D3               \ xTrackSectionOLo (xTrackSectionO = &29D3)
+ EQUB &65               \ xTrackSectionILo (xTrackSectionI = &2965 =  10597)
+ EQUB &4D               \ yTrackSectionILo (yTrackSectionI = &0C4D =   3149)
+ EQUB &7E               \ zTrackSectionILo (zTrackSectionI = &F67E =  -2434)
+ EQUB &D3               \ xTrackSectionOLo (xTrackSectionO = &29D3 =  10707)
  EQUB 136               \ trackSectionFrom
- EQUB &2F               \ zTrackSectionOLo (zTrackSectionO = &F52F)
+ EQUB &2F               \ zTrackSectionOLo (zTrackSectionO = &F52F =  -2769)
  EQUB 40                \ trackSectionSize
 
                         \ Track section 14
 
  EQUB %00110011         \ trackSectionFlag
- EQUB &95               \ xTrackSectionILo (xTrackSectionI = &1795)
- EQUB &4D               \ yTrackSectionILo (yTrackSectionI = &0C4D)
- EQUB &8E               \ zTrackSectionILo (zTrackSectionI = &F08E)
- EQUB &03               \ xTrackSectionOLo (xTrackSectionO = &1803)
+ EQUB &95               \ xTrackSectionILo (xTrackSectionI = &1795 =   6037)
+ EQUB &4D               \ yTrackSectionILo (yTrackSectionI = &0C4D =   3149)
+ EQUB &8E               \ zTrackSectionILo (zTrackSectionI = &F08E =  -3954)
+ EQUB &03               \ xTrackSectionOLo (xTrackSectionO = &1803 =   6147)
  EQUB 137               \ trackSectionFrom
- EQUB &3F               \ zTrackSectionOLo (zTrackSectionO = &EF3F)
+ EQUB &3F               \ zTrackSectionOLo (zTrackSectionO = &EF3F =  -4289)
  EQUB 16                \ trackSectionSize
 
                         \ Track section 15
 
  EQUB %00000000         \ trackSectionFlag
- EQUB &D8               \ xTrackSectionILo (xTrackSectionI = &11D8)
- EQUB &0D               \ yTrackSectionILo (yTrackSectionI = &0C0D)
- EQUB &FA               \ zTrackSectionILo (zTrackSectionI = &EBFA)
- EQUB &05               \ xTrackSectionOLo (xTrackSectionO = &1305)
+ EQUB &D8               \ xTrackSectionILo (xTrackSectionI = &11D8 =   4568)
+ EQUB &0D               \ yTrackSectionILo (yTrackSectionI = &0C0D =   3085)
+ EQUB &FA               \ zTrackSectionILo (zTrackSectionI = &EBFA =  -5126)
+ EQUB &05               \ xTrackSectionOLo (xTrackSectionO = &1305 =   4869)
  EQUB 153               \ trackSectionFrom
- EQUB &44               \ zTrackSectionOLo (zTrackSectionO = &EB44)
+ EQUB &44               \ zTrackSectionOLo (zTrackSectionO = &EB44 =  -5308)
  EQUB 135               \ trackSectionSize
 
                         \ Track section 16
 
  EQUB %00000001         \ trackSectionFlag
- EQUB &26               \ xTrackSectionILo (xTrackSectionI = &F126)
- EQUB &D5               \ yTrackSectionILo (yTrackSectionI = &07D5)
- EQUB &A9               \ zTrackSectionILo (zTrackSectionI = &B5A9)
- EQUB &53               \ xTrackSectionOLo (xTrackSectionO = &F253)
+ EQUB &26               \ xTrackSectionILo (xTrackSectionI = &F126 =  -3802)
+ EQUB &D5               \ yTrackSectionILo (yTrackSectionI = &07D5 =   2005)
+ EQUB &A9               \ zTrackSectionILo (zTrackSectionI = &B5A9 = -19031)
+ EQUB &53               \ xTrackSectionOLo (xTrackSectionO = &F253 =  -3501)
  EQUB 154               \ trackSectionFrom
- EQUB &F3               \ zTrackSectionOLo (zTrackSectionO = &B4F3)
- EQUB 6                 \ trackSectionSize
+ EQUB &F3               \ zTrackSectionOLo (zTrackSectionO = &B4F3 = -19213)
+ EQUB 06                \ trackSectionSize
 
                         \ Track section 17
 
  EQUB %00110000         \ trackSectionFlag
- EQUB &B2               \ xTrackSectionILo (xTrackSectionI = &EFB2)
- EQUB &F7               \ yTrackSectionILo (yTrackSectionI = &07F7)
- EQUB &3F               \ zTrackSectionILo (zTrackSectionI = &B33F)
- EQUB &DF               \ xTrackSectionOLo (xTrackSectionO = &F0DF)
+ EQUB &B2               \ xTrackSectionILo (xTrackSectionI = &EFB2 =  -4174)
+ EQUB &F7               \ yTrackSectionILo (yTrackSectionI = &07F7 =   2039)
+ EQUB &3F               \ zTrackSectionILo (zTrackSectionI = &B33F = -19649)
+ EQUB &DF               \ xTrackSectionOLo (xTrackSectionO = &F0DF =  -3873)
  EQUB 160               \ trackSectionFrom
- EQUB &89               \ zTrackSectionOLo (zTrackSectionO = &B289)
+ EQUB &89               \ zTrackSectionOLo (zTrackSectionO = &B289 = -19831)
  EQUB 28                \ trackSectionSize
 
                         \ Track section 18
 
  EQUB %10101101         \ trackSectionFlag
- EQUB &EA               \ xTrackSectionILo (xTrackSectionI = &E8EA)
- EQUB &9B               \ yTrackSectionILo (yTrackSectionI = &099B)
- EQUB &FB               \ zTrackSectionILo (zTrackSectionI = &A7FB)
- EQUB &17               \ xTrackSectionOLo (xTrackSectionO = &EA17)
+ EQUB &EA               \ xTrackSectionILo (xTrackSectionI = &E8EA =  -5910)
+ EQUB &9B               \ yTrackSectionILo (yTrackSectionI = &099B =   2459)
+ EQUB &FB               \ zTrackSectionILo (zTrackSectionI = &A7FB = -22533)
+ EQUB &17               \ xTrackSectionOLo (xTrackSectionO = &EA17 =  -5609)
  EQUB 161               \ trackSectionFrom
- EQUB &45               \ zTrackSectionOLo (zTrackSectionO = &A745)
+ EQUB &45               \ zTrackSectionOLo (zTrackSectionO = &A745 = -22715)
  EQUB 40                \ trackSectionSize
 
                         \ Track section 19
 
  EQUB %00110010         \ trackSectionFlag
- EQUB &49               \ xTrackSectionILo (xTrackSectionI = &D849)
- EQUB &64               \ yTrackSectionILo (yTrackSectionI = &0A64)
- EQUB &A2               \ zTrackSectionILo (zTrackSectionI = &A5A2)
- EQUB &4A               \ xTrackSectionOLo (xTrackSectionO = &D74A)
+ EQUB &49               \ xTrackSectionILo (xTrackSectionI = &D849 = -10167)
+ EQUB &64               \ yTrackSectionILo (yTrackSectionI = &0A64 =   2660)
+ EQUB &A2               \ zTrackSectionILo (zTrackSectionI = &A5A2 = -23134)
+ EQUB &4A               \ xTrackSectionOLo (xTrackSectionO = &D74A = -10422)
  EQUB 201               \ trackSectionFrom
- EQUB &AE               \ zTrackSectionOLo (zTrackSectionO = &A4AE)
+ EQUB &AE               \ zTrackSectionOLo (zTrackSectionO = &A4AE = -23378)
  EQUB 104               \ trackSectionSize
 
                         \ Track section 20
 
  EQUB %10101101         \ trackSectionFlag
- EQUB &91               \ xTrackSectionILo (xTrackSectionI = &B691)
- EQUB &F4               \ yTrackSectionILo (yTrackSectionI = &07F4)
- EQUB &FA               \ zTrackSectionILo (zTrackSectionI = &C8FA)
- EQUB &92               \ xTrackSectionOLo (xTrackSectionO = &B592)
+ EQUB &91               \ xTrackSectionILo (xTrackSectionI = &B691 = -18799)
+ EQUB &F4               \ yTrackSectionILo (yTrackSectionI = &07F4 =   2036)
+ EQUB &FA               \ zTrackSectionILo (zTrackSectionI = &C8FA = -14086)
+ EQUB &92               \ xTrackSectionOLo (xTrackSectionO = &B592 = -19054)
  EQUB 202               \ trackSectionFrom
- EQUB &06               \ zTrackSectionOLo (zTrackSectionO = &C806)
+ EQUB &06               \ zTrackSectionOLo (zTrackSectionO = &C806 = -14330)
  EQUB 33                \ trackSectionSize
 
                         \ Track section 21
 
  EQUB %00101010         \ trackSectionFlag
- EQUB &03               \ xTrackSectionILo (xTrackSectionI = &B603)
- EQUB &3E               \ yTrackSectionILo (yTrackSectionI = &083E)
- EQUB &1E               \ zTrackSectionILo (zTrackSectionI = &D71E)
- EQUB &F2               \ xTrackSectionOLo (xTrackSectionO = &B4F2)
+ EQUB &03               \ xTrackSectionILo (xTrackSectionI = &B603 = -18941)
+ EQUB &3E               \ yTrackSectionILo (yTrackSectionI = &083E =   2110)
+ EQUB &1E               \ zTrackSectionILo (zTrackSectionI = &D71E = -10466)
+ EQUB &F2               \ xTrackSectionOLo (xTrackSectionO = &B4F2 = -19214)
  EQUB 235               \ trackSectionFrom
- EQUB &FC               \ zTrackSectionOLo (zTrackSectionO = &D7FC)
+ EQUB &FC               \ zTrackSectionOLo (zTrackSectionO = &D7FC = -10244)
  EQUB 85                \ trackSectionSize
 
                         \ Track section 22
 
  EQUB %00110011         \ trackSectionFlag
- EQUB &3F               \ xTrackSectionILo (xTrackSectionI = &CF3F)
- EQUB &90               \ yTrackSectionILo (yTrackSectionI = &0B90)
- EQUB &FF               \ zTrackSectionILo (zTrackSectionI = &F5FF)
- EQUB &2E               \ xTrackSectionOLo (xTrackSectionO = &CE2E)
+ EQUB &3F               \ xTrackSectionILo (xTrackSectionI = &CF3F = -12481)
+ EQUB &90               \ yTrackSectionILo (yTrackSectionI = &0B90 =   2960)
+ EQUB &FF               \ zTrackSectionILo (zTrackSectionI = &F5FF =  -2561)
+ EQUB &2E               \ xTrackSectionOLo (xTrackSectionO = &CE2E = -12754)
  EQUB 236               \ trackSectionFrom
- EQUB &DD               \ zTrackSectionOLo (zTrackSectionO = &F6DD)
+ EQUB &DD               \ zTrackSectionOLo (zTrackSectionO = &F6DD =  -2339)
  EQUB 18                \ trackSectionSize
 
                         \ Track section 23
 
  EQUB %00000100         \ trackSectionFlag
- EQUB &DE               \ xTrackSectionILo (xTrackSectionI = &D1DE)
- EQUB &7D               \ yTrackSectionILo (yTrackSectionI = &0C7D)
- EQUB &D2               \ zTrackSectionILo (zTrackSectionI = &FDD2)
- EQUB &7E               \ xTrackSectionOLo (xTrackSectionO = &D07E)
+ EQUB &DE               \ xTrackSectionILo (trackSection1 =  &D1DE)
+ EQUB &7D               \ yTrackSectionILo (trackSection1 =  &0C7D)
+ EQUB &D2               \ zTrackSectionILo (trackSection1 =  &FDD2)
+ EQUB &7E               \ xTrackSectionOLo (trackSection1 =  &D07E)
  EQUB 254               \ trackSectionFrom
- EQUB &C5               \ zTrackSectionOLo (zTrackSectionO = &FDC5)
+ EQUB &C5               \ zTrackSectionOLo (trackSection1 =  &FDC5)
  EQUB 38                \ trackSectionSize
 
                         \ Same as track section 0
 
  EQUB %00110000         \ trackSectionFlag
- EQUB &20               \ xTrackSectionILo (xTrackSectionI = &D120)
- EQUB &80               \ yTrackSectionILo (yTrackSectionI = &0C80)
- EQUB &A0               \ zTrackSectionILo (zTrackSectionI = &0FA0)
- EQUB &C0               \ xTrackSectionOLo (xTrackSectionO = &CFC0)
- EQUB 0                 \ trackSectionFrom
- EQUB &94               \ zTrackSectionOLo (zTrackSectionO = &0F94)
+ EQUB &20               \ xTrackSectionILo (trackSection1 =  &D120)
+ EQUB &80               \ yTrackSectionILo (trackSection1 =  &0C80)
+ EQUB &A0               \ zTrackSectionILo (trackSection1 =  &0FA0)
+ EQUB &C0               \ xTrackSectionOLo (trackSection1 =  &CFC0)
+ EQUB 00                \ trackSectionFrom
+ EQUB &94               \ zTrackSectionOLo (trackSection1 =  &0F94)
  EQUB 99                \ trackSectionSize
 
  EQUB &64, &F0          \ These bytes appear to be unused
@@ -1025,8 +1026,6 @@ ORG CODE%
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
-\
-\ trackData+&6D0 = &59D0
 \
 \ These 24 bytes are copied to L5FB0, one per track section
 \ Bit 0 -> bit 7 of result
@@ -1073,7 +1072,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&6EA = &59EA
 \ Track sections and object types for 16 road signs
 \ Bits 0-2 = Object type of road sign (add 7 to get the type)
 \ Bits 3-7 = Index into track data at trackData+&001, trackData+&601
@@ -1082,22 +1080,22 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB %00000011         \ 00000 011    Type 10    Chicane       Track section  0
- EQUB %00010000         \ 00010 000    Type  7    Straight      Track section  2
- EQUB %00011001         \ 00011 001    Type  8    Start flag    Track section  3
- EQUB %00101100         \ 00101 100    Type 11    Right turn    Track section  5
- EQUB %00111000         \ 00111 000    Type  7    Straight      Track section  7
- EQUB %01001101         \ 01001 101    Type 12    Left turn     Track section  9
- EQUB %01100100         \ 01100 100    Type 11    Right turn    Track section 12
- EQUB %01110101         \ 01110 101    Type 12    Left turn     Track section 14
- EQUB %01110000         \ 01110 000    Type  7    Straight      Track section 14
- EQUB %01110000         \ 01110 000    Type  7    Straight      Track section 14
- EQUB %10010100         \ 10010 100    Type 11    Right turn    Track section 18
- EQUB %10011000         \ 10011 000    Type  7    Straight      Track section 19
- EQUB %10100100         \ 10100 100    Type 11    Right turn    Track section 20
- EQUB %10101000         \ 10101 000    Type  7    Straight      Track section 21
- EQUB %10110101         \ 10110 101    Type 12    Left turn     Track section 22
- EQUB %10111000         \ 10111 000    Type  7    Straight      Track section 23
+ EQUB %00000011         \ Sign  0: 00000 011   Type 10   Chicane      Section  0
+ EQUB %00010000         \ Sign  1: 00010 000   Type  7   Straight     Section  2
+ EQUB %00011001         \ Sign  2: 00011 001   Type  8   Start flag   Section  3
+ EQUB %00101100         \ Sign  3: 00101 100   Type 11   Right turn   Section  5
+ EQUB %00111000         \ Sign  4: 00111 000   Type  7   Straight     Section  7
+ EQUB %01001101         \ Sign  5: 01001 101   Type 12   Left turn    Section  9
+ EQUB %01100100         \ Sign  6: 01100 100   Type 11   Right turn   Section 12
+ EQUB %01110101         \ Sign  7: 01110 101   Type 12   Left turn    Section 14
+ EQUB %01110000         \ Sign  8: 01110 000   Type  7   Straight     Section 14
+ EQUB %01110000         \ Sign  9: 01110 000   Type  7   Straight     Section 14
+ EQUB %10010100         \ Sign 10: 10010 100   Type 11   Right turn   Section 18
+ EQUB %10011000         \ Sign 11: 10011 000   Type  7   Straight     Section 19
+ EQUB %10100100         \ Sign 12: 10100 100   Type 11   Right turn   Section 20
+ EQUB %10101000         \ Sign 13: 10101 000   Type  7   Straight     Section 21
+ EQUB %10110101         \ Sign 14: 10110 101   Type 12   Left turn    Section 22
+ EQUB %10111000         \ Sign 15: 10111 000   Type  7   Straight     Section 23
 
 \ ******************************************************************************
 \
@@ -1108,7 +1106,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&6FA = &59FA
 \ The number of bytes at trackData+&6D0 (24) that we copy to L5FB0
 \
 \ ******************************************************************************
@@ -1121,10 +1118,6 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track
 \    Summary: The number of track vectors in the trackVector tables
-\
-\ ------------------------------------------------------------------------------
-\
-\ trackData+&6FB = &59FB
 \
 \ ******************************************************************************
 
@@ -1139,7 +1132,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData(&6FD &6FC) = (&59FD &59FC)
 \ Length of full track (in terms of progress)
 \ carProgress wraps round to 0 when it reaches this figure
 \
@@ -1156,7 +1148,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData(&6FD &6FC) = (&59FD &59FC)
 \ Length of full track (in terms of progress)
 \ carProgress wraps round to 0 when it reaches this figure
 \
@@ -1174,7 +1165,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData(&6FE &6FF) = (&59FF &59FE)
 \ 24 bytes in (carProgressHi carProgressLo) are initialised to &034B
 \
 \ ******************************************************************************
@@ -1191,7 +1181,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData(&6FE &6FF) = (&59FF &59FE)
 \ 24 bytes in (carProgressHi carProgressLo) are initialised to &034B
 \
 \ ******************************************************************************
@@ -1208,7 +1197,6 @@ ORG CODE%
 \ ------------------------------------------------------------------------------
 \
 \ .trackLapTimeSec
-\ trackData+&700 = &5A00
 \ Race class adjuster: seconds
 \ See MainLoop (Part 4 of 6)
 \ If the slowest lap time is a human player, and it's slower than one of these
@@ -1229,7 +1217,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&703 = &5A03
 \ See MainLoop (Part 4 of 6)
 \ Race class adjuster: minutes
 \
@@ -1248,7 +1235,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&706 = &5A06
+\ 
 \
 \ ******************************************************************************
 
@@ -1269,7 +1256,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&70D = &5A0D
+\ 
 \
 \ ******************************************************************************
 
@@ -1290,7 +1277,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&714 = &5A14
+\ 
 \
 \ ******************************************************************************
 
@@ -1308,7 +1295,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&717 = &5A17
+\ 
 \
 \ ******************************************************************************
 
@@ -1323,7 +1310,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&718 = &5A18
 \ Passed to sub_C109B in A by ResetVariables for a practice or qualifying lap
 \
 \ ******************************************************************************
@@ -1340,7 +1326,6 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ trackData+&719 = &5A19
 \
 \ The value of the timerAdjust variable in the main game code is incremented on
 \ every iteration of the main driving loop. When it reaches the value in
@@ -1362,8 +1347,6 @@ ORG CODE%
 \    Summary: Slowdown factor for non-player cars in the race
 \
 \ ------------------------------------------------------------------------------
-\
-\ trackData+&71A = &5A1A
 \
 \ Reduce the speed of all cars in a race by this amount (this does not affect
 \ the speed during qualifying)
