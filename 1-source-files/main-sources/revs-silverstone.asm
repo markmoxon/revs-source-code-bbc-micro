@@ -51,7 +51,7 @@ ORG CODE%
 \
 \       Name: Track section data (Part 1 of 2)
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Data for the track sections
 \
 \ ------------------------------------------------------------------------------
@@ -405,7 +405,7 @@ ORG CODE%
 \
 \       Name: xTrackSignVector
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -435,7 +435,7 @@ ORG CODE%
 \
 \       Name: zTrackSignVector
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -465,7 +465,7 @@ ORG CODE%
 \
 \       Name: yTrackSignVector
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -495,7 +495,7 @@ ORG CODE%
 \
 \       Name: xTrackVectorI
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Vector x-coordinates between two consecutive points on the inside
 \             of the track
 \
@@ -542,7 +542,7 @@ ORG CODE%
 \
 \       Name: yTrackVectorI
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Vector y-coordinates between two consecutive points on the inside
 \             of the track
 \
@@ -589,7 +589,7 @@ ORG CODE%
 \
 \       Name: zTrackVectorI
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Vector z-coordinates between two consecutive points on the inside
 \             of the track
 \
@@ -636,7 +636,7 @@ ORG CODE%
 \
 \       Name: xTrackVectorO
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Vector x-coordinates from the inside to the outside of the track
 \
 \ ------------------------------------------------------------------------------
@@ -682,7 +682,7 @@ ORG CODE%
 \
 \       Name: zTrackVectorO
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Vector z-coordinates from the inside to the outside of the track
 \
 \ ------------------------------------------------------------------------------
@@ -728,7 +728,7 @@ ORG CODE%
 \
 \       Name: Track section data (Part 2 of 2)
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Data for the track sections
 \
 \ ------------------------------------------------------------------------------
@@ -1063,17 +1063,19 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackSteering
+\       Name: trackRacingLine
 \       Type: Variable
-\   Category: Track
-\    Summary: 
+\   Category: Track data
+\    Summary: The optimum racing line for each track section
 \
 \ ------------------------------------------------------------------------------
 \
-\ These 24 bytes are copied to L5FB0, one per track section
-\ Bit 0 -> bit 7 of result
-\ Bit 1 clear -> result is scaled by U
-\ See sub_C44C6
+\ These 24 bytes are copied to bestRacingLine by the SetBestRacingLine routine,
+\ and are processed on the way.
+\
+\   * Bit 0 -> bit 7 of result
+\
+\   * Bit 1 clear -> result is scaled by U
 \
 \ ******************************************************************************
 
@@ -1108,18 +1110,26 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackRoadSigns
+\       Name: trackSignData
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Track sections and object types for 16 road signs
 \
 \ ------------------------------------------------------------------------------
 \
-\ Track sections and object types for 16 road signs
-\ Bits 0-2 = Object type of road sign (add 7 to get the type)
-\ Bits 3-7 = Index into track data at trackData+&001, trackData+&601
-\            Track section
-\ Road sign at track section 23 is the sign we see at start of practice
+\ Object types and base coordinates for the 16 road signs.
+\
+\   * Bits 0-2 = Object type of road sign (add 7 to get the type)
+\
+\   * Bits 3-7 = The track section coordinates to use as the base coordinates
+\                for the sign (i.e. we add the track sign vector to this
+\                section's start coordinates to get the sign coordinates)
+\
+\ Note that this simply defines the sign's 3D coordinates. The mapping between
+\ track sections and the signs in those sections is defined in each section's
+\ trackSectionData byte.
+\
+\ The last sign in this table is the one we see at the start of practice.
 \
 \ ******************************************************************************
 
@@ -1144,12 +1154,8 @@ ORG CODE%
 \
 \       Name: trackSectionCount
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: The number of track sections * 8
-\
-\ ------------------------------------------------------------------------------
-\
-\ The number of bytes at trackData+&6D0 (24) that we copy to L5FB0
 \
 \ ******************************************************************************
 
@@ -1159,7 +1165,7 @@ ORG CODE%
 \
 \       Name: trackVectorCount
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: The number of track vectors in the trackVector tables
 \
 \ ******************************************************************************
@@ -1170,13 +1176,12 @@ ORG CODE%
 \
 \       Name: trackLengthLo
 \       Type: Variable
-\   Category: Track
-\    Summary: Low byte of length of full track (in terms of progress)
+\   Category: Track data
+\    Summary: Low byte of the length of the full track (in terms of progress)
 \
 \ ------------------------------------------------------------------------------
 \
-\ Length of full track (in terms of progress)
-\ carProgress wraps round to 0 when it reaches this figure
+\ (objProgressHi objProgressLo) wraps round to 0 when it reaches this figure.
 \
 \ ******************************************************************************
 
@@ -1186,13 +1191,12 @@ ORG CODE%
 \
 \       Name: trackLengthHi
 \       Type: Variable
-\   Category: Track
-\    Summary: High byte of length of full track (in terms of progress)
+\   Category: Track data
+\    Summary: High byte of the length of the full track (in terms of progress)
 \
 \ ------------------------------------------------------------------------------
 \
-\ Length of full track (in terms of progress)
-\ carProgress wraps round to 0 when it reaches this figure
+\ (objProgressHi objProgressLo) wraps round to 0 when it reaches this figure.
 \
 \ ******************************************************************************
 
@@ -1200,50 +1204,39 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackStartLo
+\       Name: trackPracticeLo
 \       Type: Variable
-\   Category: Track
-\    Summary: Low byte of starting point for practice laps (in terms of
+\   Category: Track data
+\    Summary: Low byte of the starting point for practice laps (in terms of
 \             progress)
 \
-\ ------------------------------------------------------------------------------
-\
-\ 24 bytes in (carProgressHi carProgressLo) are initialised to &034B
-\
 \ ******************************************************************************
 
- EQUB &4B               \ (trackStartHi trackStartLo) = &034B
+ EQUB &4B               \ (trackPracticeHi trackPracticeLo) = &034B
 
 \ ******************************************************************************
 \
-\       Name: trackStartHi
+\       Name: trackPracticeHi
 \       Type: Variable
-\   Category: Track
-\    Summary: High byte of starting point for practice laps (in terms of
+\   Category: Track data
+\    Summary: High byte of the starting point for practice laps (in terms of
 \             progress)
 \
-\ ------------------------------------------------------------------------------
-\
-\ 24 bytes in (carProgressHi carProgressLo) are initialised to &034B
-\
 \ ******************************************************************************
 
- EQUB &03              \ (trackStartHi trackStartLo) = &034B
+ EQUB &03              \ (trackPracticeHi trackPracticeLo) = &034B
 
 \ ******************************************************************************
 \
 \       Name: trackLapTimeSec
 \       Type: Variable
-\   Category: Track
-\    Summary: 
+\   Category: Track data
+\    Summary: Lap times for adjusting the race class (seconds)
 \
 \ ------------------------------------------------------------------------------
 \
-\ .trackLapTimeSec
-\ Race class adjuster: seconds
-\ See MainLoop (Part 4 of 6)
 \ If the slowest lap time is a human player, and it's slower than one of these
-\ times, then we set the race class to the relevant difficulty
+\ times, then we change the race class to the relevant difficulty.
 \
 \ ******************************************************************************
 
@@ -1255,13 +1248,13 @@ ORG CODE%
 \
 \       Name: trackLapTimeMin
 \       Type: Variable
-\   Category: Track
-\    Summary: 
+\   Category: Track data
+\    Summary: Lap times for adjusting the race class (minutes)
 \
 \ ------------------------------------------------------------------------------
 \
-\ See MainLoop (Part 4 of 6)
-\ Race class adjuster: minutes
+\ If the slowest lap time is a human player, and it's slower than one of these
+\ times, then we change the race class to the relevant difficulty.
 \
 \ ******************************************************************************
 
@@ -1273,7 +1266,7 @@ ORG CODE%
 \
 \       Name: trackGearRatio
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1294,7 +1287,7 @@ ORG CODE%
 \
 \       Name: trackGearPower
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1315,7 +1308,7 @@ ORG CODE%
 \
 \       Name: trackBaseSpeed
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1330,15 +1323,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackLapStart
+\       Name: trackStartPosition
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: The starting position of the player during a practice or
 \             qualifying lap
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
 \
 \ ******************************************************************************
 
@@ -1348,12 +1337,8 @@ ORG CODE%
 \
 \       Name: trackCarSpacing
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: The spacing between cars at the start of a qualifying lap
-\
-\ ------------------------------------------------------------------------------
-\
-\ Passed to sub_C109B in A by ResetVariables for a practice or qualifying lap
 \
 \ ******************************************************************************
 
@@ -1363,12 +1348,11 @@ ORG CODE%
 \
 \       Name: trackTimerAdjust
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Adjust the speed of the timers to allow for fine-tuning on a
 \             per-track basis
 \
 \ ------------------------------------------------------------------------------
-\
 \
 \ The value of the timerAdjust variable in the main game code is incremented on
 \ every iteration of the main driving loop. When it reaches the value in
@@ -1386,13 +1370,13 @@ ORG CODE%
 \
 \       Name: trackRaceSlowdown
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: Slowdown factor for non-player cars in the race
 \
 \ ------------------------------------------------------------------------------
 \
 \ Reduce the speed of all cars in a race by this amount (this does not affect
-\ the speed during qualifying)
+\ the speed during qualifying). I suspect this is used for testing purposes.
 \
 \ ******************************************************************************
 
@@ -1407,12 +1391,8 @@ ORG CODE%
 \
 \       Name: CallTrackHook
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: The track file's hook code
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
 \
 \ ******************************************************************************
 
@@ -1428,30 +1408,20 @@ ORG CODE%
 \
 \       Name: trackChecksum
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: The track file's checksum
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
 \
 \ ******************************************************************************
 
 .trackChecksum
 
- EQUB &49               \ Checksum bytes:
- EQUB &8B               \
- EQUB &8A               \   * trackChecksum+0 counts the number of data bytes
- EQUB &C7               \     ending in %00
-                        \
-                        \   * trackChecksum+1 counts the number of data bytes
-                        \     ending in %01
-                        \
-                        \   * trackChecksum+2 counts the number of data bytes
-                        \     ending in %10
-                        \
-                        \   * trackChecksum+3 counts the number of data bytes
-                        \     ending in %11
+ EQUB &49               \ Counts the number of data bytes ending in %00
+
+ EQUB &8B               \ Counts the number of data bytes ending in %01
+
+ EQUB &8A               \ Counts the number of data bytes ending in %10
+ 
+ EQUB &C7               \ Counts the number of data bytes ending in %11
 
  EQUS "REVS"            \ Game name
 

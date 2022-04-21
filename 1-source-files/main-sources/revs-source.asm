@@ -1538,7 +1538,8 @@ ORG &0880
                         \ progresses round the track, before resetting to zero
                         \ again at the end
                         \
-                        \ Set to (trackStartHi trackStartLo) in ResetVariables
+                        \ Set to (trackPracticeHi trackPracticeLo) in
+                        \ ResetVariables
                         \
                         \ For the Silverstone track, objProgress is initialised
                         \ to &034B and has a maximum value of &0400
@@ -1558,7 +1559,8 @@ ORG &0880
                         \ progresses round the track, before resetting to zero
                         \ again at the end
                         \
-                        \ Set to (trackStartHi trackStartLo) in ResetVariables
+                        \ Set to (trackPracticeHi trackPracticeLo) in
+                        \ ResetVariables
                         \
                         \ For the Silverstone track, objProgress is initialised
                         \ to &034B and has a maximum value of &0400
@@ -7641,9 +7643,9 @@ ENDIF
 
 .rese3
 
- LDA trackStartHi       \ Set the X-th byte of (objProgressHi objProgressLo) to
- STA objProgressHi,X    \ the 16-bit value in (trackStartHi trackStartLo), which
- LDA trackStartLo       \ is &034B for the Silverstone track
+ LDA trackPracticeHi    \ Set the X-th byte of (objProgressHi objProgressLo) to
+ STA objProgressHi,X    \ the 16-bit value in (trackPracticeHi trackPracticeLo),
+ LDA trackPracticeLo    \ which is &034B for the Silverstone track
  STA objProgressLo,X
 
  LDA #0                 \ Zero the X-th byte of objTrackSection
@@ -7670,8 +7672,9 @@ ENDIF
                         \ This is a practice or qualifying lap, so we set the
                         \ player's position as specified in the track data
 
- LDX trackLapStart      \ Set A to trackLapStart, which is 4 for the Silverstone
-                        \ track
+ LDX trackStartPosition \ Set X to trackStartPosition, the starting position for
+                        \ practice or qualifying laps, which is 4 for the
+                        \ Silverstone track
 
  LDY currentPosition    \ Set Y to the current player's position
 
@@ -24046,9 +24049,10 @@ NEXT
  TAY
 
                         \ Now we copy Y bytes (one per track section) from
-                        \ trackSteering to bestRacingLine, processing each byte
-                        \ as we go (i.e. taking the input from trackSteering and
-                        \ storing the result in bestRacingLine):
+                        \ trackRacingLine to bestRacingLine, processing each
+                        \ byte as we go (i.e. taking the input from
+                        \ trackRacingLine and storing the result in
+                        \ bestRacingLine):
                         \
                         \   * Bit 7 of the result = bit 0 of the input
                         \
@@ -24059,12 +24063,12 @@ NEXT
                         \     * A >> 2 * U / 256 if bit 1 of the input is clear
                         \     * A >> 2           if bit 1 of the input is set
                         \
-                        \ where A is the input from trackSteering and U is the
+                        \ where A is the input from trackRacingLine and U is the
                         \ base speed from above
 
 .slin1
 
- LDA trackSteering,Y    \ Fetch the Y-th byte from trackSteering as the input
+ LDA trackRacingLine,Y  \ Fetch the Y-th byte from trackRacingLine as the input
 
  LSR A                  \ Shift bit 0 of the input into the C flag and store it
  PHP                    \ on the stack so we can put it into bit 7 of the result
@@ -26081,6 +26085,13 @@ ENDIF
                         \ We get here if we are calling BuildRoadSign again for
                         \ the same sign number (we set previousSignNumber to
                         \ the current sign number later in the routine)
+                        \
+                        \ This ensures that we display signs at the start of
+                        \ sections that have a different value in bits 4-7 of
+                        \ trackSectionData compared to the previous section, so
+                        \ signs appear when we move into a section with a new
+                        \ value in bits 4-7 of the trackSectionData (and that
+                        \ value is the number of the sign to show)
 
  ADC #0                 \ Increment the sign number in A (we know the C flag is
                         \ set, as the above comparison was equal)
@@ -26139,14 +26150,14 @@ ENDIF
                         \                - [ yTrackSignVector * 2 ^ 4 ]
                         \                  [ zTrackSignVector * 2 ^ 6 ]
 
- LDA trackRoadSigns,X   \ Set objectType to the object type for road sign X,
- AND #%00000111         \ which comes from bits 0-2 of trackRoadSigns, and
+ LDA trackSignData,X    \ Set objectType to the object type for road sign X,
+ AND #%00000111         \ which comes from bits 0-2 of trackSignData, and
  CLC                    \ gets 7 added to get the range 7 to 12
  ADC #7
  STA objectType
 
- LDA trackRoadSigns,X   \ Set Y to the track section number for road sign X,
- AND #%11111000         \ which comes from bits 3-7 of trackRoadSigns
+ LDA trackSignData,X    \ Set Y to the track section number for road sign X,
+ AND #%11111000         \ which comes from bits 3-7 of trackSignData
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
@@ -26199,8 +26210,8 @@ ENDIF
  BCC sign2
 
  LDY temp4              \ Set previousSignNumber to the sign number from the
- STY previousSignNumber \ trackSectionData, so the next time we call this routine
-                        \ for the same sign, we increment the sign number above
+ STY previousSignNumber \ trackSectionData, so the next time we display a sign
+                        \ it will be the next sign
 
 .sign2
 
@@ -29143,7 +29154,7 @@ ENDIF
 \
 \       Name: trackData
 \       Type: Variable
-\   Category: Track
+\   Category: Track data
 \    Summary: This is where the track data gets loaded
 \
 \ ------------------------------------------------------------------------------
@@ -29260,13 +29271,13 @@ ENDIF
 
  SKIP 16
 
-.trackSteering
+.trackRacingLine
 
  SKIP 24
 
  SKIP 2
 
-.trackRoadSigns
+.trackSignData
 
  SKIP 16
 
@@ -29286,11 +29297,11 @@ ENDIF
 
  SKIP 1
 
-.trackStartLo
+.trackPracticeLo
 
  SKIP 1
 
-.trackStartHi
+.trackPracticeHi
 
  SKIP 1
 
@@ -29314,7 +29325,7 @@ ENDIF
 
  SKIP 3
 
-.trackLapStart
+.trackStartPosition
 
  SKIP 1
 
