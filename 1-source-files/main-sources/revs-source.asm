@@ -26276,15 +26276,15 @@ ENDIF
  STA V
  PLA
 
- BPL C4D2D              \ If A is positive then V is already the correct high
-                        \ byte for (V A T), so jump to C4D2D
+ BPL addv1              \ If A is positive then V is already the correct high
+                        \ byte for (V A T), so jump to addv1
 
  DEC V                  \ Otherwise, decrement V to &FF so it's the correct
                         \ high byte for (V A T)
 
                         \ We now shift (V A T) right by Y places
 
-.C4D2D
+.addv1
 
  LSR V                  \ Set (V A T) = (V A T) >> 1
  ROR A
@@ -26292,7 +26292,7 @@ ENDIF
 
  DEY                    \ Decrement the shift counter
 
- BNE C4D2D              \ Loop back until we have right-shifted Y times
+ BNE addv1              \ Loop back until we have right-shifted Y times
 
  STA U                  \ Set (V U T) = (V A T)
                         \             = A * 256 >> Y

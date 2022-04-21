@@ -57,6 +57,7 @@ ORG CODE%
 \ ------------------------------------------------------------------------------
 \
 \ Key:
+\
 \   || is a straight, with just two vectors defined (start and end)
 \   {} is a very gentle curve
 \   -> is a right corner
@@ -64,7 +65,7 @@ ORG CODE%
 \
 \ Bit 0 of trackSectionFlag is clear for ||, set for the others
 \
-\ Section                [road signs]   Description                       Size
+\ Section                Road signs     Description                       Size
 \
 \ Track section  0   ||  [chicane]      Abbey Curve to Woodcote Corner      99
 \ Track section  1   ->                 Woodcote Corner (chicane right)     21
@@ -413,8 +414,22 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB &F6, &F8, &52, &B2, &07, &FC, &D9, &28
- EQUB &FB, &CD, &27, &17, &30, &FA, &D2, &00
+ EQUB -10               \ Sign  0 = (-10,   8, 108)
+ EQUB  -8               \ Sign  1 = ( -8,   8,   4)
+ EQUB  82               \ Sign  2 = ( 82,   8,  27)
+ EQUB -78               \ Sign  3 = (-78,   8,   3)
+ EQUB   7               \ Sign  4 = (  7,   0,   8)
+ EQUB  -4               \ Sign  5 = ( -4,  18,  75)
+ EQUB -39               \ Sign  6 = (-39,  17,  63)
+ EQUB  40               \ Sign  7 = ( 40,   8,  14)
+ EQUB  -5               \ Sign  8 = ( -5,   8,  -1)
+ EQUB -51               \ Sign  9 = (-51, -16, -79)
+ EQUB  39               \ Sign 10 = ( 39, -20,  53)
+ EQUB  23               \ Sign 11 = ( 23,  12, -16)
+ EQUB  48               \ Sign 12 = ( 48,  22, -59)
+ EQUB  -6               \ Sign 13 = ( -6,   4, -16)
+ EQUB -46               \ Sign 14 = (-46, -16, -57)
+ EQUB   0               \ Sign 15 = (  0,   8,  36)
 
 \ ******************************************************************************
 \
@@ -429,8 +444,22 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB &6C, &04, &1B, &03, &08, &4B, &3F, &0E
- EQUB &FF, &B1, &35, &F0, &C5, &F0, &C7, &24
+ EQUB 108               \ Sign  0 = (-10,   8, 108)
+ EQUB   4               \ Sign  1 = ( -8,   8,   4)
+ EQUB  27               \ Sign  2 = ( 82,   8,  27)
+ EQUB   3               \ Sign  3 = (-78,   8,   3)
+ EQUB   8               \ Sign  4 = (  7,   0,   8)
+ EQUB  75               \ Sign  5 = ( -4,  18,  75)
+ EQUB  63               \ Sign  6 = (-39,  17,  63)
+ EQUB  14               \ Sign  7 = ( 40,   8,  14)
+ EQUB  -1               \ Sign  8 = ( -5,   8,  -1)
+ EQUB -79               \ Sign  9 = (-51, -16, -79)
+ EQUB  53               \ Sign 10 = ( 39, -20,  53)
+ EQUB -16               \ Sign 11 = ( 23,  12, -16)
+ EQUB -59               \ Sign 12 = ( 48,  22, -59)
+ EQUB -16               \ Sign 13 = ( -6,   4, -16)
+ EQUB -57               \ Sign 14 = (-46, -16, -57)
+ EQUB  36               \ Sign 15 = (  0,   8,  36)
 
 \ ******************************************************************************
 \
@@ -445,8 +474,22 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB &08, &08, &08, &08, &00, &12, &11, &08
- EQUB &08, &F0, &EC, &0C, &16, &04, &F0, &08
+ EQUB   8               \ Sign  0 = (-10,   8, 108)
+ EQUB   8               \ Sign  1 = ( -8,   8,   4)
+ EQUB   8               \ Sign  2 = ( 82,   8,  27)
+ EQUB   8               \ Sign  3 = (-78,   8,   3)
+ EQUB   0               \ Sign  4 = (  7,   0,   8)
+ EQUB  18               \ Sign  5 = ( -4,  18,  75)
+ EQUB  17               \ Sign  6 = (-39,  17,  63)
+ EQUB   8               \ Sign  7 = ( 40,   8,  14)
+ EQUB   8               \ Sign  8 = ( -5,   8,  -1)
+ EQUB -16               \ Sign  9 = (-51, -16, -79)
+ EQUB -20               \ Sign 10 = ( 39, -20,  53)
+ EQUB  12               \ Sign 11 = ( 23,  12, -16)
+ EQUB  22               \ Sign 12 = ( 48,  22, -59)
+ EQUB   4               \ Sign 13 = ( -6,   4, -16)
+ EQUB -16               \ Sign 14 = (-46, -16, -57)
+ EQUB   8               \ Sign 15 = (  0,   8,  36)
 
 \ ******************************************************************************
 \
