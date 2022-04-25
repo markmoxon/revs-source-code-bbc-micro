@@ -26059,7 +26059,29 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine supports multiple signs in a single track section.
+\ This routine uses the track data to build the correct sign object for the
+\ player's current track section.
+\
+\ If we just entered a new track section and the sign number from the new track
+\ section's trackSectionData is different to the previous section, then we
+\ build the new sign number, otherwise we build the next sign number.
+\
+\ The 3D coordinates of the sign are calculated using the section number in the
+\ trackSignData for the sign. This section number is only used for calculating
+\ the 3D coordinates - it isn't related to the section we are currently in.
+\
+\ In Silverstone, the 16 signs are drawn when entering these sections (as
+\ defined in trackSectionData):
+\
+\   0,  1,  3,  5,  6,  7,  9, 11, 14, 15, 16, 17, 19, 20, 21, 22
+\
+\ and those signs are drawn relative to the following section coordinates (as
+\ defined in trackSignData):
+\
+\   0,  2,  3,  5,  7,  9, 12, 14, 14, 14, 18, 19, 20, 21, 22, 23
+\
+\ This can get a little confusing, but the first batch defines when to show the
+\ signs, and the second batch defines where to show them.
 \
 \ ******************************************************************************
 
@@ -26164,18 +26186,24 @@ ENDIF
                         \ ProjectObjectX and ProjectObjectY use xVector4,
                         \ yVector4 and zVector4
 
- JSR GetSectionCoord    \ Copy the first trackSection coordinate for track
+ JSR GetSectionCoord    \ Copy the first trackSectionI coordinate for track
                         \ section Y into xVector4, so xVector4 contains the 3D
                         \ coordinates of the inside track for the start of this
-                        \ track section
+                        \ track section, i.e.
+                        \
+                        \   [ xVector4 ]   [ xTrackSectionI ]
+                        \   [ yVector4 ] = [ yTrackSectionI ]
+                        \   [ zVector4 ]   [ zTrackSectionI ]
 
  LDY #6                 \ Set Y = 6 so the call to ProjectObjectX uses xVector6
                         \ for the second variable, so we project the object at
-                        \ x-coordinates xVector4 - xVector6, i.e.
+                        \ the following 3D coordinates (if we just consider the
+                        \ the x-axis, for clarity):
                         \
-                        \    section start - (xPlayerCoord - xTrackSignVector)
-                        \  = section start - xPlayerCoord + xTrackSignVector
-                        \  = section start + xTrackSignVector - xPlayerCoord
+                        \    xVector4 - xVector6
+                        \  = xTrackSectionI - (xPlayerCoord - xTrackSignVector)
+                        \  = xTrackSectionI - xPlayerCoord + xTrackSignVector
+                        \  = xTrackSectionI + xTrackSignVector - xPlayerCoord
                         \
                         \ The xPlayerCoord vector contains the 3D coordinates
                         \ of the player's car, so the above gives us the vector
