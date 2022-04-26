@@ -222,17 +222,20 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0016
+.previousRacingLine
 
- SKIP 1                 \ 
+ SKIP 1                 \ The previous value of bestRacingLine when calculating
+                        \ the best racing line for a track segment
 
-.L0017
+.turnCounter
 
- SKIP 1                 \ 
+ SKIP 1                 \ A counter for the length of turn when calculating the
+                        \ best racing line for a track segment
 
-.L0018
+.previousSpeed
 
- SKIP 1                 \ 
+ SKIP 1                 \ The previous value of trackDriverSpeed when
+                        \ calculating the best racing line for a track segment
 
 .gearChange
 
@@ -279,9 +282,11 @@ ORG &0000
                         \ top of the track view, in the sky), down to 3 (the
                         \ lowest track line, between the mirrors and dashboard)
 
-.L0020
+.previousSpeed7
 
- SKIP 1                 \ 
+ SKIP 1                 \ The previous value of trackDriverSpeed when
+                        \ calculating the best racing line for a track segment,
+                        \ only used for accessing bit 7
 
 .sectionBehind
 
@@ -1176,13 +1181,14 @@ ORG &0100
 
 .carSectionSpeed
 
- SKIP 20                \ Set to the car's maximum speed for the next section,
+ SKIP 20                \ Set to the driver speed for the next track section,
                         \ which is taken from the track data and used to set the
                         \ section's approach speed for non-player drivers
                         \
                         \ Only applies to sections with bit 7 of the flag byte
                         \ set, in which case carSectionSpeed is set to the
-                        \ trackMaxSpeed value from the preceding track section
+                        \ trackDriverSpeed value from the preceding track 
+                        \ section
                         \
                         \ Set to 255 in ResetVariables, which means no minimum
                         \ speed
@@ -6366,11 +6372,12 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Calculate the best racing line to take for the current track
-\             section
+\             segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine populates segmentSteering for a track segment, depending on a
+\ large number of factors.
 \
 \ ******************************************************************************
 
@@ -6385,13 +6392,13 @@ ORG &0B00
  LSR A                  \ driver 23
  TAX
 
- LDA L0017              \ If L0017 is non-zero, jump to rlin5
- BNE rlin5
+ LDA turnCounter        \ If turnCounter is non-zero, then a turn is already in
+ BNE rlin5              \ progress, so jump to rlin5
 
-                        \ We get here if L0017 is zero
+                        \ We get here if turnCounter is zero
 
- LDA thisSectionFlags   \ If bit 0 of thisSectionFlags is set, jump to rlin2
- LSR A
+ LDA thisSectionFlags   \ If bit 0 of thisSectionFlags is set then this is a
+ LSR A                  \ curved track section, so jump to rlin2
  BCS rlin2
 
  LDA objSectionCount+23 \ If driver 23's progress through the track section is
@@ -6400,28 +6407,49 @@ ORG &0B00
 
                         \ If we get here, then:
                         \
-                        \   * L0017 is zero
+                        \   * turnCounter is zero
                         \
-                        \   * Bit 0 of thisSectionFlags is clear
+                        \   * Bit 0 of thisSectionFlags is clear, so this is a
+                        \     straight track section
                         \
                         \   * Driver 23's progress through the track section is
-                        \     < the trackSectionTurn for the section
+                        \     less than the trackSectionTurn value for the
+                        \     section
+                        \
+                        \ So we are not already turning from a previous call, we
+                        \ are on a straight, and we haven't yet reached the
+                        \ point at the end of the straight where we should be
+                        \ turning
+                        \
+                        \ So now we keep on driving straight
 
 .rlin1
 
  LDA bestRacingLine,X   \ Set A to the best racing line for section X, with
- ORA #%01000000         \ bit 6 set
+ ORA #%01000000         \ bit 6 set, so we do not apply any steering in MoveCars
+                        \ but instead just apply acceleration or braking
 
- BNE rlin7              \ Jump to rlin7 to store A in dashDataBlock+1 for this
+ BNE rlin7              \ Jump to rlin7 to store A in segmentSteering for this
                         \ section and return from the subroutine (this BNE is
                         \ effectively a JMP as A is never zero)
 
 .rlin2
 
- LDA L0020              \ If bit 7 of L0020 is set, then trackMaxSpeed > 127 for
- BMI rlin4              \ this section, so jump to rlin4
+                        \ If we get here then this is a curved track section and
+                        \ turnCounter is zero
+
+ LDA previousSpeed7     \ If bit 7 of previousSpeed7 is set, jump to rlin4
+ BMI rlin4
+
+                        \ If we get here then this is a curved track section and
+                        \ turnCounter is zero, and bit 7 of previousSpeed7 is
+                        \ clear
 
 .rlin3
+
+                        \ If we jump here, then driver 23 is past the
+                        \ trackSectionTurn point in this section, so we start
+                        \ looking at the next section for the best racing line
 
  TYA                    \ Set Y = Y + 8
  CLC                    \
@@ -6434,67 +6462,78 @@ ORG &0B00
 .rlin4
 
  LDA trackSectionFlag,Y \ If bit 0 of the track section's flag byte is clear,
- AND #1                 \ then this is a straight section, so jump to rlin1
- BEQ rlin1
+ AND #1                 \ then this is a straight section, so jump to rlin1 to
+ BEQ rlin1              \ disable steering in MoveCars and keep on driving
+                        \ straight
 
- LDA trackSectionTurn,Y \ Set L0017 = track section's trackSectionTurn
- STA L0017
+ LDA trackSectionTurn,Y \ Set turnCounter = track section's trackSectionTurn
+ STA turnCounter
 
- BEQ rlin1              \ If L0017 = 0, jump to rlin1
+ BEQ rlin1              \ If the track section's trackSectionTurn is zero, jump
+                        \ to rlin1 to disable steering in MoveCars and keep on
+                        \ driving straight
 
- LDA trackMaxSpeed,Y    \ Set L0020 = track section's maximum speed, including
- STA L0020              \ bit 7
+ LDA trackDriverSpeed,Y \ Set previousSpeed7 = track section's driver speed,
+ STA previousSpeed7     \ which we only use to check bit 7
 
- AND #%01111111         \ Set L0018 = bits 0-6 of the track section's maximum
- STA L0018              \ speed
+ AND #%01111111         \ Set previousSpeed = bits 0-6 of the track section's
+ STA previousSpeed      \ driver speed
 
  LDA bestRacingLine,X   \ Set A to the best racing line for the track section
 
- STA L0016              \ Set L0016 to the best racing line for the track
-                        \ section
+ STA previousRacingLine \ Set previousRacingLine to the best racing line for the
+                        \ track section
 
- JMP rlin7              \ Jump to rlin7 to store A in dashDataBlock+1 for this
+ JMP rlin7              \ Jump to rlin7 to store A in segmentSteering for this
                         \ section and return from the subroutine (this BNE is
                         \ effectively a JMP as A is never zero)
 
 .rlin5
 
-                        \ We get here if L0017 is non-zero
+                        \ If we get here then turnCounter is non-zero, so a
+                        \ turn is already in progress
 
- DEC L0017              \ Decrement L0017
+ DEC turnCounter        \ Decrement the turn counter in turnCounter
 
- LDA L0017              \ Set T = L0017 / 8
+ LDA turnCounter        \ Set T = turnCounter / 8
  LSR A
  LSR A
  LSR A
  STA T
 
- LDA L0017              \ Set A = L0017 - L0018
+ LDA turnCounter        \ Set A = turnCounter - previousSpeed
  SEC
- SBC L0018
+ SBC previousSpeed
 
- BCS rlin6              \ If the subtraction didn't underflow, i.e. L0017 >=
-                        \ L0018, jump to rlin6 to store L0016 in dashDataBlock+1
-                        \ for this section and return from the subroutine
+ BCS rlin6              \ If the subtraction didn't underflow, i.e.
+                        \
+                        \   turnCounter >= previousSpeed
+                        \
+                        \ then jump to rlin6 to set segmentSteering to
+                        \ previousRacingLine and return from the subroutine
+
+                        \ If we get here then turnCounter < previousSpeed and
+                        \ A is negative
 
  ADC T                  \ Set A = A + T
-                        \       = L0017 - L0018 + L0017 / 8
+                        \       = turnCounter - previousSpeed + turnCounter / 8
 
  LDA #0                 \ Set A = 0
 
- BCS rlin7              \ If the result above didn't overflow, i.e.
+ BCS rlin7              \ If the addition overflowed, then because A was
+                        \ negative, we must have the following:
                         \
-                        \   L0017 - L0018 + L0017 / 8 <= 255
+                        \   A = A + T >= 0
                         \
-                        \ then jump to rlin7 to store 0 in dashDataBlock+1 for
+                        \ So jump to rlin7 to store 0 in segmentSteering for
                         \ this section and return from the subroutine
                         \
-                        \ Otherwise store -L0016 in dashDataBlock+1 for this
-                        \ section and return from the subroutine
+                        \ Otherwise store previousRacingLine in segmentSteering
+                        \ for this section and return from the subroutine
 
 .rlin6
 
- LDA L0016              \ Set A = L0016
+ LDA previousRacingLine \ Set A = previousRacingLine
 
  BCS rlin7              \ If the C flag is clear, flip bit 7 of A
  EOR #%10000000
@@ -14896,7 +14935,8 @@ ENDIF
 
  LDA trackSectionFlag,Y \ Set A to the flag byte for the driver's track section
 
- BPL mcar2              \ If bit 7 of A is clear, jump to mcar2
+ BPL mcar2              \ If bit 7 of this section's flag byte is clear, jump to
+                        \ mcar2
 
                         \ If we get here then bit 7 of this section's flag byte
                         \ is set
@@ -14913,24 +14953,27 @@ ENDIF
 .mcar2
 
                         \ If we get here then bit 7 of this section's flag byte
-                        \ is clear
+                        \ is clear, and A contains this section's flag byte 
 
- LSR A                  \ Set A = A >> 2 and set the C flag to bit 0
+ LSR A                  \ Set the C flag to bit 0 of A, i.e. to bit 0 of this
+                        \ section's flag byte
 
- BCS mcar3              \ If bit 0 of A was set, jump to mcar3 to continue with
+ BCS mcar3              \ If bit 0 of this section's flag byte is set, then this
+                        \ is a curved section, so jump to mcar3 to continue with
                         \ the speed calculation
 
                         \ If we get here then bits 0 and 7 of this section's
-                        \ flag byte are both clear
+                        \ flag byte are both clear, so this is a straight
+                        \ section and ???
 
- LDA trackMaxSpeed,Y    \ Set carSectionSpeed for this driver to trackMaxSpeed
- STA carSectionSpeed,X  \ for this track section
+ LDA trackDriverSpeed,Y \ Set carSectionSpeed for this driver to
+ STA carSectionSpeed,X  \ trackDriverSpeed for this track section
 
- CLC                    \ Set A = trackMaxSpeed - carSpeedHi - 1
+ CLC                    \ Set A = trackDriverSpeed - carSpeedHi - 1
  SBC carSpeedHi,X
 
  BCS mcar3              \ If the subtraction didn't underflow, then
-                        \ trackMaxSpeed > carSpeedHi, so jump to mcar3 to
+                        \ trackDriverSpeed > carSpeedHi, so jump to mcar3 to
                         \ continue with the speed calculation
 
  LSR A                  \ Set T = A >> 2 with bits 6 and 7 set
@@ -14939,7 +14982,7 @@ ENDIF
  STA T                  \ the sign, so:
                         \
                         \   T = A / 4
-                        \     = (trackMaxSpeed - carSpeedHi - 1) / 4
+                        \     = (trackDriverSpeed - carSpeedHi - 1) / 4
 
  LDA objSectionCount,X  \ Set A = objSectionCount - trackSectionTurn
  SEC                    \
@@ -14956,7 +14999,11 @@ ENDIF
 
 .mcar3
 
- LDA carSpeedHi,X       \ Set A to the high byte of the car's speed
+                        \ We now set A and T to use in the calculation to work
+                        \ out the level of acceleration we need to apply to the
+                        \ car's speed
+
+ LDA carSpeedHi,X       \ Set A to the high byte of the car's current speed
 
  CMP #60                \ If the high byte of the car's speed in A >= 60, jump
  BCS mcar4              \ to mcar4 to skip the following instruction
@@ -14965,18 +15012,40 @@ ENDIF
 
 .mcar4
 
+                        \ By this point, A is either 22 or >= 60
+
  STA T                  \ Set T = A
 
- LDA carStatus,X        \ If bit 6 of driver X's carStatus is clear, jump
- AND #%01000000         \ to mcar5 with A = 0
+ LDA carStatus,X        \ If bit 6 of driver X's carStatus is clear, then we do
+ AND #%01000000         \ not accelerate the car, so jump to mcar5 with A = 0
  BEQ mcar5
 
  LDA #5                 \ Set A = 5
 
 .mcar5
 
- CLC                    \ Set A = A + the driver's speed, as calculated in the
- ADC driverSpeed,X      \ SetDriverSpeed routine
+                        \ By this point
+                        \
+                        \   * T is carSpeedHi, reduced to 22 if < 60
+                        \
+                        \   * A is either 0 or 5, depending on bit 6 of driver
+                        \     X's carStatus, i.e. whether the car is set to be
+                        \     accelerating
+
+ CLC                    \ Set A = A + the driver's average speed, as calculated
+ ADC driverSpeed,X      \ in the SetDriverSpeed routine
+
+                        \ So by this point:
+                        \
+                        \   * T is carSpeedHi, reduced to 22 if < 60
+                        \
+                        \   * A is driver X's average speed, + 5 if driver X is
+                        \     accelerating 
+
+                        \ We now apply any trackRaceSlowdown factor from the
+                        \ track data, which allows us to slow down races for
+                        \ debugging purposes (trackRaceSlowdown is set to 0 in
+                        \ in the Silverstone track, so this has no effect)
 
  BIT raceStarted        \ If bit 7 of raceStarted is clear then this is practice
  BPL mcar6              \ or qualifying, so jump to mcar6 to skip the following
@@ -14991,7 +15060,27 @@ ENDIF
 
 .mcar6
 
-                        \ We now set (U A) = A - T to get the speed change
+                        \ We now calculate (U A) = A - T to get the speed change
+                        \ to apply to the driver, given the following values:
+                        \
+                        \   * T is carSpeedHi, reduced to 22 if < 60
+                        \
+                        \   * A is driver X's average speed, + 5 if driver X is
+                        \     accelerating, reduced by trackRaceSlowdown if this
+                        \     is a race
+                        \
+                        \ In other words, T is the current speed, while A is the
+                        \ speed we should be aiming for, so
+                        \
+                        \   (U A) = A - T
+                        \
+                        \ will give us the delta that we need to apply to the
+                        \ car's current speed to get to the new speed, with the
+                        \ acceleration much higher when the car's current speed
+                        \ is < 60 (when T is reduced to 22)
+                        \
+                        \ So cars can't accelerate fast once they pass a certain
+                        \ speed (carSpeedHi >= 60)
 
  LDY #0                 \ Set Y = 0, so (Y A) = A
 
@@ -29223,7 +29312,7 @@ ENDIF
 
  SKIP 1
 
-.trackMaxSpeed
+.trackDriverSpeed
 
  SKIP 1
 

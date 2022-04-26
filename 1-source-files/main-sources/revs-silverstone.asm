@@ -117,7 +117,7 @@ ORG CODE%
 \ zTrackSectionOHi      High byte of the start z-coordinate of the outside verge
 \                       of each track section
 \
-\ trackMaxSpeed         The maximum speed for non-player drivers on this section
+\ trackDriverSpeed      The maximum speed for non-player drivers on this section
 \                       of the track
 \
 \ ******************************************************************************
@@ -131,7 +131,7 @@ ORG CODE%
  EQUB &CF               \ xTrackSectionOHi       xTrackSectionO = &CFC0 = -12352
  EQUB 96                \ trackSectionTurn
  EQUB &0F               \ zTrackSectionOHi       zTrackSectionO = &0F94 =   3988
- EQUB 136               \ trackMaxSpeed
+ EQUB 136               \ trackDriverSpeed
 
                         \ Track section 1
 
@@ -142,7 +142,7 @@ ORG CODE%
  EQUB &CE               \ xTrackSectionOHi       xTrackSectionO = &CE34 = -12748
  EQUB 18                \ trackSectionTurn
  EQUB &3D               \ zTrackSectionOHi       zTrackSectionO = &3DFC =  15868
- EQUB 00                \ trackMaxSpeed
+ EQUB 00                \ trackDriverSpeed
 
                         \ Track section 2
 
@@ -153,7 +153,7 @@ ORG CODE%
  EQUB &D2               \ xTrackSectionOHi       xTrackSectionO = &D2C5 = -11579
  EQUB 20                \ trackSectionTurn
  EQUB &47               \ zTrackSectionOHi       zTrackSectionO = &47E8 =  18408
- EQUB 138               \ trackMaxSpeed
+ EQUB 138               \ trackDriverSpeed
 
                         \ Track section 3
 
@@ -164,7 +164,7 @@ ORG CODE%
  EQUB &D5               \ xTrackSectionOHi       xTrackSectionO = &D556 = -10922
  EQUB 30                \ trackSectionTurn
  EQUB &4A               \ zTrackSectionOHi       zTrackSectionO = &4AC9 =  19145
- EQUB 33                \ trackMaxSpeed
+ EQUB 33                \ trackDriverSpeed
 
                         \ Track section 4
 
@@ -175,7 +175,7 @@ ORG CODE%
  EQUB &DE               \ xTrackSectionOHi       xTrackSectionO = &DE9F =  -8545
  EQUB 98                \ trackSectionTurn
  EQUB &50               \ zTrackSectionOHi       zTrackSectionO = &50AE =  20654
- EQUB 125               \ trackMaxSpeed
+ EQUB 125               \ trackDriverSpeed
 
                         \ Track section 5
 
@@ -186,7 +186,7 @@ ORG CODE%
  EQUB &0F               \ xTrackSectionOHi       xTrackSectionO = &0FD7 =   4055
  EQUB 40                \ trackSectionTurn
  EQUB &52               \ zTrackSectionOHi       zTrackSectionO = &52BB =  21179
- EQUB 26                \ trackMaxSpeed
+ EQUB 26                \ trackDriverSpeed
 
                         \ Track section 6
 
@@ -197,7 +197,7 @@ ORG CODE%
  EQUB &19               \ xTrackSectionOHi       xTrackSectionO = &1937 =   6455
  EQUB 255               \ trackSectionTurn
  EQUB &4B               \ zTrackSectionOHi       zTrackSectionO = &4B17 =  19223
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Track section 7
 
@@ -208,7 +208,7 @@ ORG CODE%
  EQUB &19               \ xTrackSectionOHi       xTrackSectionO = &19C3 =   6595
  EQUB 00                \ trackSectionTurn
  EQUB &3D               \ zTrackSectionOHi       zTrackSectionO = &3DF7 =  15863
- EQUB 00                \ trackMaxSpeed
+ EQUB 00                \ trackDriverSpeed
 
                         \ Track section 8
 
@@ -219,7 +219,7 @@ ORG CODE%
  EQUB &19               \ xTrackSectionOHi       xTrackSectionO = &19F0 =   6640
  EQUB 33                \ trackSectionTurn
  EQUB &39               \ zTrackSectionOHi       zTrackSectionO = &39BF =  14783
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Track section 9
 
@@ -230,7 +230,7 @@ ORG CODE%
  EQUB &1A               \ xTrackSectionOHi       xTrackSectionO = &1AFE =   6910
  EQUB 40                \ trackSectionTurn
  EQUB &20               \ zTrackSectionOHi       zTrackSectionO = &206F =   8303
- EQUB 12                \ trackMaxSpeed
+ EQUB 12                \ trackDriverSpeed
 
                         \ Track section 10
 
@@ -241,7 +241,7 @@ ORG CODE%
  EQUB &1D               \ xTrackSectionOHi       xTrackSectionO = &1D1B =   7451
  EQUB 255               \ trackSectionTurn
  EQUB &1A               \ zTrackSectionOHi       zTrackSectionO = &1A25 =   6693
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Track section 11
 
@@ -252,7 +252,7 @@ ORG CODE%
  EQUB &27               \ xTrackSectionOHi       xTrackSectionO = &2733 =  10035
  EQUB 21                \ trackSectionTurn
  EQUB &0B               \ zTrackSectionOHi       zTrackSectionO = &0B73 =   2931
- EQUB 116               \ trackMaxSpeed
+ EQUB 116               \ trackDriverSpeed
 
                         \ Track section 12
 
@@ -263,7 +263,7 @@ ORG CODE%
  EQUB &2E               \ xTrackSectionOHi       xTrackSectionO = &2EDD =  11997
  EQUB 39                \ trackSectionTurn
  EQUB &01               \ zTrackSectionOHi       zTrackSectionO = &015F =    351
- EQUB 25                \ trackMaxSpeed
+ EQUB 25                \ trackDriverSpeed
 
                         \ Track section 13
 
@@ -274,7 +274,7 @@ ORG CODE%
  EQUB &29               \ xTrackSectionOHi       xTrackSectionO = &29D3 =  10707
  EQUB 24                \ trackSectionTurn
  EQUB &F5               \ zTrackSectionOHi       zTrackSectionO = &F52F =  -2769
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Track section 14
 
@@ -285,7 +285,7 @@ ORG CODE%
  EQUB &18               \ xTrackSectionOHi       xTrackSectionO = &1803 =   6147
  EQUB 40                \ trackSectionTurn
  EQUB &EF               \ zTrackSectionOHi       zTrackSectionO = &EF3F =  -4289
- EQUB 20                \ trackMaxSpeed
+ EQUB 20                \ trackDriverSpeed
 
                         \ Track section 15
 
@@ -296,7 +296,7 @@ ORG CODE%
  EQUB &13               \ xTrackSectionOHi       xTrackSectionO = &1305 =   4869
  EQUB 255               \ trackSectionTurn
  EQUB &EB               \ zTrackSectionOHi       zTrackSectionO = &EB44 =  -5308
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Track section 16
 
@@ -307,7 +307,7 @@ ORG CODE%
  EQUB &F2               \ xTrackSectionOHi       xTrackSectionO = &F253 =  -3501
  EQUB 00                \ trackSectionTurn
  EQUB &B4               \ zTrackSectionOHi       zTrackSectionO = &B4F3 = -19213
- EQUB 00                \ trackMaxSpeed
+ EQUB 00                \ trackDriverSpeed
 
                         \ Track section 17
 
@@ -318,7 +318,7 @@ ORG CODE%
  EQUB &F0               \ xTrackSectionOHi       xTrackSectionO = &F0DF =  -3873
  EQUB 22                \ trackSectionTurn
  EQUB &B2               \ zTrackSectionOHi       zTrackSectionO = &B289 = -19831
- EQUB 139               \ trackMaxSpeed
+ EQUB 139               \ trackDriverSpeed
 
                         \ Track section 18
 
@@ -329,7 +329,7 @@ ORG CODE%
  EQUB &EA               \ xTrackSectionOHi       xTrackSectionO = &EA17 =  -5609
  EQUB 52                \ trackSectionTurn
  EQUB &A7               \ zTrackSectionOHi       zTrackSectionO = &A745 = -22715
- EQUB 24                \ trackMaxSpeed
+ EQUB 24                \ trackDriverSpeed
 
                         \ Track section 19
 
@@ -340,7 +340,7 @@ ORG CODE%
  EQUB &D7               \ xTrackSectionOHi       xTrackSectionO = &D74A = -10422
  EQUB 96                \ trackSectionTurn
  EQUB &A4               \ zTrackSectionOHi       zTrackSectionO = &A4AE = -23378
- EQUB 151               \ trackMaxSpeed
+ EQUB 151               \ trackDriverSpeed
 
                         \ Track section 20
 
@@ -351,7 +351,7 @@ ORG CODE%
  EQUB &B5               \ xTrackSectionOHi       xTrackSectionO = &B592 = -19054
  EQUB 49                \ trackSectionTurn
  EQUB &C8               \ zTrackSectionOHi       zTrackSectionO = &C806 = -14330
- EQUB 28                \ trackMaxSpeed
+ EQUB 28                \ trackDriverSpeed
 
                         \ Track section 21
 
@@ -362,7 +362,7 @@ ORG CODE%
  EQUB &B4               \ xTrackSectionOHi       xTrackSectionO = &B4F2 = -19214
  EQUB 69                \ trackSectionTurn
  EQUB &D7               \ zTrackSectionOHi       zTrackSectionO = &D7FC = -10244
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Track section 22
 
@@ -373,7 +373,7 @@ ORG CODE%
  EQUB &CE               \ xTrackSectionOHi       xTrackSectionO = &CE2E = -12754
  EQUB 36                \ trackSectionTurn
  EQUB &F6               \ zTrackSectionOHi       zTrackSectionO = &F6DD =  -2339
- EQUB 11                \ trackMaxSpeed
+ EQUB 11                \ trackDriverSpeed
 
                         \ Track section 23
 
@@ -384,7 +384,7 @@ ORG CODE%
  EQUB &D0               \ xTrackSectionOHi       xTrackSectionO = &D07E = -12162
  EQUB 255               \ trackSectionTurn
  EQUB &FD               \ zTrackSectionOHi       zTrackSectionO = &FDC5 =   -571
- EQUB 255               \ trackMaxSpeed
+ EQUB 255               \ trackDriverSpeed
 
                         \ Same as track section 0
 
@@ -395,7 +395,7 @@ ORG CODE%
  EQUB &CF               \ xTrackSectionOHi       xTrackSectionO = &CFC0 = -12352
  EQUB 96                \ trackSectionTurn
  EQUB &0F               \ zTrackSectionOHi       zTrackSectionO = &0F94 =   3988
- EQUB 136               \ trackMaxSpeed
+ EQUB 136               \ trackDriverSpeed
 
  EQUB &00, &8E          \ These bytes appear to be unused
  EQUB &41, &40
@@ -2000,7 +2000,7 @@ ORG CODE%
 \                              1 = 
 \
 \                       Bit 7: 0 = 
-\                              1 = 
+\                              1 = accelerate up to the maximum speed
 \
 \ xTrackSectionILo      Low byte of the start x-coordinate of the inside verge
 \                       of each track section
