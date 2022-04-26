@@ -2508,7 +2508,9 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   Y
+\   Y                   L0005 to 5, process L5EE0, var24Lo, var24Hi, L5F20
+\
+\                       Above + 40, process L5F08, L5E68,   L5EB8,   L5F48
 \
 \ ******************************************************************************
 
@@ -4883,7 +4885,7 @@ ORG &0B00
  LDA xObjectScreenLo,X  \ Copy the low byte of the screen x-coordinate to
  STA xPlayerScreenLo    \ xPlayerScreenLo
 
- LDA xObjectScreenHi,X  \ Copy the low byte of the screen x-coordinate to
+ LDA xObjectScreenHi,X  \ Copy the high byte of the screen x-coordinate to
  EOR directionFacing    \ xPlayerScreenHi, flipping the sign of the coordinate
  STA xPlayerScreenHi    \ if we are facing backwards along the track
 
@@ -5162,8 +5164,10 @@ ORG &0B00
 
  LDX segmentIndex       \ Set X to the index * 3 of the current track segment
 
- LDY #6                 \ Set L62F5 = 6
- STY L62F5
+ LDY #6                 \ Set Y = 6
+
+ STY L62F5              \ Set L62F5 to a non-zero value, so we call sub_C12A0
+                        \ in sub_C22FF to shuffle variables along
 
  LDA L0062              \ If L0062 = 0, skip the following instruction
  BEQ gets1
@@ -5232,30 +5236,62 @@ ORG &0B00
 
 .sub_C12A0
 
- LDX #44
+ LDX #44                \ Set X = 44 so we start by shuffling the first batch:
+                        \
+                        \   * L5E68+0-4 to L5E68+1-5
+                        \
+                        \   * L5EB8+0-4 to L5EB8+1-5
+                        \
+                        \   * L5F48+0-4 to L5F48+1-5
+                        \
+                        \ This works because:
+                        \
+                        \   * var24Lo + 40 = L5E68
+                        \
+                        \   * var24Hi + 40 = L5EB8
+                        \
+                        \   * L5F20 + 40 = L5F48
 
 .P12A2
 
- LDA var24Lo,X
+ LDA var24Lo,X          \ Shuffle the X-th byte of var24Lo up by one
  STA var24Lo+1,X
- LDA var24Hi,X
+
+ LDA var24Hi,X          \ Shuffle the X-th byte of var24Hi up by one
  STA var24Hi+1,X
- LDA L5F20,X
+
+ LDA L5F20,X            \ Shuffle the X-th byte of L5F20 up by one
  STA L5F20+1,X
- CPX #&28
- BNE C12BA
- LDX #5
+
+ CPX #40                \ If X <> 40 then we are either still shuffling the
+ BNE C12BA              \ first batch and haven't yet done the last shuffle, or
+                        \ we are already shuffling the second batch, so in
+                        \ either case jump to C12BA to skip the following
+
+ LDX #5                 \ We have just done the last shuffle in the first batch,
+                        \ so set X = 5 so we now shuffle the second batch:
+                        \
+                        \   * var24Lo+0-4 to var24Lo+1-5
+                        \
+                        \   * var24Hi+0-4 to var24Hi+1-5
+                        \
+                        \   * L5F20+0-4 to L5F20+1-5
 
 .C12BA
 
- DEX
- BPL P12A2
- LDA #6
+ DEX                    \ Decrement the loop counter
+
+ BPL P12A2              \ Loop back until we have shuffled all the bytes in both
+                        \ batches
+
+ LDA #6                 \ Set L0005 = 6 - L0007
  SEC
  SBC L0007
  STA L0005
- JSR sub_C12C8
- RTS
+
+ JSR sub_C12C8          \ ???
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -5289,10 +5325,16 @@ ORG &0B00
 
 .C12D7
 
- STX L0006              \ Store the updated value of X in L0006
+ STX L0006              \ Store the updated value of X in L0006, so:
+                        \
+                        \   L0006 = max(min(L0006 + 1, 6), L0005)
+                        \
+                        \ i.e. L0006 + 1, restricted to the range L0005 to 6
 
  LDX L0008              \ Set X = L0008 + 1
  INX
+
+                        \ Fall through into sub_C12DC to set L0006 and L0008
 
 \ ******************************************************************************
 \
@@ -5321,19 +5363,21 @@ ORG &0B00
 
  DEX                    \ Set X = X - 1
                         \
-                        \ so if we came from sub_C12C8 above, X = L0008 + 1
+                        \ so X is back to its original value
+                        
+                        \ If L0005 <= X < 6, set L0008 = X, else set L0008 = 5
 
  CPX L0005              \ If X >= L0005, jump to C12EA to skip the following
  BCS C12EA
 
- LDX #5                 \ X < L0005, so set X = 5
+ LDX #5                 \ X < L0005, so set X = 5, so we set L0008 = 5 below
 
 .C12EA
 
  CPX #6                 \ If X < 6, jump to C12F0 to skip the following
  BCC C12F0
 
- LDX #5                 \ X >= 6, so set X = 5, so the maximum value of X is 5
+ LDX #5                 \ X >= 6, so set X = 5, so we set L0008 = 5 below
 
 .C12F0
 
@@ -13431,39 +13475,51 @@ ENDIF
 
 .sub_C22FF
 
- LDA L62F5
- BEQ C230C
- JSR sub_C12A0
- LDA #0
- STA L62F5
+ LDA L62F5              \ If L62F5 = 0, jump to C230C to skip the following call
+ BEQ C230C              \ to sub_C12A0
+
+ JSR sub_C12A0          \ ??? Shuffle various variables along by one if this is
+                        \ a new segment
+
+ LDA #0                 \ Set L62F5 = 0 so we don't call sub_C12A0 again until
+ STA L62F5              \ L62F5 is set to a non-zero value
 
 .C230C
 
- LDY L0005
- CPY #6
+ LDY L0005              \ If L0005 = 6, return from the subroutine (as 
+ CPY #6                 \ sub_C22FF-1 contains an RTS)
  BEQ sub_C22FF-1
- LDY L0006
+
+ LDY L0006              \ If L0006 = 6, jump to C2330
  CPY #6
  BEQ C2330
 
+                        \ Otherwise we now loop from Y = L0006 to 5
+
 .P2318
 
- CPY L0008
- BEQ C232B
- STY T
- TYA
+ CPY L0008              \ If Y = L0008, jump to C232B to move on to the next
+ BEQ C232B              \ iteration
+
+ STY T                  \ Store Y in T so we can retrieve it below
+
+ TYA                    \ Set Y = Y + 40
  CLC
- ADC #&28
+ ADC #40
  TAY
+
  JSR sub_C0BA2
- LDY T
+
+ LDY T                  \ Retrieve the original value of Y that we stored above
+
  JSR sub_C0BA2
 
 .C232B
 
- INY
- CPY #6
- BCC P2318
+ INY                    \ Increment the loop counter in Y
+
+ CPY #6                 \ Loop back until we have done the above with Y = L0006
+ BCC P2318              \ to 5
 
 .C2330
 
@@ -13657,15 +13713,16 @@ ENDIF
 \
 \   X                   The offset from xSegmentCoordILo of the variable to use
 \                       for the object's 3D coordinates in sub_C23BB, as
-\                       returned by sub_C254A, i.e. segmentIndex or
-\                       segmentIndex + 120 - LATTER is xSegmentCoordOLo rather
-\                       than xSegmentCoordILo
+\                       returned by sub_C254A:
+\
+\                         * segmentIndex (xSegmentCoordILo for segmentIndex)
+\
+\                         * segmentIndex + 120 (xSegmentCoordOLo for
+\                           segmentIndex)
 \
 \   L000E               0 or 120
 \
 \   L0049               0 or 1
-\
-\   X                   segmentIndex or segmentIndex + 120
 \
 \ ******************************************************************************
 
@@ -13682,7 +13739,7 @@ ENDIF
                         \ Set Y = L0012
                         \ Set Y-th var24 to x-distance to player
                         \ Set A to high byte of collision distance between
-                        \   objectand car
+                        \   object and car
 
  CMP L0011
  BCC C23E7
@@ -29978,7 +30035,24 @@ ORG &5E40
 
 .var25Lo
 
- SKIP 64
+ SKIP 24
+
+\ ******************************************************************************
+\
+\       Name: L5E68
+\       Type: Variable
+\   Category: 
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L5E68
+
+ SKIP 40
 
 \ ******************************************************************************
 \
