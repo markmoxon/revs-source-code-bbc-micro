@@ -1476,6 +1476,24 @@ ORG &0380
 
  SKIP 1                 \ The carSteering value to steer round the corner for a
                         \ track segment in the track segment buffer
+                        \
+                        \ The various bits are as for carSteering:
+                        \
+                        \   * Bits 0-5 = the amount of steering as a positive
+                        \                value (0 to 31)
+                        \
+                        \   * Bit 6 = controls whether to apply steering in the
+                        \             MoveCars routine
+                        \
+                        \       * Clear = apply steering
+                        \
+                        \       * Set = do not apply steering
+                        \
+                        \   * Bit 7 = the direction of the steering
+                        \
+                        \       * Clear = steer left
+                        \
+                        \       * Set = steer right
                         
 .segmentFlags
 
@@ -2809,7 +2827,8 @@ ORG &0B00
 \       Name: GetObjectDistance
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the distance between two objects, for collision purposes
+\    Summary: Calculate the distance between the projected object and the
+\             player's car, for collision purposes
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2823,11 +2842,11 @@ ORG &0B00
 \   * Set (L K) = (J I) * 7/8 + (H G) / 2
 \               = max * 7/8 + min / 2
 \
-\ This appears to set the distance between the two objects, for the purposes of
-\ determining whether contact has been made.
+\ This appears to set the distance between the projected object and the player's
+\ car, for the purposes of determining whether contact has been made.
 \
 \ I suspect the calculation is designed to take the long shape of the cars into
-\ consideration, given the viewing angle of the car.
+\ consideration, given the viewing angle of the other car.
 \
 \ Arguments:
 \
@@ -2840,7 +2859,10 @@ ORG &0B00
 \
 \ Returns:
 \
-\   (L K)               The distance between the objects
+\   (L K)               The distance between the projected object and the
+\                       player's car
+\
+\   A                   Contains the high byte in L            
 \
 \ ******************************************************************************
 
@@ -6606,7 +6628,7 @@ ENDIF
 
  LDX #1                 \ Read the joystick x-axis into A and X (A is set to the
  JSR GetADCChannel      \ high byte of the channel, X is set to the sign of A
-                        \ where 0 = negative/left, 1 = positive/right)
+                        \ where 1 = negative/left, 0 = positive/right)
 
  STA U                  \ Store the x-axis high byte in U
 
@@ -6642,9 +6664,9 @@ ENDIF
  AND #%11111110
  STA T
 
- TXA                    \ Set bit 0 of T to the sign bit in X (1 = right,
- ORA T                  \ 0 = left), so this sets (A T) to the correct sign
- STA T
+ TXA                    \ Set bit 0 of T to the sign bit in X (1 = left,
+ ORA T                  \ 0 = right), so this sets (A T) to the correct sign
+ STA T                  \ for a steering measurement
 
 IF _ACORNSOFT
 
@@ -6660,7 +6682,7 @@ ELIF _SUPERIOR
                         \ so (A T) contains the joystick x-axis high byte,
                         \ squared, divided by 4 if SPACE is not being pressed,
                         \ and converted into a sign-magnitude number with the
-                        \ sign in bit 0 (0 = left, 1 = right)
+                        \ sign in bit 0 (1 = left, 0 = right)
 
  JMP AssistSteering     \ Jump to AssistSteering to apply Computer Assisted
                         \ Steering (CAS), which in turn jumps back to keys7 or
@@ -6721,7 +6743,9 @@ ENDIF
                         \ Assisted Steering (CAS)
 
  LDA #3                 \ Set U = 3
- STA U
+ STA U                  \
+                        \ So (U T) = (3 0) = 768, which is the value we use for
+                        \ steering when the SPACE key is held down
 
 IF _ACORNSOFT
 
@@ -6735,7 +6759,12 @@ ELIF _SUPERIOR
 
 ENDIF
 
- BEQ keys6              \ If SPACE is being pressed, jump to keys6
+ BEQ keys6              \ If SPACE is being pressed, jump to keys6 with
+                        \ (U T) = 768
+
+                        \ SPACE is not being pressed, so we need to calculate
+                        \ the correct value of (U T) depending on the steering
+                        \ wheel position
 
  LDA #0                 \ Set A = 0
 
@@ -6755,6 +6784,14 @@ ENDIF
 
 .keys6
 
+                        \ By this point, (U T) is:
+                        \
+                        \   * (3 0) = 768 if the SPACE key is being held down
+                        \
+                        \   * (1 128) = 384 if steeringHi > 2
+                        \
+                        \   * (0 128) = 128 if steeringHi <= 2
+
  LDA V                  \ If V = 0 then no steering is being applied, so jump to
  BEQ keys7              \ keys7
 
@@ -6762,10 +6799,9 @@ ENDIF
  BEQ keys13             \ and brake keys without applying any steering
 
                         \ If we get here then V = 1 or 2, so steering is being
-                        \ applied, so we start by fetching the current value
-                        \ of (steeringHi steeringLo) into (U T) and converting
-                        \ it to a signed 16-bit number, before jumping down to
-                        \ keys8 or keys9
+                        \ applied, so we set the sign of (U T) to match the
+                        \ position of the wheel, before jumping down to keys8
+                        \ or keys9
 
  EOR steeringLo         \ If bit 0 of steeringLo is clear, jump to keys9
  AND #1
@@ -6807,7 +6843,7 @@ ELIF _SUPERIOR
  CMP steeringHi         \ If A < steeringHi, clear the C flag, so the following
                         \ call to SetSteeringLimit does nothing
 
- JSR SetSteeringLimit   \ If  A >= steeringHi, set:
+ JSR SetSteeringLimit   \ If A >= steeringHi, set:
                         \
                         \   (A T) = |steeringHi steeringLo|
                         \
@@ -6919,10 +6955,10 @@ ENDIF
 
 .keys14
 
- CPX #0                 \ If X = 0 then the joystick y-axis is negative (down),
+ CPX #0                 \ If X = 0 then the joystick y-axis is positive (down),
  BEQ keys18             \ so jump to keys18 to apply the brakes
 
- BNE keys16             \ Otherwise the joystick y-axis is positive (up), so
+ BNE keys16             \ Otherwise the joystick y-axis is negative (up), so
                         \ jump to keys16 to increase the throttle (this BNE is
                         \ effectively a JMP as we already know X is non-zero)
 
@@ -11451,20 +11487,47 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Jumps back to keys11 or keys7 (joystick) or keys10 (keyboard).
+\ This routine applies Computer Assisted Steering (CAS) to the joystick and
+\ keyboard, but only if it is enabled and we are already steering (if we are not
+\ steering, then there is no steering to assist).
+\
+\ Jumps back to:
+\
+\   * keys11 (joystick, CAS not enabled)
+\
+\   * keys7 (joystick, CAS enabled, joystick is hardly steering)
+\
+\   * keys10 (keyboard, or joystick with CAS applied)
 \
 \ Arguments:
 \
-\   (A T)               Contains the scaled joystick x-coordinate as a
-\                       sign-magnitude number with the sign in bit 0
+\   (U T)               The amount of steering currently being applied by the
+\                       steering wheel:
 \
-\   V                   
+\                         * For joystick, contains the scaled joystick
+\                           x-coordinate as a sign-magnitude number with the
+\                           sign in bit 0 (1 = left, 0 = right)
+\
+\                         * For keyboard, contains a signed 16-bit number,
+\                           negative if bit 0 of steeringLo is set (left),
+\                           positive if bit 0 of steeringLo is clear (right)
+\
+\   (A T)               Same as (U T)
+\
+\   V                   For keyboard only:
+\
+\                         * V = 1 if ";" is being pressed (steer right)
+\
+\                         * V = 2 if "L" is being pressed (steer left)
+\
+\                         * V = 0 if neither is being pressed
 \
 \ Returns:
 \
-\   V
-\
 \   A                   A is set to steeringLo
+\
+\   (U T)               The new amount of steering to apply, adjusted to add
+\                       steering assistance, as a sign-magnitude number
 \
 \ Other entry points:
 \
@@ -11481,22 +11544,30 @@ IF _SUPERIOR
                         \ Steering (CAS) indicator on the dashboard
 
  BNE asst2              \ If CAS is enabled, jump to asst2 to skip the following
-                        \ instruction, otherwise we jump to keys11
+                        \ instruction and apply CAS, otherwise we jump to keys11
+                        \ to return to the ProcessDrivingKeys routine
 
 .asst1
 
- JMP keys11             \ Jump to keys11 in the ProcessDrivingKeys routine
+ JMP keys11             \ Return to the ProcessDrivingKeys routine at keys11
 
 .asst2
 
  BCS asst1              \ If bit 7 of directionFacing is set, then our car is
                         \ facing backwards, so jump to asst1 to jump to keys11
-                        \ in the ProcessDrivingKeys routine
+                        \ in the ProcessDrivingKeys routine, as CAS only works
+                        \ when driving forwards
 
- CMP #5                 \ If A >= 5, jump to asst4
- BCS asst4
+ CMP #5                 \ If A >= 5, then the joystick is currently applying
+ BCS asst4              \ some steering, so jump to asst4 to continue applying
+                        \ CAS
 
- JMP keys7              \ Jump to keys7 in the ProcessDrivingKeys routine
+                        \ Otherwise the joystick is not being used for steering
+                        \ at the moment, so there is no steering to assist and
+                        \ we don't apply CAS
+
+ JMP keys7              \ Return to the ProcessDrivingKeys routine at keys7 to
+                        \ apply no joystick steering
 
 .AssistSteeringKeys
 
@@ -11508,154 +11579,229 @@ IF _SUPERIOR
                         \ to keys10 in the ProcessDrivingKeys routine
 
  BCS asst3              \ If bit 7 of directionFacing is set, then our car is
-                        \ facing backwards, so jump to asst3
+                        \ facing backwards, so jump to asst3 to jump to keys10
+                        \ in the ProcessDrivingKeys routine, as CAS only works
+                        \ when driving forwards
 
- LDA V                  \ If V is non-zero, jump to asst5
- BNE asst5
+ LDA V                  \ Set A = V
+
+ BNE asst5              \ If A is non-zero, then one of the steering keys is
+                        \ being held down, so jump to asst5 to continue applying
+                        \ CAS
+
+                        \ Otherwise the keyboard is not being used for steering
+                        \ at the moment, so there is no steering to assist and
+                        \ we don't apply CAS
 
 .asst3
 
- JMP asst13             \ Jump to asst13 to set A and jump to keys10 in the
-                        \ ProcessDrivingKeys routine
+ JMP asst13             \ Jump to asst13 to set A to steeringLo and return to the
+                        \ ProcessDrivingKeys routine at keys210
 
 .asst4
 
- LDA T
- EOR #1
- LSR A
+                        \ If we get here then the joystick is being used for
+                        \ steering, and (A T) contains the scaled joystick
+                        \ x-coordinate as a sign-magnitude number with the
+                        \ sign in bit 0 (1 = left, 0 = right)
 
- LDA #3
- SBC #0
+ LDA T                  \ Set the C flag to the inverse of the joystick
+ EOR #1                 \ x-coordinate's sign bit from bit 0 (i.e. 0 = left,
+ LSR A                  \ 1 = right)
+
+ LDA #3                 \ Set A to 3 (if the C flag is set, i.e. right) or 2 (if
+ SBC #0                 \ the C flag is clear, i.e. left)
 
 .asst5
 
- LDX #50
+                        \ If we get here, then either the joystick or keyboard
+                        \ is being used for steering, and we have the following:
+                        \
+                        \   * A = 2 if we are steering left
+                        \
+                        \ We now spend the rest of the routine calculating the
+                        \ amount of assisted steering to apply, returning the
+                        \ result in the sign-magnitude number (U T)
 
- CMP #2
- BEQ asst6
+ LDX #50                \ Set X = 50 to use as the value for steering left
 
- LDX #10
+ CMP #2                 \ If A = 2 then we are steering left, so jump to asst6 to
+ BEQ asst6              \ skip the following instruction
+
+ LDX #10                \ Set X = 10 to use as the value for steering right
 
 .asst6
 
- LDA steeringLo
+                        \ We now set the following if we are steering right:
+                        \
+                        \   (W V) = (steeringHi steeringLo) + 256
+                        \
+                        \ or the following if we are steering left:
+                        \
+                        \   (W V) = (steeringHi steeringLo) - 256
+                        \
+                        \ by first converting (steeringHi steeringLo) from a
+                        \ sign-magnitude number to a signed 16-bit number and
+                        \ then doing the addition or subtraction
+
+ LDA steeringLo         \ Set V = steeringLo
  STA V
 
- LSR A
+ LSR A                  \ Set the C flag to the sign of steeringLo
 
- LDA steeringHi
- BCC asst7
+ LDA steeringHi         \ Set A = steeringHi
+                        \
+                        \ So (A V) = (steeringHi steeringLo)
 
- LDA #0
- SEC
- SBC V
+ BCC asst7              \ If the C flag is clear then (steeringHi steeringLo) is
+                        \ positive, so jump to asst7 as (A V) already has the
+                        \ correct sign
+
+                        \ Otherwise (steeringHi steeringLo) is negative, so we
+                        \ need to negate (A V)
+
+ LDA #0                 \ Set (A V) = 0 - (A V)
+ SEC                    \
+ SBC V                  \ starting with the low bytes
  STA V
 
- LDA #0
+ LDA #0                 \ And then the high bytes
  SBC steeringHi
 
 .asst7
 
- CLC
- ADC #1
+ CLC                    \ Set (A V) = (A V) + 256
+ ADC #1                 \           = (steeringHi steeringLo) + 256
 
- CPX #50
+ CPX #50                \ If X <> 50, then we are steering right, so jump to asst8
  BNE asst8
 
- SBC #2
+ SBC #2                 \ X = 50, so we are steering left, so set:
+                        \
+                        \   (A V) = (A V) - 2 * 256
+                        \         = (steeringHi steeringLo) + 256 - 2 * 256
+                        \         = (steeringHi steeringLo) - 256
 
 .asst8
 
- STA W
+ STA W                  \ Set (W V) = (A V)
+                        \
+                        \ So if we are steering right, we have:
+                        \
+                        \   (W V) = (steeringHi steeringLo) + 256
+                        \
+                        \ and if we are steering left we have:
+                        \
+                        \   (W V) = (steeringHi steeringLo) - 256
 
- LDA var24Lo,X
- SEC
- SBC V
+ LDA var24Lo,X          \ Set (A T) = X-th (var24Hi var24Lo) - (W V)
+ SEC                    \
+ SBC V                  \ starting with the low bytes
  STA T
 
- LDA var24Hi,X
+ LDA var24Hi,X          \ And then the high bytes
  SBC W
 
- PHP
+ PHP                    \ Store the sign flag for X-th var24 - (W V) on the
+                        \ stack, so we can retrieve it below
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
+                        \           = |X-th var24 - (W V)|
 
- STA V
+ STA V                  \ Set (V T) = (A T)
+                        \           = |X-th var24 - (W V)|
 
- LDY segmentIndex96
+ LDY segmentIndex96     \ Set Y to segmentIndex - 96
 
- LDA #60
+ LDA #60                \ Set A = 60 - speedHi
  SEC
  SBC speedHi
 
- BPL asst9
+ BPL asst9              \ If the result is positive, jump to asst9 to skip the
+                        \ following instruction
 
- LDA #0
+ LDA #0                 \ Set A = 0, so A is always positive, and is zero if we
+                        \ are currently doing more than 60
 
 .asst9
 
- ASL A
- ADC #32
- STA U
+ ASL A                  \ Set U = A * 2 + 32
+ ADC #32                \       = 32 + (60 - speedHi) * 2
+ STA U                  \
+                        \ So U is 32 if we are doing more than 60, and higher
+                        \ with lower speeds
 
- LDA segmentSteering,Y
+ LDA segmentSteering,Y  \ Fetch the carSteering value to steer round the corner
+                        \ for track segment segmentIndex96
 
- AND #%01111111
+ AND #%01111111         \ Zero the driving direction in bit 7
 
- CMP #64
- BCC asst10
+ CMP #64                \ If A < 64, jump to asst10 to skip the following
+ BCC asst10             \ instruction
 
- LDA #2
+ LDA #2                 \ A >= 64, i.e. bit 6 is set, so set A = 2
 
 .asst10
 
- CMP #8
- BCC asst11
+ CMP #8                 \ If A < 8, jump to asst11 to skip the following
+ BCC asst11             \ instruction
 
- LDA #7
+ LDA #7                 \ A >= 8, so set A = 7
 
 .asst11
 
- ASL A
- ASL A
- ASL A
+                        \ By now A is between 0 and 7, and is set to 2 if bit 6
+                        \ of segmentSteering was set
+
+ ASL A                  \ Set A = A * 16
+ ASL A                  \
+ ASL A                  \ So A is in the range 0 to 112
  ASL A
 
- CMP U
- BCC asst12
+ CMP U                  \ If A < U, jump to asst12 to skip the following
+ BCC asst12             \ instruction
 
- STA U
+ STA U                  \ A >= U, so set U = A, i.e. set U = max(U, A)
 
 .asst12
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+                        \           = U * |X-th var24 - (W V)| / 256
 
- LDA U
+ LDA U                  \ Set (A T) = (U T)
+                        \           = U * |X-th var24 - (W V)| / 256
 
- PLP
+ PLP                    \ Retrieve the sign of the X-th var24 - (W V)
+                        \ calculation that we stored above
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
+ JSR Absolute16Bit      \ Set the sign of (A T) to that of X-th var24 - (W V),
+                        \ so we now have:
+                        \
+                        \   (A T) = U * (X-th var24 - (W V)) / 256
 
- STA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = U * (X-th var24 - (W V)) / 256
 
- LDA T
+ LDA T                  \ Clear bit 0 of (U T)
  AND #%11111110
  STA T
 
- LDA steeringLo
+ LDA steeringLo         \ Set the C flag to the sign in bit 0 of steeringLo
  LSR A
 
- BCS asst13
+ BCS asst13             \ If the C flag is set, jump to asst13 to skip the
+                        \ following instruction
 
  JSR Negate16Bit+2      \ Set (A T) = -(U T)
 
- STA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = -(U T)
 
 .asst13
 
- LDA steeringLo
+ LDA steeringLo         \ Set A = steeringLo to return from the subroutine
 
- JMP keys10
+ JMP keys10             \ Return to the ProcessDrivingKeys routine at keys10
 
 ENDIF
 
@@ -13438,7 +13584,15 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The offset from xSegmentCoordILo of the variable to use
+\                       for the object's 3D coordinates in ProjectObjectX
+\
+\ Returns:
+\
+\   A                   High byte of the collision distance between the
+\                       projected object and the player's car
 \
 \ ******************************************************************************
 
@@ -13447,7 +13601,7 @@ ENDIF
  JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
                         \ object's screen x-coordinate, returning it in (JJ II)
 
- LDY L0012
+ LDY L0012              \ Set Y = L0012, which is 6 or 46
 
 \ ******************************************************************************
 \
@@ -13458,20 +13612,35 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   Index within var24 to store the x-distance between the
+\                       projected object and the player
+\
+\   (JJ II)             The projected screen x-coordinate of the projected
+\                       object
+\
+\ Returns:
+\
+\   A                   High byte of the collision distance between the
+\                       projected object and the player's car
 \
 \ ******************************************************************************
 
 .sub_C23C0
 
- LDA II
- SEC
- SBC xPlayerScreenLo
+ LDA II                 \ Set Y-th (var24Hi var24Lo) = (JJ II) - xPlayerScreen
+ SEC                    \
+ SBC xPlayerScreenLo    \ starting with the low bytes
  STA var24Lo,Y
- LDA JJ
+
+ LDA JJ                 \ And then the high bytes
  SBC xPlayerScreenHi
  STA var24Hi,Y
- JMP GetObjectDistance
+
+ JMP GetObjectDistance  \ Set (L K) to the distance between the projected object
+                        \ and the player's car, returning from the subroutine
+                        \ using a tail call
 
 \ ******************************************************************************
 \
@@ -13482,19 +13651,39 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   6 or 46
+\
+\   X                   The offset from xSegmentCoordILo of the variable to use
+\                       for the object's 3D coordinates in sub_C23BB, as
+\                       returned by sub_C254A, i.e. segmentIndex or
+\                       segmentIndex + 120 - LATTER is xSegmentCoordOLo rather
+\                       than xSegmentCoordILo
+\
+\   L000E               0 or 120
+\
+\   L0049               0 or 1
+\
+\   X                   segmentIndex or segmentIndex + 120
 \
 \ ******************************************************************************
 
 .sub_C23D2
 
- STA L0012
- LDA #0
+ STA L0012              \ Set L0012 = A
+
+ LDA #0                 \ Set L0042 = 0
  STA L0042
 
 .C23D8
 
- JSR sub_C23BB
+ JSR sub_C23BB          \ Project object X
+                        \ Set Y = L0012
+                        \ Set Y-th var24 to x-distance to player
+                        \ Set A to high byte of collision distance between
+                        \   objectand car
+
  CMP L0011
  BCC C23E7
  BNE C23FC
@@ -13764,7 +13953,7 @@ ENDIF
  LDA #13                \ Set L0013 = 13
  STA L0013
 
- LDA #0
+ LDA #0                 \ Set L000E, L0049, X for facing forwards
  JSR sub_C254A
 
  LDA #6
@@ -13773,10 +13962,10 @@ ENDIF
  LDA L0012              \ Set L0015 = L0012
  STA L0015
 
- LDA #&80
+ LDA #&80               \ Set L000E, L0049, X for facing backwards
  JSR sub_C254A
 
- LDA #&2E
+ LDA #46
  JSR sub_C23D2
 
  LDA L0051              \ If L0051 < 40, jump to C2528 to skip the following
@@ -13828,35 +14017,72 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   Direction:
+\
+\                         * Bit 7 clear = forwards
+\                        
+\                         * Bit 7 set = backwards
+\
+\ Returns:
+\
+\   L000E               Returns:
+\
+\                         * 0 when our car is facing in direction A
+\
+\                         * 120 when our car is facing opposite direction A
+\
+\   L0049               Returns:
+\
+\                         * 0 when our car is facing in direction A
+\
+\                         * 1 when our car is facing opposite direction A
+\
+\   X                   Returns:
+\
+\                         * segmentIndex when our car is facing in direction A
+\
+\                         * segmentIndex + 120 when our car is facing opposite
+\                           direction A (which is the outer xSegmentCoordOLo
+\                           rather than the inner xSegmentCoordILo)
 \
 \ ******************************************************************************
 
 .sub_C254A
 
- LDX segmentIndex
- EOR directionFacing
- BPL C255A
- TXA
+ LDX segmentIndex       \ Set X to the index * 3 of the current track segment
+
+ EOR directionFacing    \ If bit 7 of A and bit 7 of directionFacing are the
+ BPL C255A              \ same, jump to C255A
+
+ TXA                    \ Set X = X + 120
  CLC
  ADC #120
  TAX
- LDA #120
- SEC
- BNE C255D
+
+ LDA #120               \ Set A = 120, so L000E gets set to 120
+
+ SEC                    \ Set the C flag, so L0049 gets set to 1
+
+ BNE C255D              \ Jump to C255D (thie BNE is effectively a JMP as A is
+                        \ never zero
 
 .C255A
 
- LDA #0
- CLC
+ LDA #0                 \ Set A = 0, so L000E gets set to 0
+
+ CLC                    \ Clear the C flag, so L0049 gets set to 0
 
 .C255D
 
- STA L000E
- LDA #0
+ STA L000E              \ Set L000E = A
+
+ LDA #0                 \ Set L0049 = the C flag
  ROL A
  STA L0049
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -16033,9 +16259,9 @@ ENDIF
  LDA JJ
  STA xObjectScreenHi,Y
 
- JSR CheckForContact-2  \ Check to see if the objects are close enough for
-                        \ contact, specifically if they are within 37 projected
-                        \ units of each other
+ JSR CheckForContact-2  \ Check to see if the projected object and the player's
+                        \ car are close enough for contact, specifically if they
+                        \ are within 37 projected units of each other
 
  JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
                         \ object's screen y-coordinate, returning it in A and LL
@@ -16201,7 +16427,8 @@ ENDIF
 \       Name: CheckForContact
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Check to see if two objects are close enough to make contact
+\    Summary: Check to see if the projected object is close enough to the player
+\             car to make contact
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16228,8 +16455,8 @@ ENDIF
 
 .CheckForContact
 
- JSR GetObjectDistance  \ Set (L K) to the distance between the two projected
-                        \ objects
+ JSR GetObjectDistance  \ Set (L K) to the distance between the projected object
+                        \ and the player's car
 
  LDA L                  \ Set objectDistanceHi to the high byte of (L K)
  STA objectDistanceHi
@@ -26346,9 +26573,9 @@ ENDIF
  LDA #23                \ Set L0042 = 23, so if we are colliding with the sign,
  STA L0042              \ CheckForContact sets collisionDriver to object 23
 
- JSR CheckForContact    \ Check to see if the objects are close enough for
-                        \ contact, specifically if they are within Y projected
-                        \ units of each other
+ JSR CheckForContact    \ Check to see if the projected object and the player's
+                        \ car are close enough for contact, specifically if they
+                        \ are within Y projected units of each other
 
                         \ The final step is to project the sign in the y-axis,
                         \ and then we are done building the sign object
@@ -27893,8 +28120,8 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ This routine reads a joystick axis and returns a value with 0 representing the
-\ stick being at the centre point, and -127 and +127 representing the right/left
-\ or down/up values.
+\ stick being at the centre point, and -127 and +127 representing the left/right
+\ or up/down values.
 \
 \ Arguments:
 \
@@ -27909,7 +28136,11 @@ ENDIF
 \   A                   The high byte of the channel value, converted to an
 \                       absolute figure in the range 0 to 127
 \
-\   X                   The sign of the result (1 = positive, 0 = negative)
+\   X                   The sign of the result:
+\
+\                         * 0 = positive, i.e. right or down
+\
+\                         * 1 = negative, i.e. left or up
 \
 \   C flag              Clear if A < 10
 \
@@ -27929,9 +28160,11 @@ ENDIF
                         \ so now we need to flip this around into the range 0 to
                         \ 127, with the sign given in X
 
- LDX #1                 \ Set X = 1
+ LDX #1                 \ Set X = 1, to denote a negative result (left or down),
+                        \ which we will change below if this is a positive
+                        \ result
 
- CLC                    \ Set A = A + 128, so in terms of 8-bit mumbers, this
+ CLC                    \ Set A = A + 128, so in terms of 8-bit numbers, this
  ADC #128               \ does the following:
                         \
                         \   * 0-127 goes to 128-255
@@ -27944,13 +28177,12 @@ ENDIF
 
  BPL adcc1              \ If A is in the range 0 to 127, skip the following two
                         \ instructions as the result is already in the correct
-                        \ range, 0 to 127
+                        \ range, 0 to 127, and X is set to 1 for left or up
 
  EOR #&FF               \ Flip the value of A, so the range 128 to 255 flips to
                         \ the range 127 to 0
 
- DEX                    \ Set X = 0 to denote a negative result, so the result
-                        \ is in the range -127 to 0
+ DEX                    \ Set X = 0 to denote a positive result, right or down
 
 .adcc1
 
@@ -30499,6 +30731,9 @@ ENDIF
 \ The steering wheel position is stored as (steeringHi steeringLo), with the
 \ sign bit in bit 0 of steeringLo, so it's a sign-magnitude number.
 \
+\ Negative (bit 0 set) means we are steering left, positive (bit 0 clear) means
+\ we are steering right.
+\
 \ ******************************************************************************
 
 .steeringLo
@@ -30533,6 +30768,9 @@ ENDIF
 \
 \ The steering wheel position is stored as (steeringHi steeringLo), with the
 \ sign bit in bit 0 of steeringLo, so it's a sign-magnitude number.
+\
+\ Negative (bit 0 set) means we are steering left, positive (bit 0 clear) means
+\ we are steering right.
 \
 \ ******************************************************************************
 
