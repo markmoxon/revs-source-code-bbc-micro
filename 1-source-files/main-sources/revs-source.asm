@@ -165,15 +165,15 @@ ORG &0000
                         \
                         \ Set to 7 in ResetVariables
 
-.xPlayerScreenLo
+.playerRotationLo
 
- SKIP 1                 \ Low byte of the player's x-coordinate when projected
-                        \ onto the screen
+ SKIP 1                 \ Low byte of the player's rotation about the y-axis
+                        \ (left-right rotation)
 
-.xPlayerScreenHi
+.playerRotationHi
 
- SKIP 1                 \ High byte of the player's x-coordinate when projected
-                        \ onto the screen
+ SKIP 1                 \ High byte of the player's rotation about the y-axis
+                        \ (left-right rotation)
 
 .yStore1
 
@@ -409,15 +409,17 @@ ORG &0000
 
 .xCoord
 
- SKIP 1                 \ The x-coordinate of the centre of the current object
+ SKIP 1                 \ The pixel x-coordinate of the centre of the current
+                        \ object
                         \
-                        \ In terms of screen coodrinates, so 0 is the left edge
+                        \ In terms of screen coordinates, so 0 is the left edge
                         \ of the screen, 80 is the centre and 159 is the right
                         \ edge
 
 .yCoord
 
- SKIP 1                 \ The y-coordinate of the centre of the current object
+ SKIP 1                 \ The pixel y-coordinate of the centre of the current
+                        \ object
                         \
                         \ In terms of track lines, so 80 is the top of the track
                         \ view and 0 is the bottom of the track view
@@ -1205,20 +1207,19 @@ ORG &0100
 
 ORG &0380
 
-.xObjectScreenLo
+.objRotationLo
 
- SKIP 24                \ Low byte of each object's x-coordinate when projected
-                        \ onto the screen
+ SKIP 24                \ Low byte of each object's rotation about the y-axis
+                        \ (left-right rotation)
 
-.xObjectScreenHi
+.objRotationHi
 
- SKIP 24                \ High byte of each object's x-coordinate when projected
-                        \ onto the screen
+ SKIP 24                \ High byte of each object's rotation about the y-axis
+                        \ (left-right rotation)
 
 .yObjectScreen
 
- SKIP 24                \ Each object's y-coordinate  when projected onto the
-                        \ screen
+ SKIP 24                \ Each object's elevation angle (up-down)
 
 .objectScaleUp
 
@@ -1593,17 +1594,17 @@ ORG &0880
 
 .xSegmentCoordILo
 
- SKIP 1                 \ The low byte of the x-coordinate for an inner track
+ SKIP 1                 \ The low byte of the 3D x-coordinate for an inner track
                         \ segment in the track segment buffer
 
 .ySegmentCoordILo
 
- SKIP 1                 \ The low byte of the y-coordinate for an inner track
+ SKIP 1                 \ The low byte of the 3D y-coordinate for an inner track
                         \ segment in the track segment buffer
 
 .zSegmentCoordILo
 
- SKIP 1                 \ The low byte of the z-coordinate for an inner track
+ SKIP 1                 \ The low byte of the 3D z-coordinate for an inner track
                         \ segment in the track segment buffer
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
@@ -1612,17 +1613,17 @@ ORG &0880
 
 .xSegmentCoordOLo
 
- SKIP 1                 \ The low byte of the x-coordinate for an outer track
+ SKIP 1                 \ The low byte of the 3D x-coordinate for an outer track
                         \ segment in the track segment buffer
 
 .ySegmentCoordOLo
 
- SKIP 1                 \ The low byte of the y-coordinate for an outer track
+ SKIP 1                 \ The low byte of the 3D y-coordinate for an outer track
                         \ segment in the track segment buffer
 
 .zSegmentCoordOLo
 
- SKIP 1                 \ The low byte of the z-coordinate for an outer track
+ SKIP 1                 \ The low byte of the 3D z-coordinate for an outer track
                         \ segment in the track segment buffer
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
@@ -1671,17 +1672,17 @@ ORG &0880
 
 .xSegmentCoordIHi
 
- SKIP 1                 \ The high byte of the x-coordinate for an inner track
+ SKIP 1                 \ The high byte of the 3D x-coordinate for an inner track
                         \ segment in the track segment buffer
 
 .ySegmentCoordIHi
 
- SKIP 1                 \ The high byte of the y-coordinate for an inner track
+ SKIP 1                 \ The high byte of the 3D y-coordinate for an inner track
                         \ segment in the track segment buffer
 
 .zSegmentCoordIHi
 
- SKIP 1                 \ The high byte of the z-coordinate for an inner track
+ SKIP 1                 \ The high byte of the 3D z-coordinate for an inner track
                         \ segment in the track segment buffer
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
@@ -1690,17 +1691,17 @@ ORG &0880
 
 .xSegmentCoordOHi
 
- SKIP 1                 \ The high byte of the x-coordinate for an outer track
+ SKIP 1                 \ The high byte of the 3D x-coordinate for an outer track
                         \ segment in the track segment buffer
 
 .ySegmentCoordOHi
 
- SKIP 1                 \ The high byte of the y-coordinate for an outer track
+ SKIP 1                 \ The high byte of the 3D y-coordinate for an outer track
                         \ segment in the track segment buffer
 
 .zSegmentCoordOHi
 
- SKIP 1                 \ The high byte of the z-coordinate for an outer track
+ SKIP 1                 \ The high byte of the 3D z-coordinate for an outer track
                         \ segment in the track segment buffer
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
@@ -2519,13 +2520,13 @@ ORG &0B00
  LDA #0                 \ Set the Y-th entry in L5EE0 to 0
  STA L5EE0,Y
 
- LDA var24Lo,Y          \ Set var24 = var24 - var03
+ LDA var24Lo,Y          \ Set var24 = var24 - spinSpeed
  SEC                    \
- SBC var03Lo            \ starting with the high bytes
+ SBC spinSpeedLo        \ starting with the high bytes
  STA var24Lo,Y
 
  LDA var24Hi,Y          \ And then the low bytes
- SBC var03Hi
+ SBC spinSpeedHi
  STA var24Hi,Y
 
  LDA L5F20,Y            \ Set A = Y-th entry in L5F20 - L004E
@@ -4548,15 +4549,15 @@ ORG &0B00
 
  LDA #20                \ Set A = 20
 
- BIT var03Hi            \ Set the flags according to the sign of var03Hi, so the
-                        \ call to Absolute8Bit sets the sign of A to the same
-                        \ sign as var03
+ BIT spinSpeedHi        \ Set the flags according to the sign of spinSpeedHi, so
+                        \ the call to Absolute8Bit sets the sign of A to the
+                        \ same sign as spinSpeed
 
- JSR Absolute8Bit       \ Set A = 20 * abs(var03)
+ JSR Absolute8Bit       \ Set A = 20 * abs(spinSpeed)
 
- JMP SquealTyres        \ Jump to SquealTyres to update var03 and make the tyres
-                        \ squeal, returning from the subroutine using a tail
-                        \ call
+ JMP SquealTyres        \ Jump to SquealTyres to update spinSpeed and make the
+                        \ tyres squeal, returning from the subroutine using a
+                        \ tail call
 
 .cras1
 
@@ -4827,7 +4828,8 @@ ORG &0B00
 \
 \   xPlayerCoord        The 3D coordinates of the player's car
 \
-\   xPlayerScreen       The screen coordinates of the player's car
+\   playerRotation      The rotation of the player's car around the y-axis
+\                       (left-right)
 \
 \ Other entry points:
 \
@@ -4879,15 +4881,15 @@ ORG &0B00
  LDX L0045              \ Set X to the driver number of the current player
 
  JSR BuildCarObjects    \ Build the car object for the current player using the
-                        \ updated track segment, returning the projected screen
-                        \ coordinates in xObjectScreen
+                        \ updated track segment, returning the object's rotation
+                        \ about the y-axis in objRotation
 
- LDA xObjectScreenLo,X  \ Copy the low byte of the screen x-coordinate to
- STA xPlayerScreenLo    \ xPlayerScreenLo
+ LDA objRotationLo,X    \ Copy the low byte of the rotation about the y-axis to
+ STA playerRotationLo   \ playerRotationLo
 
- LDA xObjectScreenHi,X  \ Copy the high byte of the screen x-coordinate to
- EOR directionFacing    \ xPlayerScreenHi, flipping the sign of the coordinate
- STA xPlayerScreenHi    \ if we are facing backwards along the track
+ LDA objRotationHi,X    \ Copy the high byte of the rotation about the y-axis to
+ EOR directionFacing    \ playerRotationHi, flipping the sign of the coordinate
+ STA playerRotationHi   \ if we are facing backwards along the track
 
  RTS                    \ Return from the subroutine
 
@@ -5761,8 +5763,8 @@ ORG &0B00
 
  STA UU                 \ Set UU = 0, to use as the high byte in (UU A) below
 
- LDA xTrackVectorO,Y    \ Set A = the x-coordinate of the outer track vector for
-                        \ the new track segment
+ LDA xTrackVectorO,Y    \ Set A = the 3D x-coordinate of the outer track vector
+                        \ for the new track segment
 
  BPL sets11             \ If A is negative, decrement SS to &FF so (SS A) has
  DEC SS                 \ the correct sign
@@ -8823,7 +8825,7 @@ ENDIF
                         \ routines:
                         \
                         \   MoveAndDrawCars > BuildVisibleCar > BuildCarObjects
-                        \                   > ProjectObject > CheckForContact
+                        \                   > GetObjectAngles > CheckForContact
                         \
                         \ Note that BuildVisibleCar does get called once more at
                         \ the end of MoveAndDrawCars, for the car behind us, but
@@ -8874,15 +8876,15 @@ ENDIF
 
 .cont2
 
- LDA xObjectScreenHi,X  \ Set A to the screen x-coordinate for the other car
- SEC                    \ minus the screen x-coordinate for the player, let's
- SBC xPlayerScreenHi    \ call this x-delta
+ LDA objRotationHi,X    \ Set A to the rotation about the y-axis for the other car
+ SEC                    \ minus the rotation about the y-axis for the player, let's
+ SBC playerRotationHi   \ call this dRotation
 
  ASL A                  \ Set A = A * 4
- ASL A                  \       = x-delta * 4
+ ASL A                  \       = dRotation * 4
 
  PHP                    \ Push the N flag onto the stack, which contains the
-                        \ sign of x-delta
+                        \ sign of dRotation
 
  LDA carSpeedHi,Y       \ Set A to the high byte of the player's speed
 
@@ -8936,11 +8938,11 @@ ENDIF
                         \ By this point, (A T) is a measurement of how dangerous
                         \ the collision was, on a scale of 0 to 16
 
- PLP                    \ Restore the sign of x-delta, which we stored on the
+ PLP                    \ Restore the sign of dRotation, which we stored on the
                         \ stack above, so the N flag is positive if the other
-                        \ car's x-coordinate is larger (i.e. the other car is
+                        \ car's rotation angle is larger (i.e. the other car is
                         \ to the right of the player's car), or negative if the
-                        \ other car's x-coordinate is smaller (i.e. the other
+                        \ other car's rotation angle is smaller (i.e. the other
                         \ car is to the left of the player's car)
 
  JSR Absolute16Bit      \ Set the sign of (A T) to match the result of the
@@ -8952,8 +8954,8 @@ ENDIF
                         \
                         \   * 0 to +16 if the other car is to the right
 
-                        \ Fall through into SquealTyres to set var03Hi and make
-                        \ the sound of squealing tyres
+                        \ Fall through into SquealTyres to set spinSpeedHi and
+                        \ make the sound of squealing tyres
 
 \ ******************************************************************************
 \
@@ -8966,13 +8968,13 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   The new value for var03Hi
+\   A                   The new value for spinSpeedHi
 \
 \ ******************************************************************************
 
 .SquealTyres
 
- STA var03Hi            \ Set var03Hi = A
+ STA spinSpeedHi        \ Set spinSpeedHi = A
 
  LDA #%10000000         \ Set bit 7 in L62A6 and L62A7, so the tyres squeal
  STA L62A6
@@ -11639,8 +11641,8 @@ IF _SUPERIOR
 
 .asst3
 
- JMP asst13             \ Jump to asst13 to set A to steeringLo and return to the
-                        \ ProcessDrivingKeys routine at keys210
+ JMP asst13             \ Jump to asst13 to set A to steeringLo and return to
+                        \ the ProcessDrivingKeys routine at keys210
 
 .asst4
 
@@ -11669,8 +11671,8 @@ IF _SUPERIOR
 
  LDX #50                \ Set X = 50 to use as the value for steering left
 
- CMP #2                 \ If A = 2 then we are steering left, so jump to asst6 to
- BEQ asst6              \ skip the following instruction
+ CMP #2                 \ If A = 2 then we are steering left, so jump to asst6
+ BEQ asst6              \ to skip the following instruction
 
  LDX #10                \ Set X = 10 to use as the value for steering right
 
@@ -11717,8 +11719,8 @@ IF _SUPERIOR
  CLC                    \ Set (A V) = (A V) + 256
  ADC #1                 \           = (steeringHi steeringLo) + 256
 
- CPX #50                \ If X <> 50, then we are steering right, so jump to asst8
- BNE asst8
+ CPX #50                \ If X <> 50, then we are steering right, so jump to
+ BNE asst8              \ asst8
 
  SBC #2                 \ X = 50, so we are steering left, so set:
                         \
@@ -12642,19 +12644,12 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObjectX (Part 1 of 4)
+\       Name: GetObjRotation (Part 1 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Project an object onto the screen and calculate the object's
-\             screen x-coordinate
+\    Summary: Calculate an object's rotation angle about the y-axis
 \
 \ ------------------------------------------------------------------------------
-\
-\ The projection equation appears to be the standard 3D projection thet divides
-\ the x-coordinate by the z-coordinate.
-\
-\ The routine also returns the viewing angle, which is used in collision
-\ detection.
 \
 \ Arguments:
 \
@@ -12675,7 +12670,7 @@ ENDIF
 \
 \ Returns:
 \
-\   (JJ II)             The projected screen x-coordinate of the object
+\   (JJ II)             The projected rotation about the y-axis of the object
 \
 \   (J I)               max(|x-delta|, |z-delta|)
 \
@@ -12686,14 +12681,14 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObjectX-2    Use xPlayerCoord (Y = 0)
+\   GetObjRotation-2    Use xPlayerCoord (Y = 0)
 \
 \ ******************************************************************************
 
  LDY #0                 \ Use xPlayerCoord for the second variable when calling
-                        \ the routine via ProjectObjectX-2
+                        \ the routine via GetObjRotation-2
 
-.ProjectObjectX
+.GetObjRotation
 
                         \ The vectors used in this routine are configured by the
                         \ values of X and Y, but for the purposes of simplicity,
@@ -12845,7 +12840,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObjectX (Part 2 of 4)
+\       Name: GetObjRotation (Part 2 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate projection for when |x-delta| > |z-delta|
@@ -12874,8 +12869,8 @@ ENDIF
                         \
                         \   * |x-delta| > |z-delta|
                         \
-                        \ We now do the following division to calculate the
-                        \ projected x-coordinate:
+                        \ We now do the following division so we can use
+                        \ trigonometry to calculate the rotation angle:
                         \
                         \   |z-delta| / |x-delta|
                         \
@@ -12928,7 +12923,7 @@ ENDIF
                         \ rounding ???
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final
- STA II                 \ x-coordinate result
+ STA II                 \ rotation angle
 
  LDY T                  \ Set A = arcTan(T)
  LDA arcTan,Y           \       = arcTan(|z-delta| / |x-delta|)
@@ -12986,7 +12981,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObjectX (Part 3 of 4)
+\       Name: GetObjRotation (Part 3 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate projection for when |x-delta| = |z-delta|
@@ -13007,7 +13002,7 @@ ENDIF
  STA M                  \ degrees
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final
- STA II                 \ x-coordinate result
+ STA II                 \ rotation angle
 
  BIT VV                 \ If x-delta is positive, jump to prox11
  BPL prox11
@@ -13062,7 +13057,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObjectX (Part 4 of 4)
+\       Name: GetObjRotation (Part 4 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate projection for when |x-delta| < |z-delta|
@@ -13091,8 +13086,8 @@ ENDIF
                         \
                         \   * |x-delta| < |z-delta|
                         \
-                        \ We now do the following division to calculate the
-                        \ projected x-coordinate:
+                        \ We now do the following division so we can use
+                        \ trigonometry to calculate the rotation angle:
                         \
                         \   |x-delta| / |z-delta|
                         \
@@ -13145,7 +13140,7 @@ ENDIF
                         \ rounding ???
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final
- STA II                 \ x-coordinate result
+ STA II                 \ rotation angle
 
  LDY T                  \ Set A = arcTan(T)
  LDA arcTan,Y           \       = arcTan(|x-delta| / |z-delta|)
@@ -13203,16 +13198,12 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObjectY
+\       Name: GetObjElevation
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Project an object onto the screen and calculate the object's
-\             screen y-coordinate
+\    Summary: Calculate an object's elevation angle
 \
 \ ------------------------------------------------------------------------------
-\
-\ The projection equation appears to be the standard 3D projection thet divides
-\ the x-coordinate by the z-coordinate.
 \
 \ Arguments:
 \
@@ -13232,7 +13223,7 @@ ENDIF
 \                         * 6 = yVector6
 \
 \   (L K)               The result from GetObjectDistance, which is called
-\                       between ProjectObjectX and ProjectObjectY
+\                       between GetObjRotation and GetObjElevation
 \
 \ Returns:
 \
@@ -13255,14 +13246,14 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObjectY-2    Use yPlayerCoord (Y = 0)
+\   GetObjElevation-2   Use yPlayerCoord (Y = 0)
 \
 \ ******************************************************************************
 
  LDY #0                 \ Use xPlayerCoord for the second variable when calling
-                        \ the routine via ProjectObjectY-2
+                        \ the routine via GetObjElevation-2
 
-.ProjectObjectY
+.GetObjElevation
 
                         \ The vectors used in this routine are configured by the
                         \ values of X and Y, but for the purposes of simplicity,
@@ -13373,8 +13364,8 @@ ENDIF
                         \
                         \   * Y = 0
                         \
-                        \ We now do the following division to calculate the
-                        \ projected x-coordinate:
+                        \ We now do the following division so we can use
+                        \ trigonometry to calculate the elevation angle:
                         \
                         \   (|y-delta| / 8) / |x-delta|
                         \
@@ -13564,8 +13555,8 @@ ENDIF
  LDX #&FD               \ Copy the first trackSection coordinate for track
  JSR GetSectionCoord    \ section Y into xVector4
 
- JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
-                        \ object's screen x-coordinate, returning it in (JJ II)
+ JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
+                        \ returning it in (JJ II)
 
  LDY L0042
 
@@ -13585,8 +13576,8 @@ ENDIF
 
  LDX #&FD
 
- JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
+                        \ in A and LL
 
  LDX L0042
  LDA LL
@@ -13643,7 +13634,7 @@ ENDIF
 \ Arguments:
 \
 \   X                   The offset from xSegmentCoordILo of the variable to use
-\                       for the object's 3D coordinates in ProjectObjectX
+\                       for the object's 3D coordinates in GetObjRotation
 \
 \ Returns:
 \
@@ -13654,8 +13645,8 @@ ENDIF
 
 .sub_C23BB
 
- JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
-                        \ object's screen x-coordinate, returning it in (JJ II)
+ JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
+                        \ returning it in (JJ II)
 
  LDY L0012              \ Set Y = L0012, which is 6 or 46
 
@@ -13673,7 +13664,7 @@ ENDIF
 \   Y                   Index within var24 to store the x-distance between the
 \                       projected object and the player
 \
-\   (JJ II)             The projected screen x-coordinate of the projected
+\   (JJ II)             The projected rotation about the y-axis of the projected
 \                       object
 \
 \ Returns:
@@ -13685,13 +13676,13 @@ ENDIF
 
 .sub_C23C0
 
- LDA II                 \ Set Y-th (var24Hi var24Lo) = (JJ II) - xPlayerScreen
+ LDA II                 \ Set Y-th (var24Hi var24Lo) = (JJ II) - playerRotation
  SEC                    \
- SBC xPlayerScreenLo    \ starting with the low bytes
+ SBC playerRotationLo   \ starting with the low bytes
  STA var24Lo,Y
 
  LDA JJ                 \ And then the high bytes
- SBC xPlayerScreenHi
+ SBC playerRotationHi
  STA var24Hi,Y
 
  JMP GetObjectDistance  \ Set (L K) to the distance between the projected object
@@ -13735,7 +13726,7 @@ ENDIF
 
 .C23D8
 
- JSR sub_C23BB          \ Project object X
+ JSR sub_C23BB          \ Calculate the rotation angle for object X
                         \ Set Y = L0012
                         \ Set Y-th var24 to x-distance to player
                         \ Set A to high byte of collision distance between
@@ -13763,8 +13754,8 @@ ENDIF
 
 .C23FC
 
- JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
+                        \ in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
@@ -13830,8 +13821,8 @@ ENDIF
  LDX #&FA
  JSR sub_C23BB
 
- JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
+                        \ in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
@@ -13934,7 +13925,7 @@ ENDIF
 
  LDA L0044
  SEC
- SBC var03Hi
+ SBC spinSpeedHi
  BPL mpla1
  EOR #&FF
 
@@ -15772,7 +15763,8 @@ ENDIF
 \
 \   * xSegmentCoordI is the coordinate for the start of the car's track segment
 \
-\ The routine then projects the car object (or objects) into screen coordinates.
+\ The routine then calculates the rotation and elevation angles for the car
+\ object (or objects).
 \
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
@@ -15798,8 +15790,7 @@ ENDIF
 \                       car) or the coordinates of the rear tyres (for the
 \                       four-object car
 \
-\   xObjectScreen       The x-coordinate of the object's projected screen
-\                       coordinates
+\   objRotation         The object's rotation about the y-axis
 \
 \ ******************************************************************************
 
@@ -15822,14 +15813,14 @@ ENDIF
  LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
 
- LDA xTrackVectorI,Y    \ Set VV to the x-coordinate of the inner track vector
- STA VV                 \ for the car object
+ LDA xTrackVectorI,Y    \ Set VV to the 3D x-coordinate of the inner track
+ STA VV                 \ vector for the car object
 
- LDA yTrackVectorI,Y    \ Set VV+1 to the y-coordinate of the inner track vector
- STA VV+1               \ for the car object
+ LDA yTrackVectorI,Y    \ Set VV+1 to the 3D y-coordinate of the inner track
+ STA VV+1               \ vector for the car object
 
- LDA zTrackVectorI,Y    \ Set VV+2 to the z-coordinate of the inner track vector
- STA VV+2               \ for the car object
+ LDA zTrackVectorI,Y    \ Set VV+2 to the 3D z-coordinate of the inner track
+ STA VV+2               \ vector for the car object
 
                         \ We now calculate the following:
                         \
@@ -15970,11 +15961,11 @@ ENDIF
 
  LDY yStore1            \ Set Y to the track vector number that we stored above
 
- LDA xTrackVectorO,Y    \ Set VV to the x-coordinate of the outer track vector
- STA VV                 \ for the car object
+ LDA xTrackVectorO,Y    \ Set VV to the 3D x-coordinate of the outer track
+ STA VV                 \ vector for the car object
 
- LDA zTrackVectorO,Y    \ Set VV+2 to the x-coordinate of the outer track vector
- STA VV+2               \ for the car object
+ LDA zTrackVectorO,Y    \ Set VV+2 to the 3D x-coordinate of the outer track
+ STA VV+2               \ vector for the car object
 
                         \ Note that VV+1 still contains the y-coordinate for the
                         \ inner track vector, which we can reuse as the height
@@ -16079,9 +16070,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Now that we have the car's 3D coordinates in xVector4, we project this onto
-\ the screen and use that to create either one car object, or four car objects
-\ if this is the four-object car.
+\ Now that we have the car's 3D coordinates in xVector4, we calculate the car's
+\ rotation and elevation angles, and use them to create either one car object,
+\ or four car objects if this is the four-object car.
 \
 \ If this is the four-object car (i.e. the car is directly in front of us, is
 \ close enough and is visible), then we calculate the coordinates for the three
@@ -16107,9 +16098,9 @@ ENDIF
                         \ start with the object type of the standard car, and
                         \ change this later if required)
 
- JSR ProjectObject-2    \ Project the car object onto the screen, using xVector4
-                        \ for the object's 3D coordinates, and set the object's
-                        \ visibility, scale and type
+ JSR GetObjectAngles-2  \ Calculate the object's rotation and elevation angles,
+                        \ using the coordinates in xVector4, and set the
+                        \ object's visibility, scale and type
 
  LDX L0045              \ Set X = L0045 (driver number of car we are driving)
 
@@ -16199,10 +16190,10 @@ ENDIF
                         \ tyres of the four-object car
 
                         \ Now that we have the 3D coordinates of the extra three
-                        \ parts of the four-object car, we can project them onto
-                        \ the screen and store the details in objects 20, 21 and
-                        \ 22 (for the rear tyres, body/helmet and front tyres
-                        \ respectively)
+                        \ parts of the four-object car, we can calculate the
+                        \ object's rotation and elevation angles, and store the
+                        \ details in objects 20, 21 and 22 (for the rear tyres,
+                        \ body/helmet and front tyres respectively)
 
  LDA #20                \ Set objectNumber = 20, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -16210,8 +16201,9 @@ ENDIF
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR ProjectObject-2    \ Project the object onto the screen, using the
-                        \ coordinates of the rear tyres in xVector4
+ JSR GetObjectAngles-2  \ Calculate the object's rotation and elevation angles,
+                        \ using the coordinates of the rear tyres in xVector4,
+                        \ and set the object's visibility, scale and type
 
  LDA #21                \ Set objectNumber = 21, to use as then object number
  STA objectNumber       \ for the body and helmet in the four-object car
@@ -16219,10 +16211,13 @@ ENDIF
  LDA #1                 \ Set A = 1, to use as the object type for the body and
                         \ helmet in the four-object car
 
- LDX #&F4               \ Set X = &F4 so the call to ProjectObject uses xVector7
+ LDX #&F4               \ Set X = &F4 so the call to GetObjectAngles uses
+                        \ xVector7
 
- JSR ProjectObject      \ Project the object onto the screen, using the
-                        \ coordinates of the body and helmet in xVector7
+ JSR GetObjectAngles    \ Calculate the object's rotation and elevation angles,
+                        \ using the coordinates of the body and helmet in
+                        \ xVector7, and set the object's visibility, scale and
+                        \ type
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -16230,10 +16225,13 @@ ENDIF
  LDA #0                 \ Set A = 0, to use as the object type for the rear
                         \ tyres in the four-object car
 
- LDX #&FA               \ Set X = &FA so the call to ProjectObject uses xVector3
+ LDX #&FA               \ Set X = &FA so the call to GetObjectAngles uses
+                        \ xVector3
 
- JSR ProjectObject      \ Project the object onto the screen, using the
-                        \ coordinates of the front tyres using xVector3
+ JSR GetObjectAngles    \ Calculate the object's rotation and elevation angles,
+                        \ using the coordinates of the front tyres using
+                        \ xVector3, and set the object's visibility, scale and
+                        \ type
 
 .bcar10
 
@@ -16270,11 +16268,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ProjectObject
+\       Name: GetObjectAngles
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Project an object onto the screen and calculate the object's
-\             screen coordinates
+\    Summary: Calculate the object's rotation and elevation angles, and set the
+\             object's visibility, scale and type
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16283,7 +16281,7 @@ ENDIF
 \   A                   Object type
 \
 \   X                   The offset of the variable to use for the object's 3D
-\                       coordinates in the ProjectObjectX routine:
+\                       coordinates in the GetObjRotation routine:
 \
 \                         * &F4 = xVector7
 \
@@ -16293,35 +16291,35 @@ ENDIF
 \
 \ Other entry points:
 \
-\   ProjectObject-2     Use xVector4 for the object's 3D coordinates in the call
-\                       to ProjectObjectX
+\   GetObjectAngles-2   Use xVector4 for the object's 3D coordinates in the call
+\                       to GetObjRotation
 \
 \ ******************************************************************************
 
- LDX #&FD               \ Set X = &FD so the calls to ProjectObjectX and
-                        \ ProjectObjectY use xVector4 and yVector4 for the
+ LDX #&FD               \ Set X = &FD so the calls to GetObjRotation and
+                        \ GetObjElevation use xVector4 and yVector4 for the
                         \ object's 3D coordinates
 
-.ProjectObject
+.GetObjectAngles
 
  STA objectType         \ Store the object type in objectType
 
- JSR ProjectObjectX-2   \ Project the object onto the screen and calculate the
-                        \ object's screen x-coordinate, returning it in (JJ II)
+ JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
+                        \ returning it in (JJ II)
 
  LDY objectNumber       \ Set Y to the number of the object we are processing
 
- LDA II                 \ Set the screen x-coordinate for this object in
- STA xObjectScreenLo,Y  \ (xObjectScreenHi xObjectScreenLo) to (JJ II)
+ LDA II                 \ Set the rotation about the y-axis for this object in
+ STA objRotationLo,Y    \ (objRotationHi objRotationLo) to (JJ II)
  LDA JJ
- STA xObjectScreenHi,Y
+ STA objRotationHi,Y
 
  JSR CheckForContact-2  \ Check to see if the projected object and the player's
                         \ car are close enough for contact, specifically if they
                         \ are within 37 projected units of each other
 
- JSR ProjectObjectY-2   \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
+                        \ in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, which will hide the object in the following
@@ -16341,14 +16339,14 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   The projected y-coordinate of the object, as returned by
-\                       ProjectObjectY
+\   A                   The object's elevation angle, as returned by
+\                       GetObjElevation
 \
 \   C flag              If the C flag is set, hide the object
 \
-\   scaleUp             The scale up factor, as returned by ProjectObjectY
+\   scaleUp             The scale up factor, as returned by GetObjElevation
 \
-\   scaleDown           The scale down factor, as returned by ProjectObjectY
+\   scaleDown           The scale down factor, as returned by GetObjElevation
 \
 \ ******************************************************************************
 
@@ -16376,7 +16374,7 @@ ENDIF
                         \   scaleUp / 2 ^ (scaleDown - 10)
                         \
                         \ where scaleUp and scaleDown were set by the call to
-                        \ ProjectObjectY
+                        \ GetObjElevation
 
  LDA scaleDown          \ Set X = scaleDown - 9
  SEC
@@ -16622,13 +16620,13 @@ ENDIF
  AND #%00001111         \ Extract the object's object type from bits 0-3 and
  STA objectType         \ store it in objectType
 
- LDA xObjectScreenLo,X  \ Set (A T) =   xObjectScreen for this object
- SEC                    \             - xPlayerScreen
- SBC xPlayerScreenLo    \
+ LDA objRotationLo,X    \ Set (A T) =   objRotation for this object
+ SEC                    \             - playerRotation
+ SBC playerRotationLo   \
  STA T                  \ starting with the low bytes
 
- LDA xObjectScreenHi,X  \ And then the high bytes
- SBC xPlayerScreenHi    \
+ LDA objRotationHi,X    \ And then the high bytes
+ SBC playerRotationHi   \
                         \ So (A T) now contains the amount that the object we
                         \ are drawing is to the left or right of the player's
                         \ car
@@ -24583,7 +24581,7 @@ NEXT
  JSR Absolute8Bit       \ Set A = |A|
 
  SEC
- SBC xPlayerScreenHi
+ SBC playerRotationHi
  STA L0044
  BPL C456E
  EOR #&FF
@@ -24950,8 +24948,8 @@ ENDIF
 
 .sub_C46A1
 
- LDA xPlayerScreenHi
- LDX xPlayerScreenLo
+ LDA playerRotationHi
+ LDX playerRotationLo
  JSR sub_C0D01
  JSR sub_C48B9
 
@@ -25037,10 +25035,10 @@ ENDIF
 
 .sub_C4729
 
- LDA var03Lo
+ LDA spinSpeedLo
  STA T
  LDY #&58
- LDA var03Hi
+ LDA spinSpeedHi
  JSR sub_C4753
  STA U
  LDA var07Lo
@@ -25554,13 +25552,13 @@ ENDIF
  DEY
  DEX
  BPL C48F3
- LDA xPlayerScreenLo
+ LDA playerRotationLo
  CLC
- ADC var03Lo
- STA xPlayerScreenLo
- LDA xPlayerScreenHi
- ADC var03Hi
- STA xPlayerScreenHi
+ ADC spinSpeedLo
+ STA playerRotationLo
+ LDA playerRotationHi
+ ADC spinSpeedHi
+ STA playerRotationHi
  RTS
 
 \ ******************************************************************************
@@ -26506,9 +26504,10 @@ ENDIF
                         \ player's coordinates to get the sign's vector relative
                         \ to the player (i.e. relative to the camera)
                         \
-                        \ We then project this coordinate into driver 23, so it
-                        \ can be drawn by the call to DrawCarOrSign from the
-                        \ main driving loop
+                        \ We then calculate the rotation and elevation angles
+                        \ and create an object in driver 23, so it can be drawn
+                        \ by the call to DrawCarOrSign from the main driving
+                        \ loop
 
  LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 6
@@ -26517,21 +26516,21 @@ ENDIF
                         \ to AddScaledVector as we work through each axis, so it
                         \ stores the results in each axis of xVector6 in turn
 
- LDA zTrackSignVector,X \ Set A to the z-coordinate of the track sign vector
+ LDA zTrackSignVector,X \ Set A to the 3D z-coordinate of the track sign vector
 
  JSR AddScaledVector    \ Set zVector6 = zPlayerCoord - zTrackSignVector * 2 ^ 6
 
  LDY #4                 \ Set Y = 4, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 4
 
- LDA yTrackSignVector,X \ Set A to the y-coordinate of the track sign vector
+ LDA yTrackSignVector,X \ Set A to the 3D y-coordinate of the track sign vector
 
  JSR AddScaledVector    \ Set yVector6 = yPlayerCoord - yTrackSignVector * 2 ^ 4
 
  LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 6
 
- LDA xTrackSignVector,X \ Set A to the x-coordinate of the track sign vector
+ LDA xTrackSignVector,X \ Set A to the 3D x-coordinate of the track sign vector
 
  JSR AddScaledVector    \ Set xVector6 = xPlayerCoord - xTrackSignVector * 2 ^ 6
 
@@ -26556,7 +26555,7 @@ ENDIF
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
-                        \ ProjectObjectX and ProjectObjectY use xVector4,
+                        \ GetObjRotation and GetObjElevation use xVector4,
                         \ yVector4 and zVector4
 
  JSR GetSectionCoord    \ Copy the first trackSectionI coordinate for track
@@ -26568,10 +26567,11 @@ ENDIF
                         \   [ yVector4 ] = [ yTrackSectionI ]
                         \   [ zVector4 ]   [ zTrackSectionI ]
 
- LDY #6                 \ Set Y = 6 so the call to ProjectObjectX uses xVector6
-                        \ for the second variable, so we project the object at
-                        \ the following 3D coordinates (if we just consider the
-                        \ the x-axis, for clarity):
+ LDY #6                 \ Set Y = 6 so the call to GetObjRotation uses xVector6
+                        \ for the second variable, so we calculate the rotation
+                        \ and elevation angles for an object at the following 3D
+                        \ coordinates (if we just consider the the x-axis, for
+                        \ clarity):
                         \
                         \    xVector4 - xVector6
                         \  = xTrackSectionI - (xPlayerCoord - xTrackSignVector)
@@ -26582,27 +26582,27 @@ ENDIF
                         \ of the player's car, so the above gives us the vector
                         \ from the player's car to the sign
                         \
-                        \ So this is the vector we project onto the screen to
-                        \ show the sign in the correct place by the side of the
-                        \ track from the viewpoint of the player
+                        \ So this is the vector we use to calculate the object's
+                        \ angles, to show the sign in the correct place by the
+                        \ side of the track from the viewpoint of the player
 
- JSR ProjectObjectX     \ Project the object onto the screen and calculate the
-                        \ object's screen x-coordinate, returning it in (JJ II)
+ JSR GetObjRotation     \ Calculate the object's rotation angle about the y-axis,
+                        \ returning it in (JJ II)
 
- LDA II                 \ Set the screen x-coordinate in (xObjectScreenHi+23
- STA xObjectScreenLo+23 \ xObjectScreenLo+23) to (JJ II), so we use driver 23 to
+ LDA II                 \ Set the rotation about the y-axis in (objRotationHi+23
+ STA objRotationLo+23   \ objRotationLo+23) to (JJ II), so we use driver 23 to
  LDA JJ                 \ store the sign's object
- STA xObjectScreenHi+23
+ STA objRotationHi+23
 
                         \ Now that the sign object has been built and projected
                         \ in the x-axis, we can check for any collisions between
                         \ the player and the sign
 
- SEC                    \ Set A = JJ - xPlayerScreenHi
- SBC xPlayerScreenHi
+ SEC                    \ Set A = JJ - playerRotationHi
+ SBC playerRotationHi
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |JJ - xPlayerScreenHi|
+                        \       = |JJ - playerRotationHi|
                         \
                         \ So A contains the screen distance between the player
                         \ and the sign in the x-axis
@@ -26634,13 +26634,13 @@ ENDIF
                         \ car are close enough for contact, specifically if they
                         \ are within Y projected units of each other
 
-                        \ The final step is to project the sign in the y-axis,
-                        \ and then we are done building the sign object
+                        \ The final step is to calculate the object's elevation
+                        \ angle, and then we are done building the sign object
 
- LDY #6                 \ Set Y = 6 so the call to ProjectObjectY uses xVector6
+ LDY #6                 \ Set Y = 6 so the call to GetObjElevation uses xVector6
 
- JSR ProjectObjectY     \ Project the object onto the screen and calculate the
-                        \ object's screen y-coordinate, returning it in A and LL
+ JSR GetObjElevation    \ Calculate the object's elevation angle, returning it
+                        \ in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, which will hide the object in the following call
@@ -27011,7 +27011,7 @@ ENDIF
  STA L0028
  INC L002D
  SEC
- ROR var03Lo
+ ROR spinSpeedLo
 
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
@@ -31109,7 +31109,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var03Lo
+\       Name: spinSpeedLo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -31120,7 +31120,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var03Lo
+.spinSpeedLo
 
  EQUB 0
 
@@ -31314,7 +31314,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var03Hi
+\       Name: spinSpeedHi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -31325,7 +31325,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var03Hi
+.spinSpeedHi
 
  EQUB 0
 
@@ -33833,17 +33833,17 @@ ORG &7B00
  STA N
 
                         \ Next we calculate the mirror segment that the car
-                        \ should appear in, based on the xObjectScreenHi value
-                        \ for the car, and xPlayerScreenHi, storing the result
+                        \ should appear in, based on the objRotationHi value
+                        \ for the car, and playerRotationHi, storing the result
                         \ in A
                         \
                         \ This will then be matched with the values in
                         \ mirrorSegment to see which segment to update
 
- LDA xObjectScreenHi,X  \ Set A = xObjectScreenHi for the driver behind
+ LDA objRotationHi,X    \ Set A = objRotationHi for the driver behind
 
- SEC                    \ Set A = (A - xPlayerScreenHi - 4) / 8
- SBC xPlayerScreenHi    \       = (xObjectScreenHi - xPlayerScreenHi - 4) / 8
+ SEC                    \ Set A = (A - playerRotationHi - 4) / 8
+ SBC playerRotationHi   \       = (objRotationHi - playerRotationHi - 4) / 8
  SEC
  SBC #4
  LSR A
