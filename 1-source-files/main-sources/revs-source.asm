@@ -1217,7 +1217,7 @@ ORG &0380
  SKIP 24                \ High byte of each object's rotation about the y-axis
                         \ (left-right rotation)
 
-.yObjectScreen
+.objElevation
 
  SKIP 24                \ Each object's elevation angle (up-down)
 
@@ -16365,8 +16365,7 @@ ENDIF
                         \ the object and return from the subroutine using a tail
                         \ call
 
- STA yObjectScreen,Y    \ Store the object's projected y-coordinate in
-                        \ yObjectScreen
+ STA objElevation,Y     \ Store the object's elevation angle in objElevation
 
                         \ We now set the object's scaleUp value (i.e. its size)
                         \ to the following:
@@ -16662,8 +16661,8 @@ ENDIF
                         \ screen, as the centre x-coordinate of the screen is
                         \ at 80 pixels
 
- LDA yObjectScreen,X    \ Set yCoord to this object's screen y-coordinate from
- STA yCoord             \ yObjectScreen
+ LDA objElevation,X     \ Set yCoord to this object's elevation angle
+ STA yCoord
 
  LDA objectScaleUp,X    \ Set scaleUp to this object's scale factor (i.e. the
  STA scaleUp            \ size of the car
