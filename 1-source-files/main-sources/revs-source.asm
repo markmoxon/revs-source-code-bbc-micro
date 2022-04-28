@@ -135,9 +135,10 @@ ORG &0000
                         \ This refers to the current player's position in the
                         \ driversInOrder list
 
-.L0004
+.thisSectionNumber
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number * 8 of the current section number when
+                        \ calculating the track verges
 
 .L0005
 
@@ -2500,9 +2501,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0BA2
+\       Name: RotateTrack
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -2515,7 +2516,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C0BA2
+.RotateTrack
 
  LDA #0                 \ Set the Y-th entry in L5EE0 to 0
  STA L5EE0,Y
@@ -2536,14 +2537,14 @@ ORG &0B00
  STA yVergeRight,Y      \ Store the result in the Y-th entry in yVergeRight
 
  CMP horizonLine        \ If A < horizonLine, then this track section is lower
- BCC C0BCB              \ than the current horizon, jump to C0BCB to return
+ BCC rott1              \ than the current horizon, jump to rott1 to return
                         \ from the subroutine
 
  STA horizonLine        \ Store the result in horizonLine
 
  STY L0051              \ Set L0051 = Y
 
-.C0BCB
+.rott1
 
  RTS                    \ Return from the subroutine
 
@@ -5225,9 +5226,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C12A0
+\       Name: ShuffleSegmentData
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5236,7 +5237,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C12A0
+.ShuffleSegmentData
 
  LDX #44                \ Set X = 44 so we start by shuffling the first batch:
                         \
@@ -5254,7 +5255,7 @@ ORG &0B00
                         \
                         \   * yVergeRight + 40 = yVergeLeft
 
-.P12A2
+.shuf1
 
  LDA var24Lo,X          \ Shuffle the X-th byte of var24Lo up by one
  STA var24Lo+1,X
@@ -5266,9 +5267,9 @@ ORG &0B00
  STA yVergeRight+1,X
 
  CPX #40                \ If X <> 40 then we are either still shuffling the
- BNE C12BA              \ first batch and haven't yet done the last shuffle, or
+ BNE shuf2              \ first batch and haven't yet done the last shuffle, or
                         \ we are already shuffling the second batch, so in
-                        \ either case jump to C12BA to skip the following
+                        \ either case jump to shuf2 to skip the following
 
  LDX #5                 \ We have just done the last shuffle in the first batch,
                         \ so set X = 5 so we now shuffle the second batch:
@@ -5279,11 +5280,11 @@ ORG &0B00
                         \
                         \   * yVergeRight+0-4 to yVergeRight+1-5
 
-.C12BA
+.shuf2
 
  DEX                    \ Decrement the loop counter
 
- BPL P12A2              \ Loop back until we have shuffled all the bytes in both
+ BPL shuf1              \ Loop back until we have shuffled all the bytes in both
                         \ batches
 
  LDA #6                 \ Set L0005 = 6 - L0007
@@ -5291,15 +5292,15 @@ ORG &0B00
  SBC L0007
  STA L0005
 
- JSR sub_C12C8          \ ???
+ JSR SetSegmentPointers \ ???
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C12C8
+\       Name: SetSegmentPointers
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5312,24 +5313,24 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C12C8
+.SetSegmentPointers
 
  LDX L0006              \ Set X = L0006 + 1
  INX
 
- CPX #6                 \ If X < 6, jump to C12D1 to skip the following
- BCC C12D1
+ CPX #6                 \ If X < 6, jump to segp1 to skip the following
+ BCC segp1
 
  LDX #6                 \ Set X = 6, so the maximum value of X is 6
 
-.C12D1
+.segp1
 
- CPX L0005              \ If X >= L0005, jump to C12D7 to skip the following
- BCS C12D7
+ CPX L0005              \ If X >= L0005, jump to segp2 to skip the following
+ BCS segp2
 
  LDX L0005              \ Set X = L0005, so the minimum value of X is L0005
 
-.C12D7
+.segp2
 
  STX L0006              \ Store the updated value of X in L0006, so:
                         \
@@ -5340,7 +5341,7 @@ ORG &0B00
  LDX L0008              \ Set X = L0008 + 1
  INX
 
-                        \ Fall through into sub_C12DC to set L0006 and L0008:
+                        \ Fall through into SetSegmentPointer to set L0006 and L0008:
                         \
                         \   * L0006 = min(L0008 + 2, L0006)
                         \
@@ -5349,9 +5350,9 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C12DC
+\       Name: SetSegmentPointer
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5362,17 +5363,17 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C12DC
+.SetSegmentPointer
 
  INX                    \ Set X = X + 1
 
- CPX L0006              \ If X >= L0006, jump to C12E3 to skip the following
- BCS C12E3
+ CPX L0006              \ If X >= L0006, jump to sseg1 to skip the following
+ BCS sseg1
 
  STX L0006              \ X < L0006, so set L0006 = X, so the minimum value of
                         \ L0006 is X
 
-.C12E3
+.sseg1
 
  DEX                    \ Set X = X - 1
                         \
@@ -5380,19 +5381,19 @@ ORG &0B00
                         
                         \ If L0005 <= X < 6, set L0008 = X, else set L0008 = 5
 
- CPX L0005              \ If X >= L0005, jump to C12EA to skip the following
- BCS C12EA
+ CPX L0005              \ If X >= L0005, jump to sseg2 to skip the following
+ BCS sseg2
 
  LDX #5                 \ X < L0005, so set X = 5, so we set L0008 = 5 below
 
-.C12EA
+.sseg2
 
- CPX #6                 \ If X < 6, jump to C12F0 to skip the following
- BCC C12F0
+ CPX #6                 \ If X < 6, jump to sseg3 to skip the following
+ BCC sseg3
 
  LDX #5                 \ X >= 6, so set X = 5, so we set L0008 = 5 below
 
-.C12F0
+.sseg3
 
  STX L0008              \ Store the updated value of X in L0008
 
@@ -7337,7 +7338,8 @@ ENDIF
 
  JSR sub_C46A1
 
- JSR sub_C24F6
+ JSR GetTrackAndMarkers \ Calculate the coordinates for the track sides and
+                        \ corner markers
 
  JSR sub_C4626
 
@@ -12723,7 +12725,7 @@ ENDIF
                         \
                         \   (VV PP) = x-delta
 
- BPL prox1              \ If (VV PP) is positive, jump to prox1 to skip the
+ BPL rotn1              \ If (VV PP) is positive, jump to rotn1 to skip the
                         \ following
 
  LDA #0                 \ Set (VV PP) = 0 - (VV PP)
@@ -12738,7 +12740,7 @@ ENDIF
                         \
                         \   (VV PP) = |x-delta|
 
-.prox1
+.rotn1
 
  STA SS                 \ Set (SS PP) = (VV PP)
                         \             = |x-delta|
@@ -12757,7 +12759,7 @@ ENDIF
                         \
                         \   (GG RR) = z-delta
 
- BPL prox2              \ If (GG RR) is positive, jump to prox2 to skip the
+ BPL rotn2              \ If (GG RR) is positive, jump to rotn2 to skip the
                         \ following
 
  LDA #0                 \ Set (GG RR) = 0 - (GG RR)
@@ -12772,7 +12774,7 @@ ENDIF
                         \
                         \   (GG RR) = |z-delta|
 
-.prox2
+.rotn2
 
  STA UU                 \ Set (UU RR) = (GG RR)
                         \             = |z-delta|
@@ -12787,23 +12789,23 @@ ENDIF
                         \ the high bytes, and then the low bytes (if the high
                         \ bytes are the same)
 
- CMP SS                 \ If UU < SS, then (UU RR) < (SS PP), so jump to prox3
- BCC prox3
+ CMP SS                 \ If UU < SS, then (UU RR) < (SS PP), so jump to rotn3
+ BCC rotn3
 
- BNE prox4              \ If UU <> SS, i.e. UU > SS, then (UU RR) > (SS PP), so
-                        \ jump to prox4 with the C flag clear
+ BNE rotn4              \ If UU <> SS, i.e. UU > SS, then (UU RR) > (SS PP), so
+                        \ jump to rotn4 with the C flag clear
 
                         \ The high bytes are equal, so now we compare the low
                         \ bytes
 
- LDA RR                 \ If RR >= PP, then (UU RR) >= (SS PP), so jump to prox4
+ LDA RR                 \ If RR >= PP, then (UU RR) >= (SS PP), so jump to rotn4
  CMP PP                 \ with the C flag set
- BCS prox4
+ BCS rotn4
 
                         \ Otherwise (UU RR) < (SS PP), so fall through into
-                        \ prox3
+                        \ rotn3
 
-.prox3
+.rotn3
 
                         \ If we get here then (UU RR) < (SS PP), so:
                         \
@@ -12819,9 +12821,9 @@ ENDIF
  LDA SS                 \
  STA J                  \ and (J I) contains the larger value
 
- JMP prox6              \ Jump to prox6
+ JMP rotn6              \ Jump to rotn6
 
-.prox4
+.rotn4
 
                         \ If we get here then (UU RR) >= (SS PP), so:
                         \
@@ -12845,9 +12847,9 @@ ENDIF
 
  PLP                    \ Retrieve the status flags we stored above
 
- BEQ prox9              \ If (UU RR) = (SS PP), jump to prox9
+ BEQ rotn9              \ If (UU RR) = (SS PP), jump to rotn9
 
- JMP prox14             \ Jump to prox14
+ JMP rotn14             \ Jump to rotn14
 
 \ ******************************************************************************
 \
@@ -12858,7 +12860,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.prox5
+.rotn5
 
                         \ This part is called from below, if we want to scale
                         \ the division
@@ -12866,7 +12868,7 @@ ENDIF
  ASL RR                 \ Set (UU RR) = (UU RR) << 1
  ROL UU
 
-.prox6
+.rotn6
 
                         \ If we get here, then:
                         \
@@ -12902,8 +12904,8 @@ ENDIF
  ASL PP                 \ Set (A PP) = (A PP) << 1
  ROL A
 
- BCC prox5              \ If we just shifted a 0 out of the high byte of (A PP),
-                        \ then we can keep shifting, so loop back to prox6 to
+ BCC rotn5              \ If we just shifted a 0 out of the high byte of (A PP),
+                        \ then we can keep shifting, so loop back to rotn6 to
                         \ keep shifting both values
 
  ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
@@ -12921,7 +12923,7 @@ ENDIF
  LDA UU                 \ Set A = UU, the high byte of the scaled |z-delta|
 
  CMP V                  \ If A = V then the high bytes of the scaled values
- BEQ prox9              \ match, so jump to prox9, which deals with the case
+ BEQ rotn9              \ match, so jump to rotn9, which deals with the case
                         \ when the xVector and zVector values are equal
 
                         \ We have scaled both values, so now for the division of
@@ -12953,8 +12955,8 @@ ENDIF
  STA JJ
 
  LDA VV                 \ If VV and GG have different signs, then so do x-delta
- EOR GG                 \ and z-delta, so jump to prox7
- BMI prox7
+ EOR GG                 \ and z-delta, so jump to rotn7
+ BMI rotn7
 
  LDA #0                 \ Negate (JJ II)
  SEC                    \
@@ -12965,18 +12967,18 @@ ENDIF
  SBC JJ
  STA JJ
 
-.prox7
+.rotn7
 
  LDA #64                \ Set A = 64, to add to the high byte below
 
- BIT VV                 \ If x-delta is positive, jump to prox8 to skip the
- BPL prox8              \ following instruction
+ BIT VV                 \ If x-delta is positive, jump to rotn8 to skip the
+ BPL rotn8              \ following instruction
 
                         \ If we get here then x-delta is negative
 
  LDA #&C0               \ Set A = -64, to add to the high byte below
 
-.prox8
+.rotn8
 
  CLC                    \ Set (JJ II) = (JJ II) + (A 0)
  ADC JJ                 \
@@ -12999,7 +13001,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.prox9
+.rotn9
 
                         \ If we get here, then:
                         \
@@ -13015,13 +13017,13 @@ ENDIF
  LDA #0                 \ Set II = 0 to use as the low byte for the final
  STA II                 \ rotation angle
 
- BIT VV                 \ If x-delta is positive, jump to prox11
- BPL prox11
+ BIT VV                 \ If x-delta is positive, jump to rotn11
+ BPL rotn11
 
                         \ If we get here then x-delta is negative
 
- BIT GG                 \ If z-delta is positive, jump to prox10
- BPL prox10
+ BIT GG                 \ If z-delta is positive, jump to rotn10
+ BPL rotn10
 
                         \ If we get here then both x-delta and z-delta are
                         \ negative
@@ -13031,7 +13033,7 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.prox10
+.rotn10
 
                         \ If we get here then x-delta is negative and y-delta
                         \ is positive
@@ -13041,12 +13043,12 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.prox11
+.rotn11
 
                         \ If we get here then x-delta is positive
 
- BIT GG                 \ If z-delta is positive, jump to prox12
- BPL prox12
+ BIT GG                 \ If z-delta is positive, jump to rotn12
+ BPL rotn12
 
                         \ If we get here then x-delta is positive and y-delta
                         \ is negative
@@ -13056,7 +13058,7 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.prox12
+.rotn12
 
                         \ If we get here then both x-delta and z-delta are
                         \ positive
@@ -13075,7 +13077,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.prox13
+.rotn13
 
                         \ This part is called from below, if we want to scale
                         \ the division
@@ -13083,7 +13085,7 @@ ENDIF
  ASL PP                 \ Set (SS PP) = (SS PP) << 1
  ROL SS
 
-.prox14
+.rotn14
 
                         \ If we get here, then:
                         \
@@ -13119,8 +13121,8 @@ ENDIF
  ASL RR                 \ Set (A RR) = (A RR) << 1
  ROL A
 
- BCC prox13             \ If we just shifted a 0 out of the high byte of (A RR),
-                        \ then we can keep shifting, so loop back to prox13 to
+ BCC rotn13             \ If we just shifted a 0 out of the high byte of (A RR),
+                        \ then we can keep shifting, so loop back to rotn13 to
                         \ keep shifting both values
 
  ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
@@ -13138,7 +13140,7 @@ ENDIF
  LDA SS                 \ Set A = SS, the high byte of the scaled |x-delta|
 
  CMP V                  \ If A = V then the high bytes of the scaled values
- BEQ prox9              \ match, so jump to prox9, which deals with the case
+ BEQ rotn9              \ match, so jump to rotn9, which deals with the case
                         \ when the xVector and zVector values are equal
 
                         \ We have scaled both values, so now for the division of
@@ -13170,8 +13172,8 @@ ENDIF
  STA JJ
 
  LDA VV                 \ If VV and GG have different signs, then so do x-delta
- EOR GG                 \ and z-delta, so jump to prox15
- BPL prox15
+ EOR GG                 \ and z-delta, so jump to rotn15
+ BPL rotn15
 
  LDA #0                 \ Negate (JJ II)
  SEC                    \
@@ -13182,18 +13184,18 @@ ENDIF
  SBC JJ
  STA JJ
 
-.prox15
+.rotn15
 
  LDA #0                 \ Set A = 0, to add to the high byte below
 
- BIT GG                 \ If z-delta is positive, jump to prox16 to skip the
- BPL prox16             \ following instruction
+ BIT GG                 \ If z-delta is positive, jump to rotn16 to skip the
+ BPL rotn16             \ following instruction
 
                         \ If we get here then z-delta is negative
 
  LDA #&80               \ Set A = -128, to add to the high byte below
 
-.prox16
+.rotn16
 
  CLC                    \ Set (JJ II) = (JJ II) + (A 0)
  ADC JJ                 \
@@ -13288,7 +13290,7 @@ ENDIF
                         \
                         \   (WW QQ) = (A QQ) = y-delta
 
- BPL proy1              \ If (A QQ) is positive, jump to proy1 to skip the
+ BPL elev1              \ If (A QQ) is positive, jump to elev1 to skip the
                         \ following
 
  LDA #0                 \ Set (A QQ) = 0 - (WW QQ)
@@ -13303,7 +13305,7 @@ ENDIF
                         \
                         \   (A QQ) = |y-delta|
 
-.proy1
+.elev1
 
  LSR A                  \ Set (A QQ) = (A QQ) >> 3
  ROR QQ                 \            = |y-delta| / 8
@@ -13318,21 +13320,21 @@ ENDIF
                         \ We now compare the two 16-bit values in (A QQ) and
                         \ (L K)
 
- CMP L                  \ If A < L, then (A QQ) < (L K), so jump to proy3
- BCC proy3
+ CMP L                  \ If A < L, then (A QQ) < (L K), so jump to elev3
+ BCC elev3
 
- BNE proy2              \ If A <> L, i.e. A > L, then (A QQ) > (L K), so jump
-                        \ to proy2 to return from the subroutine with the C flag
+ BNE elev2              \ If A <> L, i.e. A > L, then (A QQ) > (L K), so jump
+                        \ to elev2 to return from the subroutine with the C flag
                         \ set
 
                         \ The high bytes are equal, so now we compare the low
                         \ bytes
 
- LDA QQ                 \ If QQ < K, then (A QQ) < (L K), so jump to proy3
+ LDA QQ                 \ If QQ < K, then (A QQ) < (L K), so jump to elev3
  CMP K
- BCC proy3
+ BCC elev3
 
-.proy2
+.elev2
 
                         \ If we get here then (A QQ) >= (L K), so:
                         \
@@ -13342,16 +13344,16 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.proy3
+.elev3
 
  LDY #0                 \ Set Y = 0, which we use to count the number of shifts
                         \ in the following calculation
 
  LDA L                  \ Set (A K) = (L K)
 
- JMP proy5              \ Jump to proy5
+ JMP elev5              \ Jump to elev5
 
-.proy4
+.elev4
 
                         \ This part is called from below, if we want to scale
                         \ the division
@@ -13361,7 +13363,7 @@ ENDIF
 
  INY                    \ Increment Y
 
-.proy5
+.elev5
 
                         \ If we get here, then:
                         \
@@ -13399,8 +13401,8 @@ ENDIF
  ASL K                  \ Set (A K) = (A K) << 1
  ROL A
 
- BCC proy4              \ If we just shifted a 0 out of the high byte of (A K),
-                        \ then we can keep shifting, so loop back to prox6 to
+ BCC elev4              \ If we just shifted a 0 out of the high byte of (A K),
+                        \ then we can keep shifting, so loop back to rotn6 to
                         \ keep shifting both values
 
  ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
@@ -13430,25 +13432,25 @@ ENDIF
                         \ using the lower byte of the |y-delta| numerator for
                         \ rounding ???
 
- LDA T                  \ If T >= 128, jump to proy8 to return from the 
+ LDA T                  \ If T >= 128, jump to elev8 to return from the 
  CMP #128               \ subroutine with the C flag set
- BCS proy8
+ BCS elev8
 
- BIT WW                 \ If y-delta is positive, jump to proy6 to skip the
- BPL proy6              \ following and add 60 to T
+ BIT WW                 \ If y-delta is positive, jump to elev6 to skip the
+ BPL elev6              \ following and add 60 to T
 
  LDA #60                \ Set A = 60 - T
  SEC
  SBC T
 
- JMP proy7              \ Jump to proy7
+ JMP elev7              \ Jump to elev7
 
-.proy6
+.elev6
 
  CLC                    \ Set A = T + 60
  ADC #60
 
-.proy7
+.elev7
 
  SEC                    \ Set LL = A - L000D
  SBC L000D
@@ -13456,53 +13458,53 @@ ENDIF
 
  CLC                    \ Clear the C flag to indicate success
 
-.proy8
+.elev8
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C22FF
+\       Name: GetTrackSections
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Get the elevations for the inner and outer track sections
 \
 \ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
-\   sub_C22FF-1         Contains an RTS
+\   GetTrackSections-1  Contains an RTS
 \
 \ ******************************************************************************
 
-.sub_C22FF
+.GetTrackSections
 
  LDA newSegmentFetched  \ If newSegmentFetched = 0, then we have not fetched a
- BEQ C230C              \ new segment since the last call, so jump to C230C to
-                        \ skip the following call to sub_C12A0
+ BEQ gsec1              \ new segment since the last call, so jump to gsec1 to
+                        \ skip the following call to ShuffleSegmentData
 
- JSR sub_C12A0          \ ??? Shuffle various variables along by one if this is
+ JSR ShuffleSegmentData \ ??? Shuffle various variables along by one if this is
                         \ a new segment, update L0006 and L0008
 
- LDA #0                 \ Set newSegmentFetched = 0 so we don't call sub_C12A0
+ LDA #0                 \ Set newSegmentFetched = 0 so we don't call ShuffleSegmentData
  STA newSegmentFetched  \ again until another new segment is fetched
 
-.C230C
+.gsec1
 
  LDY L0005              \ If L0005 = 6, return from the subroutine (as 
- CPY #6                 \ sub_C22FF-1 contains an RTS)
- BEQ sub_C22FF-1
+ CPY #6                 \ GetTrackSections-1 contains an RTS)
+ BEQ GetTrackSections-1
 
- LDY L0006              \ If L0006 = 6, jump to C2330
+ LDY L0006              \ If L0006 = 6, jump to gsec4
  CPY #6
- BEQ C2330
+ BEQ gsec4
 
                         \ Otherwise we now loop from Y = L0006 up to 5
 
-.P2318
+.gsec2
 
- CPY L0008              \ If Y = L0008, jump to C232B to move on to the next
- BEQ C232B              \ iteration
+ CPY L0008              \ If Y = L0008, jump to gsec3 to move on to the next
+ BEQ gsec3              \ iteration
 
  STY T                  \ Store Y in T so we can retrieve it below
 
@@ -13511,24 +13513,24 @@ ENDIF
  ADC #40
  TAY
 
- JSR sub_C0BA2          \ ??? Update T-th L5F08 (= 0), var23 (subtract spin),
+ JSR RotateTrack        \ ??? Update T-th L5F08 (= 0), var23 (subtract spin),
                         \ yVergeLeft (subtract L004E), maybe horizonLine and
                         \ L0051
 
  LDY T                  \ Retrieve the original value of Y that we stored above
 
- JSR sub_C0BA2          \ ??? Update T-th L5EE0 (= 0), var24 (subtract spin),
+ JSR RotateTrack        \ ??? Update T-th L5EE0 (= 0), var24 (subtract spin),
                         \ yVergeRight (subtract L004E), maybe horizonLine and
                         \ L0051
 
-.C232B
+.gsec3
 
  INY                    \ Increment the loop counter in Y
 
  CPY #6                 \ Loop back until we have done the above with Y = L0006
- BCC P2318              \ to 5
+ BCC gsec2              \ to 5
 
-.C2330
+.gsec4
 
  LDA #6                 \ Set A = (6 - L0008) * 8
  SEC
@@ -13538,7 +13540,7 @@ ENDIF
  ASL A
 
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
- BPL C234F              \ facing forwards, so jump to C234F
+ BPL gsec5              \ facing forwards, so jump to gsec5
 
                         \ If we get here then we are facing backwards, so we
                         \ now calculate the section number
@@ -13554,16 +13556,16 @@ ENDIF
  SEC                    \       = (section23 + 1 - 6 + L0008) * 8
  SBC T
 
- BCS C235B              \ If the subtraction didn't underflow, jump to C235B
+ BCS gsec6              \ If the subtraction didn't underflow, jump to gsec6
 
  ADC trackSectionCount  \ The subtraction underflowed, so add the total number
                         \ of track sections * 8 given in trackSectionCount to
                         \ wrap round to the correct section number (we know the
                         \ C flag is clear as we just passed through a BCS)
 
- JMP C235B              \ Jump to C235B
+ JMP gsec6              \ Jump to gsec6
 
-.C234F
+.gsec5
 
                         \ If we get here then we are facing forwards
 
@@ -13573,7 +13575,7 @@ ENDIF
                         \       = (6 - L0008 + section23) * 8
 
  CMP trackSectionCount  \ If A < trackSectionCount then A is a valid section
- BCC C235B              \ number, so jump to C235B
+ BCC gsec6              \ number, so jump to gsec6
 
  SBC trackSectionCount  \ The addition took us past the highest track section
                         \ number, so subtract the total number of track sections
@@ -13581,11 +13583,11 @@ ENDIF
                         \ correct section number (we know the C flag is set as
                         \ we just passed through a BCC)
 
-.C235B
+.gsec6
 
  TAY                    \ Set Y = the new section number * 8
  
- STY L0004              \ Store the new section number * 8 in L0004, so we can
+ STY thisSectionNumber  \ Store the new section number * 8 in thisSectionNumber, so we can
                         \ retrieve it below when looping back
 
  LDX L0008              \ Set X = L0008, to use as a loop counter for the inner
@@ -13596,7 +13598,7 @@ ENDIF
                         \ for the outer track section coordinates (with
                         \ X = L0008 + 40)
 
-.C2360
+.gsec7
 
  STX L0042              \ Store the loop counter in L0042
 
@@ -13614,22 +13616,22 @@ ENDIF
  LDY L0042              \ Set Y to the loop counter
 
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
- BPL C2374              \ facing forwards, so jump to C2374
+ BPL gsec8              \ facing forwards, so jump to gsec8
 
  TYA                    \ We are facing backwards, so flip Y between L0008 and
  EOR #40                \ L0008 + 40 to do the inner and outer track sections
  TAY                    \ in reverse order
 
-.C2374
+.gsec8
 
- JSR sub_C23C0          \ Set Y-th (var24Hi var24Lo) = (JJ II) - playerRotation
+ JSR GetSectionRotation \ Set Y-th (var24Hi var24Lo) = (JJ II) - playerRotation
                         \
                         \ Set (L K) to the distance between the track section
                         \ and the player's car
 
  LDX L0042              \ If X >= 40, then we are dealing with the outer track
- CPX #40                \ section, so jump to C239A as we don't need to repeat
- BCS C239A              \ the elevation calculation (as the track is level, so
+ CPX #40                \ section, so jump to gsec10 as we don't need to repeat
+ BCS gsec10             \ the elevation calculation (as the track is level, so
                         \ the outer track is the same height as the inner
                         \ track)
 
@@ -13652,36 +13654,36 @@ ENDIF
                         \ this point on the outer track section
 
  CMP horizonLine        \ If A < horizonLine, then this track section is lower
- BCC C239A              \ than the current horizon, so jump to C239A to move on
+ BCC gsec10             \ than the current horizon, so jump to gsec10 to move on
                         \ to the outer track section 
 
- BNE C2396              \ If A <> horizonLine, i.e. A > horizonLine, then the
+ BNE gsec9              \ If A <> horizonLine, i.e. A > horizonLine, then the
                         \ track section is higher than the current horizon line,
-                        \ so jump to C2396 to set the horizon line to the
+                        \ so jump to gsec9 to set the horizon line to the
                         \ elevation of this track section
 
- CPX L0051              \ If X < L0051, jump to C239A
- BCC C239A
+ CPX L0051              \ If X < L0051, jump to gsec10
+ BCC gsec10
 
-.C2396
+.gsec9
 
  STA horizonLine        \ Set horizonLine to the elevation in A
 
  STX L0051              \ Set L0051 = X
 
-.C239A
+.gsec10
 
  TXA                    \ Set A = X + 40
  CLC                    \       = L0008 + 40
  ADC #40
 
  CMP #60                \ If A >= 60, we have done both inner and outer track
- BCS C23AC              \ sections, so jump to C23AC
+ BCS gsec11             \ sections, so jump to gsec11
 
  TAX                    \ Set X = A
                         \       = L0008 + 40
 
- LDA L0004              \ Set Y = L0004 + 3
+ LDA thisSectionNumber  \ Set Y = thisSectionNumber + 3
  CLC                    \
  ADC #3                 \ So when we loop back, the offset in Y points to the
  TAY                    \ trackSectionO coordinates for the outer track section
@@ -13689,29 +13691,29 @@ ENDIF
                         \ the outer coordinates are 3 bytes after the inner ones
                         \ in the track data)
 
- JMP C2360              \ Loop back to C2360 to process the outer track section
+ JMP gsec7              \ Loop back to gsec7 to process the outer track section
 
-.C23AC
+.gsec11
 
  LDX L0008              \ Set X = L0008 - 1
  DEX
 
- JSR sub_C12DC          \ ??? Update L0008 and L0006
+ JSR SetSegmentPointer  \ ??? Update L0008 (and maybe L0006)
 
  LDA #7                 \ Set A = 7, to set as the horizon line when L0052 > 7
 
- CMP L0052              \ If A >= L0052, jump to C23BA to return from the
- BCS C23BA              \ subroutine
+ CMP L0052              \ If A >= L0052, jump to gsec12 to return from the
+ BCS gsec12             \ subroutine
 
  STA horizonLine        \ Set horizonLine = 7
 
-.C23BA
+.gsec12
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C23BB
+\       Name: GetSegmentRotation
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -13730,7 +13732,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C23BB
+.GetSegmentRotation
 
  JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
                         \ from the point of view of the player, returning it in
@@ -13738,9 +13740,12 @@ ENDIF
 
  LDY L0012              \ Set Y = L0012, which is 6 or 46
 
+                        \ Fall through into GetSectionRotation to get the
+                        \ rotation angle for this segment
+
 \ ******************************************************************************
 \
-\       Name: sub_C23C0
+\       Name: GetSectionRotation
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -13761,7 +13766,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C23C0
+.GetSectionRotation
 
  LDA II                 \ Set Y-th (var24Hi var24Lo) = (JJ II) - playerRotation
  SEC                    \
@@ -13778,9 +13783,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C23D2
+\       Name: GetTrackSegments
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -13790,8 +13795,8 @@ ENDIF
 \   A                   6 or 46
 \
 \   X                   The offset from xSegmentCoordILo of the variable to use
-\                       for the object's 3D coordinates in sub_C23BB, as
-\                       returned by sub_C254A:
+\                       for the object's 3D coordinates in GetSegmentRotation, as
+\                       returned by GetSegmentNumber:
 \
 \                         * segmentIndex (xSegmentCoordILo for segmentIndex)
 \
@@ -13804,29 +13809,29 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C23D2
+.GetTrackSegments
 
  STA L0012              \ Set L0012 = A
 
  LDA #0                 \ Set L0042 = 0
  STA L0042
 
-.C23D8
+.gseg1
 
- JSR sub_C23BB          \ Calculate the rotation angle for object X
+ JSR GetSegmentRotation \ Calculate the rotation angle for object X
                         \ Set Y = L0012
                         \ Set Y-th var24 to distance to player
                         \ Set A to high byte of collision distance between
                         \   object X and car
 
  CMP L0011
- BCC C23E7
- BNE C23FC
+ BCC gseg2
+ BNE gseg3
  LDA L0010
  CMP K
- BCC C23FC
+ BCC gseg3
 
-.C23E7
+.gseg2
 
  LDA L
  STA L0011
@@ -13839,7 +13844,7 @@ ENDIF
  LDA var24Hi,Y
  STA L005E
 
-.C23FC
+.gseg3
 
  JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
                         \ of view of the player, returning it in A and LL
@@ -13847,24 +13852,24 @@ ENDIF
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
 
- BCS C2403              \ If the object is not visible on-screen, jump to C2403
+ BCS gseg4              \ If the object is not visible on-screen, jump to gseg4
 
- BPL C246A              \ If the y-coordinate is positive, jump to C246A
+ BPL gseg10             \ If the y-coordinate is positive, jump to gseg10
 
-.C2403
+.gseg4
 
  LDA L0042
- BNE C2408
+ BNE gseg5
  RTS
 
-.C2408
+.gseg5
 
  LDA #0
  STA U
  LDY L0014
  STX W
 
-.C2410
+.gseg6
 
  LDA xSegmentCoordILo,X
  SEC
@@ -13873,10 +13878,10 @@ ENDIF
  LDA xSegmentCoordIHi,X
  SBC xSegmentCoordIHi,Y
  CLC
- BPL C2423
+ BPL gseg7
  SEC
 
-.C2423
+.gseg7
 
  PHP
  ROR A
@@ -13895,19 +13900,19 @@ ENDIF
  STA xVector3Hi,X
  INX
  CPX #3
- BEQ C2450
+ BEQ gseg8
  STX U
  LDX W
  INY
  INX
  STX W
- JMP C2410
+ JMP gseg6
 
-.C2450
+.gseg8
 
- LDX #&FA               \ xVector3 in sub_C23BB
+ LDX #&FA               \ xVector3 in GetSegmentRotation
 
- JSR sub_C23BB
+ JSR GetSegmentRotation
 
  JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
                         \ of view of the player, returning it in A and LL
@@ -13915,84 +13920,84 @@ ENDIF
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
 
- BCS C2469              \ If the object is not visible on-screen, jump to C2469
+ BCS gseg9              \ If the object is not visible on-screen, jump to gseg9
                         \ to return from the subroutine
 
  LDX L0014
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
- STA temp1              \ after the call to sub_C2565 (so the call doesn't
+ STA temp1              \ after the call to SetTrackAndMarkers (so the call doesn't
                         \ change the value of markersToDraw)
 
- JSR sub_C2565
+ JSR SetTrackAndMarkers
 
  LDA temp1              \ Retrieve the value of markersToDraw that we stored
  STA markersToDraw      \ in temp1
 
  INC L0012
 
-.C2469
+.gseg9
 
  RTS
 
-.C246A
+.gseg10
 
- JSR sub_C2565
+ JSR SetTrackAndMarkers
  LDA L0042
  CMP L0013
- BEQ C2490
- BCC C2490
+ BEQ gseg13
+ BCC gseg13
  LDY L0012
  LDA var24Hi,Y
- BPL C247E
+ BPL gseg11
  EOR #&FF
 
-.C247E
+.gseg11
 
  CMP #&14
- BCC C2490
+ BCC gseg13
  LDA var24Hi-1,Y
- BPL C2489
+ BPL gseg12
  EOR #&FF
 
-.C2489
+.gseg12
 
  CMP #&14
- BCS C24B8
- JMP C2403
+ BCS gseg16
+ JMP gseg4
 
-.C2490
+.gseg13
 
  STX L0014
  INC L0012
  INC L0042
  LDY L0042
  CPY #&12
- BCS C24B8
+ BCS gseg16
  LDA L3DD0,Y
  STA T
  TXA
  SEC
  SBC L000E
  CMP T
- BCS C24B0
+ BCS gseg14
  TXA
  CLC
  ADC #120
- JMP C24B1
+ JMP gseg15
 
-.C24B0
+.gseg14
 
  TXA
 
-.C24B1
+.gseg15
 
  SEC
  SBC T
  TAX
- JMP C23D8
+ JMP gseg1
 
-.C24B8
+.gseg16
 
  RTS
 
@@ -14065,23 +14070,20 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C24F6
+\       Name: GetTrackAndMarkers
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: Calculate the 3D coordinates of the track and corner markers
 \
 \ ******************************************************************************
 
-.sub_C24F6
+.GetTrackAndMarkers
 
  LDA #0                 \ Set horizonLine = 0
  STA horizonLine
 
- JSR sub_C22FF          \ ??? Set up elevations for 16 track sections/segments?
+ JSR GetTrackSections   \ Get the elevations for the inner and outer track
+                        \ sections
 
  LDA #&FF               \ Set L0011 = -1
  STA L0011
@@ -14090,42 +14092,42 @@ ENDIF
  STA L0013
 
  LDA #0                 \ Set L000E, L0049, X for facing forwards
- JSR sub_C254A
+ JSR GetSegmentNumber
 
  LDA #6
- JSR sub_C23D2
+ JSR GetTrackSegments
 
  LDA L0012              \ Set L0015 = L0012
  STA L0015
 
  LDA #&80               \ Set L000E, L0049, X for facing backwards
- JSR sub_C254A
+ JSR GetSegmentNumber
 
  LDA #46
- JSR sub_C23D2
+ JSR GetTrackSegments
 
- LDA L0051              \ If L0051 < 40, jump to C2528 to skip the following
+ LDA L0051              \ If L0051 < 40, jump to gmar1 to skip the following
  CMP #40                \ three instructions
- BCC C2528
+ BCC gmar1
 
  SEC                    \ Set L0051 = L0051 - 40
  SBC #40
  STA L0051
 
-.C2528
+.gmar1
 
  TAY                    \ Set Y to the updated value of L0051
 
  STY L0052              \ Set L0052 to the updated value of L0051
 
- LDA horizonLine        \ If horizonLine < 79, jump to C2535 to skip the
+ LDA horizonLine        \ If horizonLine < 79, jump to gmar2 to skip the
  CMP #79                \ following two instructions
- BCC C2535
+ BCC gmar2
 
  LDA #78                \ Set horizonLine = 78, so horizonLine is a maximum of
  STA horizonLine        \ 78
 
-.C2535
+.gmar2
 
  STA yVergeRight,Y      \ Set the Y-th entry in yVergeRight to the updated value
                         \ of horizonLine
@@ -14146,7 +14148,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C254A
+\       Name: GetSegmentNumber
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -14185,12 +14187,12 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C254A
+.GetSegmentNumber
 
  LDX segmentIndex       \ Set X to the index * 3 of the current track segment
 
  EOR directionFacing    \ If bit 7 of A and bit 7 of directionFacing are the
- BPL C255A              \ same, jump to C255A
+ BPL snum1              \ same, jump to snum1
 
  TXA                    \ Set X = X + 120
  CLC
@@ -14201,16 +14203,16 @@ ENDIF
 
  SEC                    \ Set the C flag, so L0049 gets set to 1
 
- BNE C255D              \ Jump to C255D (thie BNE is effectively a JMP as A is
+ BNE snum2              \ Jump to snum2 (thie BNE is effectively a JMP as A is
                         \ never zero
 
-.C255A
+.snum1
 
  LDA #0                 \ Set A = 0, so L000E gets set to 0
 
  CLC                    \ Clear the C flag, so L0049 gets set to 0
 
-.C255D
+.snum2
 
  STA L000E              \ Set L000E = A
 
@@ -14222,9 +14224,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2565
+\       Name: SetTrackAndMarkers
 \       Type: Subroutine
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -14233,19 +14235,19 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2565
+.SetTrackAndMarkers
 
  LDY L0049
  CPX #120
- BCS C2570
+ BCS smar1
  LDA segmentFlags,X
- BCC C2573
+ BCC smar2
 
-.C2570
+.smar1
 
  LDA segmentFlags-120,X
 
-.C2573
+.smar2
 
  AND L306C,Y            \ Set W = A AND 00101101 if Y = 0
  STA W                  \               00110011 if Y = 1
@@ -14258,10 +14260,10 @@ ENDIF
 
  LDA L0042
  CMP #3
- BCS C2589
- JMP C25FD
+ BCS smar3
+ JMP smar9
 
-.C2589
+.smar3
 
  LDA scaleDown
  SEC
@@ -14271,32 +14273,32 @@ ENDIF
  STA U
  LDA scaleUp
  DEY
- BEQ C25A9
- BPL C25A3
+ BEQ smar6
+ BPL smar5
 
-.P259B
+.smar4
 
  LSR U
  ROR A
  INY
- BNE P259B
- BEQ C25A9
+ BNE smar4
+ BEQ smar6
 
-.C25A3
+.smar5
 
  ASL A
  ROL U
  DEY
- BNE C25A3
+ BNE smar5
 
-.C25A9
+.smar6
 
  STA T
  LDA L0049
  LSR A
  ROR A
  EOR directionFacing
- BPL C25C0
+ BPL smar7
  LDA #0
  SEC
  SBC T
@@ -14305,7 +14307,7 @@ ENDIF
  SBC U
  STA U
 
-.C25C0
+.smar7
 
  LDY L0012
 
@@ -14320,12 +14322,12 @@ ENDIF
 
  LDA W
  AND #%00011000
- BEQ C25FD
+ BEQ smar9
 
  LDY markersToDraw      \ Set Y to the number of markers we have to draw
 
- CPY #3                 \ If Y >= 3, jump to C25FD to skip the following
- BCS C25FD
+ CPY #3                 \ If Y >= 3, jump to smar9 to skip the following
+ BCS smar9
 
  LDA L0012              \ Set L62B4 for the Y-th marker to L0012
  STA L62B4,Y
@@ -14333,13 +14335,13 @@ ENDIF
  LDA W                  \ Set L6299 for the Y-th marker to W
  STA L6299,Y
 
- AND #1                 \ If bit 0 of W is clear, jump to C25F1 to skip the
- BEQ C25F1              \ following instruction
+ AND #1                 \ If bit 0 of W is clear, jump to smar8 to skip the
+ BEQ smar8              \ following instruction
 
  LSR U                  \ Set (U T) = (U T) >> 1
  ROR T
 
-.C25F1
+.smar8
 
  LDA T                  \ Set (var27Hi var27Lo) for the Y-th marker to (U T)
  STA var27Lo,Y
@@ -14349,32 +14351,32 @@ ENDIF
  INC markersToDraw      \ Increment markersToDraw, as we have just added a new
                         \ marker to draw
 
-.C25FD
+.smar9
 
  TXA
  AND #1
- BEQ C2606
+ BEQ smar10
  LDA #2
- BNE C2608
+ BNE smar11
 
-.C2606
+.smar10
 
  LDA V
 
-.C2608
+.smar11
 
  LDY L0012
  STA L5EE0,Y
  LDA LL
  STA yVergeRight,Y
  CMP #&50
- BCS C261E
+ BCS smar12
  CMP horizonLine
- BCC C261E
+ BCC smar12
  STA horizonLine
  STY L0051
 
-.C261E
+.smar12
 
  RTS
 
