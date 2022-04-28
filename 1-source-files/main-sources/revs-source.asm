@@ -2866,7 +2866,7 @@ ORG &0B00
 \
 \   (L K)               The distance between the object and the player's car
 \
-\   A                   Contains the high byte in L            
+\   A                   Contains the high byte of (L K)
 \
 \ ******************************************************************************
 
@@ -5341,7 +5341,8 @@ ORG &0B00
  LDX L0008              \ Set X = L0008 + 1
  INX
 
-                        \ Fall through into SetSegmentPointer to set L0006 and L0008:
+                        \ Fall through into SetSegmentPointer to set L0006 and
+                        \ L0008:
                         \
                         \   * L0006 = min(L0008 + 2, L0006)
                         \
@@ -5370,8 +5371,8 @@ ORG &0B00
  CPX L0006              \ If X >= L0006, jump to sseg1 to skip the following
  BCS sseg1
 
- STX L0006              \ X < L0006, so set L0006 = X, so the minimum value of
-                        \ L0006 is X
+ STX L0006              \ X < L0006, so set L0006 = X, so L0006 is set to the
+                        \ lower of X and L0006
 
 .sseg1
 
@@ -5939,7 +5940,7 @@ ORG &0B00
 
 .sub_C13FB
 
- LDA #6                 \ Set L0005 = 6
+ LDA #6                 \ Set L0006 = 6
  STA L0006
 
  LDX #64                \ Set X = 64, so the call to TurnPlayerAround
@@ -13464,7 +13465,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetTrackSections
+\       Name: GetSectionAngles
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the elevations for the inner and outer track sections
@@ -13473,11 +13474,11 @@ ENDIF
 \
 \ Other entry points:
 \
-\   GetTrackSections-1  Contains an RTS
+\   GetSectionAngles-1  Contains an RTS
 \
 \ ******************************************************************************
 
-.GetTrackSections
+.GetSectionAngles
 
  LDA newSegmentFetched  \ If newSegmentFetched = 0, then we have not fetched a
  BEQ gsec1              \ new segment since the last call, so jump to gsec1 to
@@ -13486,20 +13487,22 @@ ENDIF
  JSR ShuffleSegmentData \ ??? Shuffle various variables along by one if this is
                         \ a new segment, update L0006 and L0008
 
- LDA #0                 \ Set newSegmentFetched = 0 so we don't call ShuffleSegmentData
- STA newSegmentFetched  \ again until another new segment is fetched
+ LDA #0                 \ Reset newSegmentFetched to 0 so we don't call the
+ STA newSegmentFetched  \ ShuffleSegmentData routine again until the next new
+                        \ segment has been fetched
 
 .gsec1
 
  LDY L0005              \ If L0005 = 6, return from the subroutine (as 
- CPY #6                 \ GetTrackSections-1 contains an RTS)
- BEQ GetTrackSections-1
+ CPY #6                 \ GetSectionAngles-1 contains an RTS)
+ BEQ GetSectionAngles-1
 
  LDY L0006              \ If L0006 = 6, jump to gsec4
  CPY #6
  BEQ gsec4
 
-                        \ Otherwise we now loop from Y = L0006 up to 5
+                        \ Otherwise we now loop from Y = L0006 up to 5, skipping
+                        \ when Y = L0008
 
 .gsec2
 
@@ -13587,8 +13590,8 @@ ENDIF
 
  TAY                    \ Set Y = the new section number * 8
  
- STY thisSectionNumber  \ Store the new section number * 8 in thisSectionNumber, so we can
-                        \ retrieve it below when looping back
+ STY thisSectionNumber  \ Store the new section number * 8 in thisSectionNumber,
+                        \ so we can retrieve it below when looping back
 
  LDX L0008              \ Set X = L0008, to use as a loop counter for the inner
                         \ (L0008) and outer (L0008 + 40) track coordinates
@@ -13698,7 +13701,12 @@ ENDIF
  LDX L0008              \ Set X = L0008 - 1
  DEX
 
- JSR SetSegmentPointer  \ ??? Update L0008 (and maybe L0006)
+ JSR SetSegmentPointer  \ Update the segment pointers:
+                        \
+                        \   * L0006 = min(X + 1, L0006)
+                        \
+                        \   * If L0005 <= X < 6, set L0008 = X (i.e. decrement)
+                        \                        else set L0008 = 5
 
  LDA #7                 \ Set A = 7, to set as the horizon line when L0052 > 7
 
@@ -13727,8 +13735,9 @@ ENDIF
 \
 \ Returns:
 \
-\   A                   High byte of the collision distance between the object
-\                       and the player's car
+\   (L K)               The distance between the object and the player's car
+\
+\   A                   Contains the high byte of (L K)
 \
 \ ******************************************************************************
 
@@ -13761,8 +13770,9 @@ ENDIF
 \
 \ Returns:
 \
-\   A                   High byte of the collision distance between the object
-\                       and the player's car
+\   (L K)               The distance between the object and the player's car
+\
+\   A                   Contains the high byte of (L K)
 \
 \ ******************************************************************************
 
@@ -13783,7 +13793,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetTrackSegments
+\       Name: GetSegmentAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: 
@@ -13794,14 +13804,12 @@ ENDIF
 \
 \   A                   6 or 46
 \
-\   X                   The offset from xSegmentCoordILo of the variable to use
-\                       for the object's 3D coordinates in GetSegmentRotation, as
-\                       returned by GetSegmentNumber:
+\   X                   The segment number * 3 as an offset from
+\                       xSegmentCoordILo, so:
 \
-\                         * segmentIndex (xSegmentCoordILo for segmentIndex)
+\                         * X for inner track segment coordinates
 \
-\                         * segmentIndex + 120 (xSegmentCoordOLo for
-\                           segmentIndex)
+\                         * X + 120 for outer track segment coordinates
 \
 \   L000E               0 or 120
 \
@@ -13809,7 +13817,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetTrackSegments
+.GetSegmentAngles
 
  STA L0012              \ Set L0012 = A
 
@@ -13818,30 +13826,42 @@ ENDIF
 
 .gseg1
 
- JSR GetSegmentRotation \ Calculate the rotation angle for object X
+ JSR GetSegmentRotation \ Calculate the rotation angle for the track segment
+                        \ specified in X
+                        \
                         \ Set Y = L0012
                         \ Set Y-th var24 to distance to player
-                        \ Set A to high byte of collision distance between
-                        \   object X and car
+                        \ Set (A K) = (L K) = distance between object X and car
 
- CMP L0011
- BCC gseg2
- BNE gseg3
- LDA L0010
- CMP K
+ CMP L0011              \ If A < L0011, then (L K) < (L0011 L0010), so jump to
+ BCC gseg2              \ gseg2
+
+ BNE gseg3              \ If A <> L0011, i.e. A > L0011, then
+                        \ (L K) > (L0011 L0010), so jump to gseg3
+
+                        \ We now compare the high bytes
+
+ LDA L0010              \ If L0010 < K, then (L K) > (L0011 L0010), so jump
+ CMP K                  \ to gseg3
  BCC gseg3
 
 .gseg2
 
- LDA L
+                        \ If we get here then (L K) <= (L0011 L0010)
+
+ LDA L                  \ Set (L0011 L0010) = (L K)
  STA L0011
  LDA K
  STA L0010
- LDA L0042
+
+ LDA L0042              \ Set L0013 = L0042
  STA L0013
- LDY L0012
- STY L005C
- LDA var24Hi,Y
+
+ LDY L0012              \ Set Y = L0012
+
+ STY L005C              \ Set L005C = L0012
+
+ LDA var24Hi,Y          \ Set L005E = Y-th var24Hi
  STA L005E
 
 .gseg3
@@ -13854,9 +13874,21 @@ ENDIF
 
  BCS gseg4              \ If the object is not visible on-screen, jump to gseg4
 
- BPL gseg10             \ If the y-coordinate is positive, jump to gseg10
+ BPL gseg10             \ If the elevation angle is positive, jump to gseg10
+
+\ ******************************************************************************
+\
+\       Name: GetSegmentAngles (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: 
+\
+\ ******************************************************************************
 
 .gseg4
+
+                        \ If we get here then the object is not visible or the
+                        \ elevation is negative
 
  LDA L0042
  BNE gseg5
@@ -13926,8 +13958,8 @@ ENDIF
  LDX L0014
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
- STA temp1              \ after the call to SetTrackAndMarkers (so the call doesn't
-                        \ change the value of markersToDraw)
+ STA temp1              \ after the call to SetTrackAndMarkers (so the call
+                        \ doesn't change the value of markersToDraw)
 
  JSR SetTrackAndMarkers
 
@@ -13940,7 +13972,18 @@ ENDIF
 
  RTS
 
+\ ******************************************************************************
+\
+\       Name: GetSegmentAngles (Part 3 of 3)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: 
+\
+\ ******************************************************************************
+
 .gseg10
+
+                        \ If we get here then the elevation angle is positive
 
  JSR SetTrackAndMarkers
  LDA L0042
@@ -14082,7 +14125,7 @@ ENDIF
  LDA #0                 \ Set horizonLine = 0
  STA horizonLine
 
- JSR GetTrackSections   \ Get the elevations for the inner and outer track
+ JSR GetSectionAngles   \ Get the elevation angles for the inner and outer track
                         \ sections
 
  LDA #&FF               \ Set L0011 = -1
@@ -14095,7 +14138,7 @@ ENDIF
  JSR GetSegmentNumber
 
  LDA #6
- JSR GetTrackSegments
+ JSR GetSegmentAngles
 
  LDA L0012              \ Set L0015 = L0012
  STA L0015
@@ -14104,7 +14147,7 @@ ENDIF
  JSR GetSegmentNumber
 
  LDA #46
- JSR GetTrackSegments
+ JSR GetSegmentAngles
 
  LDA L0051              \ If L0051 < 40, jump to gmar1 to skip the following
  CMP #40                \ three instructions
