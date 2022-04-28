@@ -2000,7 +2000,7 @@ ORG CODE%
 \                              1 = 
 \
 \                       Bit 7: 0 = 
-\                              1 = accelerate up to the maximum speed
+\                              1 = 
 \
 \ xTrackSectionILo      Low byte of the start x-coordinate of the inside verge
 \                       of each track section
@@ -2014,7 +2014,9 @@ ORG CODE%
 \ xTrackSectionOLo      Low byte of the start x-coordinate of the outside verge
 \                       of each track section
 \
-\ trackSectionFrom      The number of the first track vector in each section
+\ trackSectionFrom      The number of the first track vector in each section, so
+\                       this enables us to fetch the track vectors for a given
+\                       track section
 \
 \ zTrackSectionOLo      Low byte of the start z-coordinate of the outside verge
 \                       of each track section
@@ -2358,7 +2360,7 @@ ORG CODE%
 \       Name: trackSignData
 \       Type: Variable
 \   Category: Track data
-\    Summary: Track sections and object types for 16 road signs
+\    Summary: Base coordinates and object types for 16 road signs
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2400,7 +2402,7 @@ ORG CODE%
 \       Name: trackSectionCount
 \       Type: Variable
 \   Category: Track data
-\    Summary: The number of track sections * 8
+\    Summary: The total number of track sections * 8
 \
 \ ******************************************************************************
 
@@ -2411,7 +2413,7 @@ ORG CODE%
 \       Name: trackVectorCount
 \       Type: Variable
 \   Category: Track data
-\    Summary: The number of track vectors in the trackVector tables
+\    Summary: The total number of track vectors in the trackVector tables
 \
 \ ******************************************************************************
 
@@ -2424,13 +2426,12 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Low byte of the length of the full track (in terms of progress)
 \
-\ ------------------------------------------------------------------------------
-\
-\ (objProgressHi objProgressLo) wraps round to 0 when it reaches this figure.
-\
 \ ******************************************************************************
 
  EQUB &00               \ (trackLengthHi trackLengthLo) = &0400
+                        \
+                        \ (objProgressHi objProgressLo) wraps round to 0 when it
+                        \ reaches this figure
 
 \ ******************************************************************************
 \
@@ -2439,13 +2440,12 @@ ORG CODE%
 \   Category: Track data
 \    Summary: High byte of the length of the full track (in terms of progress)
 \
-\ ------------------------------------------------------------------------------
-\
-\ (objProgressHi objProgressLo) wraps round to 0 when it reaches this figure.
-\
 \ ******************************************************************************
 
  EQUB &04               \ (trackLengthHi trackLengthLo) = &0400
+                        \
+                        \ (objProgressHi objProgressLo) wraps round to 0 when it
+                        \ reaches this figure
 
 \ ******************************************************************************
 \
@@ -2458,6 +2458,8 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB &4B               \ (trackPracticeHi trackPracticeLo) = &034B
+                        \
+                        \ This is out of a full track length of &0400
 
 \ ******************************************************************************
 \
@@ -2470,6 +2472,8 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB &03              \ (trackPracticeHi trackPracticeLo) = &034B
+                       \
+                       \ This is out of a full track length of &0400
 
 \ ******************************************************************************
 \
@@ -2486,7 +2490,9 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB 51                \ Set class to Novice if slowest lap time > 1:51
+
  EQUB 41                \ Set class to Amateur if slowest lap time > 1:41
+
  EQUB 0                 \ Otherwise set class to Professional
 
 \ ******************************************************************************
@@ -2504,7 +2510,9 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB 1                 \ Set class to Novice if slowest lap time > 1:51
+
  EQUB 1                 \ Set class to Amateur if slowest lap time > 1:41
+
  EQUB 0                 \ Otherwise set class to Professional
 
 \ ******************************************************************************
@@ -2521,11 +2529,17 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB 103               \ Reverse
+
  EQUB 0                 \ Neutral
+
  EQUB 103               \ First gear
+
  EQUB 66                \ Second gear
+
  EQUB 53                \ Third gear
+
  EQUB 46                \ Fourth gear
+
  EQUB 42                \ Fifth gear
 
 \ ******************************************************************************
@@ -2542,11 +2556,17 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB 161               \ Reverse
+
  EQUB 0                 \ Neutral
+
  EQUB 161               \ First gear
+
  EQUB 104               \ Second gear
+
  EQUB 82                \ Third gear
+
  EQUB 72                \ Fourth gear
+
  EQUB 65                \ Fifth gear
 
 \ ******************************************************************************
@@ -2560,7 +2580,9 @@ ORG CODE%
 \ ******************************************************************************
 
  EQUB 134               \ Base speed for Novice
+
  EQUB 146               \ Base speed for Amateur
+
  EQUB 152               \ Base speed for Professional
 
 \ ******************************************************************************
@@ -2568,7 +2590,7 @@ ORG CODE%
 \       Name: trackStartPosition
 \       Type: Variable
 \   Category: Track data
-\    Summary: The starting position of the player during a practice or
+\    Summary: The starting race position of the player during a practice or
 \             qualifying lap
 \
 \ ******************************************************************************
@@ -2580,7 +2602,7 @@ ORG CODE%
 \       Name: trackCarSpacing
 \       Type: Variable
 \   Category: Track data
-\    Summary: The spacing between cars at the start of a qualifying lap
+\    Summary: The spacing between the cars at the start of a qualifying lap
 \
 \ ******************************************************************************
 
@@ -2591,8 +2613,8 @@ ORG CODE%
 \       Name: trackTimerAdjust
 \       Type: Variable
 \   Category: Track data
-\    Summary: Adjust the speed of the timers to allow for fine-tuning on a
-\             per-track basis
+\    Summary: Adjustment factor for the speed of the timers to allow for
+\             fine-tuning of time on a per-track basis
 \
 \ ------------------------------------------------------------------------------
 \
