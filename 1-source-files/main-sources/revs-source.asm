@@ -1672,18 +1672,18 @@ ORG &0880
 
 .xSegmentCoordIHi
 
- SKIP 1                 \ The high byte of the 3D x-coordinate for an inner track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ The high byte of the 3D x-coordinate for an inner
+                        \ track segment in the track segment buffer
 
 .ySegmentCoordIHi
 
- SKIP 1                 \ The high byte of the 3D y-coordinate for an inner track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ The high byte of the 3D y-coordinate for an inner
+                        \ track segment in the track segment buffer
 
 .zSegmentCoordIHi
 
- SKIP 1                 \ The high byte of the 3D z-coordinate for an inner track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ The high byte of the 3D z-coordinate for an inner
+                        \ track segment in the track segment buffer
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1691,18 +1691,18 @@ ORG &0880
 
 .xSegmentCoordOHi
 
- SKIP 1                 \ The high byte of the 3D x-coordinate for an outer track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ The high byte of the 3D x-coordinate for an outer
+                        \ track segment in the track segment buffer
 
 .ySegmentCoordOHi
 
- SKIP 1                 \ The high byte of the 3D y-coordinate for an outer track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ The high byte of the 3D y-coordinate for an outer
+                        \ track segment in the track segment buffer
 
 .zSegmentCoordOHi
 
- SKIP 1                 \ The high byte of the 3D z-coordinate for an outer track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ The high byte of the 3D z-coordinate for an outer
+                        \ track segment in the track segment buffer
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -2509,9 +2509,9 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   Y                   L0005 to 5, process L5EE0, var24Lo, var24Hi, L5F20
+\   Y                   L0005 to 5, update L5EE0, var24Lo, var24Hi, yVergeRight
 \
-\                       Above + 40, process L5F08, L5E68,   L5EB8,   L5F48
+\                       Above + 40, update L5F08, var23Lo, var23Hi, yVergeLeft
 \
 \ ******************************************************************************
 
@@ -2529,14 +2529,15 @@ ORG &0B00
  SBC spinSpeedHi
  STA var24Hi,Y
 
- LDA L5F20,Y            \ Set A = Y-th entry in L5F20 - L004E
+ LDA yVergeRight,Y      \ Set A = Y-th entry in yVergeRight - L004E
  SEC
  SBC L004E
 
- STA L5F20,Y            \ Store the result in the Y-th entry in L5F20
+ STA yVergeRight,Y      \ Store the result in the Y-th entry in yVergeRight
 
- CMP horizonLine        \ If A < horizonLine, jump to C0BCB to return from the
- BCC C0BCB              \ subroutine
+ CMP horizonLine        \ If A < horizonLine, then this track section is lower
+ BCC C0BCB              \ than the current horizon, jump to C0BCB to return
+                        \ from the subroutine
 
  STA horizonLine        \ Store the result in horizonLine
 
@@ -2544,7 +2545,7 @@ ORG &0B00
 
 .C0BCB
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2830,8 +2831,8 @@ ORG &0B00
 \       Name: GetObjectDistance
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the distance between the projected object and the
-\             player's car, for collision purposes
+\    Summary: Calculate the distance between an object and the player's car, for
+\             collision purposes
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2845,8 +2846,8 @@ ORG &0B00
 \   * Set (L K) = (J I) * 7/8 + (H G) / 2
 \               = max * 7/8 + min / 2
 \
-\ This appears to set the distance between the projected object and the player's
-\ car, for the purposes of determining whether contact has been made.
+\ This appears to set the distance between the object and the player's car, for
+\ the purposes of determining whether contact has been made.
 \
 \ I suspect the calculation is designed to take the long shape of the cars into
 \ consideration, given the viewing angle of the other car.
@@ -2862,8 +2863,7 @@ ORG &0B00
 \
 \ Returns:
 \
-\   (L K)               The distance between the projected object and the
-\                       player's car
+\   (L K)               The distance between the object and the player's car
 \
 \   A                   Contains the high byte in L            
 \
@@ -5168,8 +5168,8 @@ ORG &0B00
 
  LDY #6                 \ Set Y = 6
 
- STY L62F5              \ Set L62F5 to a non-zero value, so we call sub_C12A0
-                        \ in sub_C22FF to shuffle variables along
+ STY newSegmentFetched  \ Set newSegmentFetched to a non-zero value to indicate
+                        \ that we are fetching a new segment
 
  LDA L0062              \ If L0062 = 0, skip the following instruction
  BEQ gets1
@@ -5240,19 +5240,19 @@ ORG &0B00
 
  LDX #44                \ Set X = 44 so we start by shuffling the first batch:
                         \
-                        \   * L5E68+0-4 to L5E68+1-5
+                        \   * var23Lo+0-4 to var23Lo+1-5
                         \
-                        \   * L5EB8+0-4 to L5EB8+1-5
+                        \   * var23Hi+0-4 to var23Hi+1-5
                         \
-                        \   * L5F48+0-4 to L5F48+1-5
+                        \   * yVergeLeft+0-4 to yVergeLeft+1-5
                         \
                         \ This works because:
                         \
-                        \   * var24Lo + 40 = L5E68
+                        \   * var24Lo + 40 = var23Lo
                         \
-                        \   * var24Hi + 40 = L5EB8
+                        \   * var24Hi + 40 = var23Hi
                         \
-                        \   * L5F20 + 40 = L5F48
+                        \   * yVergeRight + 40 = yVergeLeft
 
 .P12A2
 
@@ -5262,8 +5262,8 @@ ORG &0B00
  LDA var24Hi,X          \ Shuffle the X-th byte of var24Hi up by one
  STA var24Hi+1,X
 
- LDA L5F20,X            \ Shuffle the X-th byte of L5F20 up by one
- STA L5F20+1,X
+ LDA yVergeRight,X      \ Shuffle the X-th byte of yVergeRight up by one
+ STA yVergeRight+1,X
 
  CPX #40                \ If X <> 40 then we are either still shuffling the
  BNE C12BA              \ first batch and haven't yet done the last shuffle, or
@@ -5277,7 +5277,7 @@ ORG &0B00
                         \
                         \   * var24Hi+0-4 to var24Hi+1-5
                         \
-                        \   * L5F20+0-4 to L5F20+1-5
+                        \   * yVergeRight+0-4 to yVergeRight+1-5
 
 .C12BA
 
@@ -5304,7 +5304,11 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\   * L0006 = max(min(L0006 + 1, 6), L0005)
+\
+\   * L0006 = min(L0008 + 2, L0006)
+\
+\   * If L0005 <= L0008 + 1 < 6, set L0008 = L0008 + 1, else set L0008 = 5
 \
 \ ******************************************************************************
 
@@ -5336,7 +5340,12 @@ ORG &0B00
  LDX L0008              \ Set X = L0008 + 1
  INX
 
-                        \ Fall through into sub_C12DC to set L0006 and L0008
+                        \ Fall through into sub_C12DC to set L0006 and L0008:
+                        \
+                        \   * L0006 = min(L0008 + 2, L0006)
+                        \
+                        \   * If L0005 <= L0008 + 1 < 6, set L0008 = L0008 + 1,
+                        \     else set L0008 = 5
 
 \ ******************************************************************************
 \
@@ -5347,7 +5356,9 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\   * L0006 = min(X + 1, L0006)
+\
+\   * If L0005 <= X < 6, set L0008 = X, else set L0008 = 5
 \
 \ ******************************************************************************
 
@@ -7950,7 +7961,7 @@ ENDIF
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
- LDA L5EB8,X            \ Set A = X-th entry in L5EB8 + 20
+ LDA var23Hi,X          \ Set A = X-th entry in var23Hi + 20
  CLC
  ADC #20
 
@@ -8234,12 +8245,12 @@ ENDIF
 
 .C1955
 
- LDA L5F20,X
+ LDA yVergeRight,X
  CMP #&50
  BCS C1980
  BIT V
  BPL C1965
- CMP L5F20+1,X
+ CMP yVergeRight+1,X
  BEQ C19A5
 
 .C1965
@@ -8276,12 +8287,12 @@ ENDIF
 
 .C1980
 
- LDA L5F20,X
+ LDA yVergeRight,X
  BMI C198E
  CMP N
  BCC C198E
  LDA N
- STA L5F20,X
+ STA yVergeRight,X
 
 .C198E
 
@@ -8511,7 +8522,7 @@ ENDIF
 
 .C1AA7
 
- LDY L5F20,X
+ LDY yVergeRight,X
  CPY #&50
  BCS C1B03
  LDA L5EE0,X
@@ -8582,7 +8593,7 @@ ENDIF
 .C1B0B
 
  LDX L0050
- LDY L5F20,X
+ LDY yVergeRight,X
  INY
  RTS
 
@@ -8664,7 +8675,7 @@ ENDIF
  STA xCoord             \ where 80 is the x-coordinate of the middle of the
                         \ screen (as the screen is 160 pixels wide)
 
- LDA L5F20,X            \ Set yCoord = X-th value from L5F20
+ LDA yVergeRight,X      \ Set yCoord = X-th value from yVergeRight
  STA yCoord
 
  LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
@@ -8820,8 +8831,8 @@ ENDIF
  SBC objectDistanceLo   \ The value of (objectDistanceHi objectDistanceLo) is
                         \ left over from the last call to CheckForContact, which
                         \ was last called for the nearest car in front of us
-                        \ when projecting the five cars in front of us, from
-                        \ furthest to nearest, as part of this chain of
+                        \ when building object for the five cars in front of us,
+                        \ from furthest to nearest, as part of this chain of
                         \ routines:
                         \
                         \   MoveAndDrawCars > BuildVisibleCar > BuildCarObjects
@@ -8876,9 +8887,9 @@ ENDIF
 
 .cont2
 
- LDA objRotationHi,X    \ Set A to the rotation about the y-axis for the other car
- SEC                    \ minus the rotation about the y-axis for the player, let's
- SBC playerRotationHi   \ call this dRotation
+ LDA objRotationHi,X    \ Set A to the rotation about the y-axis for the other
+ SEC                    \ car minus the rotation about the y-axis for the
+ SBC playerRotationHi   \ player, which we will call dRotation
 
  ASL A                  \ Set A = A * 4
  ASL A                  \       = dRotation * 4
@@ -11368,7 +11379,7 @@ IF _ACORNSOFT
 
 .gcol16
 
- LDA L5F20,X
+ LDA yVergeRight,X
 
 .gcol17
 
@@ -12670,7 +12681,7 @@ ENDIF
 \
 \ Returns:
 \
-\   (JJ II)             The projected rotation about the y-axis of the object
+\   (JJ II)             The rotation about the y-axis of the object
 \
 \   (J I)               max(|x-delta|, |z-delta|)
 \
@@ -12843,7 +12854,7 @@ ENDIF
 \       Name: GetObjRotation (Part 2 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate projection for when |x-delta| > |z-delta|
+\    Summary: Calculate rotation angle for when |x-delta| > |z-delta|
 \
 \ ******************************************************************************
 
@@ -12925,8 +12936,8 @@ ENDIF
  LDA #0                 \ Set II = 0 to use as the low byte for the final
  STA II                 \ rotation angle
 
- LDY T                  \ Set A = arcTan(T)
- LDA arcTan,Y           \       = arcTan(|z-delta| / |x-delta|)
+ LDY T                  \ Set A = arctanR(T)
+ LDA arctanR,Y          \       = arctanR(|z-delta| / |x-delta|)
                         \
                         \ So this is the viewing angle of the object
 
@@ -12936,7 +12947,7 @@ ENDIF
  LSR A                  \ Set (JJ II) = (A 0) >> 3
  ROR II                 \             = A * 256 / 8
  LSR A                  \             = A * 32
- ROR II                 \             = arcTan(|z-delta| / |x-delta|) * 32
+ ROR II                 \             = arctanR(|z-delta| / |x-delta|) * 32
  LSR A
  ROR II
  STA JJ
@@ -12984,7 +12995,7 @@ ENDIF
 \       Name: GetObjRotation (Part 3 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate projection for when |x-delta| = |z-delta|
+\    Summary: Calculate rotation angle for when |x-delta| = |z-delta|
 \
 \ ******************************************************************************
 
@@ -13060,7 +13071,7 @@ ENDIF
 \       Name: GetObjRotation (Part 4 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate projection for when |x-delta| < |z-delta|
+\    Summary: Calculate rotation angle for when |x-delta| < |z-delta|
 \
 \ ******************************************************************************
 
@@ -13142,8 +13153,8 @@ ENDIF
  LDA #0                 \ Set II = 0 to use as the low byte for the final
  STA II                 \ rotation angle
 
- LDY T                  \ Set A = arcTan(T)
- LDA arcTan,Y           \       = arcTan(|x-delta| / |z-delta|)
+ LDY T                  \ Set A = arctanR(T)
+ LDA arctanR,Y          \       = arctanR(|x-delta| / |z-delta|)
                         \
                         \ So this is the viewing angle of the object
 
@@ -13153,7 +13164,7 @@ ENDIF
  LSR A                  \ Set (JJ II) = (A 0) >> 3
  ROR II                 \             = A * 256 / 8
  LSR A                  \             = A * 32
- ROR II                 \             = arcTan(|x-delta| / |z-delta|) * 32
+ ROR II                 \             = arctanR(|x-delta| / |z-delta|) * 32
  LSR A
  ROR II
  STA JJ
@@ -13227,15 +13238,15 @@ ENDIF
 \
 \ Returns:
 \
-\   LL                  The projected y-coordinate of the object
+\   LL                  The elevation angle of the object
 \
-\   A                   The projected y-coordinate of the object (same as LL)
+\   A                   The elevation angle of the object (same as LL)
 \
 \   scaleUp             The scale up factor for the object
 \
 \   scaleDown           The scale down factor for the object
 \
-\   C flag              Is the projected object visible on-screen:
+\   C flag              Is the object visible on-screen:
 \
 \                         * Clear if the object is on-screen
 \
@@ -13404,8 +13415,8 @@ ENDIF
 
  STY scaleDown          \ Set scaleDown to the number of shifts in Y
 
- TAY                    \ Set scaleUp = L6200(A)
- LDA L6200-128,Y        \             = L6200(|x-delta|)
+ TAY                    \ Set scaleUp = arctanE(A)
+ LDA arctanE-128,Y      \             = arctanE(|x-delta|)
  STA scaleUp
 
  LDA QQ                 \ Set T = QQ, the low byte of the scaled |y-delta|, to
@@ -13466,14 +13477,15 @@ ENDIF
 
 .sub_C22FF
 
- LDA L62F5              \ If L62F5 = 0, jump to C230C to skip the following call
- BEQ C230C              \ to sub_C12A0
+ LDA newSegmentFetched  \ If newSegmentFetched = 0, then we have not fetched a
+ BEQ C230C              \ new segment since the last call, so jump to C230C to
+                        \ skip the following call to sub_C12A0
 
  JSR sub_C12A0          \ ??? Shuffle various variables along by one if this is
-                        \ a new segment
+                        \ a new segment, update L0006 and L0008
 
- LDA #0                 \ Set L62F5 = 0 so we don't call sub_C12A0 again until
- STA L62F5              \ L62F5 is set to a non-zero value
+ LDA #0                 \ Set newSegmentFetched = 0 so we don't call sub_C12A0
+ STA newSegmentFetched  \ again until another new segment is fetched
 
 .C230C
 
@@ -13485,7 +13497,7 @@ ENDIF
  CPY #6
  BEQ C2330
 
-                        \ Otherwise we now loop from Y = L0006 to 5
+                        \ Otherwise we now loop from Y = L0006 up to 5
 
 .P2318
 
@@ -13499,11 +13511,15 @@ ENDIF
  ADC #40
  TAY
 
- JSR sub_C0BA2
+ JSR sub_C0BA2          \ ??? Update T-th L5F08 (= 0), var23 (subtract spin),
+                        \ yVergeLeft (subtract L004E), maybe horizonLine and
+                        \ L0051
 
  LDY T                  \ Retrieve the original value of Y that we stored above
 
- JSR sub_C0BA2
+ JSR sub_C0BA2          \ ??? Update T-th L5EE0 (= 0), var24 (subtract spin),
+                        \ yVergeRight (subtract L004E), maybe horizonLine and
+                        \ L0051
 
 .C232B
 
@@ -13514,7 +13530,7 @@ ENDIF
 
 .C2330
 
- LDA #6
+ LDA #6                 \ Set A = (6 - L0008) * 8
  SEC
  SBC L0008
  ASL A
@@ -13524,103 +13540,174 @@ ENDIF
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
  BPL C234F              \ facing forwards, so jump to C234F
 
- STA T
- LDA objTrackSection+23
- CLC
- ADC #8
- SEC
+                        \ If we get here then we are facing backwards, so we
+                        \ now calculate the section number
+
+ STA T                  \ Set T = A
+                        \       = (6 - L0008) * 8
+
+ LDA objTrackSection+23 \ Set A to the number * 8 of the track section for
+                        \ driver 23
+
+ CLC                    \ Set A = A + 8 - T
+ ADC #8                 \       = section23 * 8 + 8 - (6 - L0008) * 8
+ SEC                    \       = (section23 + 1 - 6 + L0008) * 8
  SBC T
- BCS C235B
- ADC trackSectionCount
- JMP C235B
+
+ BCS C235B              \ If the subtraction didn't underflow, jump to C235B
+
+ ADC trackSectionCount  \ The subtraction underflowed, so add the total number
+                        \ of track sections * 8 given in trackSectionCount to
+                        \ wrap round to the correct section number (we know the
+                        \ C flag is clear as we just passed through a BCS)
+
+ JMP C235B              \ Jump to C235B
 
 .C234F
 
- CLC
- ADC objTrackSection+23
- CMP trackSectionCount
- BCC C235B
- SBC trackSectionCount
+                        \ If we get here then we are facing forwards
+
+ CLC                    \ Set A = A + number * 8 of track section for driver 23
+ ADC objTrackSection+23 \       = A + section23 * 8
+                        \       = (6 - L0008) * 8 + section23 * 8
+                        \       = (6 - L0008 + section23) * 8
+
+ CMP trackSectionCount  \ If A < trackSectionCount then A is a valid section
+ BCC C235B              \ number, so jump to C235B
+
+ SBC trackSectionCount  \ The addition took us past the highest track section
+                        \ number, so subtract the total number of track sections
+                        \ * 8 given in trackSectionCount to bring it down to the
+                        \ correct section number (we know the C flag is set as
+                        \ we just passed through a BCC)
 
 .C235B
 
- TAY
- STY L0004
- LDX L0008
+ TAY                    \ Set Y = the new section number * 8
+ 
+ STY L0004              \ Store the new section number * 8 in L0004, so we can
+                        \ retrieve it below when looping back
+
+ LDX L0008              \ Set X = L0008, to use as a loop counter for the inner
+                        \ (L0008) and outer (L0008 + 40) track coordinates
+
+                        \ We run the following section twice, once for the inner
+                        \ track section coordinates (with X = L0008), and again
+                        \ for the outer track section coordinates (with
+                        \ X = L0008 + 40)
 
 .C2360
 
- STX L0042
+ STX L0042              \ Store the loop counter in L0042
 
- LDX #&FD               \ Copy the first trackSection coordinate for track
- JSR GetSectionCoord    \ section Y into xVector4
+ LDX #&FD               \ Copy the first trackSectionI coordinate for track
+ JSR GetSectionCoord    \ section Y into xVector4, so xVector4 is the 3D
+                        \ coordinate of the inner track at the start of the
+                        \ section (or, if this is the second loop where Y is
+                        \ incremented by 3, xVector4 is the 3D coordinate of the
+                        \ outer track)
 
- JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
-                        \ returning it in (JJ II)
+ JSR GetObjRotation-2   \ Calculate xVector4's rotation about the y-axis,
+                        \ from the point of view of the player, returning it in
+                        \ (JJ II)
 
- LDY L0042
+ LDY L0042              \ Set Y to the loop counter
 
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
  BPL C2374              \ facing forwards, so jump to C2374
 
- TYA
- EOR #&28
- TAY
+ TYA                    \ We are facing backwards, so flip Y between L0008 and
+ EOR #40                \ L0008 + 40 to do the inner and outer track sections
+ TAY                    \ in reverse order
 
 .C2374
 
- JSR sub_C23C0
- LDX L0042
- CPX #&28
- BCS C239A
+ JSR sub_C23C0          \ Set Y-th (var24Hi var24Lo) = (JJ II) - playerRotation
+                        \
+                        \ Set (L K) to the distance between the track section
+                        \ and the player's car
 
- LDX #&FD
+ LDX L0042              \ If X >= 40, then we are dealing with the outer track
+ CPX #40                \ section, so jump to C239A as we don't need to repeat
+ BCS C239A              \ the elevation calculation (as the track is level, so
+                        \ the outer track is the same height as the inner
+                        \ track)
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
-                        \ in A and LL
+ LDX #&FD               \ Set X = &FD so the call to GetObjElevation uses
+                        \ xVector4
 
- LDX L0042
- LDA LL
- STA L5F20,X
- STA L5F48,X
- CMP horizonLine
- BCC C239A
- BNE C2396
- CPX L0051
+ JSR GetObjElevation-2  \ Calculate xVector4's elevation angle, from the point
+                        \ of view of the player, returning it in A and LL
+
+ LDX L0042              \ Set X to the loop counter, which we know is less than
+                        \ 40 at this point (and which is therefore equal to
+                        \ L0008)
+
+ LDA LL                 \ Set A to the elevation angle
+
+ STA yVergeRight,X      \ Store the elevation angle in the X-th yVergeRight
+                        \ entry, for this point on the inner track section
+
+ STA yVergeLeft,X       \ Store the elevation angle in the X-th yVergeLeft, for
+                        \ this point on the outer track section
+
+ CMP horizonLine        \ If A < horizonLine, then this track section is lower
+ BCC C239A              \ than the current horizon, so jump to C239A to move on
+                        \ to the outer track section 
+
+ BNE C2396              \ If A <> horizonLine, i.e. A > horizonLine, then the
+                        \ track section is higher than the current horizon line,
+                        \ so jump to C2396 to set the horizon line to the
+                        \ elevation of this track section
+
+ CPX L0051              \ If X < L0051, jump to C239A
  BCC C239A
 
 .C2396
 
- STA horizonLine
- STX L0051
+ STA horizonLine        \ Set horizonLine to the elevation in A
+
+ STX L0051              \ Set L0051 = X
 
 .C239A
 
- TXA
- CLC
- ADC #&28
- CMP #&3C
- BCS C23AC
- TAX
- LDA L0004
- CLC
- ADC #3
- TAY
- JMP C2360
+ TXA                    \ Set A = X + 40
+ CLC                    \       = L0008 + 40
+ ADC #40
+
+ CMP #60                \ If A >= 60, we have done both inner and outer track
+ BCS C23AC              \ sections, so jump to C23AC
+
+ TAX                    \ Set X = A
+                        \       = L0008 + 40
+
+ LDA L0004              \ Set Y = L0004 + 3
+ CLC                    \
+ ADC #3                 \ So when we loop back, the offset in Y points to the
+ TAY                    \ trackSectionO coordinates for the outer track section
+                        \ instead of the inner coordinates in trackSectionI (as
+                        \ the outer coordinates are 3 bytes after the inner ones
+                        \ in the track data)
+
+ JMP C2360              \ Loop back to C2360 to process the outer track section
 
 .C23AC
 
- LDX L0008
+ LDX L0008              \ Set X = L0008 - 1
  DEX
- JSR sub_C12DC
- LDA #7
- CMP L0052
- BCS C23BA
- STA horizonLine
+
+ JSR sub_C12DC          \ ??? Update L0008 and L0006
+
+ LDA #7                 \ Set A = 7, to set as the horizon line when L0052 > 7
+
+ CMP L0052              \ If A >= L0052, jump to C23BA to return from the
+ BCS C23BA              \ subroutine
+
+ STA horizonLine        \ Set horizonLine = 7
 
 .C23BA
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -13638,15 +13725,16 @@ ENDIF
 \
 \ Returns:
 \
-\   A                   High byte of the collision distance between the
-\                       projected object and the player's car
+\   A                   High byte of the collision distance between the object
+\                       and the player's car
 \
 \ ******************************************************************************
 
 .sub_C23BB
 
  JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
-                        \ returning it in (JJ II)
+                        \ from the point of view of the player, returning it in
+                        \ (JJ II)
 
  LDY L0012              \ Set Y = L0012, which is 6 or 46
 
@@ -13661,16 +13749,15 @@ ENDIF
 \
 \ Arguments:
 \
-\   Y                   Index within var24 to store the x-distance between the
-\                       projected object and the player
+\   Y                   Index within var24 to store the difference in rotation
+\                       angle between the object and the player
 \
-\   (JJ II)             The projected rotation about the y-axis of the projected
-\                       object
+\   (JJ II)             The rotation about the y-axis of the object
 \
 \ Returns:
 \
-\   A                   High byte of the collision distance between the
-\                       projected object and the player's car
+\   A                   High byte of the collision distance between the object
+\                       and the player's car
 \
 \ ******************************************************************************
 
@@ -13685,9 +13772,9 @@ ENDIF
  SBC playerRotationHi
  STA var24Hi,Y
 
- JMP GetObjectDistance  \ Set (L K) to the distance between the projected object
-                        \ and the player's car, returning from the subroutine
-                        \ using a tail call
+ JMP GetObjectDistance  \ Set (L K) to the distance between the object and the
+                        \ player's car, with A set to L, returning from the
+                        \ subroutine using a tail call
 
 \ ******************************************************************************
 \
@@ -13728,9 +13815,9 @@ ENDIF
 
  JSR sub_C23BB          \ Calculate the rotation angle for object X
                         \ Set Y = L0012
-                        \ Set Y-th var24 to x-distance to player
+                        \ Set Y-th var24 to distance to player
                         \ Set A to high byte of collision distance between
-                        \   object and car
+                        \   object X and car
 
  CMP L0011
  BCC C23E7
@@ -13754,8 +13841,8 @@ ENDIF
 
 .C23FC
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
-                        \ in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
+                        \ of view of the player, returning it in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
@@ -13818,11 +13905,12 @@ ENDIF
 
 .C2450
 
- LDX #&FA
+ LDX #&FA               \ xVector3 in sub_C23BB
+
  JSR sub_C23BB
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
-                        \ in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
+                        \ of view of the player, returning it in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
@@ -13993,7 +14081,7 @@ ENDIF
  LDA #0                 \ Set horizonLine = 0
  STA horizonLine
 
- JSR sub_C22FF
+ JSR sub_C22FF          \ ??? Set up elevations for 16 track sections/segments?
 
  LDA #&FF               \ Set L0011 = -1
  STA L0011
@@ -14039,15 +14127,15 @@ ENDIF
 
 .C2535
 
- STA L5F20,Y            \ Set the Y-th entry in L5F20 to the updated value of
-                        \ horizonLine
+ STA yVergeRight,Y      \ Set the Y-th entry in yVergeRight to the updated value
+                        \ of horizonLine
 
- STA L5F48,Y            \ Set the Y-th entry in L5F48 to the updated value of
-                        \ horizonLine
+ STA yVergeLeft,Y       \ Set the Y-th entry in yVergeLeft to the updated value
+                        \ of horizonLine
 
- LDA var24Hi,Y          \ Set A = var24Hi - L5EB8 for Y
+ LDA var24Hi,Y          \ Set A = var24Hi - var23Hi for Y
  SEC
- SBC L5EB8,Y
+ SBC var23Hi,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -14278,7 +14366,7 @@ ENDIF
  LDY L0012
  STA L5EE0,Y
  LDA LL
- STA L5F20,Y
+ STA yVergeRight,Y
  CMP #&50
  BCS C261E
  CMP horizonLine
@@ -16105,7 +16193,6 @@ ENDIF
  LDX L0045              \ Set X = L0045 (driver number of car we are driving)
 
  LDA objectDistanceHi   \ Set A to the high byte of the distance of the object
-                        \ we just projected
 
  CMP #3                 \ If A >= 3, then the car is not close enough to be the
  BCS bcar11             \ four-object car, so jump to bcar11 to check whether it
@@ -16305,7 +16392,8 @@ ENDIF
  STA objectType         \ Store the object type in objectType
 
  JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
-                        \ returning it in (JJ II)
+                        \ from the point of view of the player, returning it in
+                        \ (JJ II)
 
  LDY objectNumber       \ Set Y to the number of the object we are processing
 
@@ -16314,12 +16402,12 @@ ENDIF
  LDA JJ
  STA objRotationHi,Y
 
- JSR CheckForContact-2  \ Check to see if the projected object and the player's
-                        \ car are close enough for contact, specifically if they
-                        \ are within 37 projected units of each other
+ JSR CheckForContact-2  \ Check to see if the object and the player's car are
+                        \ close enough for contact, specifically if they are
+                        \ within a distance of 37 from each other
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, returning it
-                        \ in A and LL
+ JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
+                        \ of view of the player, returning it in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, which will hide the object in the following
@@ -16481,8 +16569,8 @@ ENDIF
 \       Name: CheckForContact
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Check to see if the projected object is close enough to the player
-\             car to make contact
+\    Summary: Check to see if the object is close enough to the player car to
+\             make contact
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16509,8 +16597,8 @@ ENDIF
 
 .CheckForContact
 
- JSR GetObjectDistance  \ Set (L K) to the distance between the projected object
-                        \ and the player's car
+ JSR GetObjectDistance  \ Set (L K) to the distance between the object and the
+                        \ player's car
 
  LDA L                  \ Set objectDistanceHi to the high byte of (L K)
  STA objectDistanceHi
@@ -16798,7 +16886,7 @@ ENDIF
  STA L0054
  LDA #0
  STA L001E
- LDA L5F20,Y
+ LDA yVergeRight,Y
  SEC
  SBC #1
  CMP #&4E
@@ -16825,7 +16913,7 @@ ENDIF
  CLC
  ADC #&80
  STA W
- LDA L5F20,Y
+ LDA yVergeRight,Y
  STA RR
  STX L0045
  STY thisObjectIndex
@@ -26585,16 +26673,16 @@ ENDIF
                         \ angles, to show the sign in the correct place by the
                         \ side of the track from the viewpoint of the player
 
- JSR GetObjRotation     \ Calculate the object's rotation angle about the y-axis,
-                        \ returning it in (JJ II)
+ JSR GetObjRotation     \ Calculate the object's rotation angle about the
+                        \ y-axis, returning it in (JJ II)
 
  LDA II                 \ Set the rotation about the y-axis in (objRotationHi+23
  STA objRotationLo+23   \ objRotationLo+23) to (JJ II), so we use driver 23 to
  LDA JJ                 \ store the sign's object
  STA objRotationHi+23
 
-                        \ Now that the sign object has been built and projected
-                        \ in the x-axis, we can check for any collisions between
+                        \ Now that the sign object has been built and the angles
+                        \ calculated, we can check for any collisions between
                         \ the player and the sign
 
  SEC                    \ Set A = JJ - playerRotationHi
@@ -26629,9 +26717,9 @@ ENDIF
  LDA #23                \ Set L0042 = 23, so if we are colliding with the sign,
  STA L0042              \ CheckForContact sets collisionDriver to object 23
 
- JSR CheckForContact    \ Check to see if the projected object and the player's
-                        \ car are close enough for contact, specifically if they
-                        \ are within Y projected units of each other
+ JSR CheckForContact    \ Check to see if the object and the player's car are
+                        \ close enough for contact, specifically if they are
+                        \ within a distance of Y from each other
 
                         \ The final step is to calculate the object's elevation
                         \ angle, and then we are done building the sign object
@@ -30038,7 +30126,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5E68
+\       Name: var23Lo
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -30049,7 +30137,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5E68
+.var23Lo
 
  SKIP 40
 
@@ -30089,7 +30177,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5EB8
+\       Name: var23Hi
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -30100,7 +30188,7 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5EB8
+.var23Hi
 
  SKIP 40
 
@@ -30154,18 +30242,14 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F20
+\       Name: yVergeRight
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: Elevation of the right verge of the track in front of us
 \
 \ ******************************************************************************
 
-.L5F20
+.yVergeRight
 
  SKIP 24
 
@@ -30337,18 +30421,14 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F48
+\       Name: yVergeLeft
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: Elevation of the left verge of the track in front of us
 \
 \ ******************************************************************************
 
-.L5F48
+.yVergeLeft
 
  SKIP 24
 
@@ -30457,18 +30537,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: arcTan
+\       Name: arctanR
 \       Type: Variable
 \   Category: Maths
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Table for arctan values when calculating rotation angles
 \
 \ ******************************************************************************
 
-.arcTan
+.arctanR
 
  FOR I%, 0, 255
   EQUB INT(0.5 + ATN(I% / 256) * 325.95)
@@ -30476,10 +30552,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L6200
+\       Name: arctanE
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Table for arctan values when calculating elevation angles
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30491,7 +30567,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L6200
+.arctanE
 
  EQUB &FF, &FE, &FC, &FA
  EQUB &F8, &F6, &F5, &F3, &F1, &EF, &ED, &EC, &EA, &E8, &E7, &E5
@@ -31604,20 +31680,21 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F5
+\       Name: newSegmentFetched
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: Flag that determines whether a new track segment has been fetched
 \
 \ ******************************************************************************
 
-.L62F5
+.newSegmentFetched
 
- EQUB 0
+ EQUB 0                 \ Track segment status:
+                        \
+                        \   * 0 = no new segment
+                        \
+                        \   * Non-zero = a new segment has been fetched by the
+                        \                GetTrackSegment routine
 
 \ ******************************************************************************
 \
