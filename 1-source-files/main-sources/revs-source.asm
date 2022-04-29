@@ -2517,14 +2517,14 @@ ORG &0B00
 \   Y                   0 to 5:
 \
 \                         * Zero L5EE0
-\                         * Subtract spin from xVergeLeftLo, xVergeLeftHi
+\                         * Subtract spin from xVergeRightLo, xVergeRightHi
 \                         * Subtract spinElevation from yVergeRight
 \                         * Update L0051 and horizonLine
 \
 \                       40 to 45:
 \
 \                         * Zero L5F08
-\                         * Subtract spin from xVergeRightLo, xVergeRightHi
+\                         * Subtract spin from xVergeLeftLo, xVergeLeftHi
 \                         * Subtract spinElevation from yVergeLeft
 \                         * Update L0051 and horizonLine
 \
@@ -2535,14 +2535,14 @@ ORG &0B00
  LDA #0                 \ Set the Y-th entry in L5EE0 to 0
  STA L5EE0,Y
 
- LDA xVergeLeftLo,Y     \ Set xVergeLeft = xVergeLeft - spinRotation
+ LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinRotation
  SEC                    \
  SBC spinRotationLo     \ starting with the high bytes
- STA xVergeLeftLo,Y
+ STA xVergeRightLo,Y
 
- LDA xVergeLeftHi,Y     \ And then the low bytes
+ LDA xVergeRightHi,Y    \ And then the low bytes
  SBC spinRotationHi
- STA xVergeLeftHi,Y
+ STA xVergeRightHi,Y
 
  LDA yVergeRight,Y      \ Set A = Y-th entry in yVergeRight - spinElevation
  SEC
@@ -5255,27 +5255,27 @@ ORG &0B00
 
  LDX #44                \ Set X = 44 so we start by shuffling the first batch:
                         \
-                        \   * xVergeRightLo+0-4 to xVergeRightLo+1-5
+                        \   * xVergeLeftLo+0-4 to xVergeLeftLo+1-5
                         \
-                        \   * xVergeRightHi+0-4 to xVergeRightHi+1-5
+                        \   * xVergeLeftHi+0-4 to xVergeLeftHi+1-5
                         \
                         \   * yVergeLeft+0-4 to yVergeLeft+1-5
                         \
                         \ This works because:
                         \
-                        \   * xVergeLeftLo + 40 = xVergeRightLo
+                        \   * xVergeRightLo + 40 = xVergeLeftLo
                         \
-                        \   * xVergeLeftHi + 40 = xVergeRightHi
+                        \   * xVergeRightHi + 40 = xVergeLeftHi
                         \
                         \   * yVergeRight + 40 = yVergeLeft
 
 .shuf1
 
- LDA xVergeLeftLo,X     \ Shuffle the X-th byte of xVergeLeftLo up by one
- STA xVergeLeftLo+1,X
+ LDA xVergeRightLo,X    \ Shuffle the X-th byte of xVergeRightLo up by one
+ STA xVergeRightLo+1,X
 
- LDA xVergeLeftHi,X     \ Shuffle the X-th byte of xVergeLeftHi up by one
- STA xVergeLeftHi+1,X
+ LDA xVergeRightHi,X    \ Shuffle the X-th byte of xVergeRightHi up by one
+ STA xVergeRightHi+1,X
 
  LDA yVergeRight,X      \ Shuffle the X-th byte of yVergeRight up by one
  STA yVergeRight+1,X
@@ -5288,9 +5288,9 @@ ORG &0B00
  LDX #5                 \ We have just done the last shuffle in the first batch,
                         \ so set X = 5 so we now shuffle the second batch:
                         \
-                        \   * xVergeLeftLo+0-4 to xVergeLeftLo+1-5
+                        \   * xVergeRightLo+0-4 to xVergeRightLo+1-5
                         \
-                        \   * xVergeLeftHi+0-4 to xVergeLeftHi+1-5
+                        \   * xVergeRightHi+0-4 to xVergeRightHi+1-5
                         \
                         \   * yVergeRight+0-4 to yVergeRight+1-5
 
@@ -7978,14 +7978,14 @@ ENDIF
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
- LDA xVergeRightHi,X    \ Set A = X-th entry in xVergeRightHi + 20
+ LDA xVergeLeftHi,X     \ Set A = X-th entry in xVergeLeftHi + 20
  CLC
  ADC #20
 
  BPL bgnd1              \ If A is positive, jump to bgnd1 to set the lines below
                         \ the horizon to the colour of grass
 
- LDA xVergeLeftHi,X     \ Set A = X-th entry in xVergeLeftHi + 20
+ LDA xVergeRightHi,X    \ Set A = X-th entry in xVergeRightHi + 20
  CLC
  ADC #20
 
@@ -8224,7 +8224,7 @@ ENDIF
 
 .sub_C1933
 
- LDA xVergeLeftHi,X
+ LDA xVergeRightHi,X
  CLC
  ADC #&14
  CMP #&28
@@ -8547,16 +8547,16 @@ ENDIF
  LDA GG
  CMP #&14
  BEQ C1AC4
- LDA xVergeLeftHi+16,X
+ LDA xVergeRightHi+16,X
  STA W
- LDA xVergeLeftHi,X
+ LDA xVergeRightHi,X
  JMP C1ACC
 
 .C1AC4
 
- LDA xVergeLeftHi,X
+ LDA xVergeRightHi,X
  STA W
- LDA xVergeLeftHi+16,X
+ LDA xVergeRightHi+16,X
 
 .C1ACC
 
@@ -8665,11 +8665,11 @@ ENDIF
  STA T                  \ Set (U T) = (U A)
                         \           = var27 << 1
 
- CLC                    \ Set (A V) = (U A) + X-th value from xVergeLeft
- ADC xVergeLeftLo,X     \
+ CLC                    \ Set (A V) = (U A) + X-th value from xVergeRight
+ ADC xVergeRightLo,X    \
  STA V                  \ starting with the low bytes
 
- LDA xVergeLeftHi,X     \ And then the high bytes
+ LDA xVergeRightHi,X    \ And then the high bytes
  ADC U
 
  CMP #24                \ If A < 24, jump to corn3
@@ -11769,22 +11769,22 @@ IF _SUPERIOR
                         \
                         \   (W V) = (steeringHi steeringLo) - 256
 
- LDA xVergeLeftLo,X     \ Set (A T) = X-th (xVergeLeftHi xVergeLeftLo) - (W V)
+ LDA xVergeRightLo,X    \ Set (A T) = X-th (xVergeRightHi xVergeRightLo) - (W V)
  SEC                    \
  SBC V                  \ starting with the low bytes
  STA T
 
- LDA xVergeLeftHi,X     \ And then the high bytes
+ LDA xVergeRightHi,X    \ And then the high bytes
  SBC W
 
- PHP                    \ Store the sign flag for X-th xVergeLeft - (W V) on the
-                        \ stack, so we can retrieve it below
+ PHP                    \ Store the sign flag for X-th xVergeRight - (W V) on
+                        \ the stack, so we can retrieve it below
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
-                        \           = |X-th xVergeLeft - (W V)|
+                        \           = |X-th xVergeRight - (W V)|
 
  STA V                  \ Set (V T) = (A T)
-                        \           = |X-th xVergeLeft - (W V)|
+                        \           = |X-th xVergeRight - (W V)|
 
  LDY segmentIndex96     \ Set Y to segmentIndex - 96
 
@@ -11841,21 +11841,21 @@ IF _SUPERIOR
 .asst12
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
-                        \           = U * |X-th xVergeLeft - (W V)| / 256
+                        \           = U * |X-th xVergeRight - (W V)| / 256
 
  LDA U                  \ Set (A T) = (U T)
-                        \           = U * |X-th xVergeLeft - (W V)| / 256
+                        \           = U * |X-th xVergeRight - (W V)| / 256
 
- PLP                    \ Retrieve the sign of the X-th xVergeLeft - (W V)
+ PLP                    \ Retrieve the sign of the X-th xVergeRight - (W V)
                         \ calculation that we stored above
 
- JSR Absolute16Bit      \ Set the sign of (A T) to that of X-th xVergeLeft -
+ JSR Absolute16Bit      \ Set the sign of (A T) to that of X-th xVergeRight -
                         \ (W V), so we now have:
                         \
-                        \   (A T) = U * (X-th xVergeLeft - (W V)) / 256
+                        \   (A T) = U * (X-th xVergeRight - (W V)) / 256
 
  STA U                  \ Set (U T) = (A T)
-                        \           = U * (X-th xVergeLeft - (W V)) / 256
+                        \           = U * (X-th xVergeRight - (W V)) / 256
 
  LDA T                  \ Clear bit 0 of (U T)
  AND #%11111110
@@ -13534,7 +13534,7 @@ ENDIF
  JSR RotateTrack        \ For the section in Y:
                         \
                         \   * Zero L5EE0
-                        \   * Subtract spin from xVergeLeftLo, xVergeLeftHi
+                        \   * Subtract spin from xVergeRightLo, xVergeRightHi
                         \   * Subtract spinElevation from yVergeRight
                         \   * Update L0051 and horizonLine
 
@@ -13543,7 +13543,7 @@ ENDIF
  JSR RotateTrack        \ For the section in T:
                         \
                         \   * Zero L5F08
-                        \   * Subtract spin from xVergeRightLo, xVergeRightHi
+                        \   * Subtract spin from xVergeLeftLo, xVergeLeftHi
                         \   * Subtract spinElevation from yVergeLeft
                         \   * Update L0051 and horizonLine
 
@@ -13650,7 +13650,7 @@ ENDIF
 
  JSR GetSectionRotation \ Set the following for the Y-th section:
                         \
-                        \   xVergeLeft = (JJ II) - playerRotation
+                        \   xVergeRight = (JJ II) - playerRotation
                         \
                         \ Set (L K) to the distance between the track section
                         \ and the player's car
@@ -13758,9 +13758,9 @@ ENDIF
 \
 \   L0012               The variable to use for calculations:
 \
-\                         * 6 = xVergeLeft+6
+\                         * 6 = xVergeRight+6
 \
-\                         * 46 = xVergeRight+6
+\                         * 46 = xVergeLeft+6
 \
 \ Returns:
 \
@@ -13776,11 +13776,11 @@ ENDIF
                         \ from the point of view of the player, returning it in
                         \ (JJ II)
 
- LDY L0012              \ Set Y = L0012, which is 6 or 46 (for xVergeLeft+6 or
-                        \ xVergeRight+6)
+ LDY L0012              \ Set Y = L0012, which is 6 or 46 (for xVergeRight+6 or
+                        \ xVergeLeft+6)
 
                         \ Fall through into GetSectionRotation to set the
-                        \ specified xVergeLeft or xVergeRight to the difference
+                        \ specified xVergeRight or xVergeLeft to the difference
                         \ in the rotation angle between the player and the
                         \ segment
 
@@ -13795,7 +13795,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   Y                   Index from xVergeLeft to store the difference in
+\   Y                   Index from xVergeRight to store the difference in
 \                       rotation angle between the object and the player
 \
 \   (JJ II)             The rotation about the y-axis of the object
@@ -13812,13 +13812,13 @@ ENDIF
 
  LDA II                 \ Set the following for the Y-th section:
  SEC                    \
- SBC playerRotationLo   \   xVergeLeft = (JJ II) - playerRotation
- STA xVergeLeftLo,Y     \
+ SBC playerRotationLo   \   xVergeRight = (JJ II) - playerRotation
+ STA xVergeRightLo,Y    \
                         \ starting with the low bytes
 
  LDA JJ                 \ And then the high bytes
  SBC playerRotationHi
- STA xVergeLeftHi,Y
+ STA xVergeRightHi,Y
 
  JMP GetObjectDistance  \ Set (L K) to the distance between the object and the
                         \ player's car, with A set to L, returning from the
@@ -13838,9 +13838,9 @@ ENDIF
 \   A                   The variable to use for storing the difference in
 \                       rotation angles in GetSegmentRotation:
 \
-\                         * 6 = xVergeLeft+6
+\                         * 6 = xVergeRight+6
 \
-\                         * 46 = xVergeRight+6
+\                         * 46 = xVergeLeft+6
 \
 \   X                   The segment number * 3 as an offset from
 \                       xSegmentCoordILo, so:
@@ -13867,7 +13867,7 @@ ENDIF
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
                         \ player's car and the track segment specified in X
                         \
-                        \ Set Y-th xVergeLeft/xVergeRight to difference in
+                        \ Set Y-th xVergeRight/xVergeLeft to difference in
                         \ rotation angle between the player and segment
                         \
                         \ Set (A K) = (L K) = distance between object X and car
@@ -13896,13 +13896,13 @@ ENDIF
  LDA segmentCounter     \ Set L0013 = segmentCounter
  STA L0013
 
- LDY L0012              \ Set Y = L0012 (6 or 46 for xVergeLeft+6 or
-                        \         xVergeRight+6)
+ LDY L0012              \ Set Y = L0012 (6 or 46 for xVergeRight+6 or
+                        \         xVergeLeft+6)
 
- STY L005C              \ Set L005C = L0012 (6 or 46 for xVergeLeft+6 or
-                        \             xVergeRight+6)
+ STY L005C              \ Set L005C = L0012 (6 or 46 for xVergeRight+6 or
+                        \             xVergeLeft+6)
 
- LDA xVergeLeftHi,Y     \ Set L005E = xVergeLeftHi+6 or xVergeRightHi+6
+ LDA xVergeRightHi,Y    \ Set L005E = xVergeRightHi+6 or xVergeLeftHi+6
  STA L005E
 
 .gseg3
@@ -13989,7 +13989,7 @@ ENDIF
                         \ player's car and xVector3
                         \
                         \ Set Y = L0012
-                        \ Set Y-th xVergeLeft to distance to player
+                        \ Set Y-th xVergeRight to distance to player
                         \ Set (A K) = (L K) = distance between xVector3 and car
 
  JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
@@ -14037,7 +14037,7 @@ ENDIF
  BEQ gseg13
  BCC gseg13
  LDY L0012
- LDA xVergeLeftHi,Y
+ LDA xVergeRightHi,Y
  BPL gseg11
  EOR #&FF
 
@@ -14045,7 +14045,7 @@ ENDIF
 
  CMP #&14
  BCC gseg13
- LDA xVergeLeftHi-1,Y
+ LDA xVergeRightHi-1,Y
  BPL gseg12
  EOR #&FF
 
@@ -14224,9 +14224,9 @@ ENDIF
  STA yVergeLeft,Y       \ Set the Y-th entry in yVergeLeft to the updated value
                         \ of horizonLine
 
- LDA xVergeLeftHi,Y     \ Set A = xVergeLeftHi - xVergeRightHi for Y
+ LDA xVergeRightHi,Y    \ Set A = xVergeRightHi - xVergeLeftHi for Y
  SEC
- SBC xVergeRightHi,Y
+ SBC xVergeLeftHi,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -14400,14 +14400,14 @@ ENDIF
 
  LDY L0012
 
- LDA xVergeLeftLo,Y     \ Set (xVergeLeftHi+16 xVergeLeftLo+16)
- CLC                    \      = (xVergeLeftHi xVergeLeftLo) + (U T)
+ LDA xVergeRightLo,Y    \ Set (xVergeRightHi+16 xVergeRightLo+16)
+ CLC                    \      = (xVergeRightHi xVergeRightLo) + (U T)
  ADC T                  \
- STA xVergeLeftLo+16,Y  \ starting with the low bytes
+ STA xVergeRightLo+16,Y \ starting with the low bytes
 
- LDA xVergeLeftHi,Y     \ And then the high bytes
+ LDA xVergeRightHi,Y    \ And then the high bytes
  ADC U
- STA xVergeLeftHi+16,Y
+ STA xVergeRightHi+16,Y
 
  LDA W
  AND #%00011000
@@ -16982,7 +16982,7 @@ ENDIF
  SBC #1
  CMP #&4E
  BCS C2B40
- LDA xVergeLeftHi,X
+ LDA xVergeRightHi,X
  BPL C2B3E
  EOR #&FF
 
@@ -16993,9 +16993,9 @@ ENDIF
 .C2B40
 
  ROR GG
- LDA xVergeLeftHi,X
+ LDA xVergeRightHi,X
  STA W
- LDA xVergeLeftLo,X
+ LDA xVergeRightLo,X
  ASL A
  ROL W
  ASL A
@@ -17042,12 +17042,12 @@ ENDIF
  BEQ C2BCD
  LDY L0045
  LDX L004F
- LDA xVergeLeftLo,Y
+ LDA xVergeRightLo,Y
  SEC
- SBC xVergeLeftLo,X
+ SBC xVergeRightLo,X
  STA T
- LDA xVergeLeftHi,Y
- SBC xVergeLeftHi,X
+ LDA xVergeRightHi,Y
+ SBC xVergeRightHi,X
  STA VV
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
@@ -30181,29 +30181,15 @@ ORG &594A               \ moved to trackData after the game binary has loaded
 
 \ ******************************************************************************
 \
-\       Name: xVergeLeftLo
+\       Name: xVergeRightLo
 \       Type: Variable
 \   Category: Track
-\    Summary: Low byte of segment rotation angles along the left track verge
+\    Summary: Low byte of segment rotation angles along the right track verge
 \             in front of the player (i.e. along the left-right x-axis)
 \
 \ ******************************************************************************
 
 ORG &5E40
-
-.xVergeLeftLo
-
- SKIP 40
-
-\ ******************************************************************************
-\
-\       Name: xVergeRightLo
-\       Type: Variable
-\   Category: Track
-\    Summary: Low byte of segment rotation angles along the tight track verge
-\             in front of the player (i.e. along the left-right x-axis)
-\
-\ ******************************************************************************
 
 .xVergeRightLo
 
@@ -30214,26 +30200,40 @@ ORG &5E40
 \       Name: xVergeLeftLo
 \       Type: Variable
 \   Category: Track
+\    Summary: Low byte of segment rotation angles along the left track verge
+\             in front of the player (i.e. along the left-right x-axis)
+\
+\ ******************************************************************************
+
+.xVergeLeftLo
+
+ SKIP 40
+
+\ ******************************************************************************
+\
+\       Name: xVergeRightLo
+\       Type: Variable
+\   Category: Track
+\    Summary: High byte of segment rotation angles along the right track verge
+\             in front of the player (i.e. along the left-right x-axis)
+\
+\ ******************************************************************************
+
+.xVergeRightHi
+
+ SKIP 40
+
+\ ******************************************************************************
+\
+\       Name: xVergeLeftHi
+\       Type: Variable
+\   Category: Track
 \    Summary: High byte of segment rotation angles along the left track verge
 \             in front of the player (i.e. along the left-right x-axis)
 \
 \ ******************************************************************************
 
 .xVergeLeftHi
-
- SKIP 40
-
-\ ******************************************************************************
-\
-\       Name: xVergeRightHi
-\       Type: Variable
-\   Category: Track
-\    Summary: High byte of segment rotation angles along the tight track verge
-\             in front of the player (i.e. along the left-right x-axis)
-\
-\ ******************************************************************************
-
-.xVergeRightHi
 
  SKIP 40
 
@@ -31101,7 +31101,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ Something to do with corner markers. The value is used as an offset into the
-\ xVergeLeftLo and xVergeLeftHi tables.
+\ xVergeRightLo and xVergeRightHi tables.
 \
 \ ******************************************************************************
 
