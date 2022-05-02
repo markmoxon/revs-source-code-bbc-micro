@@ -140,23 +140,37 @@ ORG &0000
  SKIP 1                 \ The number * 8 of the current section number when
                         \ calculating the track verges
 
-.L0005
+.sectionListStart
 
- SKIP 1                 \ 
-
-.L0006
-
- SKIP 1                 \ 
+ SKIP 1                 \ The start index of the track section list that's
+                        \ used when calculating the positions of the track
+                        \ verges
                         \
-                        \ Set to 6 in ResetVariables
+                        \ The list runs from index sectionListStart up to 6
 
-.L0007
+.sectionListValid
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the first valid entry in the track
+                        \ section list
+                        \
+                        \ The list runs from index sectionListStart up to 6, and
+                        \ valid entries run from index sectionListValid up to 6
+                        \
+                        \ Set to 6 in ResetVariables to indicate that the list
+                        \ does not yet contain any valid entries
 
-.L0008
+.sectionListSize
 
- SKIP 1                 \ 
+ SKIP 1                 \ The size of the track section list that's used when
+                        \ calculating the positions of the track verges
+
+.sectionListPointer
+
+ SKIP 1                 \ The index of the current entry in the track section
+                        \ list, as we only update one entry in the list on each
+                        \ iteration of the main driving loop
+                        \
+                        \ The list runs from index sectionListStart up to 6
                         \
                         \ Set to 6 in ResetVariables
 
@@ -632,13 +646,16 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0051
+.horizonSection
 
- SKIP 1                 \ 
+ SKIP 1                 \ The track section on the horizon
+                        \
+                        \ Specifically, entry horizonSection in yVergeRight
+                        \ equals horizonLine
 
-.L0052
+.prevHorizonSection
 
- SKIP 1                 \ 
+ SKIP 1                 \ The previous value of horizonSection
 
 .L0053
 
@@ -722,9 +739,14 @@ ORG &0000
                         \
                         \   * &FF = engine is on
 
-.L0062
+.resetSectionList
 
- SKIP 1                 \ 
+ SKIP 1                 \ Controls whether to reset the contents of the track
+                        \ section list
+                        \
+                        \   * 0 = do not reset the track section list
+                        \
+                        \   * Non-zero = reset the track section list
 
 .speedHi
 
@@ -2505,32 +2527,34 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: RotateTrack
+\       Name: SpinTrackSection
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Apply spin to a section in the track section list
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   Y                   0 to 5:
+\   Y                   The index of the entry in the track section list:
+\
+\                       Y = 0 to 5:
 \
 \                         * Zero L5EE0
 \                         * Subtract spin from xVergeRightLo, xVergeRightHi
 \                         * Subtract spinElevation from yVergeRight
-\                         * Update L0051 and horizonLine
+\                         * Update horizonSection and horizonLine
 \
-\                       40 to 45:
+\                       Y = 0 to 5 + 40:
 \
 \                         * Zero L5F08
 \                         * Subtract spin from xVergeLeftLo, xVergeLeftHi
 \                         * Subtract spinElevation from yVergeLeft
-\                         * Update L0051 and horizonLine
+\                         * Update horizonSection and horizonLine
 \
 \ ******************************************************************************
 
-.RotateTrack
+.SpinTrackSection
 
  LDA #0                 \ Set the Y-th entry in L5EE0 to 0
  STA L5EE0,Y
@@ -2556,7 +2580,7 @@ ORG &0B00
 
  STA horizonLine        \ Store the result in horizonLine
 
- STY L0051              \ Set L0051 = Y
+ STY horizonSection     \ Set horizonSection = Y
 
 .rott1
 
@@ -5155,11 +5179,9 @@ ORG &0B00
 \
 \   segmentIndex        The index * 3 of the current track segment
 \
-\   L0062               If non-zero, set L0006 = 6
-\
 \ Returns:
 \
-\   L0007               Bits 0-2 from trackSectionData, or 2 if we are facing
+\   sectionListSize     Bits 0-2 from trackSectionData, or 2 if we are facing
 \                       backwards
 \
 \   xSegmentCoordI      Start coordinates for the inside of the track section,
@@ -5183,13 +5205,21 @@ ORG &0B00
 
  LDY #6                 \ Set Y = 6
 
- STY newSegmentFetched  \ Set newSegmentFetched to a non-zero value to indicate
-                        \ that we are fetching a new segment
+ STY newSectionFetched  \ Set newSectionFetched to a non-zero value to indicate
+                        \ that we have juet fetched a new section (as the
+                        \ GetTrackSegment routine is only called when the
+                        \ player's car enters a new section
 
- LDA L0062              \ If L0062 = 0, skip the following instruction
- BEQ gets1
+ LDA resetSectionList   \ If resetSectionList = 0, then we do not need to reset
+ BEQ gets1              \ the track section list, so jump to gets1 to skip the
+                        \ following instruction
 
- STY L0006              \ L0062 <> 0, so set L0006 = 6
+                        \ If we get here then resetSectionList is non-zero,
+                        \ which means we need to reset the track section list
+
+ STY sectionListValid   \ Set sectionListValid = 6 to indicate that the track
+                        \ section list contains no valid entries, so the list
+                        \ gets regenerated over the coming iterations
 
 .gets1
 
@@ -5204,7 +5234,8 @@ ORG &0B00
                         \ thisVectorNumber to trackSectionFrom
 
  LDA trackSectionData,Y \ Set A = trackSectionData for the track section, so
-                        \ bits 0-2 can be set as the value for L0007 below
+                        \ bits 0-2 can be set as the value for sectionListSize
+                        \ below
 
  JMP gets3              \ Jump to gets3 to skip the following
 
@@ -5220,12 +5251,13 @@ ORG &0B00
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
                         \ track in the direction we are facing
 
- LDA #2                 \ Set A = 2, to use as the value for L0007 below
+ LDA #2                 \ Set A = 2, to use as the value for sectionListSize
+                        \ below
 
 .gets3
 
- AND #%00000111         \ Set L0007 = bits 0-2 from A
- STA L0007
+ AND #%00000111         \ Set sectionListSize = bits 0-2 from A
+ STA sectionListSize
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
@@ -5240,18 +5272,33 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ShuffleSegmentData
+\       Name: ShuffleSectionList
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Shuffle the track section list along by one position
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The track section list lives in the first six bytes of the following variable
+\ blocks, and contains data on a number of track sections that we use when
+\ calculating the positions of the track verges:
+\
+\   * xVergeLeftLo
+\   * xVergeLeftHi
+\   * yVergeLeft
+\   * xVergeRightLo
+\   * xVergeRightHi
+\   * yVergeRight
+\
+\ This routine shuffles the list along by one position, so we can insert a new
+\ track section into position 0 while  pushing the data in position 5 off the
+\ end of the list.
+\
+\ The remaining bytes in the blocks are used to store track segment data.
 \
 \ ******************************************************************************
 
-.ShuffleSegmentData
+.ShuffleSectionList
 
  LDX #44                \ Set X = 44 so we start by shuffling the first batch:
                         \
@@ -5301,35 +5348,37 @@ ORG &0B00
  BPL shuf1              \ Loop back until we have shuffled all the bytes in both
                         \ batches
 
- LDA #6                 \ Set L0005 = 6 - L0007
- SEC
- SBC L0007
- STA L0005
+ LDA #6                 \ Set sectionListStart = 6 - sectionListSize
+ SEC                    \
+ SBC sectionListSize    \ so sectionListStart is the start index of the track
+ STA sectionListStart   \ section list, as the list ends at index 6
 
- JSR SetSegmentPointers \ ???
+ JSR SetSectionPointers \ Update the list pointer variables
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: SetSegmentPointers
+\       Name: SetSectionPointers
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Update the track section list pointers
 \
 \ ------------------------------------------------------------------------------
 \
-\   * L0006 = max(min(L0006 + 1, 6), L0005)
+\   * sectionListValid = max(min(sectionListValid + 1, 6), sectionListStart)
 \
-\   * L0006 = min(L0008 + 2, L0006)
+\   * sectionListValid = min(sectionListPointer + 2, sectionListValid)
 \
-\   * If L0005 <= L0008 + 1 < 6, set L0008 = L0008 + 1, else set L0008 = 5
+\   * If sectionListStart <= sectionListPointer + 1 < 6
+\       set sectionListPointer = sectionListPointer + 1
+\       else set sectionListPointer = 5
 \
 \ ******************************************************************************
 
-.SetSegmentPointers
+.SetSectionPointers
 
- LDX L0006              \ Set X = L0006 + 1
+ LDX sectionListValid   \ Set X = sectionListValid + 1
  INX
 
  CPX #6                 \ If X < 6, jump to segp1 to skip the following
@@ -5339,54 +5388,61 @@ ORG &0B00
 
 .segp1
 
- CPX L0005              \ If X >= L0005, jump to segp2 to skip the following
- BCS segp2
+ CPX sectionListStart   \ If X >= sectionListStart, jump to segp2 to skip the
+ BCS segp2              \ following
 
- LDX L0005              \ Set X = L0005, so the minimum value of X is L0005
+ LDX sectionListStart   \ Set X = sectionListStart, so the minimum value of X is
+                        \ sectionListStart
 
 .segp2
 
- STX L0006              \ Store the updated value of X in L0006, so:
+ STX sectionListValid   \ Store the updated value of X in sectionListValid, so:
                         \
-                        \   L0006 = max(min(L0006 + 1, 6), L0005)
+                        \   sectionListValid = max(min(sectionListValid + 1, 6),
+                        \                          sectionListStart)
                         \
-                        \ i.e. L0006 + 1, restricted to the range L0005 to 6
+                        \ i.e. sectionListValid + 1, restricted to the range
+                        \ sectionListStart to 6
 
- LDX L0008              \ Set X = L0008 + 1
+ LDX sectionListPointer \ Set X = sectionListPointer + 1
  INX
 
-                        \ Fall through into SetSegmentPointer to set L0006 and
-                        \ L0008:
+                        \ Fall through into SetSectionPointer to set
+                        \ sectionListValid and sectionListPointer:
                         \
-                        \   * L0006 = min(L0008 + 2, L0006)
+                        \   * sectionListValid = min(sectionListPointer + 2,
+                        \                            sectionListValid)
                         \
-                        \   * If L0005 <= L0008 + 1 < 6, set L0008 = L0008 + 1,
-                        \     else set L0008 = 5
+                        \   * If sectionListStart <= sectionListPointer + 1 < 6
+                        \       set sectionListPointer = sectionListPointer + 1
+                        \       else set sectionListPointer = 5
 
 \ ******************************************************************************
 \
-\       Name: SetSegmentPointer
+\       Name: SetSectionPointer
 \       Type: Subroutine
 \   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\   * L0006 = min(X + 1, L0006)
+\   * sectionListValid = min(X + 1, sectionListValid)
 \
-\   * If L0005 <= X < 6, set L0008 = X, else set L0008 = 5
+\   * If sectionListStart <= X < 6, set sectionListPointer = X
+\                                   else set sectionListPointer = 5
 \
 \ ******************************************************************************
 
-.SetSegmentPointer
+.SetSectionPointer
 
  INX                    \ Set X = X + 1
 
- CPX L0006              \ If X >= L0006, jump to sseg1 to skip the following
- BCS sseg1
+ CPX sectionListValid   \ If X >= sectionListValid, jump to sseg1 to skip the
+ BCS sseg1              \ following
 
- STX L0006              \ X < L0006, so set L0006 = X, so L0006 is set to the
-                        \ lower of X and L0006
+ STX sectionListValid   \ X < sectionListValid, so set sectionListValid = X, so
+                        \ sectionListValid is set to the lower of X and
+                        \ sectionListValid
 
 .sseg1
 
@@ -5394,23 +5450,27 @@ ORG &0B00
                         \
                         \ so X is back to its original value
                         
-                        \ If L0005 <= X < 6, set L0008 = X, else set L0008 = 5
+                        \ If sectionListStart <= X < 6
+                        \   set sectionListPointer = X
+                        \   else set sectionListPointer = 5
 
- CPX L0005              \ If X >= L0005, jump to sseg2 to skip the following
- BCS sseg2
+ CPX sectionListStart   \ If X >= sectionListStart, jump to sseg2 to skip the
+ BCS sseg2              \ following
 
- LDX #5                 \ X < L0005, so set X = 5, so we set L0008 = 5 below
+ LDX #5                 \ X < sectionListStart, so set X = 5, so we set
+                        \ sectionListPointer = 5 below
 
 .sseg2
 
  CPX #6                 \ If X < 6, jump to sseg3 to skip the following
  BCC sseg3
 
- LDX #5                 \ X >= 6, so set X = 5, so we set L0008 = 5 below
+ LDX #5                 \ X >= 6, so set X = 5, so we set sectionListPointer = 5
+                        \ below
 
 .sseg3
 
- STX L0008              \ Store the updated value of X in L0008
+ STX sectionListPointer \ Store the updated value of X in sectionListPointer
 
  RTS                    \ Return from the subroutine
 
@@ -5954,8 +6014,8 @@ ORG &0B00
 
 .sub_C13FB
 
- LDA #6                 \ Set L0006 = 6
- STA L0006
+ LDA #6                 \ Set sectionListValid = 6
+ STA sectionListValid
 
  LDX #64                \ Set X = 64, so the call to TurnPlayerAround
                         \ initialises 64 track segments in the new direction
@@ -5995,8 +6055,9 @@ ORG &0B00
  LDX #40                \ Set X = 40, so the call to TurnPlayerAround
                         \ initialises 64 track segments in the new direction
 
- STX L0062              \ Set L0062 to a non-zero value, so the following calls
-                        \ set L0006 to 6
+ STX resetSectionList   \ Set resetSectionList to a non-zero value, so if the
+                        \ calls to TurnPlayerAround need to fetch load a new
+                        \ track section, then we reset the track section list
 
  JSR TurnPlayerAround   \ Turn the player around and initialise 40 track
                         \ segments in the new direction
@@ -6007,8 +6068,9 @@ ORG &0B00
  JSR TurnPlayerAround   \ Turn the player back around and initialise 39 track
                         \ segments in the new direction
 
- LDA #0                 \ Set L0062 = 0
- STA L0062
+ LDA #0                 \ Set resetSectionList = 0, so future calls to the
+ STA resetSectionList   \ TurnPlayerAround routine will update the track section
+                        \ list as normal
 
  RTS                    \ Return from the subroutine
 
@@ -7893,10 +7955,10 @@ ENDIF
  LDX #7                 \ Set L0009 = 7
  STX L0009
 
- DEX                    \ Set L0006 = 6
- STX L0006
+ DEX                    \ Set sectionListValid = 6
+ STX sectionListValid
 
- STX L0008              \ Set L0008 = 6
+ STX sectionListPointer \ Set sectionListPointer = 6
 
  DEX                    \ We now zero the six bytes at mirrorContents to clear
                         \ all six segments of the wing mirrors, so set X = 5 to
@@ -7974,7 +8036,7 @@ ENDIF
 
 .DrawBackground
 
- LDX L0051              \ Set X = L0051
+ LDX horizonSection     \ Set X = horizonSection
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
@@ -8450,7 +8512,7 @@ ENDIF
 
  LDA #&80
  STA P
- LDA L0051
+ LDA horizonSection
  CLC
  ADC #&28
  TAX
@@ -8475,7 +8537,7 @@ ENDIF
  LDY #0
  STY KK
  INY
- LDA L0051
+ LDA horizonSection
  CLC
  ADC #&28
  JSR sub_C19AF
@@ -8483,7 +8545,7 @@ ENDIF
  LDX #4
  JSR sub_C1A98
  STY L002C
- LDA L0051
+ LDA horizonSection
  TAX
  CMP #9
  BCS dtra2
@@ -8492,7 +8554,7 @@ ENDIF
 .dtra2
 
  STA L0050
- LDX L0051
+ LDX horizonSection
  LDA #LO(L0450)
  LDY L0015
  JSR sub_C193E
@@ -8501,7 +8563,7 @@ ENDIF
  LDA #&10
  STA L0032
  LDY #2
- LDA L0051
+ LDA horizonSection
  JSR sub_C19AF
  LDA #&1C
  STA L0032
@@ -13495,34 +13557,43 @@ ENDIF
 
 .GetSectionAngles
 
- LDA newSegmentFetched  \ If newSegmentFetched = 0, then we have not fetched a
- BEQ gsec1              \ new segment since the last call, so jump to gsec1 to
-                        \ skip the following call to ShuffleSegmentData
+ LDA newSectionFetched  \ If newSectionFetched = 0, then we have not fetched a
+ BEQ gsec1              \ new track section since the last call, so jump to
+                        \ gsec1 to skip the following call to ShuffleSectionList
 
- JSR ShuffleSegmentData \ ??? Shuffle various variables along by one if this is
-                        \ a new segment, update L0006 and L0008
+ JSR ShuffleSectionList \ Shuffle the track section list along by one so we can
+                        \ insert the new section, updating sectionListValid and
+                        \ sectionListPointer accordingly
 
- LDA #0                 \ Reset newSegmentFetched to 0 so we don't call the
- STA newSegmentFetched  \ ShuffleSegmentData routine again until the next new
-                        \ segment has been fetched
+ LDA #0                 \ Reset newSectionFetched to 0 so we don't call the
+ STA newSectionFetched  \ ShuffleSectionList routine again until the next new
+                        \ section has been fetched
 
 .gsec1
 
- LDY L0005              \ If L0005 = 6, return from the subroutine (as 
- CPY #6                 \ GetSectionAngles-1 contains an RTS)
- BEQ GetSectionAngles-1
+ LDY sectionListStart   \ If sectionListStart = 6, then the track section list
+ CPY #6                 \ is zero-length, so return from the subroutine (as
+ BEQ GetSectionAngles-1 \ GetSectionAngles-1 contains an RTS)
+                        \
+                        \ This never happens with the Silverstone track, as for
+                        \ this track, sectionListStart is in the range 2 to 5
+                        \ (as sectionListSize is in the range 1 to 4)
 
- LDY L0006              \ If L0006 = 6, jump to gsec4
- CPY #6
- BEQ gsec4
+ LDY sectionListValid   \ If sectionListValid = 6 then there are no valid
+ CPY #6                 \ entries in the track section list, so jump to gsec4 to
+ BEQ gsec4              \ skip the updating process (as we only update valid
+                        \ sections in the list)
 
-                        \ Otherwise we now loop from Y = L0006 up to 5, skipping
-                        \ when Y = L0008
+                        \ Otherwise we now loop from Y = sectionListValid up to
+                        \ 5 to work through the valid entries in the list,
+                        \ skipping entry number sectionListPointer as we are
+                        \ about to recreate that entry below
 
 .gsec2
 
- CPY L0008              \ If Y = L0008, jump to gsec3 to move on to the next
- BEQ gsec3              \ iteration
+ CPY sectionListPointer \ If Y = sectionListPointer, jump to gsec3 to move on to
+ BEQ gsec3              \ the next entry in the list, as we are going to
+                        \ recreate this entry in full below
 
  STY T                  \ Store Y in T so we can retrieve it below
 
@@ -13531,34 +13602,34 @@ ENDIF
  ADC #40
  TAY
 
- JSR RotateTrack        \ For the section in Y:
+ JSR SpinTrackSection   \ For the section in Y:
                         \
                         \   * Zero L5EE0
                         \   * Subtract spin from xVergeRightLo, xVergeRightHi
                         \   * Subtract spinElevation from yVergeRight
-                        \   * Update L0051 and horizonLine
+                        \   * Update horizonSection and horizonLine
 
  LDY T                  \ Retrieve the original value of Y that we stored above
 
- JSR RotateTrack        \ For the section in T:
+ JSR SpinTrackSection   \ For the section in T:
                         \
                         \   * Zero L5F08
                         \   * Subtract spin from xVergeLeftLo, xVergeLeftHi
                         \   * Subtract spinElevation from yVergeLeft
-                        \   * Update L0051 and horizonLine
+                        \   * Update horizonSection and horizonLine
 
 .gsec3
 
  INY                    \ Increment the loop counter in Y
 
- CPY #6                 \ Loop back until we have done the above with Y = L0006
- BCC gsec2              \ to 5
+ CPY #6                 \ Loop back until we have updated all the valid entries
+ BCC gsec2              \ in the track section list
 
 .gsec4
 
- LDA #6                 \ Set A = (6 - L0008) * 8
+ LDA #6                 \ Set A = (6 - sectionListPointer) * 8
  SEC
- SBC L0008
+ SBC sectionListPointer
  ASL A
  ASL A
  ASL A
@@ -13570,15 +13641,15 @@ ENDIF
                         \ now calculate the section number
 
  STA T                  \ Set T = A
-                        \       = (6 - L0008) * 8
+                        \       = (6 - sectionListPointer) * 8
 
  LDA objTrackSection+23 \ Set A to the number * 8 of the track section for
                         \ driver 23
 
  CLC                    \ Set A = A + 8 - T
- ADC #8                 \       = section23 * 8 + 8 - (6 - L0008) * 8
- SEC                    \       = (section23 + 1 - 6 + L0008) * 8
- SBC T
+ ADC #8                 \       = section23 * 8 + 8
+ SEC                    \            - (6 - sectionListPointer) * 8
+ SBC T                  \       = (section23 + 1 - 6 + sectionListPointer) * 8
 
  BCS gsec6              \ If the subtraction didn't underflow, jump to gsec6
 
@@ -13595,8 +13666,8 @@ ENDIF
 
  CLC                    \ Set A = A + number * 8 of track section for driver 23
  ADC objTrackSection+23 \       = A + section23 * 8
-                        \       = (6 - L0008) * 8 + section23 * 8
-                        \       = (6 - L0008 + section23) * 8
+                        \       = (6 - sectionListPointer) * 8 + section23 * 8
+                        \       = (6 - sectionListPointer + section23) * 8
 
  CMP trackSectionCount  \ If A < trackSectionCount then A is a valid section
  BCC gsec6              \ number, so jump to gsec6
@@ -13614,13 +13685,14 @@ ENDIF
  STY thisSectionNumber  \ Store the new section number * 8 in thisSectionNumber,
                         \ so we can retrieve it below when looping back
 
- LDX L0008              \ Set X = L0008, to use as a loop counter for the inner
-                        \ (L0008) and outer (L0008 + 40) track coordinates
+ LDX sectionListPointer \ Set X = sectionListPointer, to use as a loop counter
+                        \ for the inner (sectionListPointer) and outer
+                        \ (sectionListPointer + 40) track coordinates
 
                         \ We run the following section twice, once for the inner
-                        \ track section coordinates (with X = L0008), and again
-                        \ for the outer track section coordinates (with
-                        \ X = L0008 + 40)
+                        \ track section coordinates with X = sectionListPointer,
+                        \ and again for the outer track section coordinates with
+                        \ X = sectionListPointer + 40
 
 .gsec7
 
@@ -13642,18 +13714,20 @@ ENDIF
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
  BPL gsec8              \ facing forwards, so jump to gsec8
 
- TYA                    \ We are facing backwards, so flip Y between L0008 and
- EOR #40                \ L0008 + 40 to do the inner and outer track sections
- TAY                    \ in reverse order
+ TYA                    \ We are facing backwards, so flip Y between
+ EOR #40                \ sectionListPointer and sectionListPointer + 40 to do
+ TAY                    \ the inner and outer track sections in reverse order
 
 .gsec8
 
- JSR GetSectionRotation \ Set the following for the Y-th section:
+ JSR GetSectionRotation \ Set the following for the Y-th section, to calculate
+                        \ the difference in rotation angle between the track
+                        \ section and the player:
                         \
                         \   xVergeRight = (JJ II) - playerRotation
                         \
-                        \ Set (L K) to the distance between the track section
-                        \ and the player's car
+                        \ Also sets (L K) to the distance between the track
+                        \ section and the player's car
 
  LDX sectionCounter     \ If the loop counter in X >= 40, then we are dealing
  CPX #40                \ with the outer track section, so jump to gsec10 as we
@@ -13669,7 +13743,7 @@ ENDIF
 
  LDX sectionCounter     \ Set X to the loop counter, which we know is less than
                         \ 40 at this point (and which is therefore equal to
-                        \ L0008)
+                        \ sectionListPointer)
 
  LDA LL                 \ Set A to the elevation angle
 
@@ -13688,26 +13762,26 @@ ENDIF
                         \ so jump to gsec9 to set the horizon line to the
                         \ elevation of this track section
 
- CPX L0051              \ If X < L0051, jump to gsec10
+ CPX horizonSection     \ If X < horizonSection, jump to gsec10
  BCC gsec10
 
 .gsec9
 
  STA horizonLine        \ Set horizonLine to the elevation in A
 
- STX L0051              \ Set L0051 = X
+ STX horizonSection     \ Set horizonSection = X
 
 .gsec10
 
  TXA                    \ Set A = X + 40
- CLC                    \       = L0008 + 40
+ CLC                    \       = sectionListPointer + 40
  ADC #40
 
  CMP #60                \ If A >= 60, we have done both inner and outer track
  BCS gsec11             \ sections, so jump to gsec11
 
  TAX                    \ Set X = A
-                        \       = L0008 + 40
+                        \       = sectionListPointer + 40
 
  LDA thisSectionNumber  \ Set Y = thisSectionNumber + 3
  CLC                    \
@@ -13721,20 +13795,23 @@ ENDIF
 
 .gsec11
 
- LDX L0008              \ Set X = L0008 - 1
+ LDX sectionListPointer \ Set X = sectionListPointer - 1
  DEX
 
- JSR SetSegmentPointer  \ Update the segment pointers:
+ JSR SetSectionPointer  \ Update the segment pointers:
                         \
-                        \   * L0006 = min(X + 1, L0006)
+                        \   * sectionListValid = min(X + 1, sectionListValid)
+                        \           = min(sectionListPointer, sectionListValid)
                         \
-                        \   * If L0005 <= X < 6, set L0008 = X (i.e. decrement)
-                        \                        else set L0008 = 5
+                        \   * If sectionListStart <= X < 6
+                        \       set sectionListPointer = X (i.e. decrement)
+                        \       else set sectionListPointer = 5
 
- LDA #7                 \ Set A = 7, to set as the horizon line when L0052 > 7
+ LDA #7                 \ Set A = 7, to set as the horizon line when
+                        \ prevHorizonSection > 7
 
- CMP L0052              \ If A >= L0052, jump to gsec12 to return from the
- BCS gsec12             \ subroutine
+ CMP prevHorizonSection \ If A >= prevHorizonSection, jump to gsec12 to return
+ BCS gsec12             \ from the subroutine
 
  STA horizonLine        \ Set horizonLine = 7
 
@@ -13746,8 +13823,9 @@ ENDIF
 \
 \       Name: GetSegmentRotation
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Calculate the difference in rotation angle between a track segment
+\             and the player
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13777,7 +13855,8 @@ ENDIF
                         \ (JJ II)
 
  LDY L0012              \ Set Y = L0012, which is 6 or 46 (for xVergeRight+6 or
-                        \ xVergeLeft+6)
+                        \ xVergeLeft+6), so the result gets stored after the end
+                        \ of the track section list
 
                         \ Fall through into GetSectionRotation to set the
                         \ specified xVergeRight or xVergeLeft to the difference
@@ -13788,10 +13867,14 @@ ENDIF
 \
 \       Name: GetSectionRotation
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Calculate the difference in rotation angle between an object and
+\             the player
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine is typically used to calculate the difference in rotation angle
+\ between a track section and the player.
 \
 \ Arguments:
 \
@@ -13801,6 +13884,9 @@ ENDIF
 \   (JJ II)             The rotation about the y-axis of the object
 \
 \ Returns:
+\
+\   xVergeRight/Left    The difference in the rotation angle between the object
+\                       and the player
 \
 \   (L K)               The distance between the object and the player's car
 \
@@ -13867,7 +13953,7 @@ ENDIF
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
                         \ player's car and the track segment specified in X
                         \
-                        \ Set Y-th xVergeRight/xVergeLeft to difference in
+                        \ Set L0012-th xVergeRight/xVergeLeft to difference in
                         \ rotation angle between the player and segment
                         \
                         \ Set (A K) = (L K) = distance between object X and car
@@ -13989,7 +14075,10 @@ ENDIF
                         \ player's car and xVector3
                         \
                         \ Set Y = L0012
-                        \ Set Y-th xVergeRight to distance to player
+                        \
+                        \ Set L0012-th xVergeRight/xVergeLeft to difference in
+                        \ rotation angle between the player and xVector3
+                        \
                         \ Set (A K) = (L K) = distance between xVector3 and car
 
  JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
@@ -14195,19 +14284,20 @@ ENDIF
  LDA #46
  JSR GetSegmentAngles
 
- LDA L0051              \ If L0051 < 40, jump to gmar1 to skip the following
- CMP #40                \ three instructions
+ LDA horizonSection     \ If horizonSection < 40, jump to gmar1 to skip the
+ CMP #40                \ following three instructions
  BCC gmar1
 
- SEC                    \ Set L0051 = L0051 - 40
+ SEC                    \ Set horizonSection = horizonSection - 40
  SBC #40
- STA L0051
+ STA horizonSection
 
 .gmar1
 
- TAY                    \ Set Y to the updated value of L0051
+ TAY                    \ Set Y to the updated value of horizonSection
 
- STY L0052              \ Set L0052 to the updated value of L0051
+ STY prevHorizonSection \ Set prevHorizonSection to the updated value of
+                        \ horizonSection
 
  LDA horizonLine        \ If horizonLine < 79, jump to gmar2 to skip the
  CMP #79                \ following two instructions
@@ -14463,7 +14553,7 @@ ENDIF
  CMP horizonLine
  BCC smar12
  STA horizonLine
- STY L0051
+ STY horizonSection
 
 .smar12
 
@@ -31727,21 +31817,21 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: newSegmentFetched
+\       Name: newSectionFetched
 \       Type: Variable
 \   Category: Track
-\    Summary: Flag that determines whether a new track segment has been fetched
+\    Summary: Flag that determines whether a new track section has been fetched
 \
 \ ******************************************************************************
 
-.newSegmentFetched
+.newSectionFetched
 
- EQUB 0                 \ Track segment status:
+ EQUB 0                 \ Track section status:
                         \
-                        \   * 0 = no new segment
+                        \   * 0 = no new section
                         \
-                        \   * Non-zero = a new segment has been fetched by the
-                        \                GetTrackSegment routine
+                        \   * Non-zero = the player's car has entered a new
+                        \                track section
 
 \ ******************************************************************************
 \

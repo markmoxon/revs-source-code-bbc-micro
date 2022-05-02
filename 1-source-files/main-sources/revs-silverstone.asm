@@ -97,7 +97,9 @@ ORG CODE%
 \                         * Bits 4-7: road sign number (0 to 15) to show when we
 \                                     enter this section
 \
-\                         * Bits 0-2: gets put into L0007 in sub_C1267
+\                         * Bits 0-2: the size of the track section list for
+\                                     this section, which is used to calculate
+\                                     the coordinates of the track verges
 \
 \ xTrackSectionIHi      High byte of the start x-coordinate of the inside verge
 \                       of each track section
@@ -124,7 +126,7 @@ ORG CODE%
 
                         \ Track section 0
 
- EQUB &03               \ trackSectionData       sign = 0, L0007 = 3
+ EQUB &03               \ trackSectionData       sign = 0, sectionListSize = 3
  EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D120 = -12000
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &0F               \ zTrackSectionIHi       zTrackSectionI = &0FA0 =   4000
@@ -135,7 +137,7 @@ ORG CODE%
 
                         \ Track section 1
 
- EQUB &13               \ trackSectionData       sign = 1, L0007 = 3
+ EQUB &13               \ trackSectionData       sign = 1, sectionListSize = 3
  EQUB &CF               \ xTrackSectionIHi       xTrackSectionI = &CF94 = -12396
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &3E               \ zTrackSectionIHi       zTrackSectionI = &3E08 =  15880
@@ -146,7 +148,7 @@ ORG CODE%
 
                         \ Track section 2
 
- EQUB &12               \ trackSectionData       sign = 1, L0007 = 2
+ EQUB &12               \ trackSectionData       sign = 1, sectionListSize = 2
  EQUB &D3               \ xTrackSectionIHi       xTrackSectionI = &D325 = -11483
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &46               \ zTrackSectionIHi       zTrackSectionI = &4696 =  18070
@@ -157,7 +159,7 @@ ORG CODE%
 
                         \ Track section 3
 
- EQUB &22               \ trackSectionData       sign = 2, L0007 = 2
+ EQUB &22               \ trackSectionData       sign = 2, sectionListSize = 2
  EQUB &D6               \ xTrackSectionIHi       xTrackSectionI = &D6B2 = -10574
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &4A               \ zTrackSectionIHi       zTrackSectionI = &4A91 =  19089
@@ -168,7 +170,7 @@ ORG CODE%
 
                         \ Track section 4
 
- EQUB &22               \ trackSectionData       sign = 2, L0007 = 2
+ EQUB &22               \ trackSectionData       sign = 2, sectionListSize = 2
  EQUB &DE               \ xTrackSectionIHi       xTrackSectionI = &DEAF =  -8529
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &4F               \ zTrackSectionIHi       zTrackSectionI = &4F4F =  20303
@@ -179,7 +181,7 @@ ORG CODE%
 
                         \ Track section 5
 
- EQUB &33               \ trackSectionData       sign = 3, L0007 = 3
+ EQUB &33               \ trackSectionData       sign = 3, sectionListSize = 3
  EQUB &0F               \ xTrackSectionIHi       xTrackSectionI = &0FE7 =   4071
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &51               \ zTrackSectionIHi       zTrackSectionI = &515C =  20828
@@ -190,7 +192,7 @@ ORG CODE%
 
                         \ Track section 6
 
- EQUB &42               \ trackSectionData       sign = 4, L0007 = 2
+ EQUB &42               \ trackSectionData       sign = 4, sectionListSize = 2
  EQUB &17               \ xTrackSectionIHi       xTrackSectionI = &17D8 =   6104
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0CCB =   3275
  EQUB &4B               \ zTrackSectionIHi       zTrackSectionI = &4B09 =  19209
@@ -201,7 +203,7 @@ ORG CODE%
 
                         \ Track section 7
 
- EQUB &53               \ trackSectionData       sign = 5, L0007 = 3
+ EQUB &53               \ trackSectionData       sign = 5, sectionListSize = 3
  EQUB &18               \ xTrackSectionIHi       xTrackSectionI = &1864 =   6244
  EQUB &0E               \ yTrackSectionIHi       yTrackSectionI = &0E53 =   3667
  EQUB &3D               \ zTrackSectionIHi       zTrackSectionI = &3DE9 =  15849
@@ -212,7 +214,7 @@ ORG CODE%
 
                         \ Track section 8
 
- EQUB &53               \ trackSectionData       sign = 5, L0007 = 3
+ EQUB &53               \ trackSectionData       sign = 5, sectionListSize = 3
  EQUB &18               \ xTrackSectionIHi       xTrackSectionI = &1891 =   6289
  EQUB &0E               \ yTrackSectionIHi       yTrackSectionI = &0E77 =   3703
  EQUB &39               \ zTrackSectionIHi       zTrackSectionI = &39B1 =  14769
@@ -223,7 +225,7 @@ ORG CODE%
 
                         \ Track section 9
 
- EQUB &64               \ trackSectionData       sign = 6, L0007 = 4
+ EQUB &64               \ trackSectionData       sign = 6, sectionListSize = 4
  EQUB &19               \ xTrackSectionIHi       xTrackSectionI = &199F =   6559
  EQUB &0D               \ yTrackSectionIHi       yTrackSectionI = &0D9F =   3487
  EQUB &20               \ zTrackSectionIHi       zTrackSectionI = &2061 =   8289
@@ -234,7 +236,7 @@ ORG CODE%
 
                         \ Track section 10
 
- EQUB &64               \ trackSectionData       sign = 6, L0007 = 4
+ EQUB &64               \ trackSectionData       sign = 6, sectionListSize = 4
  EQUB &1B               \ xTrackSectionIHi       xTrackSectionI = &1BFA =   7162
  EQUB &0D               \ yTrackSectionIHi       yTrackSectionI = &0D5F =   3423
  EQUB &19               \ zTrackSectionIHi       zTrackSectionI = &195D =   6493
@@ -245,7 +247,7 @@ ORG CODE%
 
                         \ Track section 11
 
- EQUB &73               \ trackSectionData       sign = 7, L0007 = 3
+ EQUB &73               \ trackSectionData       sign = 7, sectionListSize = 3
  EQUB &26               \ xTrackSectionIHi       xTrackSectionI = &2612 =   9746
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0CC7 =   3271
  EQUB &0A               \ zTrackSectionIHi       zTrackSectionI = &0AAB =   2731
@@ -256,7 +258,7 @@ ORG CODE%
 
                         \ Track section 12
 
- EQUB &72               \ trackSectionData       sign = 7, L0007 = 2
+ EQUB &72               \ trackSectionData       sign = 7, sectionListSize = 2
  EQUB &2D               \ xTrackSectionIHi       xTrackSectionI = &2DC5 =  11717
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C5B =   3163
  EQUB &00               \ zTrackSectionIHi       zTrackSectionI = &008B =    139
@@ -267,7 +269,7 @@ ORG CODE%
 
                         \ Track section 13
 
- EQUB &72               \ trackSectionData       sign = 7, L0007 = 2
+ EQUB &72               \ trackSectionData       sign = 7, sectionListSize = 2
  EQUB &29               \ xTrackSectionIHi       xTrackSectionI = &2965 =  10597
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C4D =   3149
  EQUB &F6               \ zTrackSectionIHi       zTrackSectionI = &F67E =  -2434
@@ -278,7 +280,7 @@ ORG CODE%
 
                         \ Track section 14
 
- EQUB &84               \ trackSectionData       sign = 8, L0007 = 4
+ EQUB &84               \ trackSectionData       sign = 8, sectionListSize = 4
  EQUB &17               \ xTrackSectionIHi       xTrackSectionI = &1795 =   6037
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C4D =   3149
  EQUB &F0               \ zTrackSectionIHi       zTrackSectionI = &F08E =  -3954
@@ -289,7 +291,7 @@ ORG CODE%
 
                         \ Track section 15
 
- EQUB &93               \ trackSectionData       sign = 9, L0007 = 3
+ EQUB &93               \ trackSectionData       sign = 9, sectionListSize = 3
  EQUB &11               \ xTrackSectionIHi       xTrackSectionI = &11D8 =   4568
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C0D =   3085
  EQUB &EB               \ zTrackSectionIHi       zTrackSectionI = &EBFA =  -5126
@@ -300,7 +302,7 @@ ORG CODE%
 
                         \ Track section 16
 
- EQUB &A2               \ trackSectionData       sign = 10, L0007 = 2
+ EQUB &A2               \ trackSectionData       sign = 10, sectionListSize = 2
  EQUB &F1               \ xTrackSectionIHi       xTrackSectionI = &F126 =  -3802
  EQUB &07               \ yTrackSectionIHi       yTrackSectionI = &07D5 =   2005
  EQUB &B5               \ zTrackSectionIHi       zTrackSectionI = &B5A9 = -19031
@@ -311,7 +313,7 @@ ORG CODE%
 
                         \ Track section 17
 
- EQUB &B1               \ trackSectionData       sign = 11, L0007 = 1
+ EQUB &B1               \ trackSectionData       sign = 11, sectionListSize = 1
  EQUB &EF               \ xTrackSectionIHi       xTrackSectionI = &EFB2 =  -4174
  EQUB &07               \ yTrackSectionIHi       yTrackSectionI = &07F7 =   2039
  EQUB &B3               \ zTrackSectionIHi       zTrackSectionI = &B33F = -19649
@@ -322,7 +324,7 @@ ORG CODE%
 
                         \ Track section 18
 
- EQUB &B4               \ trackSectionData       sign = 11, L0007 = 4
+ EQUB &B4               \ trackSectionData       sign = 11, sectionListSize = 4
  EQUB &E8               \ xTrackSectionIHi       xTrackSectionI = &E8EA =  -5910
  EQUB &09               \ yTrackSectionIHi       yTrackSectionI = &099B =   2459
  EQUB &A7               \ zTrackSectionIHi       zTrackSectionI = &A7FB = -22533
@@ -333,7 +335,7 @@ ORG CODE%
 
                         \ Track section 19
 
- EQUB &C3               \ trackSectionData       sign = 12, L0007 = 3
+ EQUB &C3               \ trackSectionData       sign = 12, sectionListSize = 3
  EQUB &D8               \ xTrackSectionIHi       xTrackSectionI = &D849 = -10167
  EQUB &0A               \ yTrackSectionIHi       yTrackSectionI = &0A64 =   2660
  EQUB &A5               \ zTrackSectionIHi       zTrackSectionI = &A5A2 = -23134
@@ -344,7 +346,7 @@ ORG CODE%
 
                         \ Track section 20
 
- EQUB &D2               \ trackSectionData       sign = 13, L0007 = 2
+ EQUB &D2               \ trackSectionData       sign = 13, sectionListSize = 2
  EQUB &B6               \ xTrackSectionIHi       xTrackSectionI = &B691 = -18799
  EQUB &07               \ yTrackSectionIHi       yTrackSectionI = &07F4 =   2036
  EQUB &C8               \ zTrackSectionIHi       zTrackSectionI = &C8FA = -14086
@@ -355,7 +357,7 @@ ORG CODE%
 
                         \ Track section 21
 
- EQUB &E2               \ trackSectionData       sign = 14, L0007 = 2
+ EQUB &E2               \ trackSectionData       sign = 14, sectionListSize = 2
  EQUB &B6               \ xTrackSectionIHi       xTrackSectionI = &B603 = -18941
  EQUB &08               \ yTrackSectionIHi       yTrackSectionI = &083E =   2110
  EQUB &D7               \ zTrackSectionIHi       zTrackSectionI = &D71E = -10466
@@ -366,7 +368,7 @@ ORG CODE%
 
                         \ Track section 22
 
- EQUB &F2               \ trackSectionData       sign = 15, L0007 = 2
+ EQUB &F2               \ trackSectionData       sign = 15, sectionListSize = 2
  EQUB &CF               \ xTrackSectionIHi       xTrackSectionI = &CF3F = -12481
  EQUB &0B               \ yTrackSectionIHi       yTrackSectionI = &0B90 =   2960
  EQUB &F5               \ zTrackSectionIHi       zTrackSectionI = &F5FF =  -2561
@@ -377,7 +379,7 @@ ORG CODE%
 
                         \ Track section 23
 
- EQUB &F2               \ trackSectionData       sign = 15, L0007 = 2
+ EQUB &F2               \ trackSectionData       sign = 15, sectionListSize = 2
  EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D1DE = -11810
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C7D =   3197
  EQUB &FD               \ zTrackSectionIHi       zTrackSectionI = &FDD2 =   -558
@@ -388,7 +390,7 @@ ORG CODE%
 
                         \ Same as track section 0
 
- EQUB &03               \ trackSectionData       sign = 0, L0007 = 3
+ EQUB &03               \ trackSectionData       sign = 0, sectionListSize = 3
  EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D120 = -12000
  EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
  EQUB &0F               \ zTrackSectionIHi       zTrackSectionI = &0FA0 =   4000
