@@ -654,10 +654,13 @@ ORG &0000
 
 .horizonSection
 
- SKIP 1                 \ The track section on the horizon
+ SKIP 1                 \ The track section on the horizon, given in terms of
+                        \ the section's index in the track section list
                         \
-                        \ Specifically, entry horizonSection in yVergeRight
-                        \ equals horizonLine
+                        \ Specifically, entry number horizonSection in the
+                        \ yVergeRight equals horizonLine, as does the same entry
+                        \ in yVergeLeft (as the track is level in a left to
+                        \ right direction)
 
 .prevHorizonSection
 
@@ -2547,18 +2550,28 @@ ORG &0B00
 \
 \   Y                   The index of the entry in the track section list:
 \
-\                       Y = 0 to 5:
+\                       Y = 0 to 5 (update the right verge):
 \
 \                         * Zero L5EE0
-\                         * Subtract spin from xVergeRightLo, xVergeRightHi
-\                         * Subtract spinElevation from yVergeRight
+\
+\                         * Subtract spinRotation from the rotation angles in
+\                           xVergeRightLo, xVergeRightHi
+\
+\                         * Subtract spinElevation from the elevation angle in
+\                            yVergeRight
+\
 \                         * Update horizonSection and horizonLine
 \
-\                       Y = 0 to 5 + 40:
+\                       Y = 0 to 5 + 40 (update the left verge):
 \
 \                         * Zero L5F08
-\                         * Subtract spin from xVergeLeftLo, xVergeLeftHi
-\                         * Subtract spinElevation from yVergeLeft
+\
+\                         * Subtract spinRotation from the rotation angles in
+\                           xVergeLeftLo, xVergeLeftHi
+\
+\                         * Subtract spinElevation from the elevation angle in
+\                            yVergeLeft
+\
 \                         * Update horizonSection and horizonLine
 \
 \ ******************************************************************************
@@ -2584,12 +2597,14 @@ ORG &0B00
  STA yVergeRight,Y      \ Store the result in the Y-th entry in yVergeRight
 
  CMP horizonLine        \ If A < horizonLine, then this track section is lower
- BCC rott1              \ than the current horizon, jump to rott1 to return
+ BCC rott1              \ than the current horizon, so jump to rott1 to return
                         \ from the subroutine
 
- STA horizonLine        \ Store the result in horizonLine
+ STA horizonLine        \ Otherwise this track section is higher than the current
+                        \ horizon height, so the track obscures the horizon and
+                        \ we need to update horizonLine to this new height
 
- STY horizonSection     \ Set horizonSection = Y
+ STY horizonSection     \ Set horizonSection to the track section number in Y
 
 .rott1
 
@@ -5371,122 +5386,120 @@ ORG &0B00
  SBC sectionListSize    \ so sectionListStart is the start index of the track
  STA sectionListStart   \ section list, as the list ends at index 6
 
- JSR SetSectionPointers \ Update the list pointer variables
+ JSR IncSectionPointers \ Update the list pointer variables so the new entry is
+                        \ not marked as valid
 
  RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: IncSectionPointers
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Increment the track section list pointers following a shuffle
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine increment sectionListValid and sectionListPointer so they move
+\ along with the newly shuffled track section list.
+\
+\ ******************************************************************************
+
+.IncSectionPointers
+
+ LDX sectionListValid   \ Set X = sectionListValid + 1
+ INX                    \
+                        \ If the whole section list is valid, then this marks
+                        \ the first entry in the list as invalid, which we want
+                        \ to do as we just shuffled the list and inserted a
+                        \ dummy entry into the start of the list
+                        \
+                        \ If the whole section is not valid, then this moves
+                        \ the valid pointer along with the shuffled entries
+
+ CPX #6                 \ If X < 6, then the new value of sectionListValid is
+ BCC incp1              \ within the list, so jump to incp1 to skip the
+                        \ following
+
+ LDX #6                 \ Set X = 6, so the maximum value of sectionListValid
+                        \ is 6
+
+.incp1
+
+ CPX sectionListStart   \ If X >= sectionListStart, then the new value of
+ BCS incp2              \ sectionListValid is within the list, so jump to incp2
+                        \ to skip the following
+
+ LDX sectionListStart   \ Set X = sectionListStart, so the minimum value of 
+                        \ sectionListValid is sectionListStart, at the start of
+                        \ the list
+
+.incp2
+
+ STX sectionListValid   \ Store the updated value of X in sectionListValid, so
+                        \ we mark the new entry that we shuffled in as invalid
+
+ LDX sectionListPointer \ Set X = sectionListPointer + 1
+ INX
+
+                        \ Fall through into SetSectionPointers to set the track
+                        \ section list pointer to the new value, i.e. increment
+                        \ the pointer so it moves along with the shuffled values
 
 \ ******************************************************************************
 \
 \       Name: SetSectionPointers
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Update the track section list pointers
+\    Summary: Set the track section list pointer to a specific value and update
+\             the validity pointer accordingly
 \
 \ ------------------------------------------------------------------------------
 \
-\   * sectionListValid = max(min(sectionListValid + 1, 6), sectionListStart)
+\ Arguments:
 \
-\   * sectionListValid = min(sectionListPointer + 2, sectionListValid)
-\
-\   * If sectionListStart <= sectionListPointer + 1 < 6
-\       set sectionListPointer = sectionListPointer + 1
-\       else set sectionListPointer = 5
+\   X                   The new value for sectionListPointer
 \
 \ ******************************************************************************
 
 .SetSectionPointers
 
- LDX sectionListValid   \ Set X = sectionListValid + 1
- INX
-
- CPX #6                 \ If X < 6, jump to segp1 to skip the following
- BCC segp1
-
- LDX #6                 \ Set X = 6, so the maximum value of X is 6
-
-.segp1
-
- CPX sectionListStart   \ If X >= sectionListStart, jump to segp2 to skip the
- BCS segp2              \ following
-
- LDX sectionListStart   \ Set X = sectionListStart, so the minimum value of X is
-                        \ sectionListStart
-
-.segp2
-
- STX sectionListValid   \ Store the updated value of X in sectionListValid, so:
-                        \
-                        \   sectionListValid = max(min(sectionListValid + 1, 6),
-                        \                          sectionListStart)
-                        \
-                        \ i.e. sectionListValid + 1, restricted to the range
-                        \ sectionListStart to 6
-
- LDX sectionListPointer \ Set X = sectionListPointer + 1
- INX
-
-                        \ Fall through into SetSectionPointer to set
-                        \ sectionListValid and sectionListPointer:
-                        \
-                        \   * sectionListValid = min(sectionListPointer + 2,
-                        \                            sectionListValid)
-                        \
-                        \   * If sectionListStart <= sectionListPointer + 1 < 6
-                        \       set sectionListPointer = sectionListPointer + 1
-                        \       else set sectionListPointer = 5
-
-\ ******************************************************************************
-\
-\       Name: SetSectionPointer
-\       Type: Subroutine
-\   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\   * sectionListValid = min(X + 1, sectionListValid)
-\
-\   * If sectionListStart <= X < 6, set sectionListPointer = X
-\                                   else set sectionListPointer = 5
-\
-\ ******************************************************************************
-
-.SetSectionPointer
-
  INX                    \ Set X = X + 1
+                        \
+                        \ So X points to the entry above the proposed pointer
+                        \ value in the list
 
- CPX sectionListValid   \ If X >= sectionListValid, jump to sseg1 to skip the
- BCS sseg1              \ following
+ CPX sectionListValid   \ If X >= sectionListValid, then this entry is valid, so
+ BCS secp1              \ jump to secp1 to skip the following
 
- STX sectionListValid   \ X < sectionListValid, so set sectionListValid = X, so
-                        \ sectionListValid is set to the lower of X and
-                        \ sectionListValid
+ STX sectionListValid   \ Set sectionListValid = X, so the value at the proposed
+                        \ pointer is flagged as not valid, but the value above
+                        \ it is valid
 
-.sseg1
+.secp1
 
  DEX                    \ Set X = X - 1
                         \
-                        \ so X is back to its original value
-                        
-                        \ If sectionListStart <= X < 6
-                        \   set sectionListPointer = X
-                        \   else set sectionListPointer = 5
+                        \ so X is back to its original value, the proposed value
+                        \ of sectionListPointer
 
- CPX sectionListStart   \ If X >= sectionListStart, jump to sseg2 to skip the
- BCS sseg2              \ following
+ CPX sectionListStart   \ If X >= sectionListStart, then the proposed pointer
+ BCS secp2              \ value is not before the start of the list, so jump to
+                        \ secp2 to skip the following
 
- LDX #5                 \ X < sectionListStart, so set X = 5, so we set
-                        \ sectionListPointer = 5 below
+ LDX #5                 \ The proposed pointer is not within the list, so set
+                        \ X = 5, so we set sectionListPointer to 5 below
 
-.sseg2
+.secp2
 
- CPX #6                 \ If X < 6, jump to sseg3 to skip the following
- BCC sseg3
+ CPX #6                 \ If X < 6, then the proposed pointer valus is not past
+ BCC secp3              \ the end of the list, so jump to secp3 to skip the
+                        \ following
 
- LDX #5                 \ X >= 6, so set X = 5, so we set sectionListPointer = 5
-                        \ below
+ LDX #5                 \ The proposed pointer is past the end of the list, so
+                        \ set X = 5, so we set sectionListPointer to 5 below
 
-.sseg3
+.secp3
 
  STX sectionListPointer \ Store the updated value of X in sectionListPointer
 
@@ -13560,12 +13573,30 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetSectionAngles
+\       Name: GetSectionAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the elevations for the inner and outer track sections
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine does the following:
+\
+\   * Part 1: If we have fetched a new track section since the last call,
+\     shuffle the track section list along by one so we can insert the new
+\     section
+\
+\   * Part 1: Go through the track section list and apply spin to each valid
+\     entry (for both the right and left track section), skipping the entry
+\     pointed to by the sectionListPointer
+\
+\   * Update the entry at sectionListPointer as follows:
+\
+\     * Part 2: Calculate the track section number for this entry, relative to
+\       driver 23
+\
+\     * Part 3: Set the rotation and elevation angles for this section in the
+\       xVergeRight/Left and yVergeRight/Left tables
 \
 \ Other entry points:
 \
@@ -13599,41 +13630,55 @@ ENDIF
 
  LDY sectionListValid   \ If sectionListValid = 6 then there are no valid
  CPY #6                 \ entries in the track section list, so jump to gsec4 to
- BEQ gsec4              \ skip the updating process (as we only update valid
-                        \ sections in the list)
+ BEQ gsec4              \ skip the spinning process (as we only apply spin to
+                        \ valid sections in the list)
 
                         \ Otherwise we now loop from Y = sectionListValid up to
                         \ 5 to work through the valid entries in the list,
-                        \ skipping entry number sectionListPointer as we are
-                        \ about to recreate that entry below
+                        \ applying spin rotation to each one, and skipping entry
+                        \ number sectionListPointer as we are going to update
+                        \ that entry below
 
 .gsec2
 
  CPY sectionListPointer \ If Y = sectionListPointer, jump to gsec3 to move on to
- BEQ gsec3              \ the next entry in the list, as we are going to
-                        \ recreate this entry in full below
+ BEQ gsec3              \ the next entry in the list, as we are going to update
+                        \ this entry below
 
- STY T                  \ Store Y in T so we can retrieve it below
+ STY T                  \ Store Y in T so we can retrieve it below when applying
+                        \ spin to the left verge
 
  TYA                    \ Set Y = Y + 40
- CLC
- ADC #40
+ CLC                    \
+ ADC #40                \ So Y now points to the section for the right verge
  TAY
 
- JSR SpinTrackSection   \ For the section in Y:
+ JSR SpinTrackSection   \ Apply the car's current spin to the right verge track
+                        \ section in Y:
                         \
                         \   * Zero L5EE0
-                        \   * Subtract spin from xVergeRightLo, xVergeRightHi
-                        \   * Subtract spinElevation from yVergeRight
+                        \
+                        \   * Subtract spinRotation from the rotation angles in
+                        \     xVergeRightLo, xVergeRightHi
+                        \
+                        \   * Subtract spinElevation from the elevation angle in
+                        \     yVergeRight
+                        \
                         \   * Update horizonSection and horizonLine
 
  LDY T                  \ Retrieve the original value of Y that we stored above
 
- JSR SpinTrackSection   \ For the section in T:
+ JSR SpinTrackSection   \ Apply the car's current spin to the left verge track
+                        \ section in T:
                         \
                         \   * Zero L5F08
-                        \   * Subtract spin from xVergeLeftLo, xVergeLeftHi
-                        \   * Subtract spinElevation from yVergeLeft
+                        \
+                        \   * Subtract spinRotation from the rotation angles in
+                        \     xVergeLeftLo, xVergeLeftHi
+                        \
+                        \   * Subtract spinElevation from the elevation angle in
+                        \     yVergeLeft
+                        \
                         \   * Update horizonSection and horizonLine
 
 .gsec3
@@ -13643,31 +13688,81 @@ ENDIF
  CPY #6                 \ Loop back until we have updated all the valid entries
  BCC gsec2              \ in the track section list
 
+\ ******************************************************************************
+\
+\       Name: GetSectionAngles (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Calculate the track section number for this track section entry
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the routine calculates the number of the track section that we
+\ want to update, i.e. the section at entry sectionListPointer in the list.
+\
+\ The track section list contains up to six segments in front of driver 23, as
+\ follows (for when we are facing forwards):
+\
+\   * Entry #5 in the list corresponds to the section in front of driver 23
+\   * Entry #4 in the list corresponds to two sections in front of driver 23
+\   * Entry #3 in the list corresponds to three sections in front of driver 23
+\   * Entry #2 in the list corresponds to four sections in front of driver 23
+\   * Entry #1 in the list corresponds to five sections in front of driver 23
+\   * Entry #0 in the list corresponds to six sections in front of driver 23
+\
+\ And the following for when we are facing backwards:
+\
+\   * Entry #5 in the list corresponds to the section containing driver 23
+\   * Entry #4 in the list corresponds to the section behind driver 23
+\   * Entry #3 in the list corresponds to two sections behind driver 23
+\   * Entry #2 in the list corresponds to three sections behind driver 23
+\   * Entry #1 in the list corresponds to four sections behind driver 23
+\   * Entry #0 in the list corresponds to five sections behind driver 23
+\
+\ Note that entry #5 is the last in the list, and for most track sections, we
+\ only store the last few entries (e.g. for track section 0, sectionListSize is
+\ set to 3, so we only store entries #3 to #5).
+\
+\ ******************************************************************************
+
 .gsec4
 
  LDA #6                 \ Set A = (6 - sectionListPointer) * 8
- SEC
- SBC sectionListPointer
- ASL A
- ASL A
- ASL A
+ SEC                    \
+ SBC sectionListPointer \ This calculates the following:
+ ASL A                  \
+ ASL A                  \   * A = 1 * 8 for entry #5
+ ASL A                  \   * A = 2 * 8 for entry #4
+                        \   * A = 3 * 8 for entry #3
+                        \   * A = 4 * 8 for entry #2
+                        \   * A = 5 * 8 for entry #1
+                        \   * A = 6 * 8 for entry #0
 
  BIT directionFacing    \ If bit 7 of directionFacing is clear, then we are
  BPL gsec5              \ facing forwards, so jump to gsec5
 
-                        \ If we get here then we are facing backwards, so we
-                        \ now calculate the section number
+                        \ If we get here then we are facing backwards
 
  STA T                  \ Set T = A
-                        \       = (6 - sectionListPointer) * 8
 
  LDA objTrackSection+23 \ Set A to the number * 8 of the track section for
                         \ driver 23
 
  CLC                    \ Set A = A + 8 - T
- ADC #8                 \       = section23 * 8 + 8
- SEC                    \            - (6 - sectionListPointer) * 8
- SBC T                  \       = (section23 + 1 - 6 + sectionListPointer) * 8
+ ADC #8                 \       = section23 * 8 + 8 - T
+ SEC                    \       = (section23 + 1 - (T / 8)) * 8
+ SBC T                  \
+                        \ So A contains:
+                        \
+                        \   * (section23 - 0) * 8 for entry #5
+                        \   * (section23 - 1) * 8 for entry #4
+                        \   * (section23 - 2) * 8 for entry #3
+                        \   * (section23 - 3) * 8 for entry #2
+                        \   * (section23 - 4) * 8 for entry #1
+                        \   * (section23 - 5) * 8 for entry #0
+                        \
+                        \ So A now contains the correct section number for
+                        \ entry number number sectionListPointer
 
  BCS gsec6              \ If the subtraction didn't underflow, jump to gsec6
 
@@ -13684,8 +13779,18 @@ ENDIF
 
  CLC                    \ Set A = A + number * 8 of track section for driver 23
  ADC objTrackSection+23 \       = A + section23 * 8
-                        \       = (6 - sectionListPointer) * 8 + section23 * 8
-                        \       = (6 - sectionListPointer + section23) * 8
+                        \
+                        \ So A contains:
+                        \
+                        \   * (1 + section23) * 8 for entry #5
+                        \   * (2 + section23) * 8 for entry #4
+                        \   * (3 + section23) * 8 for entry #3
+                        \   * (4 + section23) * 8 for entry #2
+                        \   * (5 + section23) * 8 for entry #1
+                        \   * (6 + section23) * 8 for entry #0
+                        \
+                        \ So A now contains the correct section number for
+                        \ entry number number sectionListPointer
 
  CMP trackSectionCount  \ If A < trackSectionCount then A is a valid section
  BCC gsec6              \ number, so jump to gsec6
@@ -13696,21 +13801,36 @@ ENDIF
                         \ correct section number (we know the C flag is set as
                         \ we just passed through a BCC)
 
+\ ******************************************************************************
+\
+\       Name: GetSectionAngles (Part 3 of 3)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Calculate the rotation and elevation angles for the track section
+\             entry that we want to update
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the routine sets the rotation and elevation angles for this track
+\ section in the xVergeRight/Left and yVergeRight/Left tables.
+\
+\ ******************************************************************************
+
 .gsec6
 
- TAY                    \ Set Y = the new section number * 8
+ TAY                    \ Set Y = the section number * 8 that we calculated in
+                        \ part 3
  
- STY thisSectionNumber  \ Store the new section number * 8 in thisSectionNumber,
-                        \ so we can retrieve it below when looping back
+ STY thisSectionNumber  \ Store the section number * 8 in thisSectionNumber, so
+                        \ we can retrieve it below when looping back
 
- LDX sectionListPointer \ Set X = sectionListPointer, to use as a loop counter
-                        \ for the inner (sectionListPointer) and outer
-                        \ (sectionListPointer + 40) track coordinates
+ LDX sectionListPointer \ Set X = sectionListPointer, to use as a counter in the
+                        \ two loops below
 
                         \ We run the following section twice, once for the inner
                         \ track section coordinates with X = sectionListPointer,
-                        \ and again for the outer track section coordinates with
-                        \ X = sectionListPointer + 40
+                        \ and a second time for the outer track section
+                        \ coordinates with X = sectionListPointer + 40
 
 .gsec7
 
@@ -13719,12 +13839,12 @@ ENDIF
  LDX #&FD               \ Copy the first trackSectionI coordinate for track
  JSR GetSectionCoord    \ section Y into xVector4, so xVector4 is the 3D
                         \ coordinate of the inner track at the start of the
-                        \ section (or, if this is the second loop where Y is
-                        \ incremented by 3, xVector4 is the 3D coordinate of the
-                        \ outer track)
+                        \ section (or, if this is the second loop where Y has
+                        \ been incremented by 3, xVector4 is the 3D coordinate
+                        \ of the outer track)
 
- JSR GetObjRotation-2   \ Calculate xVector4's rotation about the y-axis,
-                        \ from the point of view of the player, returning it in
+ JSR GetObjRotation-2   \ Calculate xVector4's rotation about the y-axis, from
+                        \ the point of view of the player, returning it in
                         \ (JJ II)
 
  LDY sectionCounter     \ Set Y to the loop counter
@@ -13735,6 +13855,9 @@ ENDIF
  TYA                    \ We are facing backwards, so flip Y between
  EOR #40                \ sectionListPointer and sectionListPointer + 40 to do
  TAY                    \ the inner and outer track sections in reverse order
+                        \ (so we always do the right track verge first, then the
+                        \ left track verge, where right and left are relative to
+                        \ the direction we are facing)
 
 .gsec8
 
@@ -13744,17 +13867,18 @@ ENDIF
                         \
                         \   xVergeRight = (JJ II) - playerRotation
                         \
-                        \ Also sets (L K) to the distance between the track
+                        \ Also set (L K) to the distance between the track
                         \ section and the player's car
 
  LDX sectionCounter     \ If the loop counter in X >= 40, then we are dealing
  CPX #40                \ with the outer track section, so jump to gsec10 as we
- BCS gsec10             \ don't need to repeat the elevation calculation (as
-                        \ the track is level, so the outer track is the same
-                        \ height as the inner track)
+ BCS gsec10             \ don't need to repeat the elevation calculation (the
+                        \ track is level from left to right, so the outer track
+                        \ is the same height as the inner track)
 
  LDX #&FD               \ Set X = &FD so the call to GetObjElevation uses
-                        \ xVector4
+                        \ xVector4, which we set above to the 3D coordinate of
+                        \ the inner track at the start of the section
 
  JSR GetObjElevation-2  \ Calculate xVector4's elevation angle, from the point
                         \ of view of the player, returning it in A and LL
@@ -13763,37 +13887,55 @@ ENDIF
                         \ 40 at this point (and which is therefore equal to
                         \ sectionListPointer)
 
- LDA LL                 \ Set A to the elevation angle
+ LDA LL                 \ Set A to the elevation angle that we just calculated
+                        \ for the track section
 
  STA yVergeRight,X      \ Store the elevation angle in the X-th yVergeRight
-                        \ entry, for this point on the inner track section
+                        \ entry, for this point on the right track section
 
- STA yVergeLeft,X       \ Store the elevation angle in the X-th yVergeLeft, for
-                        \ this point on the outer track section
+ STA yVergeLeft,X       \ Store the same elevation angle in the X-th yVergeLeft,
+                        \ for this point on the left track section, which will
+                        \ at the same height as the track is level from left to
+                        \ right
 
  CMP horizonLine        \ If A < horizonLine, then this track section is lower
  BCC gsec10             \ than the current horizon, so jump to gsec10 to move on
-                        \ to the outer track section 
+                        \ to the outer track section, as this section will not
+                        \ be obscuring the horizon
 
- BNE gsec9              \ If A <> horizonLine, i.e. A > horizonLine, then the
-                        \ track section is higher than the current horizon line,
-                        \ so jump to gsec9 to set the horizon line to the
-                        \ elevation of this track section
+ BNE gsec9              \ If A <> horizonLine, i.e. A > horizonLine, then this
+                        \ means the track section is higher than the current
+                        \ horizon line, so jump to gsec9 to set the horizon
+                        \ line to the elevation of this track section, as the
+                        \ section is obscuring the horizon
 
- CPX horizonSection     \ If X < horizonSection, jump to gsec10
- BCC gsec10
+                        \ If we get here, then A = horizonLine, so this section
+                        \ is at the same height as the current horizon line
+
+ CPX horizonSection     \ If X < horizonSection, then this section has a lower
+ BCC gsec10             \ index than the current horizon section, so jump to
+                        \ gsec10 horizonSection contains the higher index
 
 .gsec9
 
- STA horizonLine        \ Set horizonLine to the elevation in A
+                        \ If we get here then we want to update the horizon to
+                        \ to the height of the track section we are updating, as
+                        \ it obscures the horizon
 
- STX horizonSection     \ Set horizonSection = X
+ STA horizonLine        \ Set horizonLine to the elevation in A, so the horizon
+                        \ is set to the height of this track section
+
+ STX horizonSection     \ Store the index of this section in the track section
+                        \ list in horizonSection
 
 .gsec10
 
  TXA                    \ Set A = X + 40
  CLC                    \       = sectionListPointer + 40
- ADC #40
+ ADC #40                \
+                        \ So A now points to the outer track section coordinates
+                        \ and is ready to be put into X (and, when we look back,
+                        \ into sectionCounter) for the loop back to gcsec7 below
 
  CMP #60                \ If A >= 60, we have done both inner and outer track
  BCS gsec11             \ sections, so jump to gsec11
@@ -13813,25 +13955,23 @@ ENDIF
 
 .gsec11
 
+                        \ If we get here then we have updated this entry in the
+                        \ track section list with both left and right angles, so
+                        \ we now update the list pointers
+
  LDX sectionListPointer \ Set X = sectionListPointer - 1
  DEX
 
- JSR SetSectionPointer  \ Update the segment pointers:
-                        \
-                        \   * sectionListValid = min(X + 1, sectionListValid)
-                        \           = min(sectionListPointer, sectionListValid)
-                        \
-                        \   * If sectionListStart <= X < 6
-                        \       set sectionListPointer = X (i.e. decrement)
-                        \       else set sectionListPointer = 5
+ JSR SetSectionPointers \ Update the section list pointers to move down through
+                        \ the track section list
 
- LDA #7                 \ Set A = 7, to set as the horizon line when
-                        \ prevHorizonSection > 7
+ LDA #7                 \ If prevHorizonSection <= 7, jump to gsec12 to return
+ CMP prevHorizonSection \ from the subroutine
+ BCS gsec12
 
- CMP prevHorizonSection \ If A >= prevHorizonSection, jump to gsec12 to return
- BCS gsec12             \ from the subroutine
-
- STA horizonLine        \ Set horizonLine = 7
+ STA horizonLine        \ If we get here then prevHorizonSection > 7, which is
+                        \ the value of horizonSection from the previous call to
+                        \ GetTrackAndMarkers, so set horizonLine = 7 ???
 
 .gsec12
 
@@ -14314,7 +14454,7 @@ ENDIF
                         \ sections
 
  LDA #255               \ Set edgeDistanceHi = 255, so GetSegmentAngles can set
- STA edgeDistanceHi    \ it to the distance of the nearest verge
+ STA edgeDistanceHi     \ it to the distance of the nearest verge
 
  LDA #13                \ Set edgeSegmentNumber = 13
  STA edgeSegmentNumber
@@ -14339,15 +14479,18 @@ ENDIF
  BCC gmar1
 
  SEC                    \ Set horizonSection = horizonSection - 40
- SBC #40
- STA horizonSection
+ SBC #40                \
+ STA horizonSection     \ so if we set horizonSection to the index for the outer
+                        \ track coordinates, this corrects the value to the
+                        \ index for the inner coordinates
 
 .gmar1
 
- TAY                    \ Set Y to the updated value of horizonSection
+ TAY                    \ Set Y to the corrected value of horizonSection
 
- STY prevHorizonSection \ Set prevHorizonSection to the updated value of
-                        \ horizonSection
+ STY prevHorizonSection \ Store the horizon section index in prevHorizonSection,
+                        \ so we can refer to it in the next call to
+                        \ GetTrackAndMarkers
 
  LDA horizonLine        \ If horizonLine < 79, jump to gmar2 to skip the
  CMP #79                \ following two instructions

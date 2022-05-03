@@ -2473,9 +2473,9 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB &03              \ (trackPracticeHi trackPracticeLo) = &034B
-                       \
-                       \ This is out of a full track length of &0400
+ EQUB &03               \ (trackPracticeHi trackPracticeLo) = &034B
+                        \
+                        \ This is out of a full track length of &0400
 
 \ ******************************************************************************
 \
