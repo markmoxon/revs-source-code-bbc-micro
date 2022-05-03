@@ -213,21 +213,27 @@ ORG &0000
                         \ During the countdown we are unable to accelerate or
                         \ brake, but can steer
 
-.L0010
+.vergeDistanceLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ Low byte of the distance between the player's car and
+                        \ the nearest track verge
 
-.L0011
+.vergeDistanceHi
 
- SKIP 1                 \ 
+ SKIP 1                 \ High byte of the distance between the player's car and
+                        \ the nearest track verge
 
-.L0012
+.segmentListPointer
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the current entry in the track segment
+                        \ list
+                        \
+                        \ The list runs from index 6 upwards
 
-.L0013
+.vergeSegmentNumber
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of the segment within the track segment
+                        \ list that is closest to the player's car
 
 .L0014
 
@@ -705,17 +711,20 @@ ORG &0000
                         \
                         \ The position behind last place is the leader
 
-.L005C
+.vergePointerNumber
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the segment within the combined track
+                        \ section/segment list (i.e. from xVergeRight) that is
+                        \ closest to the player's car
 
 .L005D
 
  SKIP 1                 \ 
 
-.L005E
+.vergeAngle
 
- SKIP 1                 \ 
+ SKIP 1                 \ The rotation angle of the track segment that is
+                        \ closest to the player's car
 
 .soundRevTarget
 
@@ -4574,23 +4583,32 @@ ORG &0B00
 
 .CheckForCrash
 
- LDA L0011              \ If L0011 < 2, jump to cras3 to return from the
- CMP #2                 \ subroutine
- BCC cras3
+ LDA vergeDistanceHi    \ If vergeDistanceHi < 2, then we are too close to the
+ CMP #2                 \ verge to have reached the fence or to spin out on the
+ BCC cras3              \ grass, so jump to cras3 to return from the subroutine
 
- LDA L005E              \ Set A = L005E
+                        \ If we get here then we are quite far off the track
+
+ LDA vergeAngle         \ Set A = vergeAngle
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |L005E|
+                        \       = |vergeAngle|
 
- CMP #96                \ If A >= 96, jump to cras1 to crash into the fence
- BCS cras1
+ CMP #96                \ If A >= 96, then the rotation angle of the nearest
+ BCS cras1              \ track segment to the player is at least 17 degrees
+                        \ (0 to 255 represents 0 to 45 degrees, so 96 = 17
+                        \ degrees), so jump to cras1 to crash into the fence
 
- LDA #20                \ Set A = 20
+                        \ If we get here then we have not hit the fence but we
+                        \ are off the track, so we spin out
+
+ LDA #20                \ Set A = 20 so we apply a rotation of magnitude 20 to
+                        \ the car
 
  BIT spinRotationHi     \ Set the flags according to the sign of spinRotationHi,
                         \ so the call to Absolute8Bit sets the sign of A to the
-                        \ same sign as the spin rotation
+                        \ same sign as the spin rotation (so the car spins out
+                        \ in the same direction as it is currently apinning)
 
  JSR Absolute8Bit       \ Set A = 20 * abs(spinRotation)
 
@@ -6113,7 +6131,7 @@ ORG &0B00
 
  JSR SetTrackSegment    \ Initialise the next track segment
 
- DEC segmentCounter     \ Decrement the look counter
+ DEC segmentCounter     \ Decrement the loop counter
 
  BNE turn1              \ Loop back until we have set all the stack entries
 
@@ -8526,7 +8544,7 @@ ENDIF
  LDA #LO(L0400)
  STA R
  STA MM
- LDY L0012
+ LDY segmentListPointer
  JSR sub_C193E
  LDY #0
  STY L0032
@@ -13834,7 +13852,7 @@ ENDIF
 \   X                   The offset from xSegmentCoordILo of the variable to use
 \                       for the object's 3D coordinates in GetObjRotation
 \
-\   L0012               The variable to use for calculations:
+\   segmentListPointer  The variable to use for calculations:
 \
 \                         * 6 = xVergeRight+6
 \
@@ -13854,9 +13872,10 @@ ENDIF
                         \ from the point of view of the player, returning it in
                         \ (JJ II)
 
- LDY L0012              \ Set Y = L0012, which is 6 or 46 (for xVergeRight+6 or
-                        \ xVergeLeft+6), so the result gets stored after the end
-                        \ of the track section list
+ LDY segmentListPointer \ Set Y = segmentListPointer, which is 6 or 46 (for
+                        \ xVergeRight+6 or xVergeLeft+6), so the result gets
+                        \ stored after the end of the track section list, i.e.
+                        \ in the track segment list
 
                         \ Fall through into GetSectionRotation to set the
                         \ specified xVergeRight or xVergeLeft to the difference
@@ -13939,11 +13958,25 @@ ENDIF
 \
 \   L0049               0 or 1
 \
+\ Returns:
+\
+\   vergeDistance       The distance between the player's car and the nearest
+\                       track verge
+\
+\   vergeSegmentNumber  The number of the segment within the track segment list
+\                       that is closest to the player's car
+\
+\   vergePointerNumber  The index of the segment within the combined track
+\                       section/segment list (i.e. from xVergeRight) that is
+\                       closest to the player's car
+\
+\   vergeAngle               ???
+\
 \ ******************************************************************************
 
 .GetSegmentAngles
 
- STA L0012              \ Set L0012 = A
+ STA segmentListPointer \ Set segmentListPointer = A
 
  LDA #0                 \ Set segmentCounter = 0
  STA segmentCounter
@@ -13953,43 +13986,58 @@ ENDIF
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
                         \ player's car and the track segment specified in X
                         \
-                        \ Set L0012-th xVergeRight/xVergeLeft to difference in
-                        \ rotation angle between the player and segment
+                        \ Set xVergeRight/xVergeLeft at the segment list pointer
+                        \ to the difference in rotation angle between the player
+                        \ and the segment
                         \
                         \ Set (A K) = (L K) = distance between object X and car
 
- CMP L0011              \ If A < L0011, then (L K) < (L0011 L0010), so jump to
- BCC gseg2              \ gseg2
+ CMP vergeDistanceHi    \ If A < vergeDistanceHi, then we know that (A K) and
+ BCC gseg2              \ therefore (L K) < (vergeDistanceHi vergeDistanceLo),
+                        \ so jump to gseg2 to set (L K) as the new minimum
+                        \ distance to the verge
 
- BNE gseg3              \ If A <> L0011, i.e. A > L0011, then
-                        \ (L K) > (L0011 L0010), so jump to gseg3
+ BNE gseg3              \ If A <> vergeDistanceHi, i.e. A > vergeDistanceHi,
+                        \ then (L K) > (vergeDistanceHi vergeDistanceLo), so
+                        \ jump to gseg3 as (L K) is not a new minimum verge
+                        \ distance
 
                         \ We now compare the high bytes
 
- LDA L0010              \ If L0010 < K, then (L K) > (L0011 L0010), so jump
- CMP K                  \ to gseg3
- BCC gseg3
+ LDA vergeDistanceLo    \ If vergeDistanceLo < K, then we know that
+ CMP K                  \ (L K) > (vergeDistanceHi vergeDistanceLo), so jump to
+ BCC gseg3              \ gseg3 as (L K) is not a new minimum verge distance
 
 .gseg2
 
-                        \ If we get here then (L K) <= (L0011 L0010)
+                        \ If we get here then we know that
+                        \ (L K) <= (vergeDistanceHi vergeDistanceLo), so we now
+                        \ set (L K) as the new minimum distance to the verge,
+                        \ and set a number of variables so we can refer to the
+                        \ nearest verge in places like the crash routine
 
- LDA L                  \ Set (L0011 L0010) = (L K)
- STA L0011
+ LDA L                  \ Set (vergeDistanceHi vergeDistanceLo) = (L K)
+ STA vergeDistanceHi
  LDA K
- STA L0010
+ STA vergeDistanceLo
 
- LDA segmentCounter     \ Set L0013 = segmentCounter
- STA L0013
+ LDA segmentCounter     \ Set vergeSegmentNumber = segmentCounter
+ STA vergeSegmentNumber \
+                        \ So vergeSegmentNumber contains the number of the
+                        \ segment within the track segment list that is closest
+                        \ to the player's car
 
- LDY L0012              \ Set Y = L0012 (6 or 46 for xVergeRight+6 or
-                        \         xVergeLeft+6)
+ LDY segmentListPointer \ Set vergePointerNumber = segmentListPointer
+ STY vergePointerNumber \
+                        \ So vergePointerNumber contains the index of the
+                        \ segment within the combined track section/segment
+                        \ list (i.e. from xVergeRight) that is closest to the
+                        \ player's car
 
- STY L005C              \ Set L005C = L0012 (6 or 46 for xVergeRight+6 or
-                        \             xVergeLeft+6)
-
- LDA xVergeRightHi,Y    \ Set L005E = xVergeRightHi+6 or xVergeLeftHi+6
- STA L005E
+ LDA xVergeRightHi,Y    \ Set vergeAngle = the segment's entry in xVergeRightHi
+ STA vergeAngle         \
+                        \ So vergeAngle contains the rotation angle of the
+                        \ segment that is closest to the player's car
 
 .gseg3
 
@@ -14074,10 +14122,11 @@ ENDIF
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
                         \ player's car and xVector3
                         \
-                        \ Set Y = L0012
+                        \ Set Y = segmentListPointer
                         \
-                        \ Set L0012-th xVergeRight/xVergeLeft to difference in
-                        \ rotation angle between the player and xVector3
+                        \ Set xVergeRight/xVergeLeft at the segment list pointer
+                        \ to the difference in rotation angle between the player
+                        \ and xVector3
                         \
                         \ Set (A K) = (L K) = distance between xVector3 and car
 
@@ -14101,7 +14150,7 @@ ENDIF
  LDA temp1              \ Retrieve the value of markersToDraw that we stored
  STA markersToDraw      \ in temp1
 
- INC L0012
+ INC segmentListPointer
 
 .gseg9
 
@@ -14122,10 +14171,10 @@ ENDIF
 
  JSR SetTrackAndMarkers
  LDA segmentCounter
- CMP L0013
+ CMP vergeSegmentNumber
  BEQ gseg13
  BCC gseg13
- LDY L0012
+ LDY segmentListPointer
  LDA xVergeRightHi,Y
  BPL gseg11
  EOR #&FF
@@ -14147,7 +14196,7 @@ ENDIF
 .gseg13
 
  STX L0014
- INC L0012
+ INC segmentListPointer
  INC segmentCounter
  LDY segmentCounter
  CPY #&12
@@ -14218,7 +14267,7 @@ ENDIF
 
 .mpla3
 
- LDA L0013
+ LDA vergeSegmentNumber
  CMP #12
  BEQ mpla4
  BCS mpla5
@@ -14263,11 +14312,11 @@ ENDIF
  JSR GetSectionAngles   \ Get the elevation angles for the inner and outer track
                         \ sections
 
- LDA #255               \ Set L0011 = 255, so the first call to GetSegmentAngles
- STA L0011              \ below sets (L0011 L0010) = (L K)
+ LDA #255               \ Set vergeDistanceHi = 255, so GetSegmentAngles can set
+ STA vergeDistanceHi    \ it to the distance of the nearest verge
 
- LDA #13                \ Set L0013 = 13
- STA L0013
+ LDA #13                \ Set vergeSegmentNumber = 13
+ STA vergeSegmentNumber
 
  LDA #0                 \ Set L000E, L0049, X for facing forwards
  JSR GetSegmentNumber
@@ -14275,7 +14324,7 @@ ENDIF
  LDA #6
  JSR GetSegmentAngles
 
- LDA L0012              \ Set L0015 = L0012
+ LDA segmentListPointer \ Set L0015 = segmentListPointer
  STA L0015
 
  LDA #&80               \ Set L000E, L0049, X for facing backwards
@@ -14488,7 +14537,7 @@ ENDIF
 
 .smar7
 
- LDY L0012
+ LDY segmentListPointer
 
  LDA xVergeRightLo,Y    \ Set (xVergeRightHi+16 xVergeRightLo+16)
  CLC                    \      = (xVergeRightHi xVergeRightLo) + (U T)
@@ -14508,7 +14557,7 @@ ENDIF
  CPY #3                 \ If Y >= 3, jump to smar9 to skip the following
  BCS smar9
 
- LDA L0012              \ Set L62B4 for the Y-th marker to L0012
+ LDA segmentListPointer \ Set L62B4 for the Y-th marker to segmentListPointer
  STA L62B4,Y
 
  LDA W                  \ Set L6299 for the Y-th marker to W
@@ -14544,7 +14593,7 @@ ENDIF
 
 .smar11
 
- LDY L0012
+ LDY segmentListPointer
  STA L5EE0,Y
  LDA LL
  STA yVergeRight,Y
@@ -25038,7 +25087,7 @@ NEXT
 
 .sub_C4626
 
- LDA L005E
+ LDA vergeAngle
  SEC
  SBC L0044
 
@@ -25058,7 +25107,7 @@ NEXT
  LDY #186
  JSR sub_C4676
 
- LDX L005C
+ LDX vergePointerNumber
  CPX #&28
  BCC C4647
  EOR #&FF
@@ -25138,10 +25187,10 @@ ENDIF
  STA U                  \ Set (U T) = (A T)
                         \           = Y * A+
 
- LDA L0010              \ Set (A T) = A * U
- JSR Multiply8x8        \           = L0010 * U
-                        \           = L0010 * (Y * A+ / 256)
-                        \           = L0010 * A+ * (Y / 256)
+ LDA vergeDistanceLo    \ Set (A T) = A * U
+ JSR Multiply8x8        \           = vergeDistanceLo * U
+                        \           = vergeDistanceLo * (Y * A+ / 256)
+                        \           = vergeDistanceLo * A+ * (Y / 256)
 
  RTS                    \ Return from the subroutine
 
