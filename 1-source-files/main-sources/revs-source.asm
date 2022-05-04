@@ -198,9 +198,14 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L000E
+.segmentOffset
 
- SKIP 1                 \ 
+ SKIP 1                 \ The offset to use for the segment being processed in
+                        \ the GetSegmentAngles routine
+                        \
+                        \   * 0 when our car is facing in the same direction
+                        \
+                        \   * 120 when our car is facing the opposite direction
 
 .leaveTrackTimer
 
@@ -235,13 +240,17 @@ ORG &0000
  SKIP 1                 \ The number of the segment within the track segment
                         \ list that is closest to the player's car
 
-.L0014
+.prevSegmentIndex
 
- SKIP 1                 \ 
+ SKIP 1                 \ The segment coordinate index from the previous segment
+                        \ when adding segments to the track segment list
 
-.L0015
+.leftSegmentPointer
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the first entry in the track segment list
+                        \ pointer for the segments on the left side of the track
+                        \ (i.e. the index of the first left segment that appears
+                        \ after the right-hand segments)
 
 .previousRacingLine
 
@@ -613,9 +622,14 @@ ORG &0000
  SKIP 1                 \ Determines whether we are drawing two edges within the
                         \ same pixel byte in DrawObjectEdge
 
-.L0049
+.segmentDirection
 
- SKIP 1                 \ 
+ SKIP 1                 \ The relative dirction of our car, to use when
+                        \ processing segments in the GetSegmentAngles routine
+                        \
+                        \   * 0 when our car is facing in the same direction
+                        \
+                        \   * 1 when our car is facing in the opposite direction
 
 .setSpeedForDriver
 
@@ -8587,7 +8601,7 @@ ENDIF
  STA L0050
  LDX horizonSection
  LDA #LO(L0450)
- LDY L0015
+ LDY leftSegmentPointer
  JSR sub_C193E
  LDA #&1C
  STA KK
@@ -12169,9 +12183,9 @@ ENDIF
 
  LDA scaleUp            \ Set A = scaleUp
 
- CMP L62FC              \ If A >= L62FC, jump to dobj4 to skip the following
- BCS dobj4              \ instruction and set lowestTrackLine to 0 (so the whole
-                        \ object is drawn)
+ CMP horizonTrackWidth  \ If A >= horizonTrackWidth, jump to dobj4 to skip the
+ BCS dobj4              \ following instruction and set lowestTrackLine to 0 (so
+                        \ the whole object is drawn)
 
  LDX horizonLine        \ Set X to the track line number of the horizon, so the
                         \ parts of the object below this line do not get drawn
@@ -12179,7 +12193,7 @@ ENDIF
 .dobj4
 
  STX lowestTrackLine    \ Set lowestTrackLine = X, so the object gets cut off at
-                        \ the horizon line when scaleUp < L62FC
+                        \ the horizon line when scaleUp < horizonTrackWidth
 
  CMP #64                \ If A >= 64, i.e. scaleUp >= 64, jump to dobj5 to skip
  BCS dobj5              \ the following
@@ -13576,7 +13590,8 @@ ENDIF
 \       Name: GetSectionAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Get the elevations for the inner and outer track sections
+\    Summary: Get the rotation and elevation angles for the inner and outer
+\             track sections
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13597,6 +13612,19 @@ ENDIF
 \
 \     * Part 3: Set the rotation and elevation angles for this section in the
 \       xVergeRight/Left and yVergeRight/Left tables
+\
+\ Returns:
+\
+\   xVergeRight/Left    Updated rotation angles for the entries in the track
+\                       section list (i.e. indexes 0 to 5)
+\
+\   yVergeRight/Left    Updated elevation angles for the entries in the track
+\                       section list (i.e. indexes 0 to 5)
+\
+\   horizonLine         Updated to cater for the heights of the updated track
+\                       sections
+\
+\   horizonSection      Updated to the track section on the horizon
 \
 \ Other entry points:
 \
@@ -13989,14 +14017,15 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The offset from xSegmentCoordILo of the variable to use
-\                       for the object's 3D coordinates in GetObjRotation
+\   X                   The offset from xSegmentCoordILo of the segment's 3D
+\                       coordinates, i.e. the segment number * 3, with:
 \
-\   segmentListPointer  The variable to use for calculations:
+\                         * X for inner track segment coordinates
 \
-\                         * 6 = xVergeRight+6
+\                         * X + 120 for outer track segment coordinates
 \
-\                         * 46 = xVergeLeft+6
+\   segmentListPointer  The index of the segment in the track segment list to
+\                       use for calculations
 \
 \ Returns:
 \
@@ -14012,10 +14041,8 @@ ENDIF
                         \ from the point of view of the player, returning it in
                         \ (JJ II)
 
- LDY segmentListPointer \ Set Y = segmentListPointer, which is 6 or 46 (for
-                        \ xVergeRight+6 or xVergeLeft+6), so the result gets
-                        \ stored after the end of the track section list, i.e.
-                        \ in the track segment list
+ LDY segmentListPointer \ Set Y = segmentListPointer, so the result gets stored
+                        \ in the correct position in the track segment list
 
                         \ Fall through into GetSectionRotation to set the
                         \ specified xVergeRight or xVergeLeft to the difference
@@ -14074,29 +14101,36 @@ ENDIF
 \       Name: GetSegmentAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Get the rotation and elevation angles for the inner or outer
+\             track segments
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   A                   The variable to use for storing the difference in
-\                       rotation angles in GetSegmentRotation:
+\   A                   The index of the segment to update in the track segment
+\                       list, starting at 6 for the first entry in list of right
+\                       segments, and 46 for the first entry in the list of left
+\                       segments
 \
-\                         * 6 = xVergeRight+6
-\
-\                         * 46 = xVergeLeft+6
-\
-\   X                   The segment number * 3 as an offset from
-\                       xSegmentCoordILo, so:
+\   X                   The offset from xSegmentCoordILo of the segment's 3D
+\                       coordinates, i.e. the segment number * 3, with:
 \
 \                         * X for inner track segment coordinates
 \
 \                         * X + 120 for outer track segment coordinates
 \
-\   L000E               0 or 120
+\   segmentOffset       The offset to use for this segment:
 \
-\   L0049               0 or 1
+\                         * 0 when our car is facing in the same direction
+\
+\                         * 120 when our car is facing the opposite direction
+\
+\   segmentDirection    The relative direction of our car:
+\
+\                         * 0 when our car is facing in the same direction
+\
+\                         * 1 when our car is facing the opposite direction
 \
 \ Returns:
 \
@@ -14117,21 +14151,25 @@ ENDIF
 
 .GetSegmentAngles
 
- STA segmentListPointer \ Set segmentListPointer = A
+ STA segmentListPointer \ Set segmentListPointer to the index passed in A
 
- LDA #0                 \ Set segmentCounter = 0
- STA segmentCounter
+ LDA #0                 \ Set segmentCounter = 0, to use to count visible
+ STA segmentCounter     \ segments over the course of the following routine
 
 .gseg1
 
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
-                        \ player's car and the track segment specified in X
+                        \ player's car and the track segment specified in X, and
+                        \ store the results in the track segment list at the
+                        \ segment list pointer
                         \
-                        \ Set xVergeRight/xVergeLeft at the segment list pointer
-                        \ to the difference in rotation angle between the player
-                        \ and the segment
-                        \
-                        \ Set (A K) = (L K) = distance between object X and car
+                        \ Also set (A K) = (L K) = the distance between the car
+                        \ and the track segment
+
+                        \ We now check to see if this is the closest track
+                        \ segment we've come across in this iteration of the
+                        \ main loop, and if it is, we set a bunch of variables
+                        \ with the details of the track edge
 
  CMP edgeDistanceHi     \ If A < edgeDistanceHi, then we know that (A K) and
  BCC gseg2              \ therefore (L K) < (edgeDistanceHi edgeDistanceLo),
@@ -14154,8 +14192,8 @@ ENDIF
                         \ If we get here then we know that
                         \ (L K) <= (edgeDistanceHi edgeDistanceLo), so we now
                         \ set (L K) as the new minimum distance to the verge,
-                        \ and set a number of variables so we can refer to the
-                        \ nearest verge in places like the crash routine
+                        \ and set a number of variables so we can refer to this
+                        \ nearest track edge in places like the crash routine
 
  LDA L                  \ Set (edgeDistanceHi edgeDistanceLo) = (L K)
  STA edgeDistanceHi
@@ -14182,13 +14220,13 @@ ENDIF
 
 .gseg3
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
-                        \ of view of the player, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate the segment's elevation angle, from the
+                        \ point of view of the player, returning it in A and LL
                         \
-                        \ If the object is not visible on-screen, the C flag is
+                        \ If the segment is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
 
- BCS gseg4              \ If the object is not visible on-screen, jump to gseg4
+ BCS gseg4              \ If the segment is not visible on-screen, jump to gseg4
 
  BPL gseg10             \ If the elevation angle is positive, jump to gseg10
 
@@ -14203,18 +14241,23 @@ ENDIF
 
 .gseg4
 
-                        \ If we get here then the object is not visible or the
-                        \ elevation is negative
+                        \ If we get here then the segment is not visible or the
+                        \ segment's elevation angle is negative
 
- LDA segmentCounter
- BNE gseg5
- RTS
+ LDA segmentCounter     \ If segmentCounter is non-zero then we have already
+ BNE gseg5              \ found a visible segment, so jump to gseg5
+
+ RTS                    \ Otherwise this is the first segment and it's not
+                        \ visible, so return from the subroutine as none of the
+                        \ others will be either
 
 .gseg5
 
  LDA #0
  STA U
- LDY L0014
+
+ LDY prevSegmentIndex
+
  STX W
 
 .gseg6
@@ -14223,37 +14266,55 @@ ENDIF
  SEC
  SBC xSegmentCoordILo,Y
  STA T
+
  LDA xSegmentCoordIHi,X
  SBC xSegmentCoordIHi,Y
+
  CLC
  BPL gseg7
+
  SEC
 
 .gseg7
 
  PHP
+
  ROR A
  ROR T
+
  PLP
+
  ROR A
  ROR T
+
  STA V
+
  LDX U
+
  LDA xSegmentCoordILo,Y
  CLC
  ADC T
  STA xVector3Lo,X
+
  LDA xSegmentCoordIHi,Y
  ADC V
  STA xVector3Hi,X
+
  INX
+
  CPX #3
  BEQ gseg8
+
  STX U
+
  LDX W
+
  INY
+
  INX
+
  STX W
+
  JMP gseg6
 
 .gseg8
@@ -14280,13 +14341,13 @@ ENDIF
  BCS gseg9              \ If the object is not visible on-screen, jump to gseg9
                         \ to return from the subroutine
 
- LDX L0014
+ LDX prevSegmentIndex
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
- STA temp1              \ after the call to SetTrackAndMarkers (so the call
+ STA temp1              \ after the call to GetCornerMarkers (so the call
                         \ doesn't change the value of markersToDraw)
 
- JSR SetTrackAndMarkers
+ JSR GetCornerMarkers
 
  LDA temp1              \ Retrieve the value of markersToDraw that we stored
  STA markersToDraw      \ in temp1
@@ -14308,50 +14369,70 @@ ENDIF
 
 .gseg10
 
-                        \ If we get here then the elevation angle is positive
+                        \ If we get here then the segment's elevation angle is
+                        \ positive and the segment is visible on-screen
 
- JSR SetTrackAndMarkers
- LDA segmentCounter
+ JSR GetCornerMarkers
+
+ LDA segmentCounter     \ If segmentCounter <= edgeSegmentNumber, jump to gseg13
  CMP edgeSegmentNumber
  BEQ gseg13
  BCC gseg13
- LDY segmentListPointer
- LDA xVergeRightHi,Y
- BPL gseg11
- EOR #&FF
+
+ LDY segmentListPointer \ Set Y to the segment list pointer
+
+ LDA xVergeRightHi,Y    \ Set A to the high byte of the rotation angle of the
+                        \ segment's right verge
+
+ BPL gseg11             \ If the angle is negative, negate it, so we now have
+ EOR #&FF               \ A = |rotation angle|
 
 .gseg11
 
- CMP #&14
+ CMP #20                \ If A < 20, jump to gseg13
  BCC gseg13
- LDA xVergeRightHi-1,Y
- BPL gseg12
- EOR #&FF
+
+ LDA xVergeRightHi-1,Y  \ Set A to the high byte of the rotation angle of the
+                        \ previous segment's right verge
+
+ BPL gseg12             \ If the angle is negative, negate it, so we now have
+ EOR #&FF               \ A = |rotation angle|
 
 .gseg12
 
- CMP #&14
- BCS gseg16
- JMP gseg4
+ CMP #20                \ If A >= 20, jump to gseg16 to return from the
+ BCS gseg16             \ subroutine
+
+ JMP gseg4              \ Jump to gseg4 to process the segment as if it were
+                        \ not visible or with a negative elevation angle
 
 .gseg13
 
- STX L0014
+ STX prevSegmentIndex
+
  INC segmentListPointer
+
  INC segmentCounter
+
  LDY segmentCounter
- CPY #&12
+
+ CPY #18
  BCS gseg16
+
  LDA L3DD0,Y
  STA T
+
  TXA
  SEC
- SBC L000E
+ SBC segmentOffset
+
  CMP T
  BCS gseg14
+
  TXA
  CLC
  ADC #120
+
  JMP gseg15
 
 .gseg14
@@ -14363,6 +14444,7 @@ ENDIF
  SEC
  SBC T
  TAX
+
  JMP gseg1
 
 .gseg16
@@ -14447,11 +14529,11 @@ ENDIF
 
 .GetTrackAndMarkers
 
- LDA #0                 \ Set horizonLine = 0
- STA horizonLine
+ LDA #0                 \ Set horizonLine = 0, so we can calculate a new height
+ STA horizonLine        \ for the horizon in the following
 
- JSR GetSectionAngles   \ Get the elevation angles for the inner and outer track
-                        \ sections
+ JSR GetSectionAngles   \ Get the rotation and elevation angles for the inner
+                        \ and outer track sections in the track section list
 
  LDA #255               \ Set edgeDistanceHi = 255, so GetSegmentAngles can set
  STA edgeDistanceHi     \ it to the distance of the nearest verge
@@ -14459,20 +14541,22 @@ ENDIF
  LDA #13                \ Set edgeSegmentNumber = 13
  STA edgeSegmentNumber
 
- LDA #0                 \ Set L000E, L0049, X for facing forwards
- JSR GetSegmentNumber
+ LDA #0                 \ Set segmentOffset, segmentDirection, and the segment
+ JSR GetSegmentDetails  \ index in X for the segment in front of our car
 
- LDA #6
- JSR GetSegmentAngles
+ LDA #6                 \ Get the rotation and elevation angles for the right
+ JSR GetSegmentAngles   \ track segment
 
- LDA segmentListPointer \ Set L0015 = segmentListPointer
- STA L0015
+ LDA segmentListPointer \ Set leftSegmentPointer = segmentListPointer
+ STA leftSegmentPointer \
+                        \ So it points to the first left track segment that
+                        \ comes after the right track segments
 
- LDA #&80               \ Set L000E, L0049, X for facing backwards
- JSR GetSegmentNumber
+ LDA #%10000000         \ Set segmentOffset, segmentDirection, and the segment
+ JSR GetSegmentDetails  \ index in X for the segment behind our car
 
- LDA #46
- JSR GetSegmentAngles
+ LDA #46                \ Get the rotation and elevation angles for the left
+ JSR GetSegmentAngles   \ track segment
 
  LDA horizonSection     \ If horizonSection < 40, jump to gmar1 to skip the
  CMP #40                \ following three instructions
@@ -14501,35 +14585,36 @@ ENDIF
 
 .gmar2
 
- STA yVergeRight,Y      \ Set the Y-th entry in yVergeRight to the updated value
-                        \ of horizonLine
+ STA yVergeRight,Y      \ Set the elevation angle for the right side of the
+                        \ horizon line to the updated value of horizonLine
 
- STA yVergeLeft,Y       \ Set the Y-th entry in yVergeLeft to the updated value
-                        \ of horizonLine
+ STA yVergeLeft,Y       \ Set the elevation angle for the left side of the
+                        \ horizon line to the updated value of horizonLine
 
- LDA xVergeRightHi,Y    \ Set A = xVergeRightHi - xVergeLeftHi for Y
- SEC
+ LDA xVergeRightHi,Y    \ Set A = xVergeRightHi - xVergeLeftHi for the horizon
+ SEC                    \ section
  SBC xVergeLeftHi,Y
 
- JSR Absolute8Bit       \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = |A|, so A contains the arc of the track at
+                        \ the horizon (i.e. the track width at the horizon)
 
- LSR A                  \ Set L62FC = A / 2
- STA L62FC
+ LSR A                  \ Set horizonTrackWidth = A / 2
+ STA horizonTrackWidth
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: GetSegmentNumber
+\       Name: GetSegmentDetails
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: Get the details for the segment in front or behind
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   A                   Direction:
+\   A                   The direction in which to fetch a segment:
 \
 \                         * Bit 7 clear = forwards
 \                        
@@ -14537,13 +14622,13 @@ ENDIF
 \
 \ Returns:
 \
-\   L000E               Returns:
+\   segmentOffset       The offset to use for this segment:
 \
 \                         * 0 when our car is facing in direction A
 \
 \                         * 120 when our car is facing opposite direction A
 \
-\   L0049               Returns:
+\   segmentDirection    The relative direction of our car:
 \
 \                         * 0 when our car is facing in direction A
 \
@@ -14559,44 +14644,44 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetSegmentNumber
+.GetSegmentDetails
 
  LDX segmentIndex       \ Set X to the index * 3 of the current track segment
 
  EOR directionFacing    \ If bit 7 of A and bit 7 of directionFacing are the
- BPL snum1              \ same, jump to snum1
+ BPL segd1              \ same, jump to segd1
 
  TXA                    \ Set X = X + 120
  CLC
  ADC #120
  TAX
 
- LDA #120               \ Set A = 120, so L000E gets set to 120
+ LDA #120               \ Set A = 120, so segmentOffset gets set to 120
 
- SEC                    \ Set the C flag, so L0049 gets set to 1
+ SEC                    \ Set the C flag, so segmentDirection gets set to 1
 
- BNE snum2              \ Jump to snum2 (thie BNE is effectively a JMP as A is
+ BNE segd2              \ Jump to segd2 (thie BNE is effectively a JMP as A is
                         \ never zero
 
-.snum1
+.segd1
 
- LDA #0                 \ Set A = 0, so L000E gets set to 0
+ LDA #0                 \ Set A = 0, so segmentOffset gets set to 0
 
- CLC                    \ Clear the C flag, so L0049 gets set to 0
+ CLC                    \ Clear the C flag, so segmentDirection gets set to 0
 
-.snum2
+.segd2
 
- STA L000E              \ Set L000E = A
+ STA segmentOffset      \ Set segmentOffset = A
 
- LDA #0                 \ Set L0049 = the C flag
+ LDA #0                 \ Set segmentDirection to the C flag
  ROL A
- STA L0049
+ STA segmentDirection
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: SetTrackAndMarkers
+\       Name: GetCornerMarkers
 \       Type: Subroutine
 \   Category: Track
 \    Summary: 
@@ -14607,11 +14692,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.SetTrackAndMarkers
+.GetCornerMarkers
 
- LDY L0049
+ LDY segmentDirection
+
  CPX #120
  BCS smar1
+
  LDA segmentFlags,X
  BCC smar2
 
@@ -14633,6 +14720,7 @@ ENDIF
  LDA segmentCounter
  CMP #3
  BCS smar3
+
  JMP smar9
 
 .smar3
@@ -14641,40 +14729,55 @@ ENDIF
  SEC
  SBC L3076,Y
  TAY
+
  LDA #0
  STA U
+
  LDA scaleUp
+
  DEY
+
  BEQ smar6
+
  BPL smar5
 
 .smar4
 
  LSR U
  ROR A
+
  INY
+
  BNE smar4
+
  BEQ smar6
 
 .smar5
 
  ASL A
  ROL U
+
  DEY
+
  BNE smar5
 
 .smar6
 
  STA T
- LDA L0049
+
+ LDA segmentDirection
  LSR A
+
  ROR A
+
  EOR directionFacing
  BPL smar7
+
  LDA #0
  SEC
  SBC T
  STA T
+
  LDA #0
  SBC U
  STA U
@@ -14728,7 +14831,9 @@ ENDIF
  TXA
  AND #1
  BEQ smar10
+
  LDA #2
+
  BNE smar11
 
 .smar10
@@ -14739,13 +14844,19 @@ ENDIF
 
  LDY segmentListPointer
  STA L5EE0,Y
+
  LDA LL
+
  STA yVergeRight,Y
- CMP #&50
+
+ CMP #80
  BCS smar12
+
  CMP horizonLine
  BCC smar12
+
  STA horizonLine
+
  STY horizonSection
 
 .smar12
@@ -32122,18 +32233,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62FC
+\       Name: horizonTrackWidth
 \       Type: Variable
-\   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: The arc of the track at the horizon (i.e. the track width at the
+\             horizon)
 \
 \ ******************************************************************************
 
-.L62FC
+.horizonTrackWidth
 
  EQUB 0
 
