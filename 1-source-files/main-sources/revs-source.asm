@@ -262,10 +262,11 @@ ORG &0000
  SKIP 1                 \ A counter for the length of turn when calculating the
                         \ best racing line for a track segment
 
-.previousSpeed
+.prevDriverSpeed06
 
- SKIP 1                 \ The previous value of trackDriverSpeed when
-                        \ calculating the best racing line for a track segment
+ SKIP 1                 \ Bits 0-6 of the previous value of trackDriverSpeed
+                        \ when calculating the best racing line for a track
+                        \ segment
 
 .gearChange
 
@@ -312,7 +313,7 @@ ORG &0000
                         \ top of the track view, in the sky), down to 3 (the
                         \ lowest track line, between the mirrors and dashboard)
 
-.previousSpeed7
+.prevDriverSpeed7
 
  SKIP 1                 \ The previous value of trackDriverSpeed when
                         \ calculating the best racing line for a track segment,
@@ -1551,8 +1552,10 @@ ORG &0380
                         
 .segmentFlags
 
- SKIP 1                 \ Section flags based on trackSectionFlag for a track
-                        \ segment in the track segment buffer
+ SKIP 1                 \ Flags for a track segment in the track segment buffer
+                        \
+                        \ Based on the track section flags for the track section
+                        \ containing the segment, but updated for each segment
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -2566,7 +2569,7 @@ ORG &0B00
 \
 \                       Y = 0 to 5 (update the right verge):
 \
-\                         * Zero L5EE0
+\                         * Reset vergeMarkRight to zero
 \
 \                         * Subtract spinRotation from the rotation angles in
 \                           xVergeRightLo, xVergeRightHi
@@ -2578,7 +2581,7 @@ ORG &0B00
 \
 \                       Y = 0 to 5 + 40 (update the left verge):
 \
-\                         * Zero L5F08
+\                         * Reset vergeMarkLeft to zero
 \
 \                         * Subtract spinRotation from the rotation angles in
 \                           xVergeLeftLo, xVergeLeftHi
@@ -2592,8 +2595,8 @@ ORG &0B00
 
 .SpinTrackSection
 
- LDA #0                 \ Set the Y-th entry in L5EE0 to 0
- STA L5EE0,Y
+ LDA #0                 \ Set the Y-th entry in vergeMarkRight to 0
+ STA vergeMarkRight,Y
 
  LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinRotation
  SEC                    \
@@ -5802,11 +5805,13 @@ ORG &0B00
 
 .sets8
 
- AND #%11100111         \ Clear bits 3 and 4 of A
+ AND #%11100111         \ Clear bits 3 and 4 of A, so we don't show any corner
+                        \ markers for this segment
 
 .sets9
 
- AND #%11011111         \ Clear bit 5 of A
+ AND #%11011111         \ Clear bit 5 of A, so any markers for this segment are
+                        \ shown in white
 
 .sets10
 
@@ -6640,11 +6645,11 @@ ORG &0B00
                         \ If we get here then this is a curved track section and
                         \ turnCounter is zero
 
- LDA previousSpeed7     \ If bit 7 of previousSpeed7 is set, jump to rlin4
+ LDA prevDriverSpeed7   \ If bit 7 of prevDriverSpeed7 is set, then jump to rlin4
  BMI rlin4
 
                         \ If we get here then this is a curved track section and
-                        \ turnCounter is zero, and bit 7 of previousSpeed7 is
+                        \ turnCounter is zero, and bit 7 of prevDriverSpeed7 is
                         \ clear
 
 .rlin3
@@ -6675,11 +6680,11 @@ ORG &0B00
                         \ to rlin1 to disable steering in MoveCars and keep on
                         \ driving straight
 
- LDA trackDriverSpeed,Y \ Set previousSpeed7 = track section's driver speed,
- STA previousSpeed7     \ which we only use to check bit 7
+ LDA trackDriverSpeed,Y \ Set prevDriverSpeed7 = track section's driver speed,
+ STA prevDriverSpeed7   \ which we only use to check bit 7
 
- AND #%01111111         \ Set previousSpeed = bits 0-6 of the track section's
- STA previousSpeed      \ driver speed
+ AND #%01111111         \ Set prevDriverSpeed06 = bits 0-6 of the track
+ STA prevDriverSpeed06  \ section's driver speed
 
  LDA bestRacingLine,X   \ Set A to the best racing line for the track section
 
@@ -6703,22 +6708,22 @@ ORG &0B00
  LSR A
  STA T
 
- LDA turnCounter        \ Set A = turnCounter - previousSpeed
+ LDA turnCounter        \ Set A = turnCounter - prevDriverSpeed06
  SEC
- SBC previousSpeed
+ SBC prevDriverSpeed06
 
  BCS rlin6              \ If the subtraction didn't underflow, i.e.
                         \
-                        \   turnCounter >= previousSpeed
+                        \   turnCounter >= prevDriverSpeed06
                         \
                         \ then jump to rlin6 to set segmentSteering to
                         \ previousRacingLine and return from the subroutine
 
-                        \ If we get here then turnCounter < previousSpeed and
-                        \ A is negative
+                        \ If we get here then turnCounter < prevDriverSpeed06
+                        \ and A is negative
 
  ADC T                  \ Set A = A + T
-                        \       = turnCounter - previousSpeed + turnCounter / 8
+                        \       = turnCounter - prevDriverSpeed06 + turnCounter / 8
 
  LDA #0                 \ Set A = 0
 
@@ -8432,7 +8437,7 @@ ENDIF
 
 .P1998
 
- LDA L5EE0,X
+ LDA vergeMarkRight,X
  BPL C19A2
  INX
  CPX U
@@ -8446,8 +8451,8 @@ ENDIF
 .C19A5
 
  LDA #&80
- ORA L5EE0,X
- STA L5EE0,X
+ ORA vergeMarkRight,X
+ STA vergeMarkRight,X
  BMI C1979
 
 \ ******************************************************************************
@@ -8494,13 +8499,13 @@ ENDIF
  INY
  CPY L004B
  BCS C1A1F
- LDA L5EE0,Y
+ LDA vergeMarkRight,Y
  BMI C19D7
  LDA L004C
  CMP L0050
  BCC C19F8
  BNE C19FD
- LDA L5EE0-1,Y
+ LDA vergeMarkRight-1,Y
  AND #3
  BNE C1A10
  STY L0050
@@ -8516,7 +8521,7 @@ ENDIF
 
 .C19FD
 
- LDA L5EE0-1,Y
+ LDA vergeMarkRight-1,Y
  AND #3
  BNE C1A10
  LDA L0027
@@ -8649,7 +8654,7 @@ ENDIF
  LDY yVergeRight,X
  CPY #&50
  BCS C1B03
- LDA L5EE0,X
+ LDA vergeMarkRight,X
  BMI C1B03
  LDA GG
  CMP #&14
@@ -8677,7 +8682,7 @@ ENDIF
 
 .P1AD8
 
- LDA L5EE0+1,X
+ LDA vergeMarkRight+1,X
  BPL C1AE4
  INX
  INC U
@@ -8699,7 +8704,7 @@ ENDIF
 
 .C1AF9
 
- LDA L5EE0,X
+ LDA vergeMarkRight,X
  AND #3
  ORA GG
  STA backgroundColour,Y
@@ -8758,7 +8763,8 @@ ENDIF
  BEQ corn2              \ instructions
 
  LDA #%00001111         \ Map logical colour 2 in the colour palette to physical
- STA colourPalette+2    \ colour 1 (red in the track view)
+ STA colourPalette+2    \ colour 1 (red in the track view), so the corner marker
+                        \ is drawn in red rather than white
 
 .corn2
 
@@ -11484,7 +11490,7 @@ IF _ACORNSOFT
 
 .gcol13
 
- LDA L5EE0-1,X
+ LDA vergeMarkRight-1,X
 
 .gcol14
 
@@ -11647,7 +11653,7 @@ IF _SUPERIOR
  AND #%01111111         \ Set X to bits 0-6 of A
  TAX
 
- LDA L5EE0-1,X          \ Set A to entry X - 1 from L5EE0
+ LDA vergeMarkRight-1,X \ Set A to entry X - 1 from vergeMarkRight
 
 .scol7
 
@@ -13684,7 +13690,7 @@ ENDIF
  JSR SpinTrackSection   \ Apply the car's current spin to the right verge track
                         \ section in Y:
                         \
-                        \   * Zero L5EE0
+                        \   * Reset vergeMarkRight to zero
                         \
                         \   * Subtract spinRotation from the rotation angles in
                         \     xVergeRightLo, xVergeRightHi
@@ -13699,7 +13705,7 @@ ENDIF
  JSR SpinTrackSection   \ Apply the car's current spin to the left verge track
                         \ section in T:
                         \
-                        \   * Zero L5F08
+                        \   * Reset vergeMarkLeft to zero
                         \
                         \   * Subtract spinRotation from the rotation angles in
                         \     xVergeLeftLo, xVergeLeftHi
@@ -14332,7 +14338,7 @@ ENDIF
                         \
                         \ Set (A K) = (L K) = distance between xVector3 and car
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
+ JSR GetObjElevation-2  \ Calculate the segment's elevation angle, from the point
                         \ of view of the player, returning it in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
@@ -14344,10 +14350,10 @@ ENDIF
  LDX prevSegmentIndex
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
- STA temp1              \ after the call to GetCornerMarkers (so the call
+ STA temp1              \ after the call to GetVergeAndMarkers (so the call
                         \ doesn't change the value of markersToDraw)
 
- JSR GetCornerMarkers
+ JSR GetVergeAndMarkers
 
  LDA temp1              \ Retrieve the value of markersToDraw that we stored
  STA markersToDraw      \ in temp1
@@ -14372,7 +14378,7 @@ ENDIF
                         \ If we get here then the segment's elevation angle is
                         \ positive and the segment is visible on-screen
 
- JSR GetCornerMarkers
+ JSR GetVergeAndMarkers
 
  LDA segmentCounter     \ If segmentCounter <= edgeSegmentNumber, jump to gseg13
  CMP edgeSegmentNumber
@@ -14558,9 +14564,9 @@ ENDIF
  LDA #46                \ Get the rotation and elevation angles for the left
  JSR GetSegmentAngles   \ track segment
 
- LDA horizonSection     \ If horizonSection < 40, jump to gmar1 to skip the
+ LDA horizonSection     \ If horizonSection < 40, jump to gtrm1 to skip the
  CMP #40                \ following three instructions
- BCC gmar1
+ BCC gtrm1
 
  SEC                    \ Set horizonSection = horizonSection - 40
  SBC #40                \
@@ -14568,7 +14574,7 @@ ENDIF
                         \ track coordinates, this corrects the value to the
                         \ index for the inner coordinates
 
-.gmar1
+.gtrm1
 
  TAY                    \ Set Y to the corrected value of horizonSection
 
@@ -14576,14 +14582,14 @@ ENDIF
                         \ so we can refer to it in the next call to
                         \ GetTrackAndMarkers
 
- LDA horizonLine        \ If horizonLine < 79, jump to gmar2 to skip the
+ LDA horizonLine        \ If horizonLine < 79, jump to gtrm2 to skip the
  CMP #79                \ following two instructions
- BCC gmar2
+ BCC gtrm2
 
  LDA #78                \ Set horizonLine = 78, so horizonLine is a maximum of
  STA horizonLine        \ 78
 
-.gmar2
+.gtrm2
 
  STA yVergeRight,Y      \ Set the elevation angle for the right side of the
                         \ horizon line to the updated value of horizonLine
@@ -14681,110 +14687,185 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetCornerMarkers
+\       Name: GetVergeAndMarkers
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Get the details for a segment's corner markers and verge marks
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The offset from xSegmentCoordILo of the segment's 3D
+\                       coordinates, i.e. the segment number * 3, with:
+\
+\                         * X for inner track segment coordinates
+\
+\                         * X + 120 for outer track segment coordinates
+\
+\   LL                  The segment's elevation angle, from the point of view of
+\                       the player
+\
+\   scaleUp             The scale up factor for the segment
+\
+\   scaleDown           The scale down factor for the segment
 \
 \ ******************************************************************************
 
-.GetCornerMarkers
+.GetVergeAndMarkers
 
- LDY segmentDirection
+ LDY segmentDirection   \ Set Y to segmentDirection, which will be 0 when our
+                        \ car is facing in the same direction as the segment we
+                        \ are checking, or 1 if it's the opposite direction
+                        \
+                        \ This determines whether we are creating the left or
+                        \ right edge ???
 
- CPX #120
- BCS smar1
+ CPX #120               \ If X >= 120, jump to gmar1 to subtract 120 from the
+ BCS gmar1              \ offset
 
- LDA segmentFlags,X
- BCC smar2
+ LDA segmentFlags,X     \ Set A to the flags for this track segment from the
+                        \ track segment buffer
 
-.smar1
+ BCC gmar2              \ Jump to gmar2 (this BCC is effectively a JMP as we
+                        \ just passed through a BCS)
 
- LDA segmentFlags-120,X
+.gmar1
 
-.smar2
+ LDA segmentFlags-120,X \ Set A to the flags for this track segment from the
+                        \ track segment buffer
 
- AND L306C,Y            \ Set W = A AND 00101101 if Y = 0
- STA W                  \               00110011 if Y = 1
+.gmar2
 
- AND #7                 \ Set Y = bits 0-2 of W
- TAY
+ AND segmentFlagMask,Y  \ Extract the relevant bits of the segment's flags:
+ STA W                  \ 
+                        \   W = A AND 00 1 01 10 1 if Y = 0 (same direction)
+                        \             00 1 10 01 1 if Y = 1 (different direction)
 
- LDA L306E,Y            \ Set V = 0 if Y = 0 or 1
- STA V                  \         1 otherwise
+ AND #%00000111         \ Set Y = bits 0-2 of W, so Y is in the range 0 to 7
+ TAY                    \
+                        \   Y = A AND 10 1 if car is in same direction
+                        \             01 1 if car is in a different direction
+                        \
+                        \ So bits 1-2 are cleared if this is not the side with
+                        \ the red and white verge marks
 
- LDA segmentCounter
+ LDA L306E,Y            \ Set V = 0 if Y = 0 to 1 (black and white verge mark)
+ STA V                  \         1 if Y = 2 to 7 (red and white verge mark)
+
+ LDA segmentCounter     \ If segmentCounter >= 3 then jump to gmar3
  CMP #3
- BCS smar3
+ BCS gmar3
 
- JMP smar9
+ JMP gmar9              \ Otherwise segmentCounter is 0 to 2, so jump to gmar9
+                        \ to skip the following
 
-.smar3
+.gmar3
 
- LDA scaleDown
+                        \ We now calculate the following scale factor:
+                        \
+                        \                     scaleUp
+                        \   (U A) = ----------------------------
+                        \           2 ^ (scaleDown - Y-th L3076)
+                        \
+                        \ which will determine the width of the verge marks on
+                        \ the side of the track
+
+ LDA scaleDown          \ Set Y = scaleDown - Y-th L3076
  SEC
  SBC L3076,Y
  TAY
 
- LDA #0
+ LDA #0                 \ Set U = 0, to use as the high byte in (U A)
  STA U
 
- LDA scaleUp
+ LDA scaleUp            \ Set A = scaleUp
+                        \
+                        \ So (U A) = scaleUp
 
- DEY
+ DEY                    \ Set Y = Y - 1
+                        \       = scaleDown - Y-th L3076 - 1
 
- BEQ smar6
+                        \ We now scale (U A) by 2 ^ Y, so if Y is 0 we don't
+                        \ do any scaling, if it's negative we scale down, and
+                        \ if it's positive we scale up
+                        \
+                        \ Note that the -1 in the scale factor calculation is
+                        \ reversed by the right-shift that we apply below when
+                        \ setting bit 7 of the shifted result, so the result is
+                        \ as above, despite the extra -1
 
- BPL smar5
+ BEQ gmar6              \ If Y = 0, then there is no scaling to be done, so jump
+                        \ to gmar6
 
-.smar4
+ BPL gmar5              \ If Y > 0, then we need to scale up, so jump to gmar5
 
- LSR U
+                        \ If we get here then Y < 0, so we need to scale down,
+                        \ specifically by right-shifting (U A) by |Y| places
+
+.gmar4
+
+ LSR U                  \ Set (U A) = (U A) >> 1
  ROR A
 
- INY
+ INY                    \ Increment the shift counter in Y
 
- BNE smar4
+ BNE gmar4              \ Loop back to gmar4 to keep shifting right until we
+                        \ have shifted by |Y| places
 
- BEQ smar6
+ BEQ gmar6              \ Jump to gmar6 (this BEQ is effectively a JMP, as we
+                        \ just passed through a BNE)
 
-.smar5
+.gmar5
 
- ASL A
+                        \ If we get here then Y > 0, so we need to scale up,
+                        \ specifically by left-shifting (U A) by Y places
+
+ ASL A                  \ Set (U A) = (U A) << 1
  ROL U
 
- DEY
+ DEY                    \ Decrement the shift counter in Y
 
- BNE smar5
+ BNE gmar5              \ Loop back to gmar5 to keep shifting left until we
+                        \ have shifted by Y places
 
-.smar6
+.gmar6
 
- STA T
+ STA T                  \ Set (U T) = (U A)
+                        \
+                        \ So (U T) contains our scaled value
 
- LDA segmentDirection
- LSR A
+ LDA segmentDirection   \ Set the C flag to bit 0 of segmentDirection, which
+ LSR A                  \ will be 0 when our car is facing in the same direction
+                        \ as the segment we are checking, or 1 if it's the
+                        \ opposite direction
 
- ROR A
+ ROR A                  \ Set A = A >> 1 and set bit 7 to the C flag
 
- EOR directionFacing
- BPL smar7
+ EOR directionFacing    \ If the C flag matches directionFacing, jump to gmar7
+ BPL gmar7
 
- LDA #0
+ LDA #0                 \ Negate (U T), starting with the low bytes
  SEC
  SBC T
  STA T
 
- LDA #0
+ LDA #0                 \ And then the high bytes
  SBC U
  STA U
 
-.smar7
+                        \ So we now have our scale factor:
+                        \
+                        \                  scaleUp
+                        \   (U T) = ----------------------
+                        \           scaleDown - Y-th L3076
+                        \
+                        \ where the sign of (U T) is ???
 
- LDY segmentListPointer
+.gmar7
+
+ LDY segmentListPointer \ Set Y to the index of the current entry in the track
+                        \ segment list
 
  LDA xVergeRightLo,Y    \ Set (xVergeRightHi+16 xVergeRightLo+16)
  CLC                    \      = (xVergeRightHi xVergeRightLo) + (U T)
@@ -14795,14 +14876,15 @@ ENDIF
  ADC U
  STA xVergeRightHi+16,Y
 
- LDA W
- AND #%00011000
- BEQ smar9
+ LDA W                  \ If bits 3 and 4 of W are clear, then we do not show
+ AND #%00011000         \ any corner markers for this segment, so jump to gmar9
+ BEQ gmar9
 
  LDY markersToDraw      \ Set Y to the number of markers we have to draw
 
- CPY #3                 \ If Y >= 3, jump to smar9 to skip the following
- BCS smar9
+ CPY #3                 \ If Y >= 3, then we already have three markers to
+ BCS gmar9              \ show, which is the maximum at any one time, so
+                        \ jump to gmar9 to skip the following
 
  LDA segmentListPointer \ Set L62B4 for the Y-th marker to segmentListPointer
  STA L62B4,Y
@@ -14810,13 +14892,17 @@ ENDIF
  LDA W                  \ Set L6299 for the Y-th marker to W
  STA L6299,Y
 
- AND #1                 \ If bit 0 of W is clear, jump to smar8 to skip the
- BEQ smar8              \ following instruction
+ AND #1                 \ If bit 0 of W is clear, then this is a straight track
+ BEQ gmar8              \ section, so jump to gmar8 to skip the following
+                        \ instruction
+
+                        \ This is a curved section, so move the markers away
+                        \ from the track edge
 
  LSR U                  \ Set (U T) = (U T) >> 1
  ROR T
 
-.smar8
+.gmar8
 
  LDA T                  \ Set (var27Hi var27Lo) for the Y-th marker to (U T)
  STA var27Lo,Y
@@ -14826,42 +14912,60 @@ ENDIF
  INC markersToDraw      \ Increment markersToDraw, as we have just added a new
                         \ marker to draw
 
-.smar9
+.gmar9
 
- TXA
- AND #1
- BEQ smar10
+                        \ The verge marks are either black-white-black-white
+                        \ or red-white-red-white, so we now work out which of
+                        \ these colours applies to this segment
 
- LDA #2
+ TXA                    \ If bit 0 of X is clear, then this is a coloured verge
+ AND #%00000001         \ mark, so jump to gmar10 to set A = V to use as the
+ BEQ gmar10             \ vergeMarkRight for this segment
 
- BNE smar11
+ LDA #2                 \ Otherwise this is a white verge mark, so set A = 2
+                        \ to use as the vergeMarkRight for this segment
 
-.smar10
+ BNE gmar11             \ Jump to gmar11 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
- LDA V
+.gmar10
 
-.smar11
+ LDA V                  \ Set A = V, which is 0 (black verge mark) or 1 (red
+                        \ verge mark)
 
- LDY segmentListPointer
- STA L5EE0,Y
+.gmar11
 
- LDA LL
+ LDY segmentListPointer \ Set Y to the index of the current entry in the track
+                        \ segment list
 
- STA yVergeRight,Y
+ STA vergeMarkRight,Y   \ Store A in the segment's corresponding vergeMarkRight,
+                        \ so that's 2 for a white verge mark, 1 for a red verge
+                        \ mark, and 0 for a black verge mark
 
- CMP #80
- BCS smar12
+ LDA LL                 \ Set A to the segment's elevation angle, from the point
+                        \ of view of the player
 
- CMP horizonLine
- BCC smar12
+ STA yVergeRight,Y      \ Store the result in the segment's entry in yVergeRight
+                        \ to set the segment's elevation
 
- STA horizonLine
+ CMP #80                \ If the elevation angle is 80 or more, jump to gmar12
+ BCS gmar12             \ to return from the subroutine
 
- STY horizonSection
+ CMP horizonLine        \ If the elevation angle is less than horizonLine, jump
+ BCC gmar12             \ to gmar12 to return from the subroutine
 
-.smar12
+                        \ If we get here then the elevation angle in A is less
+                        \ than 80 and is greater or equal to horizonLine
 
- RTS
+ STA horizonLine        \ This track segment is higher than the current horizon
+                        \ height, so the track obscures the horizon and we need
+                        \ to update horizonLine to this new height
+
+ STY horizonSection     \ Set horizonSection to the track segment number in Y
+
+.gmar12
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -15811,9 +15915,9 @@ ENDIF
 
                         \ If we get here then bits 0 and 7 of this section's
                         \ flag byte are both clear, so this is a straight
-                        \ section and ???
+                        \ section and there is no maximum approach speed set
 
- LDA trackDriverSpeed,Y \ Set carSectionSpeed for this driver to
+ LDA trackDriverSpeed,Y \ Set carSectionSpeed for this driver to the value of
  STA carSectionSpeed,X  \ trackDriverSpeed for this track section
 
  CLC                    \ Set A = trackDriverSpeed - carSpeedHi - 1
@@ -18570,9 +18674,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L306C
+\       Name: segmentFlagMask
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18581,16 +18685,17 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L306C
+.segmentFlagMask
 
- EQUB %00101101
- EQUB %00110011
+ EQUB %00101101         \ Mask for facing in the same direction
+
+ EQUB %00110011         \ Mask for facing in the opposite direction
 
 \ ******************************************************************************
 \
 \       Name: L306E
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18601,24 +18706,41 @@ ENDIF
 
 .L306E
 
- EQUB 0, 0, 1, 1, 1, 1, 1, 1
+ EQUB 0
+ EQUB 0
+ EQUB 1
+ EQUB 1
+ EQUB 1
+ EQUB 1
+ EQUB 1
+ EQUB 1
 
 \ ******************************************************************************
 \
 \       Name: L3076
 \       Type: Variable
-\   Category: 
+\   Category: Track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Scales the track verges and corner markers, lower number = bigger verges and
+\ markers.
 \
 \ ******************************************************************************
 
 .L3076
 
- EQUB &05, &05, &03, &04, &03, &04, &04, &04, &38, &38
+ EQUB 5
+ EQUB 5
+ EQUB 3
+ EQUB 4
+ EQUB 3
+ EQUB 4
+ EQUB 4
+ EQUB 4
+
+ EQUB &38, &38          \ Unused ???
 
 \ ******************************************************************************
 \
@@ -30633,18 +30755,20 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5EE0
+\       Name: vergeMarkRight
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: The colour of the verge marks on the right side of the track
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Gets set to 0, 1 or 2 (black, red or white).
+\
+\ Bit 7 gets set in sub_C193E.
 \
 \ ******************************************************************************
 
-.L5EE0
+.vergeMarkRight
 
  SKIP 24
 
@@ -30664,18 +30788,20 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5F08
+\       Name: vergeMarkLeft
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Track
+\    Summary: The colour of the verge marks on the left side of the track
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Gets set to 0, 1 or 2 (black, red or white).
+\
+\ Bit 7 gets set in sub_C193E.
 \
 \ ******************************************************************************
 
-.L5F08
+.vergeMarkLeft
 
  SKIP 24
 
@@ -30898,17 +31024,15 @@ ORG &5E40
 \       Name: bestRacingLine
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Set to the best racing line for each section
 \
 \ ******************************************************************************
 
 .bestRacingLine
 
- SKIP 32
+ SKIP 24
+
+ SKIP 8                 \ Unused ???
 
 \ ******************************************************************************
 \
@@ -31628,11 +31752,8 @@ ENDIF
 \       Name: spinRotationLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the amount of rotational spin that is being applied to
+\             the player's car
 \
 \ ******************************************************************************
 
@@ -31833,11 +31954,8 @@ ENDIF
 \       Name: spinRotationHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the amount of rotational spin that is being applied
+\             to the player's car
 \
 \ ******************************************************************************
 
