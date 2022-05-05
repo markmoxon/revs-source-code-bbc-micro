@@ -278,9 +278,15 @@ ORG &0000
                         \
                         \   * -1 = change down
 
-.L001A
+.debugSpinning
 
- SKIP 1                 \ 
+ SKIP 1                 \ This variable is never read, but is set to 64 and back
+                        \ to 0 when the car spins past the point where it
+                        \ changes the direction that it is facing along the
+                        \ track
+                        \
+                        \ Perhaps it was used for debugging the spinning
+                        \ routines?
 
 .thisObjectIndex
 
@@ -667,19 +673,21 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.horizonSection
+.horizonListIndex
 
- SKIP 1                 \ The track section on the horizon, given in terms of
-                        \ the section's index in the track section list
+ SKIP 1                 \ The track section or segment that's on the horizon,
+                        \ given in terms of the index within the track section
+                        \ list (or the track segment list)
                         \
-                        \ Specifically, entry number horizonSection in the
+                        \ Specifically, entry number horizonListIndex at
                         \ yVergeRight equals horizonLine, as does the same entry
                         \ in yVergeLeft (as the track is level in a left to
                         \ right direction)
 
-.prevHorizonSection
+.prevHorizonIndex
 
- SKIP 1                 \ The previous value of horizonSection
+ SKIP 1                 \ The value of horizonListIndex from the previous call
+                        \ to the GetTrackAndMarkers routine
 
 .L0053
 
@@ -2577,7 +2585,7 @@ ORG &0B00
 \                         * Subtract spinElevation from the elevation angle in
 \                            yVergeRight
 \
-\                         * Update horizonSection and horizonLine
+\                         * Update horizonListIndex and horizonLine
 \
 \                       Y = 0 to 5 + 40 (update the left verge):
 \
@@ -2589,7 +2597,7 @@ ORG &0B00
 \                         * Subtract spinElevation from the elevation angle in
 \                            yVergeLeft
 \
-\                         * Update horizonSection and horizonLine
+\                         * Update horizonListIndex and horizonLine
 \
 \ ******************************************************************************
 
@@ -2622,7 +2630,8 @@ ORG &0B00
                         \ horizon and we need to update horizonLine to this
                         \ new height
 
- STY horizonSection     \ Set horizonSection to the track section number in Y
+ STY horizonListIndex   \ Set horizonListIndex to the track section list index
+                        \ number in Y
 
 .rott1
 
@@ -6005,7 +6014,7 @@ ORG &0B00
 
  LDA thisSectionFlags   \ If bit 0 of the track section's flag byte is clear,
  AND #1                 \ then this is a straight track section, so return from
- BEQ sub_C13FB-1        \ the subroutine (as sub_C13FB-1 contains an RTS)
+ BEQ ChangeDirection-1  \ the subroutine (as ChangeDirection-1 contains an RTS)
 
                         \ Otherwise this is a curved track section, so fall
                         \ through into UpdateVectorNumber to update the value
@@ -6076,34 +6085,39 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C13FB
+\       Name: ChangeDirection
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Update the track segment buffer when the player's car spins so it
+\             changes the direction in which it is facing along the track
 \
 \ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
-\   sub_C13FB-1         Contains an RTS
+\   ChangeDirection-1   Contains an RTS
 \
 \ ******************************************************************************
 
-.sub_C13FB
+.ChangeDirection
 
- LDA #6                 \ Set sectionListValid = 6
- STA sectionListValid
+ LDA #6                 \ Set sectionListValid = 6, to invalidate the contents
+ STA sectionListValid   \ of the track section list (so it gets repopulated
+                        \ by the GetTrackAndMarkers routine)
 
  LDX #64                \ Set X = 64, so the call to TurnPlayerAround
                         \ initialises 64 track segments in the new direction
 
- STX L001A              \ Set L001A = 64
+ STX debugSpinning      \ Set debugSpinning = 64 (this value is never read and
+                        \ is not used anywhere, so perhaps it was used for
+                        \ debugging purposes, or was left over from code that
+                        \ was subsequently removed?)
 
  JSR TurnPlayerAround   \ Turn the player around and initialise 64 track
                         \ segments in the new direction
 
- LDA #0                 \ Set L001A = 0
- STA L001A
+ LDA #0                 \ Set debugSpinning = 0 (which has no effect)
+ STA debugSpinning
 
  RTS                    \ Return from the subroutine
 
@@ -8114,7 +8128,7 @@ ENDIF
 
 .DrawBackground
 
- LDX horizonSection     \ Set X = horizonSection
+ LDX horizonListIndex   \ Set X = horizonListIndex
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
@@ -8590,7 +8604,7 @@ ENDIF
 
  LDA #&80
  STA P
- LDA horizonSection
+ LDA horizonListIndex
  CLC
  ADC #&28
  TAX
@@ -8615,7 +8629,7 @@ ENDIF
  LDY #0
  STY KK
  INY
- LDA horizonSection
+ LDA horizonListIndex
  CLC
  ADC #&28
  JSR sub_C19AF
@@ -8623,7 +8637,7 @@ ENDIF
  LDX #4
  JSR sub_C1A98
  STY L002C
- LDA horizonSection
+ LDA horizonListIndex
  TAX
  CMP #9
  BCS dtra2
@@ -8632,7 +8646,7 @@ ENDIF
 .dtra2
 
  STA L0050
- LDX horizonSection
+ LDX horizonListIndex
  LDA #LO(L0450)
  LDY leftSegmentPointer
  JSR sub_C193E
@@ -8641,7 +8655,7 @@ ENDIF
  LDA #&10
  STA L0032
  LDY #2
- LDA horizonSection
+ LDA horizonListIndex
  JSR sub_C19AF
  LDA #&1C
  STA L0032
@@ -12215,14 +12229,19 @@ ENDIF
  LDX #0                 \ Set scaleDown = 0, so the object's scaffold is not
  STX scaleDown          \ scaled down (as 2^scaleDown = 2^0 = 1)
 
- LDA scaleUp            \ Set A = scaleUp
+ LDA scaleUp            \ Set A = scaleUp, so A contains the object size, which
+                        \ we can also interpret as the object distance
 
- CMP horizonTrackWidth  \ If A >= horizonTrackWidth, jump to dobj4 to skip the
- BCS dobj4              \ following instruction and set lowestTrackLine to 0 (so
+ CMP horizonTrackWidth  \ If A >= horizonTrackWidth, then the object is closer
+ BCS dobj4              \ than the horizon line, so jump to dobj4 to skip the
+                        \ following instruction and set lowestTrackLine to 0 (so
                         \ the whole object is drawn)
 
- LDX horizonLine        \ Set X to the track line number of the horizon, so the
-                        \ parts of the object below this line do not get drawn
+ LDX horizonLine        \ Otherwise the object is further away then the horizon
+                        \ line, so set X to the track line number of the
+                        \ horizon, so the parts of the object below this line do
+                        \ not get drawn (as they are below the horizon line, so
+                        \ presumably hidden by a hill)
 
 .dobj4
 
@@ -13660,7 +13679,9 @@ ENDIF
 \   horizonLine         Updated to cater for the heights of the updated track
 \                       sections
 \
-\   horizonSection      Updated to the track section on the horizon
+\   horizonListIndex    Updated to the index of the track section that contains
+\                       the horizon (i.e. the index within the track section
+\                       list)
 \
 \ Other entry points:
 \
@@ -13728,7 +13749,7 @@ ENDIF
                         \   * Subtract spinElevation from the elevation angle in
                         \     yVergeRight
                         \
-                        \   * Update horizonSection and horizonLine
+                        \   * Update horizonListIndex and horizonLine
 
  LDY T                  \ Retrieve the original value of Y that we stored above
 
@@ -13743,7 +13764,7 @@ ENDIF
                         \   * Subtract spinElevation from the elevation angle in
                         \     yVergeLeft
                         \
-                        \   * Update horizonSection and horizonLine
+                        \   * Update horizonListIndex and horizonLine
 
 .gsec3
 
@@ -13976,9 +13997,11 @@ ENDIF
                         \ If we get here, then A = horizonLine, so this section
                         \ is at the same height as the current horizon line
 
- CPX horizonSection     \ If X < horizonSection, then this section has a lower
+ CPX horizonListIndex   \ If X < horizonListIndex, then this section has a lower
  BCC gsec10             \ index than the current horizon section, so jump to
-                        \ gsec10 horizonSection contains the higher index
+                        \ gsec10 as horizonListIndex already contains the higher
+                        \ index, and a higher index is closer to the player, so
+                        \ we don't need to change the horizon line details
 
 .gsec9
 
@@ -13989,8 +14012,8 @@ ENDIF
  STA horizonLine        \ Set horizonLine to the elevation in A, so the horizon
                         \ is set to the height of this track section
 
- STX horizonSection     \ Store the index of this section in the track section
-                        \ list in horizonSection
+ STX horizonListIndex   \ Store the index of this section in the track section
+                        \ list in horizonListIndex
 
 .gsec10
 
@@ -14029,13 +14052,17 @@ ENDIF
  JSR SetSectionPointers \ Update the section list pointers to move down through
                         \ the track section list
 
- LDA #7                 \ If prevHorizonSection <= 7, jump to gsec12 to return
- CMP prevHorizonSection \ from the subroutine
- BCS gsec12
+ LDA #7                 \ If prevHorizonIndex >= 7, then the previous call to
+ CMP prevHorizonIndex   \ GetTrackAndMarkers (on the last iteration of the main
+ BCS gsec12             \ driving loop) had the horizon on one of the segments
+                        \ in the track segment list, but not the first one (as
+                        \ the list starts at index 6), so jump to gsec12 to skip
+                        \ the following
 
- STA horizonLine        \ If we get here then prevHorizonSection > 7, which is
-                        \ the value of horizonSection from the previous call to
-                        \ GetTrackAndMarkers, so set horizonLine = 7 ???
+ STA horizonLine        \ If we get here then the previous iteration around the
+                        \ main loop had the horizon line on one of the track
+                        \ segments in the track segment list, so set horizonLine
+                        \ to 7
 
 .gsec12
 
@@ -14361,7 +14388,8 @@ ENDIF
 
  BPL gseg7              \ If the result in (A T) is positive, then jump to gseg7
 
- SEC                    \ Set the C flag, to indicate that the result is negative
+ SEC                    \ Set the C flag, to indicate that the result is
+                        \ negative
 
 .gseg7
 
@@ -14433,8 +14461,8 @@ ENDIF
                         \ xVector3
 
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
-                        \ player's car and xVector3, and store the results in the
-                        \ track segment list at the segment list pointer
+                        \ player's car and xVector3, and store the results in
+                        \ the track segment list at the segment list pointer
                         \
                         \ Also set (A K) = (L K) = the distance between the car
                         \ and xvector3
@@ -14455,7 +14483,7 @@ ENDIF
  LDX prevSegmentIndex   \ Set X to the offset from xSegmentCoordILo of the
                         \ previous segment's 3D coordinates, so the call to
                         \ GetVergeAndMarkers uses the previous segment's verge
-                        \ and marker data for our quarter segment's calculation
+                        \ data for our quarter segment's calculation
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
  STA temp1              \ after the call to GetVergeAndMarkers (so the call
@@ -14651,7 +14679,9 @@ ENDIF
 
  CMP #&FC
  BCS mpla3
- JSR sub_C13FB
+
+ JSR ChangeDirection
+
  RTS
 
 .mpla3
@@ -14696,76 +14726,89 @@ ENDIF
 .GetTrackAndMarkers
 
  LDA #0                 \ Set horizonLine = 0, so we can calculate a new height
- STA horizonLine        \ for the horizon in the following
+ STA horizonLine        \ for the horizon in the following process
 
  JSR GetSectionAngles   \ Get the rotation and elevation angles for the inner
                         \ and outer track sections in the track section list
+                        \ and store the results in xVergeRight/Left and
+                        \ yVergeRight/Left
 
  LDA #255               \ Set edgeDistanceHi = 255, so GetSegmentAngles can set
  STA edgeDistanceHi     \ it to the distance of the nearest verge
 
- LDA #13                \ Set edgeSegmentNumber = 13
- STA edgeSegmentNumber
+ LDA #13                \ Set edgeSegmentNumber = 13, as the default value for
+ STA edgeSegmentNumber  \ the number of the segment within the track segment
+                        \ list that is closest to the player's car
 
- LDA #0                 \ Set segmentOffset, segmentDirection, and the segment
- JSR GetSegmentDetails  \ index in X for the segment in front of our car
+ LDA #0                 \ Fetch the index details of the right track segments
+ JSR GetSegmentDetails
 
- LDA #6                 \ Get the rotation and elevation angles for the right
- JSR GetSegmentAngles   \ track segment
+ LDA #6                 \ Get the rotation and elevation angles for the segments
+ JSR GetSegmentAngles   \ (and the verge marks and corner markers) along the
+                        \ right side of the track and store the results in
+                        \ xVergeRight, yVergeRight, xMarker and vergeDataRight
 
  LDA segmentListPointer \ Set leftSegmentPointer = segmentListPointer
  STA leftSegmentPointer \
                         \ So it points to the first left track segment that
-                        \ comes after the right track segments
+                        \ comes after the right track segments in the track
+                        \ segment list
 
- LDA #%10000000         \ Set segmentOffset, segmentDirection, and the segment
- JSR GetSegmentDetails  \ index in X for the segment behind our car
+ LDA #%10000000         \ Fetch the index details of the left track segments
+ JSR GetSegmentDetails
 
- LDA #46                \ Get the rotation and elevation angles for the left
- JSR GetSegmentAngles   \ track segment
+ LDA #46                \ Get the rotation and elevation angles for the segments
+ JSR GetSegmentAngles   \ (and the verge marks and corner markers) along the
+                        \ left side of the track and store the results in
+                        \ xVergeLeft, yVergeLeft, xMarker and vergeDataLeft
 
- LDA horizonSection     \ If horizonSection < 40, jump to gtrm1 to skip the
- CMP #40                \ following three instructions
- BCC gtrm1
+ LDA horizonListIndex   \ If horizonListIndex < 40, then this is a valid index
+ CMP #40                \ into the track section/segment list so jump to gtrm1
+ BCC gtrm1              \ to skip the following three instructions
 
- SEC                    \ Set horizonSection = horizonSection - 40
+ SEC                    \ Set horizonListIndex = horizonListIndex - 40
  SBC #40                \
- STA horizonSection     \ so if we set horizonSection to the index for the outer
-                        \ track coordinates, this corrects the value to the
-                        \ index for the inner coordinates
+ STA horizonListIndex   \ so if we set horizonListIndex to the index for the
+                        \ outer track coordinates, this corrects the value to
+                        \ the index for the inner coordinates
 
 .gtrm1
 
- TAY                    \ Set Y to the corrected value of horizonSection
+ TAY                    \ Set Y to the corrected value of horizonListIndex
 
- STY prevHorizonSection \ Store the horizon section index in prevHorizonSection,
+ STY prevHorizonIndex   \ Store the horizon section index in prevHorizonIndex,
                         \ so we can refer to it in the next call to
                         \ GetTrackAndMarkers
 
- LDA horizonLine        \ If horizonLine < 79, jump to gtrm2 to skip the
- CMP #79                \ following two instructions
- BCC gtrm2
+ LDA horizonLine        \ If horizonLine < 79, then the horizon line is a valid
+ CMP #79                \ number, so  jump to gtrm2 to skip the following two
+ BCC gtrm2              \ instructions
 
- LDA #78                \ Set horizonLine = 78, so horizonLine is a maximum of
- STA horizonLine        \ 78
+ LDA #78                \ Set horizonLine = 78, so the maximum value for the
+ STA horizonLine        \ horizon line is 78
 
 .gtrm2
 
  STA yVergeRight,Y      \ Set the elevation angle for the right side of the
-                        \ horizon line to the updated value of horizonLine
+                        \ horizon line in the track section/segment list to the
+                        \ updated value of horizonLine
 
  STA yVergeLeft,Y       \ Set the elevation angle for the left side of the
-                        \ horizon line to the updated value of horizonLine
+                        \ horizon line in the track section/segment list to the
+                        \ updated value of horizonLine
 
  LDA xVergeRightHi,Y    \ Set A = xVergeRightHi - xVergeLeftHi for the horizon
  SEC                    \ section
  SBC xVergeLeftHi,Y
 
  JSR Absolute8Bit       \ Set A = |A|, so A contains the arc of the track at
-                        \ the horizon (i.e. the track width at the horizon)
+                        \ the horizon (i.e. the track width on the section or
+                        \ segment at the horizon) in terms of the high bytes
 
  LSR A                  \ Set horizonTrackWidth = A / 2
- STA horizonTrackWidth
+ STA horizonTrackWidth  \
+                        \ So horizonTrackWidth contains half the width of the
+                        \ track on the horizon, in terms of the high bytes
 
  RTS                    \ Return from the subroutine
 
@@ -14782,9 +14825,12 @@ ENDIF
 \
 \   A                   The direction in which to fetch a segment:
 \
-\                         * Bit 7 clear = forwards
+\                         * Bit 7 clear = forwards (right)
 \                        
-\                         * Bit 7 set = backwards
+\                         * Bit 7 set = backwards (left)
+\
+\                       In other words, fetch the track segments from the right
+\                       or left verges, according to the way we are facing
 \
 \ Returns:
 \
@@ -15263,7 +15309,7 @@ ENDIF
                         \ height, so the track obscures the horizon and we need
                         \ to update horizonLine to this new height
 
- STY horizonSection     \ Set horizonSection to the track segment number in Y
+ STY horizonListIndex   \ Set horizonListIndex to the track segment number in Y
 
 .gmar12
 
@@ -32668,7 +32714,7 @@ ENDIF
 \       Type: Variable
 \   Category: Track
 \    Summary: The arc of the track at the horizon (i.e. the track width at the
-\             horizon)
+\             horizon), halved
 \
 \ ******************************************************************************
 
