@@ -8781,12 +8781,12 @@ ENDIF
  BEQ corn7              \ markers, so jump to corn7 to reset markersToDraw to
                         \ zero and return from the subroutine
 
- LDX L62B4,Y            \ Set X = L62B4 for marker Y
+ LDX markerListIndex,Y  \ Set X = markerListIndex for marker Y
 
  STY temp1              \ Store the marker number in temp1, so we can retrieve
                         \ it at the end of the loop
 
- LDA L6299,Y            \ If bit 5 of L6299 for marker Y is clear, then the
+ LDA markerData,Y       \ If bit 5 of markerData for marker Y is clear, then the
  AND #%00100000         \ marker is white, so skip the following two
  BEQ corn2              \ instructions
 
@@ -8796,15 +8796,15 @@ ENDIF
 
 .corn2
 
- LDA var27Hi,Y          \ Set (U A) = (var27Hi var27Lo) for marker Y
+ LDA xMarkerHi,Y        \ Set (U A) = (xMarkerHi xMarkerLo) for marker Y
  STA U
- LDA var27Lo,Y
+ LDA xMarkerLo,Y
 
  ASL A                  \ Set (U A) = (U A) << 1
- ROL U                  \           = var27 << 1
+ ROL U                  \           = xMarker << 1
 
  STA T                  \ Set (U T) = (U A)
-                        \           = var27 << 1
+                        \           = xMarker << 1
 
  CLC                    \ Set (A V) = (U A) + X-th value from xVergeRight
  ADC xVergeRightLo,X    \
@@ -12849,6 +12849,8 @@ ENDIF
 \   M                   The smaller viewing angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees
 \
+\   X                   X is preserved
+\
 \ Other entry points:
 \
 \   GetObjRotation-2    Use xPlayerCoord (Y = 0)
@@ -14143,12 +14145,17 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine works through track segments, starting from distant segments and
+\ working backwards towards the player, calculating the angles and verge data
+\ for each segment as we go, up to a maximum of 16 segments (which is the
+\ capacity of the track segment list).
+\
 \ Arguments:
 \
-\   A                   The index of the segment to update in the track segment
-\                       list, starting at 6 for the first entry in list of right
-\                       segments, and 46 for the first entry in the list of left
-\                       segments
+\   A                   The index of the first segment to update in the track
+\                       segment list, starting at 6 for the first entry in list
+\                       of right segments, and 46 for the first entry in the
+\                       list of left segments
 \
 \   X                   The offset from xSegmentCoordILo of the segment's 3D
 \                       coordinates, i.e. the segment number * 3, with:
@@ -14171,6 +14178,12 @@ ENDIF
 \
 \ Returns:
 \
+\   xVergeRight/Left    Updated rotation angles for the entries in the track
+\                       segment list (i.e. indexes 6 to 21)
+\
+\   yVergeRight/Left    Updated elevation angles for the entries in the track
+\                       segment list (i.e. indexes 6 to 21)
+\
 \   edgeDistance        The distance between the player's car and the nearest
 \                       track edge
 \
@@ -14184,6 +14197,19 @@ ENDIF
 \   edgeAngle           The rotation angle of the segment that is closest to the
 \                       player's car
 \
+\   xVergeRight/Left    Entries in the second part of the track segment list for
+\                       the coordinates of the outside of the track verge
+\                       (i.e. indexes 22 to 37, which correspond to the rotation
+\                       angles in the track segment list in indexes 6 to 21)
+\
+\   yVergeRight/Left    Elevation angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21)
+\
+\   xMarker             Distance in the x-axis between the track edge and the
+\                       corner marker for this segment (if there is one)
+\
+\   vergeDataRight/Left Data (such as colour) for this segment's verge
+\
 \ ******************************************************************************
 
 .GetSegmentAngles
@@ -14192,6 +14218,10 @@ ENDIF
 
  LDA #0                 \ Set segmentCounter = 0, to use to count visible
  STA segmentCounter     \ segments over the course of the following routine
+
+                        \ We now run the rest of the routine for each segment
+                        \ in turn, looping back to here while segments are
+                        \ visible
 
 .gseg1
 
@@ -14272,135 +14302,188 @@ ENDIF
 \       Name: GetSegmentAngles (Part 2 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Process a segment that is not visible by trying to process a
+\             segment that's one-quarter of the size
 \
 \ ******************************************************************************
 
 .gseg4
 
                         \ If we get here then the segment is not visible or the
-                        \ segment's elevation angle is negative
+                        \ segment's elevation angle is negative, so we need to
+                        \ stop processing segments
+                        \
+                        \ However, before we stop, we try to eek as much
+                        \ accuracy out of the last (not visible) segment by
+                        \ trying to process a segment that's one-quarter of the
+                        \ size, just in case this smaller segment is visible, in
+                        \ which case we at least finish with something to show
+                        \ for the last visible segment (and if not, at least we
+                        \ tried)
 
  LDA segmentCounter     \ If segmentCounter is non-zero then we have already
- BNE gseg5              \ found a visible segment, so jump to gseg5
+ BNE gseg5              \ found at least one visible segment, so jump to gseg5
 
  RTS                    \ Otherwise this is the first segment and it's not
                         \ visible, so return from the subroutine as none of the
-                        \ others will be either
+                        \ others will be either (as we are working backwards
+                        \ through the segments towards the player, so if the
+                        \ first segment is not visible, so will all the ones
+                        \ behind it)
 
 .gseg5
 
- LDA #0
+ LDA #0                 \ Set U = 0, to use as an axis counter below
  STA U
 
- LDY prevSegmentIndex
+ LDY prevSegmentIndex   \ Set Y to the offset from xSegmentCoordILo of the
+                        \ previous segment's 3D coordinates
 
- STX W
+ STX W                  \ Store the segment offset that's in X in W, so we can
+                        \ retrieve it below
+
+                        \ We now loop through all three axes, calculating the
+                        \ difference in 3D coordinates between this segment and
+                        \ the previous segment for xSegmentCoord, ySegmentCoord
+                        \ and zSegmentCoord
 
 .gseg6
 
- LDA xSegmentCoordILo,X
- SEC
- SBC xSegmentCoordILo,Y
+ LDA xSegmentCoordILo,X \ Set (A T) to the difference between the coordinate
+ SEC                    \ of the previous segment and this one, starting with
+ SBC xSegmentCoordILo,Y \ the low bytes
  STA T
 
- LDA xSegmentCoordIHi,X
+ LDA xSegmentCoordIHi,X \ And then the high bytes
  SBC xSegmentCoordIHi,Y
 
- CLC
- BPL gseg7
+ CLC                    \ Clear the C flag
 
- SEC
+ BPL gseg7              \ If the result in (A T) is positive, then jump to gseg7
+
+ SEC                    \ Set the C flag, to indicate that the result is negative
 
 .gseg7
 
- PHP
+ PHP                    \ Store the C flag on the stack, which contains the sign
+                        \ bit of the result (0 for positive, 1 for negative), so
+                        \ we can use it to rotate the correct sign but into
+                        \ (A T) in the following
 
- ROR A
- ROR T
+ ROR A                  \ Set (A T) = (A T) >> 1
+ ROR T                  \
+                        \ making sure to retain the correct sign in bit 7
 
- PLP
+ PLP                    \ Fetch the C flag from the stack, so it once again
+                        \ contains the correct sign for (A T)
 
- ROR A
- ROR T
+ ROR A                  \ Set (A T) = (A T) >> 1
+ ROR T                  \
+                        \ making sure to retain the correct sign in bit 7
 
- STA V
+ STA V                  \ Set (V T) = (A T)
+                        \
+                        \ So (V T) contains the difference in 3D coordinates,
+                        \ divided by 4, and with the correct sign retained
 
- LDX U
+ LDX U                  \ Set X to the axis counter in U
+                        \
+                        \ For clarity, the following comments will assume we are
+                        \ working with the x-axis
 
- LDA xSegmentCoordILo,Y
- CLC
- ADC T
- STA xVector3Lo,X
+ LDA xSegmentCoordILo,Y \ Set xVector3 = xSegmentCoord for previous segment
+ CLC                    \                 + (V T)
+ ADC T                  \
+ STA xVector3Lo,X       \ starting with the low bytes
 
- LDA xSegmentCoordIHi,Y
+ LDA xSegmentCoordIHi,Y \ And then the high bytes
  ADC V
  STA xVector3Hi,X
 
- INX
+ INX                    \ Increment the axis counter in X
 
- CPX #3
- BEQ gseg8
+ CPX #3                 \ If X = 3, we have done all three axes, so jump to
+ BEQ gseg8              \ gseg8
 
- STX U
+ STX U                  \ Stote the incremented value in U, so this is the same
+                        \ as incrementing U
 
- LDX W
+ LDX W                  \ Set X = W, which we set above to the segment offset
+                        \ for the current segment
 
- INY
+ INY                    \ Increment Y to point to the next axis for the previous
+                        \ segment
 
- INX
+ INX                    \ Increment X to point to the next axis for the current
+                        \ segment
 
- STX W
+ STX W                  \ Store the updated segment offset for the current
+                        \ segment in W
 
- JMP gseg6
+ JMP gseg6              \ Loop back to gseg6 to process the next axis
 
 .gseg8
 
- LDX #&FA               \ xVector3 in GetSegmentRotation
+                        \ By the time we get here, xVector3 contains the 3D
+                        \ coordinates of the previous segment, plus a quarter
+                        \ of the vector from the previous segment to the current
+                        \ segment
+
+ LDX #&FA               \ Set X = &FA so the call to GetSegmentRotation uses
+                        \ xVector3
 
  JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
-                        \ player's car and xVector3
+                        \ player's car and xVector3, and store the results in the
+                        \ track segment list at the segment list pointer
                         \
-                        \ Set Y = segmentListPointer
-                        \
-                        \ Set xVergeRight/xVergeLeft at the segment list pointer
-                        \ to the difference in rotation angle between the player
-                        \ and xVector3
-                        \
-                        \ Set (A K) = (L K) = distance between xVector3 and car
+                        \ Also set (A K) = (L K) = the distance between the car
+                        \ and xvector3
 
- JSR GetObjElevation-2  \ Calculate the segment's elevation angle, from the
-                        \ point of view of the player, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate xVector3's elevation angle, from the point
+                        \ of view of the player, returning it in A and LL
                         \
-                        \ If the object is not visible on-screen, the C flag is
+                        \ If xVector3 is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
 
- BCS gseg9              \ If the object is not visible on-screen, jump to gseg9
+ BCS gseg9              \ If xVector3 is not visible on-screen, jump to gseg9
                         \ to return from the subroutine
 
- LDX prevSegmentIndex
+                        \ If we get here then xVector3 is visible, so we can
+                        \ store the results as our final entry in the track
+                        \ segment list
+
+ LDX prevSegmentIndex   \ Set X to the offset from xSegmentCoordILo of the
+                        \ previous segment's 3D coordinates, so the call to
+                        \ GetVergeAndMarkers uses the previous segment's verge
+                        \ and marker data for our quarter segment's calculation
 
  LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
  STA temp1              \ after the call to GetVergeAndMarkers (so the call
-                        \ doesn't change the value of markersToDraw)
+                        \ doesn't change the value of markersToDraw, as we
+                        \ don't want to try drawing markers with this
+                        \ quarter-size segment)
 
- JSR GetVergeAndMarkers
+ JSR GetVergeAndMarkers \ Get the details for the previous segment's corner
+                        \ markers and verge marks and store them for this
+                        \ segment
 
  LDA temp1              \ Retrieve the value of markersToDraw that we stored
- STA markersToDraw      \ in temp1
+ STA markersToDraw      \ in temp1, so any marker calculations in the above
+                        \ call get ignored
 
- INC segmentListPointer
+ INC segmentListPointer \ Increment the segment list pointer as we just added a
+                        \ new entry to the track segment list
 
 .gseg9
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: GetSegmentAngles (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: 
+\    Summary: Process a visible segment
 \
 \ ******************************************************************************
 
@@ -14409,12 +14492,18 @@ ENDIF
                         \ If we get here then the segment's elevation angle is
                         \ positive and the segment is visible on-screen
 
- JSR GetVergeAndMarkers
+ JSR GetVergeAndMarkers \ Get the details for this segment's corner markers and
+                        \ verge marks
 
  LDA segmentCounter     \ If segmentCounter <= edgeSegmentNumber, jump to gseg13
- CMP edgeSegmentNumber
- BEQ gseg13
+ CMP edgeSegmentNumber  \ to keep checking segments, as we haven't yet gone past
+ BEQ gseg13             \ the closest segment to the player
  BCC gseg13
+
+                        \ If we get here then we have gone past the closest
+                        \ segment to the player, so we need to check whether the
+                        \ segment is within the 20-degree field of view, and
+                        \ stop when the segments become hidden from view
 
  LDY segmentListPointer \ Set Y to the segment list pointer
 
@@ -14426,8 +14515,9 @@ ENDIF
 
 .gseg11
 
- CMP #20                \ If A < 20, jump to gseg13
- BCC gseg13
+ CMP #20                \ If A < 20, then the segment is within the 20-degree
+ BCC gseg13             \ field of view, so jump to gseg13 to keep checking
+                        \ segments
 
  LDA xVergeRightHi-1,Y  \ Set A to the high byte of the rotation angle of the
                         \ previous segment's right verge
@@ -14437,56 +14527,95 @@ ENDIF
 
 .gseg12
 
- CMP #20                \ If A >= 20, jump to gseg16 to return from the
- BCS gseg16             \ subroutine
+ CMP #20                \ If A >= 20, then the previous segment was also outside
+ BCS gseg16             \ the 20-degree field of view, so jump to gseg16 to
+                        \ return from the subroutine
 
- JMP gseg4              \ Jump to gseg4 to process the segment as if it were
-                        \ not visible or with a negative elevation angle
+ JMP gseg4              \ If we get here then the current segment is outside the
+                        \ 20-degree field of view, but the previous one wasn't,
+                        \ so we jump to gseg4 to process this segment as being
+                        \ not visible
 
 .gseg13
 
- STX prevSegmentIndex
+                        \ If we get here then we have successfully processed a
+                        \ visible segment
 
- INC segmentListPointer
+ STX prevSegmentIndex   \ Store the offset from xSegmentCoordILo of this
+                        \ segment's 3D coordinates in prevSegmentIndex, to use
+                        \ in the next iteration if the next segment is not
+                        \ visible
 
- INC segmentCounter
+ INC segmentListPointer \ Increment the segment list pointer to point to the
+                        \ next entry in the list
 
- LDY segmentCounter
+ INC segmentCounter     \ Increment the segment counter to indicate that we have
+                        \ populated a visible segment (so this will become 1 if
+                        \ this is the first visible segment we have processes,
+                        \ 2 for the second visible segment, and so on)
 
- CPY #18
- BCS gseg16
+ LDY segmentCounter     \ Set Y to the number of visible segments we have
+                        \ populated so far
 
- LDA L3DD0,Y
- STA T
+ CPY #18                \ If Y >= 18, i.e. Y > 17, then Y was 16 before we
+ BCS gseg16             \ incremented it, which means we have filled the track
+                        \ segment list with 16 visible segments, so we jump to
+                        \ gseg16 to return from the subroutine to stop
+                        \ processing segments
 
- TXA
- SEC
- SBC segmentOffset
+ LDA segmentStep,Y      \ Set T to the segment step for segment number Y, so to
+ STA T                  \ get the nest segment, we step back T steps in the
+                        \ track segment buffer
+                        \
+                        \ This makes us step a long way backwards for the first
+                        \ few segments, and then make shorter steps as we get
+                        \ closer to the player
 
- CMP T
- BCS gseg14
+ TXA                    \ Set A to the segment offset that's in X
 
- TXA
- CLC
- ADC #120
+ SEC                    \ Set A = A - segmentOffset
+ SBC segmentOffset      \
+                        \ so A contains the number of the segment * 3 (as X
+                        \ contains the offset from xSegmentCoordILo, which will
+                        \ be 120 + X for the X-th outer segment coordinate, so
+                        \ subtracting segmentOffset brings the offset down to
+                        \ the number * 3, whether this is an inner or outer
+                        \ coordinate)
 
- JMP gseg15
+ CMP T                  \ If A >= T, jump to gseg14 to jump back T segments
+ BCS gseg14             \ towards the player, for the next iteration
+
+                        \ If we get here then A < T, so we can't jump back T
+                        \ segments or we will jump past the beginning of the
+                        \ track segment buffer, so we need to add 120 to wrap
+                        \ around to the end of the buffer before we can jump
+                        \ back T segments
+
+ TXA                    \ Set A to the segment offset that's in X
+
+ CLC                    \ Set A = A + 120 to wrap around to the end of the track
+ ADC #120               \ segment buffer
+
+ JMP gseg15             \ Jump to gseg15
 
 .gseg14
 
- TXA
+ TXA                    \ Set A to the segment offset that's in X
 
 .gseg15
 
- SEC
- SBC T
- TAX
+ SEC                    \ Set X = A - T
+ SBC T                  \
+ TAX                    \ So the next segment to be tested is T steps backwards
+                        \ in the track segment buffer, towards the player (so
+                        \ if T = 3, we step back one segment, or if T = 13 * 3,
+                        \ we step back 13 segments)
 
- JMP gseg1
+ JMP gseg1              \ Loop back to gseg1 to move on to the next segment
 
 .gseg16
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -14718,12 +14847,20 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetVergeAndMarkers (Part 1 of 3)
+\       Name: GetVergeAndMarkers (Part 1 of 4)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the details for a segment's corner markers and verge marks
 \
 \ ------------------------------------------------------------------------------
+\
+\ The track verge, which is shown in black-and-white or red-and-white verge
+\ marks according to the track data, extends outwards from the track edge, where
+\ the track edge is the line defined by the track vectors.
+\
+\ This routine calculates the verge colours and the coordinates of the outside
+\ of the verge, and it also calculates the coordinates and colours of the corner
+\ markers for this track segment.
 \
 \ Arguments:
 \
@@ -14740,6 +14877,21 @@ ENDIF
 \   scaleUp             The scale up factor for the segment
 \
 \   scaleDown           The scale down factor for the segment
+\
+\ Results:
+\
+\   xVergeRight/Left    Entries in the second part of the track segment list for
+\                       the coordinates of the outside of the track verge
+\                       (i.e. indexes 22 to 37, which correspond to the rotation
+\                       angles in the track segment list in indexes 6 to 21)
+\
+\   yVergeRight/Left    Elevation angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21)
+\
+\   xMarker             Distance in the x-axis between the track edge and the
+\                       corner marker for this segment (if there is one)
+\
+\   vergeDataRight/Left Data (such as colour) for this segment's verge
 \
 \ ******************************************************************************
 
@@ -14832,40 +14984,57 @@ ENDIF
                         \        1 if this is a red and white verge
 
  LDA segmentCounter     \ If segmentCounter >= 3 then jump to gmar3 to process
- CMP #3                 \ the segment's corner markers
+ CMP #3                 \ the segment's corner markers in part 2
  BCS gmar3
 
  JMP gmar9              \ Otherwise segmentCounter is 0 to 2, so jump to gmar9
                         \ to skip the corner markers and move on to the verge
-                        \ marks
+                        \ marks in part 4
 
 \ ******************************************************************************
 \
 \       Name: GetVergeAndMarkers (Part 2 of 4)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Calculate the segment's verge width and second set of coordinates
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Calculate the segment's verge width and outside verge coordinates
 \
 \ ******************************************************************************
 
 .gmar3
 
-                        \ We now calculate the following scale factor:
+                        \ We calculate the verge width as follows:
                         \
-                        \                     scaleUp
-                        \   (U A) = ----------------------------
-                        \           2 ^ (scaleDown - Y-th L3076)
+                        \   (U A) = scaleUp * 2 ^ (scaleDown - vergeScale)
                         \
-                        \ which will determine the width of the verge marks on
-                        \ the side of the track
+                        \ to determine the width of the verge marks on the side
+                        \ of the track
+                        \
+                        \ The higher the value of (U A), the wider the verge for
+                        \ this segment
+                        \
+                        \ The vergeScale factor is between 3 and 5, and scales
+                        \ the verge width differently for different track
+                        \ configurations, with larger values of vergeScale
+                        \ giving smaller verges
+                        \
+                        \ This gives the following:
+                        \
+                        \   * If both verges are black-and-white, then the
+                        \     verges are thin (vergeScale = 5), on both curves
+                        \     straight sections
+                        \
+                        \   * If this is a curve and at least one of the verges
+                        \     is red-and-white, or we're on a straight and both
+                        \     verges are red-and-white, then the verges are
+                        \     medium thickness (vergeScale = 4)
+                        \
+                        \   * If this is a straight and only one of the verges
+                        \     is red-and-white, then the verges are thick
+                        \     (vergeScale = 3)
 
- LDA scaleDown          \ Set Y = scaleDown - Y-th L3076
+ LDA scaleDown          \ Set Y = scaleDown - vergeScale
  SEC
- SBC L3076,Y
+ SBC vergeScale,Y
  TAY
 
  LDA #0                 \ Set U = 0, to use as the high byte in (U A)
@@ -14876,7 +15045,7 @@ ENDIF
                         \ So (U A) = scaleUp
 
  DEY                    \ Set Y = Y - 1
-                        \       = scaleDown - Y-th L3076 - 1
+                        \       = scaleDown - vergeScale - 1
 
                         \ We now scale (U A) by 2 ^ Y, so if Y is 0 we don't
                         \ do any scaling, if it's negative we scale down, and
@@ -14937,6 +15106,11 @@ ENDIF
  EOR directionFacing    \ If the C flag matches directionFacing, jump to gmar7
  BPL gmar7
 
+                        \ If we get here then this is the left verge, so we need
+                        \ to negate (U T) so the outside of the verge is to the
+                        \ left of the track, i.e. in a negative direction along
+                        \ the x-axis
+
  LDA #0                 \ Negate (U T), starting with the low bytes
  SEC
  SBC T
@@ -14946,18 +15120,26 @@ ENDIF
  SBC U
  STA U
 
-                        \ So we now have our scale factor:
+                        \ So we now have our verge width result:
                         \
-                        \                  scaleUp
-                        \   (U T) = ----------------------
-                        \           scaleDown - Y-th L3076
+                        \   (U T) = scaleUp * 2 ^ (scaleDown - vergeScale)
                         \
-                        \ where the sign of (U T) is ???
+                        \ where the sign of (U T) is positive for the right
+                        \ verge and negative for the left verge
 
 .gmar7
 
  LDY segmentListPointer \ Set Y to the index of the current entry in the track
                         \ segment list
+
+                        \ We now calculate the coordinates for the outside edge
+                        \ of the track verge by adding the verge width in (U T)
+                        \ to the track segment's verge coordinates, storing the
+                        \ result in the track segment list, 16 bytes after the
+                        \ corresponding track segment entry (so indexes 6 to 21
+                        \ contain the track segment list, while indexes 22 to 37
+                        \ contain the corresponding entries for the outside of
+                        \ the verge)
 
  LDA xVergeRightLo,Y    \ Set (xVergeRightHi+16 xVergeRightLo+16)
  CLC                    \      = (xVergeRightHi xVergeRightLo) + (U T)
@@ -14975,47 +15157,53 @@ ENDIF
 \   Category: Track
 \    Summary: Process the segment's corner markers
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
- LDA W                  \ If bits 3 and 4 of W are clear, then we do not show
- AND #%00011000         \ any corner markers for this segment, so jump to gmar9
- BEQ gmar9
+ LDA W                  \ If bits 3 and 4 of W are clear, which are these bits
+ AND #%00011000         \ in the segment flags:
+ BEQ gmar9              \
+                        \   * Bit 3 (show right corner markers)
+                        \   * Bit 4 (show left corner markers)
+                        \
+                        \ then we do not show any corner markers for this
+                        \ segment, so jump to gmar9 to move on to the verge
+                        \ marks in part 4
+
+                        \ If we get here then we have a marker to draw for this
+                        \ segment
 
  LDY markersToDraw      \ Set Y to the number of markers we have to draw
 
- CPY #3                 \ If Y >= 3, then we already have three markers to
- BCS gmar9              \ show, which is the maximum at any one time, so
+ CPY #3                 \ If Y >= 3, then we already have three markers ready
+ BCS gmar9              \ to show, which is the maximum at any one time, so
                         \ jump to gmar9 to skip the following
 
- LDA segmentListPointer \ Set L62B4 for the Y-th marker to segmentListPointer
- STA L62B4,Y
+ LDA segmentListPointer \ Set markerListIndex for marker Y to segmentListPointer
+ STA markerListIndex,Y
 
- LDA W                  \ Set L6299 for the Y-th marker to W
- STA L6299,Y
+ LDA W                  \ Set markerData for marker Y to the segment flags for
+ STA markerData,Y       \ this marker in W
 
  AND #1                 \ If bit 0 of W is clear, then this is a straight track
  BEQ gmar8              \ section, so jump to gmar8 to skip the following
                         \ instruction
 
-                        \ This is a curved section, so move the markers away
-                        \ from the track edge
+                        \ This is a curved section, so move the markers closer
+                        \ to the track edge by halving the distance that we
+                        \ store in xMarker
 
  LSR U                  \ Set (U T) = (U T) >> 1
  ROR T
 
 .gmar8
 
- LDA T                  \ Set (var27Hi var27Lo) for the Y-th marker to (U T)
- STA var27Lo,Y
- LDA U
- STA var27Hi,Y
+ LDA T                  \ Set (xMarkerHi xMarkerLo) for marker Y to (U T), so
+ STA xMarkerLo,Y        \ xMarker contains the width of the verge (halved if
+ LDA U                  \ this is a corner), which we can use as the x-axis
+ STA xMarkerHi,Y        \ distance from the track verge to the marker
 
  INC markersToDraw      \ Increment markersToDraw, as we have just added a new
-                        \ marker to draw
+                        \ marker to the list
 
 \ ******************************************************************************
 \
@@ -18791,70 +18979,72 @@ ENDIF
 \       Name: segmentFlagMask
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: A mask for extracting bits from the segment flag byte when
+\             processing the track verge and corner markers
 \
 \ ******************************************************************************
 
 .segmentFlagMask
 
- EQUB %00101101         \ Mask for the right verge
+ EQUB %00101101         \ Mask for the right verge, to keep the following from
+                        \ the segment flags:
+                        \
+                        \   * Bit 0 (section shape)
+                        \   * Bit 2 (colour of right verge marks)
+                        \   * Bit 3 (show right corner markers)
+                        \   * Bit 5 (corner marker colours)
 
- EQUB %00110011         \ Mask for the left verge
+ EQUB %00110011         \ Mask for the left verge, to keep the following from
+                        \ the segment flags:
+                        \
+                        \   * Bit 0 (section shape)
+                        \   * Bit 1 (colour of left verge marks)
+                        \   * Bit 4 (show left corner markers)
+                        \   * Bit 5 (corner marker colours)
 
 \ ******************************************************************************
 \
 \       Name: vergeColour
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Lookup table for converting bits 0-2 of the segment flag byte into
+\             the verge colour scheme
 \
 \ ******************************************************************************
 
 .vergeColour
 
- EQUB 0
- EQUB 0
- EQUB 1
- EQUB 1
- EQUB 1
- EQUB 1
- EQUB 1
- EQUB 1
+ EQUB 0                 \   * 0 = %000 = black right, black left, straight
+ EQUB 0                 \   * 1 = %001 = black right, black left, curve
+ EQUB 1                 \   * 2 = %010 = black right, red left,   straight
+ EQUB 1                 \   * 3 = %011 = black right, red left,   curve
+ EQUB 1                 \   * 4 = %100 = red right,   black left, straight
+ EQUB 1                 \   * 5 = %101 = red right,   black left, curve
+ EQUB 1                 \   * 6 = %110 = red right,   red left,   straight
+ EQUB 1                 \   * 7 = %111 = red right,   red left,   curve
 
 \ ******************************************************************************
 \
-\       Name: L3076
+\       Name: vergeScale
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Scales the track verges and corner markers, lower number = bigger verges and
-\ markers.
+\    Summary: Scale factors for the track verge width for different types of
+\             verge (larger value = smaller verge width)
 \
 \ ******************************************************************************
 
-.L3076
+.vergeScale
 
- EQUB 5
- EQUB 5
- EQUB 3
- EQUB 4
- EQUB 3
- EQUB 4
- EQUB 4
- EQUB 4
+ EQUB 5                 \   * 0 = %000 = black right, black left, straight
+ EQUB 5                 \   * 1 = %001 = black right, black left, curve
+ EQUB 3                 \   * 2 = %010 = black right, red left,   straight
+ EQUB 4                 \   * 3 = %011 = black right, red left,   curve
+ EQUB 3                 \   * 4 = %100 = red right,   black left, straight
+ EQUB 4                 \   * 5 = %101 = red right,   black left, curve
+ EQUB 4                 \   * 6 = %110 = red right,   red left,   straight
+ EQUB 4                 \   * 7 = %111 = red right,   red left,   curve
 
- EQUB &38, &38          \ Unused ???
+ EQUB &38, &38          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -23451,21 +23641,37 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L3DD0
+\       Name: segmentStep
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track
+\    Summary: The number of segments we step over when working backwards through
+\             the track segment buffer in GetSegmentAngles
 \
 \ ******************************************************************************
 
-.L3DD0
+.segmentStep
 
- EQUB &00, &27, &12, &09, &03, &03, &03, &03, &03, &03, &03, &03
- EQUB &03, &03, &03, &03, &03, &03
+ EQUB 0                 \ Not used, as the index into the table starts at 1
+
+ EQUB 13 * 3            \ Visible segment  1, jump back 13 segments
+ EQUB 6 * 3             \ Visible segment  2, jump back 6 segments
+ EQUB 3 * 3             \ Visible segment  3, jump back 3 segments
+ EQUB 3                 \ Visible segment  4, jump back 1 segment
+ EQUB 3                 \ Visible segment  5, jump back 1 segment
+ EQUB 3                 \ Visible segment  6, jump back 1 segment
+ EQUB 3                 \ Visible segment  7, jump back 1 segment
+ EQUB 3                 \ Visible segment  8, jump back 1 segment
+ EQUB 3                 \ Visible segment  9, jump back 1 segment
+ EQUB 3                 \ Visible segment 10, jump back 1 segment
+ EQUB 3                 \ Visible segment 11, jump back 1 segment
+ EQUB 3                 \ Visible segment 12, jump back 1 segment
+ EQUB 3                 \ Visible segment 13, jump back 1 segment
+ EQUB 3                 \ Visible segment 14, jump back 1 segment
+ EQUB 3                 \ Visible segment 15, jump back 1 segment
+ EQUB 3                 \ Visible segment 16, jump back 1 segment
+
+ EQUB 3                 \ Visible segment 17 (not used as there is a maximum of
+                        \ 16 visible segments)
 
 \ ******************************************************************************
 \
@@ -31488,21 +31694,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L6299
+\       Name: markerData
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Something to do with corner markers.
-\
-\ If bit 5 is set, the marker is red, otherwise it is white.
-\ If bit 0 is set, the marker is half size.
+\    Summary: The segment flags for each of the three corner markers
 \
 \ ******************************************************************************
 
-.L6299
+.markerData
 
  EQUB 0, 0, 0
 
@@ -31735,53 +31934,43 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62B4
+\       Name: markerListIndex
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Something to do with corner markers. The value is used as an offset into the
-\ xVergeRightLo and xVergeRightHi tables.
+\    Summary: The index of the corresponding entry in the track segment list for
+\             each of the three corner markers
 \
 \ ******************************************************************************
 
-.L62B4
+.markerListIndex
 
  EQUB 0, 0, 0
 
 \ ******************************************************************************
 \
-\       Name: var27Lo
+\       Name: xMarkerLo
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Something to do with corner markers.
+\    Summary: Low byte of the x-axis distance between the track edge and the
+\             three corner markers
 \
 \ ******************************************************************************
 
-.var27Lo
+.xMarkerLo
 
  EQUB 0, 0, 0
 
 \ ******************************************************************************
 \
-\       Name: var27Hi
+\       Name: xMarkerHi
 \       Type: Variable
 \   Category: Track
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ Something to do with corner markers.
+\    Summary: High byte of the x-axis distance between the track edge and the
+\             three corner markers
 \
 \ ******************************************************************************
 
-.var27Hi
+.xMarkerHi
 
  EQUB 0, 0, 0
 
