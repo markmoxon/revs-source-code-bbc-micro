@@ -2005,25 +2005,29 @@ ORG CODE%
 \
 \                           * 1 = curved section (i.e. multiple track vectors)
 \
-\                         * Bits 1-2: Colour of verge marks (Vcol)
+\                         * Bit 1: Colour of left verge marks (Vcol)
 \
-\                           * %00 = black and white verges on both sides
+\                           * 0 = black and white verge
 \
-\                           * %01 = red and white verge on right
+\                           * 1 = red and white verge
 \
-\                           * %10 = red and white verge on left
+\                         * Bit 2: Colour of right verge marks (Vcol)
 \
-\                           * %11 = red and white verges on both sides
+\                           * 0 = black and white verge
 \
-\                         * Bits 3-4: Corner marker left-right positions (Mlr)
+\                           * 1 = red and white verge
 \
-\                           * %00 = show no corner markers for this section
+\                         * Bit 3: Show right corner markers (Mlr)
 \
-\                           * %01 = show corner markers on right
+\                           * 0 = do not show corner markers to right of track
 \
-\                           * %10 = show corner markers on left
+\                           * 1 = show corner markers to right of track
 \
-\                           * %11 = show corner markers on both sides
+\                         * Bit 4: Show left corner markers (Mlr)
+\
+\                           * 0 = do not show corner markers to left of track
+\
+\                           * 1 = show corner markers to left of track
 \
 \                         * Bit 5: Corner marker colours (Mcol)
 \

@@ -2569,7 +2569,7 @@ ORG &0B00
 \
 \                       Y = 0 to 5 (update the right verge):
 \
-\                         * Reset vergeMarkRight to zero
+\                         * Reset vergeDataRight to zero
 \
 \                         * Subtract spinRotation from the rotation angles in
 \                           xVergeRightLo, xVergeRightHi
@@ -2581,7 +2581,7 @@ ORG &0B00
 \
 \                       Y = 0 to 5 + 40 (update the left verge):
 \
-\                         * Reset vergeMarkLeft to zero
+\                         * Reset vergeDataLeft to zero
 \
 \                         * Subtract spinRotation from the rotation angles in
 \                           xVergeLeftLo, xVergeLeftHi
@@ -2595,8 +2595,8 @@ ORG &0B00
 
 .SpinTrackSection
 
- LDA #0                 \ Set the Y-th entry in vergeMarkRight to 0
- STA vergeMarkRight,Y
+ LDA #0                 \ Set the Y-th entry in vergeDataRight to 0
+ STA vergeDataRight,Y
 
  LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinRotation
  SEC                    \
@@ -2617,9 +2617,10 @@ ORG &0B00
  BCC rott1              \ than the current horizon, so jump to rott1 to return
                         \ from the subroutine
 
- STA horizonLine        \ Otherwise this track section is higher than the current
-                        \ horizon height, so the track obscures the horizon and
-                        \ we need to update horizonLine to this new height
+ STA horizonLine        \ Otherwise this track section is higher than the
+                        \ current horizon height, so the track obscures the
+                        \ horizon and we need to update horizonLine to this
+                        \ new height
 
  STY horizonSection     \ Set horizonSection to the track section number in Y
 
@@ -2916,12 +2917,19 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ If the viewing angle is < 18.2 degrees:
+\ This routine is called with the smaller viewing angle of the object, where 0
+\ to 255 represents 0 to 45 degrees, so 103 = 18.2 degrees. The smaller viewing
+\ angle is taken from the arctan calculation for the rotation calculation in
+\ GetObjRotation, so that's the triangle whose hypoteneuse is the line between
+\ the player and the object, and whose other sides are parallel to the x-axis
+\ and z-axis.
+\
+\ If the smaller viewing angle is < 18.2 degrees, the routine does this:
 \
 \   * Set (L K) = (J I) + (H G) / 8
 \               = max + min / 8
 \
-\ If the viewing angle is >= 18.2 degrees
+\ If the smaller viewing angle is >= 18.2 degrees, the routine does this:
 \
 \   * Set (L K) = (J I) * 7/8 + (H G) / 2
 \               = max * 7/8 + min / 2
@@ -2929,8 +2937,10 @@ ORG &0B00
 \ This appears to set the distance between the object and the player's car, for
 \ the purposes of determining whether contact has been made.
 \
-\ I suspect the calculation is designed to take the long shape of the cars into
-\ consideration, given the viewing angle of the other car.
+\ I suspect the calculation is an approximation of Pythagoras that is much
+\ faster to calculate, split into small viewing angles (when the objects are
+\ close to being orthogonal to each other) and larger viewing angles (when their
+\ relative positions are closer to the diagonal). This is a guess, though.
 \
 \ Arguments:
 \
@@ -4621,15 +4631,32 @@ ORG &0B00
 
                         \ If we get here then we are quite far off the track
 
- LDA edgeAngle          \ Set A = edgeAngle
+ LDA edgeAngle          \ Set A to the rotation angle of the track segment that
+                        \ is closest to the player's car, from the point of view
+                        \ of the car
 
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |edgeAngle|
 
- CMP #96                \ If A >= 96, then the rotation angle of the nearest
- BCS cras1              \ track segment to the player is at least 17 degrees
-                        \ (0 to 255 represents 0 to 45 degrees, so 96 = 17
-                        \ degrees), so jump to cras1 to crash into the fence
+ CMP #96                \ If A >= 96, then the nearest track segment to the
+ BCS cras1              \ player is within a cone stretching out behind the car
+                        \ to 45 degrees on each side, so that's between -96 and
+                        \ +96 in the following diagram:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ If the nearest track segment is behind us in this way,
+                        \ jump to cras1 to crash into the fence
 
                         \ If we get here then we have not hit the fence but we
                         \ are off the track, so we spin out
@@ -6645,7 +6672,7 @@ ORG &0B00
                         \ If we get here then this is a curved track section and
                         \ turnCounter is zero
 
- LDA prevDriverSpeed7   \ If bit 7 of prevDriverSpeed7 is set, then jump to rlin4
+ LDA prevDriverSpeed7   \ If bit 7 of prevDriverSpeed7 is set, jump to rlin4
  BMI rlin4
 
                         \ If we get here then this is a curved track section and
@@ -6723,7 +6750,8 @@ ORG &0B00
                         \ and A is negative
 
  ADC T                  \ Set A = A + T
-                        \       = turnCounter - prevDriverSpeed06 + turnCounter / 8
+                        \       = turnCounter - prevDriverSpeed06
+                        \                     + turnCounter / 8
 
  LDA #0                 \ Set A = 0
 
@@ -8437,7 +8465,7 @@ ENDIF
 
 .P1998
 
- LDA vergeMarkRight,X
+ LDA vergeDataRight,X
  BPL C19A2
  INX
  CPX U
@@ -8451,8 +8479,8 @@ ENDIF
 .C19A5
 
  LDA #&80
- ORA vergeMarkRight,X
- STA vergeMarkRight,X
+ ORA vergeDataRight,X
+ STA vergeDataRight,X
  BMI C1979
 
 \ ******************************************************************************
@@ -8499,13 +8527,13 @@ ENDIF
  INY
  CPY L004B
  BCS C1A1F
- LDA vergeMarkRight,Y
+ LDA vergeDataRight,Y
  BMI C19D7
  LDA L004C
  CMP L0050
  BCC C19F8
  BNE C19FD
- LDA vergeMarkRight-1,Y
+ LDA vergeDataRight-1,Y
  AND #3
  BNE C1A10
  STY L0050
@@ -8521,7 +8549,7 @@ ENDIF
 
 .C19FD
 
- LDA vergeMarkRight-1,Y
+ LDA vergeDataRight-1,Y
  AND #3
  BNE C1A10
  LDA L0027
@@ -8654,7 +8682,7 @@ ENDIF
  LDY yVergeRight,X
  CPY #&50
  BCS C1B03
- LDA vergeMarkRight,X
+ LDA vergeDataRight,X
  BMI C1B03
  LDA GG
  CMP #&14
@@ -8682,7 +8710,7 @@ ENDIF
 
 .P1AD8
 
- LDA vergeMarkRight+1,X
+ LDA vergeDataRight+1,X
  BPL C1AE4
  INX
  INC U
@@ -8704,7 +8732,7 @@ ENDIF
 
 .C1AF9
 
- LDA vergeMarkRight,X
+ LDA vergeDataRight,X
  AND #3
  ORA GG
  STA backgroundColour,Y
@@ -11490,7 +11518,7 @@ IF _ACORNSOFT
 
 .gcol13
 
- LDA vergeMarkRight-1,X
+ LDA vergeDataRight-1,X
 
 .gcol14
 
@@ -11653,7 +11681,7 @@ IF _SUPERIOR
  AND #%01111111         \ Set X to bits 0-6 of A
  TAX
 
- LDA vergeMarkRight-1,X \ Set A to entry X - 1 from vergeMarkRight
+ LDA vergeDataRight-1,X \ Set A to entry X - 1 from vergeDataRight
 
 .scol7
 
@@ -13690,7 +13718,7 @@ ENDIF
  JSR SpinTrackSection   \ Apply the car's current spin to the right verge track
                         \ section in Y:
                         \
-                        \   * Reset vergeMarkRight to zero
+                        \   * Reset vergeDataRight to zero
                         \
                         \   * Subtract spinRotation from the rotation angles in
                         \     xVergeRightLo, xVergeRightHi
@@ -13705,7 +13733,7 @@ ENDIF
  JSR SpinTrackSection   \ Apply the car's current spin to the left verge track
                         \ section in T:
                         \
-                        \   * Reset vergeMarkLeft to zero
+                        \   * Reset vergeDataLeft to zero
                         \
                         \   * Subtract spinRotation from the rotation angles in
                         \     xVergeLeftLo, xVergeLeftHi
@@ -14084,6 +14112,9 @@ ENDIF
 \
 \   A                   Contains the high byte of (L K)
 \
+\   M                   The smaller viewing angle of the object, where 0 to 255
+\                       represents 0 to 45 degrees
+\
 \ ******************************************************************************
 
 .GetSectionRotation
@@ -14338,8 +14369,8 @@ ENDIF
                         \
                         \ Set (A K) = (L K) = distance between xVector3 and car
 
- JSR GetObjElevation-2  \ Calculate the segment's elevation angle, from the point
-                        \ of view of the player, returning it in A and LL
+ JSR GetObjElevation-2  \ Calculate the segment's elevation angle, from the
+                        \ point of view of the player, returning it in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
@@ -14687,7 +14718,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetVergeAndMarkers
+\       Name: GetVergeAndMarkers (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the details for a segment's corner markers and verge marks
@@ -14719,7 +14750,8 @@ ENDIF
                         \ are checking, or 1 if it's the opposite direction
                         \
                         \ This determines whether we are creating the left or
-                        \ right edge ???
+                        \ right verge, with 0 for the left verge and 1 for the
+                        \ right verge
 
  CPX #120               \ If X >= 120, jump to gmar1 to subtract 120 from the
  BCS gmar1              \ offset
@@ -14739,26 +14771,86 @@ ENDIF
 
  AND segmentFlagMask,Y  \ Extract the relevant bits of the segment's flags:
  STA W                  \ 
-                        \   W = A AND 00 1 01 10 1 if Y = 0 (same direction)
-                        \             00 1 10 01 1 if Y = 1 (different direction)
-
- AND #%00000111         \ Set Y = bits 0-2 of W, so Y is in the range 0 to 7
- TAY                    \
-                        \   Y = A AND 10 1 if car is in same direction
-                        \             01 1 if car is in a different direction
+                        \   W = A AND %00101101 if Y = 0 (right verge)
+                        \             %00110011 if Y = 1 (left verge)
                         \
-                        \ So bits 1-2 are cleared if this is not the side with
-                        \ the red and white verge marks
+                        \ So when we are processing the right verge, we extract
+                        \ these flags into W while zeroing the rest:
+                        \
+                        \   * Bit 0 (section shape)
+                        \   * Bit 2 (colour of right verge marks)
+                        \   * Bit 3 (show right corner markers)
+                        \   * Bit 5 (corner marker colours)
+                        \
+                        \ and when we are processing the left verge, we extract
+                        \ these flags into W while zeroing the rest:
+                        \
+                        \   * Bit 0 (section shape)
+                        \   * Bit 1 (colour of left verge marks)
+                        \   * Bit 4 (show left corner markers)
+                        \   * Bit 5 (corner marker colours)
 
- LDA L306E,Y            \ Set V = 0 if Y = 0 to 1 (black and white verge mark)
- STA V                  \         1 if Y = 2 to 7 (red and white verge mark)
+ AND #%00000111         \ Set Y = bits 0-2 of W, so Y is in the range 0 to 7,
+ TAY                    \ where the possible values are as follows:
+                        \
+                        \   * Y = 0 = %000 = black right, black left, straight
+                        \   * Y = 1 = %001 = black right, black left, curve
+                        \   * Y = 2 = %010 = black right, red left,   straight
+                        \   * Y = 3 = %011 = black right, red left,   curve
+                        \   * Y = 4 = %100 = red right,   black left, straight
+                        \   * Y = 5 = %101 = red right,   black left, curve
+                        \   * Y = 6 = %110 = red right,   red left,   straight
+                        \   * Y = 7 = %111 = red right,   red left,   curve
 
- LDA segmentCounter     \ If segmentCounter >= 3 then jump to gmar3
- CMP #3
+ LDA vergeColour,Y      \ When we are processing the right verge, we know bit 1
+ STA V                  \ is clear, so the possible values of Y are as follows:
+                        \
+                        \   * Y = 0 = %000 = black right, black left, straight
+                        \   * Y = 1 = %001 = black right, black left, curve
+                        \   * Y = 4 = %100 = red right,   black left, straight
+                        \   * Y = 5 = %101 = red right,   black left, curve
+                        \
+                        \ When we are processing the left verge, we know bit 2
+                        \ is clear, so the possible values of Y are as follows:
+                        \
+                        \   * Y = 0 = %000 = black right, black left, straight
+                        \   * Y = 1 = %001 = black right, black left, curve
+                        \   * Y = 2 = %010 = black right, red left,   straight
+                        \   * Y = 3 = %011 = black right, red left,   curve
+                        \
+                        \ So if Y = 0 or 1, then we know that the verge we are
+                        \ processing is black and white, otherwise it is red and
+                        \ white
+                        \
+                        \ These instructions set V to the Y-th entry in the
+                        \ vergeColour table, which contains the following:
+                        \
+                        \   * 0 when Y = 0 to 1 (black and white verge)
+                        \   * 1 when Y = 2 to 7 (red and white verge)
+                        \
+                        \ So V = 0 if this is a black and white verge
+                        \        1 if this is a red and white verge
+
+ LDA segmentCounter     \ If segmentCounter >= 3 then jump to gmar3 to process
+ CMP #3                 \ the segment's corner markers
  BCS gmar3
 
  JMP gmar9              \ Otherwise segmentCounter is 0 to 2, so jump to gmar9
-                        \ to skip the following
+                        \ to skip the corner markers and move on to the verge
+                        \ marks
+
+\ ******************************************************************************
+\
+\       Name: GetVergeAndMarkers (Part 2 of 4)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Calculate the segment's verge width and second set of coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
 
 .gmar3
 
@@ -14876,6 +14968,19 @@ ENDIF
  ADC U
  STA xVergeRightHi+16,Y
 
+\ ******************************************************************************
+\
+\       Name: GetVergeAndMarkers (Part 3 of 4)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Process the segment's corner markers
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
  LDA W                  \ If bits 3 and 4 of W are clear, then we do not show
  AND #%00011000         \ any corner markers for this segment, so jump to gmar9
  BEQ gmar9
@@ -14912,18 +15017,27 @@ ENDIF
  INC markersToDraw      \ Increment markersToDraw, as we have just added a new
                         \ marker to draw
 
+\ ******************************************************************************
+\
+\       Name: GetVergeAndMarkers (Part 4 of 4)
+\       Type: Subroutine
+\   Category: Track
+\    Summary: Store details of the segment's verge marks
+\
+\ ******************************************************************************
+
 .gmar9
 
                         \ The verge marks are either black-white-black-white
                         \ or red-white-red-white, so we now work out which of
                         \ these colours applies to this segment
 
- TXA                    \ If bit 0 of X is clear, then this is a coloured verge
+ TXA                    \ If bit 0 of X is clear, then this is a non-white verge
  AND #%00000001         \ mark, so jump to gmar10 to set A = V to use as the
- BEQ gmar10             \ vergeMarkRight for this segment
+ BEQ gmar10             \ vergeDataRight for this segment
 
  LDA #2                 \ Otherwise this is a white verge mark, so set A = 2
-                        \ to use as the vergeMarkRight for this segment
+                        \ to use as the vergeDataRight for this segment
 
  BNE gmar11             \ Jump to gmar11 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -14938,7 +15052,7 @@ ENDIF
  LDY segmentListPointer \ Set Y to the index of the current entry in the track
                         \ segment list
 
- STA vergeMarkRight,Y   \ Store A in the segment's corresponding vergeMarkRight,
+ STA vergeDataRight,Y   \ Store A in the segment's corresponding vergeDataRight,
                         \ so that's 2 for a white verge mark, 1 for a red verge
                         \ mark, and 0 for a black verge mark
 
@@ -18687,13 +18801,13 @@ ENDIF
 
 .segmentFlagMask
 
- EQUB %00101101         \ Mask for facing in the same direction
+ EQUB %00101101         \ Mask for the right verge
 
- EQUB %00110011         \ Mask for facing in the opposite direction
+ EQUB %00110011         \ Mask for the left verge
 
 \ ******************************************************************************
 \
-\       Name: L306E
+\       Name: vergeColour
 \       Type: Variable
 \   Category: Track
 \    Summary: 
@@ -18704,7 +18818,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L306E
+.vergeColour
 
  EQUB 0
  EQUB 0
@@ -30755,20 +30869,25 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: vergeMarkRight
+\       Name: vergeDataRight
 \       Type: Variable
 \   Category: Track
-\    Summary: The colour of the verge marks on the right side of the track
+\    Summary: Data (such as colour) for the verge marks on the right side of the
+\             track
 \
 \ ------------------------------------------------------------------------------
 \
-\ Gets set to 0, 1 or 2 (black, red or white).
+\   * Bits 0-1: colour of the verge mark
 \
-\ Bit 7 gets set in sub_C193E.
+\     * 0 = black
+\     * 1 = red
+\     * 2 = white
+\
+\   * Bit 7: gets set in sub_C193E
 \
 \ ******************************************************************************
 
-.vergeMarkRight
+.vergeDataRight
 
  SKIP 24
 
@@ -30788,20 +30907,25 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: vergeMarkLeft
+\       Name: vergeDataLeft
 \       Type: Variable
 \   Category: Track
-\    Summary: The colour of the verge marks on the left side of the track
+\    Summary: Data (such as colour) for the verge marks on the left side of the
+\             track
 \
 \ ------------------------------------------------------------------------------
 \
-\ Gets set to 0, 1 or 2 (black, red or white).
+\   * Bits 0-1: colour of the verge mark
 \
-\ Bit 7 gets set in sub_C193E.
+\     * 0 = black
+\     * 1 = red
+\     * 2 = white
+\
+\   * Bit 7: gets set in sub_C193E
 \
 \ ******************************************************************************
 
-.vergeMarkLeft
+.vergeDataLeft
 
  SKIP 24
 
