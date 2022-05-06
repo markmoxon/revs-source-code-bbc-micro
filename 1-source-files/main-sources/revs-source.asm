@@ -1204,14 +1204,16 @@ ORG &0100
 
 .carProgress
 
- SKIP 20                \ Lowest byte of each car's progress around the track
+ SKIP 20                \ Lowest byte of each car's progress through the segment
+                        \ it's in
                         \
                         \ This is effectively a fractional part of the car's
-                        \ progress around the track, from the starting line
+                        \ progress throught the segment, with 0 being the start
+                        \ of the segment and 255 the end of the segment
                         \
                         \ When this byte rolls over, we increment the car's
-                        \ (objProgressHi objProgressLo), so it's effectively
-                        \ (objProgressHi objProgressLo carProgress)
+                        \ segment number in (objectSegmentHi objectSegmentLo) to
+                        \ move on to the next segment
 
 .carRacingLine
 
@@ -1588,15 +1590,16 @@ ORG &0380
 
 ORG &0880
 
-.objSectionCount
+.objSegmentSectn
 
- SKIP 24                \ Each object's progress within the current track
+ SKIP 24                \ Each object's segment number within the current track
                         \ section, counting from the start of the section
                         \
-                        \ Increments along with objProgressLo as the object
+                        \ Increments along with objectSegment as the object
                         \ moves through the section, until it reaches the
-                        \ section's trackSectionSize (the section's length),
-                        \ at which point it resets to zero for the next section
+                        \ section's trackSectionSize (the section's length in
+                        \ terms of segments), at which point it resets to zero
+                        \ for the next section
 
 .totalRaceTenths
 
@@ -1614,47 +1617,43 @@ ORG &0880
 
  SKIP 16                \ These bytes appear to be unused
 
-.objProgressLo
+.objectSegmentLo
 
- SKIP 24                \ Low byte of each object's progress around the track
+ SKIP 24                \ Low byte of each object's segment, i.e. its position
+                        \ around on the track
                         \
-                        \ This is the object's position on the track, in terms
-                        \ of progress from the starting line, and is typically
-                        \ used for car objects
-                        \
-                        \ It is zero when the car is on the starting line, and
-                        \ goes up to (trackLengthHi trackLengthLo) as the car
-                        \ progresses round the track, before resetting to zero
-                        \ again at the end
+                        \ Segment 0 on the starting line, and segment numbers
+                        \ go up to (trackLengthHi trackLengthLo) as we move
+                        \ along the track, before wrapping back to zero again
+                        \ at the end of the lap
                         \
                         \ Set to (trackPracticeHi trackPracticeLo) in
                         \ ResetVariables
                         \
-                        \ For the Silverstone track, objProgress is initialised
-                        \ to &034B and has a maximum value of &0400
+                        \ For the Silverstone track, objectSegment is
+                        \ initialised to &034B and has a maximum value of &0400
                         \
-                        \ Stored as a 16-bit value (objProgressHi objProgressLo)
+                        \ Stored as a 16-bit value (objectSegmentHi
+                        \ objectSegmentLo)
 
-.objProgressHi
+.objectSegmentHi
 
- SKIP 24                \ High byte of each object's progress around the track
+ SKIP 24                \ High byte of each object's segment, i.e. its position
+                        \ around on the track
                         \
-                        \ This is the object's position on the track, in terms
-                        \ of progress from the starting line, and is typically
-                        \ used for car objects
-                        \
-                        \ It is zero when the car is on the starting line, and
-                        \ goes up to (trackLengthHi trackLengthLo) as the car
-                        \ progresses round the track, before resetting to zero
-                        \ again at the end
+                        \ Segment 0 on the starting line, and segment numbers
+                        \ go up to (trackLengthHi trackLengthLo) as we move
+                        \ along the track, before wrapping back to zero again
+                        \ at the end of the lap
                         \
                         \ Set to (trackPracticeHi trackPracticeLo) in
                         \ ResetVariables
                         \
-                        \ For the Silverstone track, objProgress is initialised
-                        \ to &034B and has a maximum value of &0400
+                        \ For the Silverstone track, objectSegment is
+                        \ initialised to &034B and has a maximum value of &0400
                         \
-                        \ Stored as a 16-bit value (objProgressHi objProgressLo)
+                        \ Stored as a 16-bit value (objectSegmentHi
+                        \ objectSegmentLo)
 
 .xSegmentCoordILo
 
@@ -4408,9 +4407,9 @@ ORG &0B00
                         \ We start by moving all the cars to the end of the
                         \ track
                         \
-                        \ In Silverstone, all the cars start at an objProgress
+                        \ In Silverstone, all the cars start at an objectSegment
                         \ value of &034B, so the following loop moves all the
-                        \ cars forwards one step at a time, until objProgress
+                        \ cars forwards one step at a time, until objectSegment
                         \ wraps round to 0 (which it does after reaching the
                         \ value of trackLength, which is &0400 for Silverstone)
 
@@ -4426,8 +4425,8 @@ ORG &0B00
 
  BPL rcar2              \ Loop back until we have processed all 20 drivers
 
- LDA objProgressLo      \ If objProgress for driver 0 is non-zero, jump back to
- ORA objProgressHi      \ rcar1 to repeat the above loop
+ LDA objectSegmentLo    \ If objectSegment for driver 0 is non-zero, jump back
+ ORA objectSegmentHi    \ to rcar1 to repeat the above loop
  BNE rcar1
 
                         \ All 20 cars are now at the end of the track
@@ -4531,9 +4530,9 @@ ORG &0B00
  LDX currentPlayer      \ Set X to the driver number of the current player
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
-                        \ to GetObjectProgress
+                        \ to CompareSegments
 
- JSR GetObjectProgress  \ Set A and T to the distance between drivers X and Y
+ JSR CompareSegments    \ Set A and T to the distance between drivers X and Y
 
  BCS rcar6              \ If the C flag is set then the cars are far apart, so
                         \ jump to rcar6 to keep moving driver 23 forwards
@@ -5734,8 +5733,8 @@ ORG &0B00
 \
 \ Straight:
 \
-\   * If driver 23's progress through the section is not in the range 1 to 9,
-\     clear bits 1, 2
+\   * If driver 23's segment number within the track section is not in the range
+\     1 to 9, clear bits 1, 2
 \
 \   * If the distance yet to cover in this section = 14 or 21, clear bit 5
 \
@@ -5759,7 +5758,7 @@ ORG &0B00
 
                         \ If we get here then this is a straight track section
 
- LDY objSectionCount+23 \ Set Y to driver 23's progress through the track
+ LDY objSegmentSectn+23 \ Set Y to driver 23's segment number within the track
                         \ section
 
  CPY #1                 \ If Y < 1, jump to sets5
@@ -5779,12 +5778,12 @@ ORG &0B00
  STA W                  \ Store A in W, so W contains:
                         \
                         \   * The current section's flags if this is a curve, or
-                        \     if this is a straight and driver 23's progress
-                        \     through the track section is in the range 1 to 9
+                        \     if this is a straight and driver 23's segment 
+                        \     number in the track section is in the range 1 to 9
                         \
                         \   * The current section's flags with bits 1 and 2
                         \     cleared otherwise (i.e. if this is a straight and
-                        \     driver 23's progress through the track section is
+                        \     driver 23's segment number in the track section is
                         \     not in the range 1 to 9)
                         \
                         \ We use W to build the flags for the new track segment
@@ -5807,7 +5806,7 @@ ORG &0B00
  LDA W                  \ Set A = W, which contains the flags we are building
                         \ for the new track segment
 
- CPY objSectionCount+23 \ If Y = driver 23's progress through the track section,
+ CPY objSegmentSectn+23 \ If Y = driver 23's segment number in the track section,
  BEQ sets10             \ then the driver is exactly halfway round the curve, so
                         \ jump to sets10 to store A in the track segment's flags
 
@@ -5819,8 +5818,8 @@ ORG &0B00
                         \ If we get here then this is a straight section and A
                         \ is set to the size of the track section for driver 23
 
- SEC                    \ Set Y = A - driver 23's progress through the track
- SBC objSectionCount+23 \ section
+ SEC                    \ Set Y = A - driver 23's segment number in the track
+ SBC objSegmentSectn+23 \ section
  TAY                    \
                         \ So Y contains the length of the track section that
                         \ driver 23 has yet to cover
@@ -6369,8 +6368,8 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves object X forwards, updating objTrackSection, objSectionCount and
-\ objProgress accordingly, as well as the lap number and lap time (but only if
+\ Moves object X forwards, updating objTrackSection, objSegmentSectn and
+\ objectSegment accordingly, as well as the lap number and lap time (but only if
 \ this is a driver and bit 7 of updateLapTimes is clear).
 \
 \ Arguments:
@@ -6396,10 +6395,10 @@ ORG &0B00
 
  LDY objTrackSection,X  \ Set Y to the track section number * 8 for object X
 
- LDA objSectionCount,X  \ Set A = objSectionCount + 1
+ LDA objSegmentSectn,X  \ Set A = objSegmentSectn + 1
  CLC                    \
  ADC #1                 \ This increments the track section counter, which keeps
-                        \ track of the object's progress through the current
+                        \ track of the object's segment number in the current
                         \ track section, so it moves forwards
 
  CMP trackSectionSize,Y \ If A < Y-th trackSectionSize, then the object is still
@@ -6436,29 +6435,29 @@ ORG &0B00
 
 .fore2
 
- STA objSectionCount,X  \ Set the track section counter to the new value
+ STA objSegmentSectn,X  \ Set the track section counter to the new value
 
-                        \ We now need to increment the object's progress in
-                        \ (objProgressHi objProgressLo)
+                        \ We now need to increment the object's segment number
+                        \ in (objectSegmentHi objectSegmentLo)
 
- INC objProgressLo,X    \ Increment (objProgressHi objProgressLo) for object X,
-                        \ starting with the low byte
+ INC objectSegmentLo,X  \ Increment (objectSegmentHi objectSegmentLo) for object
+                        \ X, starting with the low byte
 
  BNE fore3              \ And then the high byte, if the low byte overflows
- INC objProgressHi,X
+ INC objectSegmentHi,X
 
 .fore3
 
- LDA objProgressLo,X    \ If objProgress <> trackLength, then the object has not
- CMP trackLengthLo      \ yet reached the end of the track, so jump to fore4 to
- BNE fore4              \ return from the subroutine as we are done
- LDA objProgressHi,X
+ LDA objectSegmentLo,X  \ If objectSegment <> trackLength, then the object has
+ CMP trackLengthLo      \ not yet reached the end of the track, so jump to fore4
+ BNE fore4              \ to return from the subroutine as we are done
+ LDA objectSegmentHi,X
  CMP trackLengthHi
  BNE fore4
 
  LDA #0                 \ The object has just reached the end of the track, so
- STA objProgressLo,X    \ set (objProgressHi objProgressLo) = 0 to wrap round to
- STA objProgressHi,X    \ the start again
+ STA objectSegmentLo,X  \ set (objectSegmentHi objectSegmentLo) = 0 to wrap
+ STA objectSegmentHi,X  \ round to the start again
 
  JSR UpdateLaps         \ Increment the lap number and lap times for object X,
                         \ for when this object is a car
@@ -6480,8 +6479,8 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves object X backwards, updating objTrackSection, objSectionCount,
-\ objProgress and the current lap number accordingly.
+\ Moves object X backwards, updating objTrackSection, objSegmentSectn,
+\ objectSegment and the current lap number accordingly.
 \
 \ Arguments:
 \
@@ -6503,8 +6502,8 @@ ORG &0B00
 
  LDY objTrackSection,X  \ Set Y to the track section number * 8 for object X
 
- LDA objSectionCount,X  \ Set A = objSectionCount, which keeps track of the
-                        \ object's progress through the current track section
+ LDA objSegmentSectn,X  \ Set A = objSegmentSectn, which keeps track of the
+                        \ object's segment number in the current track section
 
  CLC                    \ If A is non-zero then the object can move backwards by
  BNE back2              \ one step while staying in the same track section, so
@@ -6557,56 +6556,57 @@ ORG &0B00
                         \ the object is still within the same track section, set
                         \ otherwise
 
- SEC                    \ A contains the object's progress through the current
+ SEC                    \ A contains the object's segment number in the current
  SBC #1                 \ track section, so subtract 1 to move the object
                         \ backwards
 
- STA objSectionCount,X  \ Set the track section counter to the new value
+ STA objSegmentSectn,X  \ Set the track section counter to the new value
 
 .back3
 
-                        \ We now need to decrement the object's progress in
-                        \ (objProgressHi objProgressLo)
+                        \ We now need to decrement the object's segment number
+                        \ in (objectSegmentHi objectSegmentLo)
 
- LDA objProgressLo,X    \ If the low byte of objProgress for object X is
+ LDA objectSegmentLo,X  \ If the low byte of objectSegment for object X is
  BNE back4              \ non-zero, then jump to back4 to decrement the low
                         \ byte, and we are done
 
- DEC objProgressHi,X    \ Otherwise decrement the high byte
+ DEC objectSegmentHi,X  \ Otherwise decrement the high byte
 
  BPL back4              \ If the high byte is positive, jump to back4 to
                         \ decrement the low byte to &FF, and we are done
 
                         \ If we get here then we just decremented the 16-bit
-                        \ value in (objProgressHi objProgressLo) into negative
-                        \ territory, so the object just moved backwards across
-                        \ the starting line, into the previous lap
+                        \ value in (objectSegmentHi objectSegmentLo) into
+                        \ negative territory, so the object just moved
+                        \ backwards across the starting line, into the previous
+                        \ lap
 
- LDA trackLengthLo      \ Set objProgress for driver X = trackLength
- STA objProgressLo,X    \
- LDA trackLengthHi      \ So objProgress wraps around to the progress value for
- STA objProgressHi,X    \ the end of the track, as trackLength contains the
-                        \ length of the full track (in terms of progress)
+ LDA trackLengthLo      \ Set objectSegment for driver X = trackLength
+ STA objectSegmentLo,X  \
+ LDA trackLengthHi      \ So objectSegment wraps around to the segment number
+ STA objectSegmentHi,X  \ for the end of the track, as trackLength contains the
+                        \ length of the full track (in terms of segments)
 
  CPX currentPlayer      \ If object X is not the current player, jump to back3
- BNE back3              \ to decrement the newly wrapped progress figure
+ BNE back3              \ to decrement the newly wrapped segment number
 
  LDA driverLapNumber,X  \ If the current lap number for the current player is
  BEQ back3              \ zero (i.e. this is the first lap) then jump to back3
-                        \ to decrement the newly wrapped progress figure
+                        \ to decrement the newly wrapped segment number
 
  DEC driverLapNumber,X  \ Otherwise this is not the current player's first lap,
                         \ and they just moved backwards, across the starting
                         \ line and into the previous lap, so decrement the
                         \ current lap number for the current player
 
- JMP back3              \ Jump to back3 to decrement the newly wrapped progress
-                        \ figure
+ JMP back3              \ Jump to back3 to decrement the newly wrapped segment
+                        \ number
 
 .back4
 
- DEC objProgressLo,X    \ Decrement the low byte of the object's progress to
-                        \ move them backwards
+ DEC objectSegmentLo,X  \ Decrement the low byte of the object's segment number
+                        \ to move it backwards
 
  PLP                    \ Retrieve the C flag from the stack so we can return it
                         \ from the subroutine, so it is clear if the object is
@@ -6649,7 +6649,7 @@ ORG &0B00
  LSR A                  \ curved track section, so jump to rlin2
  BCS rlin2
 
- LDA objSectionCount+23 \ If driver 23's progress through the track section is
+ LDA objSegmentSectn+23 \ If driver 23's segment number in the track section is
  CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to rlin3
  BCS rlin3              \ to move on to the next track section
 
@@ -6660,7 +6660,7 @@ ORG &0B00
                         \   * Bit 0 of thisSectionFlags is clear, so this is a
                         \     straight track section
                         \
-                        \   * Driver 23's progress through the track section is
+                        \   * Driver 23's segment number in the track section is
                         \     less than the trackSectionTurn value for the
                         \     section
                         \
@@ -7938,23 +7938,23 @@ ENDIF
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
  LDX #23                \ We now zero the 24-byte blocks at objTrackSection and
-                        \ objSectionCount, and initialise all 24 bytes in
-                        \ (objProgressHi objProgressLo), so set up a loop
+                        \ objSegmentSectn, and initialise all 24 bytes in
+                        \ (objectSegmentHi objectSegmentLo), so set up a loop
                         \ counter in X
 
  STX previousSignNumber \ Set previousSignNumber = 23
 
 .rese3
 
- LDA trackPracticeHi    \ Set the X-th byte of (objProgressHi objProgressLo) to
- STA objProgressHi,X    \ the 16-bit value in (trackPracticeHi trackPracticeLo),
+ LDA trackPracticeHi    \ Set the X-th byte of (objectSegmentHi objectSegmentLo)
+ STA objectSegmentHi,X  \ to the value of (trackPracticeHi trackPracticeLo),
  LDA trackPracticeLo    \ which is &034B for the Silverstone track
- STA objProgressLo,X
+ STA objectSegmentLo,X
 
  LDA #0                 \ Zero the X-th byte of objTrackSection
  STA objTrackSection,X
 
- STA objSectionCount,X  \ Zero the X-th byte of objSectionCount
+ STA objSegmentSectn,X  \ Zero the X-th byte of objSegmentSectn
 
  DEX                    \ Decrement the loop counter
 
@@ -12093,7 +12093,7 @@ IF _SUPERIOR
 .sub_C1FA8
 
  BCC C1FAF
- LDA objSectionCount,X
+ LDA objSegmentSectn,X
  CMP #3
 
 .C1FAF
@@ -15565,7 +15565,8 @@ ENDIF
                         \ driver X will drive straight (though we may change
                         \ this below)
 
- JSR GetCarProgress     \ Set A to the distance between drivers X and Y
+ JSR CompareCarSegments \ Set A to the number of segments between drivers X and
+                        \ Y (i.e. the race distance between the cars)
 
  BCS tact4              \ If the C flag is set then the cars are far apart, so
                         \ jump to tact18 via tact4 to update the car status byte
@@ -15985,12 +15986,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetCarProgress
+\       Name: CompareCarSegments
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate the distance between two cars, in terms of progress
-\             along the track
-\             
+\    Summary: Calculate the distance between two cars, in terms of segments and
+\             progress with the current segment
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16002,7 +16002,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetCarProgress
+.CompareCarSegments
 
  LDA carProgress,Y      \ Set the C flag according to the subtraction:
  SEC                    \
@@ -16015,16 +16015,16 @@ ENDIF
                         \ only serve to round the result to the nearest integer,
                         \ rather than giving a full 24-bit result
 
-                        \ Fall through into GetObjectProgress to calculate the
+                        \ Fall through into CompareSegments to calculate the
                         \ distance between the two cars
 
 \ ******************************************************************************
 \
-\       Name: GetObjectProgress
+\       Name: CompareSegments
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the distance between two objects, in terms of progress
-\             along the track
+\    Summary: Calculate the distance between two objects, in terms of segment
+\             numbers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16038,10 +16038,10 @@ ENDIF
 \
 \   C flag              Determines the accuracy of the arithmetic:
 \
-\                         * Clear for a 16-bit calculation using objProgress
+\                         * Clear for a 16-bit calculation using objectSegment
 \
 \                         * For a 24-bit calculation, contains the carry from
-\                           GetCarProgress above
+\                           CompareCarSegments above
 \
 \ Returns:
 \
@@ -16072,22 +16072,23 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetObjectProgress
+.CompareSegments
 
- LDA objProgressLo,Y    \ Set (A T) =   objProgress for object Y
- SBC objProgressLo,X    \             - objProgress for object X
+ LDA objectSegmentLo,Y  \ Set (A T) =   objectSegment for object Y
+ SBC objectSegmentLo,X  \             - objectSegment for object X
  STA T                  \
                         \ starting with the low bytes
 
- LDA objProgressHi,Y    \ And then the high bytes
- SBC objProgressHi,X    \
+ LDA objectSegmentHi,Y  \ And then the high bytes
+ SBC objectSegmentHi,X  \
                         \ So (A T) now contains the distance between the two
                         \ objects - let's call it distance
 
  PHP                    \ Store the status register on the stack, so the N flag
                         \ on the stack is the sign of the above subtraction, so
-                        \ it's set if objProgressHi for object Y < objProgressHi
-                        \ for object X, i.e. if object X is ahead by 256 or more
+                        \ it's set if objectSegmentHi for object Y <
+                        \ objectSegmentHi for object X, i.e. if object X is
+                        \ ahead by 256 segments or more
 
  BPL dist1              \ If the result of the subtraction was positive, jump
                         \ to dist1 to skip the following instruction
@@ -16108,15 +16109,16 @@ ENDIF
                         \ If we get here then the high byte of the distance
                         \ is non-zero, so now we need to check whether this is
                         \ down to the objects being close but either side of the
-                        \ starting line (as object progress resets to zero at
+                        \ starting line (as the segment number resets to zero at
                         \ the starting line, so objects that are on either side
-                        \ of the line will have a big difference in objProgress
-                        \ values even though they are actually close together)
+                        \ of the line will have a big difference in
+                        \ objectSegment values even though they are actually
+                        \ close together)
 
  PLA                    \ Flip the N flag in the status register on the stack
  EOR #%10000000         \ (as the N flag is bit 7 of the status register), so
  PHP                    \ the N flag on the stack is the opposite sign to the
-                        \ objProgress subtraction we did above, in other words
+                        \ objectSegment subtraction we did above, in other words
                         \ it's now clear if object X is ahead by 256 or more and
                         \ set otherwise
                         \
@@ -16283,14 +16285,14 @@ ENDIF
                         \   T = A / 4
                         \     = (trackDriverSpeed - carSpeedHi - 1) / 4
 
- LDA objSectionCount,X  \ Set A = objSectionCount - trackSectionTurn
+ LDA objSegmentSectn,X  \ Set A = objSegmentSectn - trackSectionTurn
  SEC                    \
- SBC trackSectionTurn,Y \ so this takes the driver's current progress through
+ SBC trackSectionTurn,Y \ so this takes the driver's current segment number in
                         \ the track section and subtracts the trackSectionTurn
                         \ for this track section
 
  BCS mcar11             \ If the subtraction didn't underflow, then
-                        \ objSectionCount >= trackSectionTurn, so jump to mcar11
+                        \ objSegmentSectn >= trackSectionTurn, so jump to mcar11
                         \ to skip changing the car's speed
 
  CMP T                  \ If A >= T, jump to mcar8 to apply the brakes
@@ -16489,8 +16491,8 @@ ENDIF
                         \ the next loop
 
  JSR MoveObjectForward  \ The addition overflowed, so carProgress has filled up
-                        \ and we need to update (objProgressHi objProgressLo)
-                        \ for driver X
+                        \ and we need to update (objectSegmentHi
+                        \ objectSegmentLo) for driver X
 
 .mcar13
 
@@ -16669,9 +16671,9 @@ ENDIF
  LDY #23                \ Set Y to driver 23
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
-                        \ to GetObjectProgress
+                        \ to CompareSegments
 
- JSR GetObjectProgress  \ Set A and T to the distance between driver X and
+ JSR CompareSegments    \ Set A and T to the distance between driver X and
                         \ driver 23 in object Y
 
  BCS bvis1              \ If the C flag is set then the two cars are far apart,
@@ -16766,7 +16768,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ This routine calculates the 3D coordinate of the specified car, given its
-\ progress through the current section and the racing line, as follows:
+\ progress through the current segment and the racing line, as follows:
 \
 \   [ xVector4 ]     [ xSegmentCoordI        ]   [ xTrackVectorI ]
 \   [ yVector4 ]  =  [ ySegmentCoordI mod 32 ] + [ yTrackVectorI ] * carProgress
@@ -16833,7 +16835,7 @@ ENDIF
  TAY                    \ Set Y to the track vector number of the car object
 
  LDA carProgress,X      \ Set TT to the lowest byte of the car's progress
- STA TT
+ STA TT                 \ through the current segment
 
  LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
@@ -16859,7 +16861,8 @@ ENDIF
                         \ The comments below are for the x-axis
 
  LDA TT                 \ Set U = TT
- STA U                  \       = the lowest byte of the car's progress
+ STA U                  \       = the lowest byte of the car's progress through
+                        \         the current segment
 
  LDY T                  \ Set Y to the index * 3 of the track segment that we
                         \ stored above
