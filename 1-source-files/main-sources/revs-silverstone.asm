@@ -129,8 +129,8 @@ ORG CODE%
 \ xTrackSectionOHi      High byte of the start x-coordinate of the outside verge
 \                       of each track section
 \
-\ trackSectionTurn      Progress range within the section where cars should turn
-\                       into the corner
+\ trackSectionTurn      The number of the segment at the end of the section
+\                       where cars should start turning for the next section
 \
 \ zTrackSectionOHi      High byte of the start z-coordinate of the outside verge
 \                       of each track section
@@ -2017,13 +2017,13 @@ ORG CODE%
 \
 \                           * 1 = red and white verge
 \
-\                         * Bit 3: Show right corner markers (Mlr)
+\                         * Bit 3: Show corner markers on right (Mlr)
 \
 \                           * 0 = do not show corner markers to right of track
 \
 \                           * 1 = show corner markers to right of track
 \
-\                         * Bit 4: Show left corner markers (Mlr)
+\                         * Bit 4: Show corner markers on left (Mlr)
 \
 \                           * 0 = do not show corner markers to left of track
 \
@@ -2062,8 +2062,7 @@ ORG CODE%
 \ zTrackSectionOLo      Low byte of the start z-coordinate of the outside verge
 \                       of each track section
 \
-\ trackSectionSize      The length of each track section in terms of progress in
-\                       objProgressLo
+\ trackSectionSize      The length of each track section in terms of segments
 \
 \ ******************************************************************************
 
@@ -2465,56 +2464,54 @@ ORG CODE%
 \       Name: trackLengthLo
 \       Type: Variable
 \   Category: Track data
-\    Summary: Low byte of the length of the full track (in terms of progress)
+\    Summary: Low byte of the length of the full track (in terms of segments)
 \
 \ ******************************************************************************
 
  EQUB &00               \ (trackLengthHi trackLengthLo) = &0400
                         \
-                        \ (objProgressHi objProgressLo) wraps round to 0 when it
-                        \ reaches this figure
+                        \ (objectSegmentHi objectSegmentLo) wraps round to 0
+                        \ when it reaches this figure
 
 \ ******************************************************************************
 \
 \       Name: trackLengthHi
 \       Type: Variable
 \   Category: Track data
-\    Summary: High byte of the length of the full track (in terms of progress)
+\    Summary: High byte of the length of the full track (in terms of segments)
 \
 \ ******************************************************************************
 
  EQUB &04               \ (trackLengthHi trackLengthLo) = &0400
                         \
-                        \ (objProgressHi objProgressLo) wraps round to 0 when it
-                        \ reaches this figure
+                        \ (objectSegmentHi objectSegmentLo) wraps round to 0
+                        \ when it reaches this figure
 
 \ ******************************************************************************
 \
 \       Name: trackPracticeLo
 \       Type: Variable
 \   Category: Track data
-\    Summary: Low byte of the starting point for practice laps (in terms of
-\             progress)
+\    Summary: Low byte of the starting segment for practice laps
 \
 \ ******************************************************************************
 
  EQUB &4B               \ (trackPracticeHi trackPracticeLo) = &034B
                         \
-                        \ This is out of a full track length of &0400
+                        \ This is out of a full track length of &0400 segments
 
 \ ******************************************************************************
 \
 \       Name: trackPracticeHi
 \       Type: Variable
 \   Category: Track data
-\    Summary: High byte of the starting point for practice laps (in terms of
-\             progress)
+\    Summary: High byte of the starting segment for practice laps
 \
 \ ******************************************************************************
 
  EQUB &03               \ (trackPracticeHi trackPracticeLo) = &034B
                         \
-                        \ This is out of a full track length of &0400
+                        \ This is out of a full track length of &0400 segments
 
 \ ******************************************************************************
 \

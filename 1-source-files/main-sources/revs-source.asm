@@ -124,7 +124,7 @@ ORG &0000
 
 .thisVectorNumber
 
- SKIP 1                 \ The number of the track vector for the current track
+ SKIP 1                 \ The number of the segment vector for the current track
                         \ segment, ready to store in the track segment buffer
                         \ as segmentVector
 
@@ -1534,7 +1534,7 @@ ORG &0380
 
 .segmentVector
 
- SKIP 1                 \ The track vector number for a track segment in the
+ SKIP 1                 \ The segment vector number for a track segment in the
                         \ track segment buffer
 
 .segmentSteering
@@ -1590,7 +1590,7 @@ ORG &0380
 
 ORG &0880
 
-.objSegmentSectn
+.objSectionSegmt
 
  SKIP 24                \ Each object's segment number within the current track
                         \ section, counting from the start of the section
@@ -4602,17 +4602,17 @@ ORG &0B00
  LDA #0                 \ Set segmentIndex = 0
  STA segmentIndex
 
-                        \ We now call SetTrackSegment segmentCounter times,
+                        \ We now call GetTrackSegment segmentCounter times,
                         \ where segmentCounter is the number of times we moved
                         \ driver 23 backwards in the above
 
 .rcar10
 
- JSR SetTrackSegment    \ Initialise the next track segment
+ JSR GetTrackSegment    \ Initialise the next track segment
 
  DEC segmentCounter     \ Decrement the counter in segmentCounter
 
- BNE rcar10             \ Loop back until we have called SetTrackSegment
+ BNE rcar10             \ Loop back until we have called GetTrackSegment
                         \ segmentCounter times
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
@@ -5219,7 +5219,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: SetSegmentIndex96
+\       Name: GetSegmentIndex96
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Set the segmentIndex96 index to 96 + the current track section
@@ -5227,7 +5227,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.SetSegmentIndex96
+.GetSegmentIndex96
 
  LDA segmentIndex       \ Set A = the current track segment index * 3 - 96
  SEC
@@ -5245,11 +5245,11 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: GetTrackSegment
+\       Name: GetFirstSegment
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the track section coordinates and flags from the track data
-\             and populate the current track segment
+\             and populate the first track segment
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5284,7 +5284,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.GetTrackSegment
+.GetFirstSegment
 
  LDX segmentIndex       \ Set X to the index * 3 of the current track segment
 
@@ -5292,7 +5292,7 @@ ORG &0B00
 
  STY newSectionFetched  \ Set newSectionFetched to a non-zero value to indicate
                         \ that we have juet fetched a new section (as the
-                        \ GetTrackSegment routine is only called when the
+                        \ GetFirstSegment routine is only called when the
                         \ player's car enters a new section
 
  LDA resetSectionList   \ If resetSectionList = 0, then we do not need to reset
@@ -5573,12 +5573,12 @@ ORG &0B00
 
  JSR MovePlayer         \ Drive the player's car forwards
 
-                        \ Fall through into SetTrackSegment to set up the
+                        \ Fall through into GetTrackSegment to set up the
                         \ next track segment
 
 \ ******************************************************************************
 \
-\       Name: SetTrackSegment (Part 1 of 1)
+\       Name: GetTrackSegment (Part 1 of 1)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Set up the next track segment
@@ -5588,13 +5588,13 @@ ORG &0B00
 \ This routine calculates the coordinates, flags and cornering data for the next
 \ track segment. It does this in three parts:
 \
-\   1. Initialise up the new track segment, and fetch the track vector for the
+\   1. Initialise up the new track segment, and fetch the segment vector for the
 \      new track segment
 \
 \   2. Set the flags for the new track segment
 \
-\   3. Add the track vector from part 1 to the coordinates for the current track
-\      segment to get the coordinates for the next track segment
+\   3. Add the segment vector from part 1 to the coordinates for the current
+\      track segment to get the coordinates for the next track segment
 \
 \ This part does the following:
 \
@@ -5604,12 +5604,12 @@ ORG &0B00
 \
 \   * Set pastHalfway
 \
-\   * Set (SS T), (TT U) and (UU V) to the xTrackVectorI, yTrackVectorI and
-\     zTrackVectorI vectors
+\   * Set (SS T), (TT U) and (UU V) to the xTrackSegmentI, yTrackSegmentI and
+\     zTrackSegmentI vectors
 \
 \ ******************************************************************************
 
-.SetTrackSegment
+.GetTrackSegment
 
  LDA segmentIndex       \ Set A to the index * 3 of the current track segment
 
@@ -5661,10 +5661,10 @@ ORG &0B00
  BCC sets4              \ If driver 23 is still in the same track section, jump
                         \ to sets4
 
- JSR GetTrackSegment    \ Otherwise we just moved into a new track section, so
+ JSR GetFirstSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
-                        \ track data and populate the current track segment,
-                        \ setting thisVectorNumber to the number of the track
+                        \ track data and populate the first track segment,
+                        \ setting thisVectorNumber to the number of the segment
                         \ vector for the new track segment
 
  JMP sets13             \ Jump to sets13 to finish setting up the track segment,
@@ -5686,23 +5686,23 @@ ORG &0B00
  BCC sets4              \ If driver 23 is still in the same track section, jump
                         \ to sets4
 
- JSR GetTrackSegment    \ Otherwise we just moved into a new track section, so
+ JSR GetFirstSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
-                        \ track data and populate the current track segment,
-                        \ setting thisVectorNumber to the number of the track
+                        \ track data and populate the first track segment,
+                        \ setting thisVectorNumber to the number of the segment
                         \ vector for the new track segment
 
 .sets4
 
- LDY thisVectorNumber   \ Set Y to the number of the track vector for the new
+ LDY thisVectorNumber   \ Set Y to the number of the segment vector for the new
                         \ track segment
 
  JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the coordinates of
-                        \ the track vector for the new track segment, so:
+                        \ the segment vector for the new track segment, so:
                         \
-                        \   [ (SS T) ]   [ xTrackVectorI ]
-                        \   [ (TT U) ] = [ yTrackVectorI ]
-                        \   [ (UU V) ]   [ zTrackVectorI ]
+                        \   [ (SS T) ]   [ xTrackSegmentI ]
+                        \   [ (TT U) ] = [ yTrackSegmentI ]
+                        \   [ (UU V) ]   [ zTrackSegmentI ]
                         \
                         \ In other words, they contain the vector that we need
                         \ to add to the previous track segment's coordinates in
@@ -5713,7 +5713,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: SetTrackSegment (Part 2 of 3)
+\       Name: GetTrackSegment (Part 2 of 3)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Set the flags for the new track segment
@@ -5758,7 +5758,7 @@ ORG &0B00
 
                         \ If we get here then this is a straight track section
 
- LDY objSegmentSectn+23 \ Set Y to driver 23's segment number within the track
+ LDY objSectionSegmt+23 \ Set Y to driver 23's segment number within the track
                         \ section
 
  CPY #1                 \ If Y < 1, jump to sets5
@@ -5806,9 +5806,10 @@ ORG &0B00
  LDA W                  \ Set A = W, which contains the flags we are building
                         \ for the new track segment
 
- CPY objSegmentSectn+23 \ If Y = driver 23's segment number in the track section,
- BEQ sets10             \ then the driver is exactly halfway round the curve, so
-                        \ jump to sets10 to store A in the track segment's flags
+ CPY objSectionSegmt+23 \ If Y = driver 23's segment number in the track
+ BEQ sets10             \ section, then the driver is exactly halfway round the
+                        \ curve, so jump to sets10 to store A in the track
+                        \ segment's flags
 
  BNE sets8              \ Otherwise jump to sets8 to clear bits 3-5 of A before
                         \ storing it in the track segment's flags
@@ -5819,7 +5820,7 @@ ORG &0B00
                         \ is set to the size of the track section for driver 23
 
  SEC                    \ Set Y = A - driver 23's segment number in the track
- SBC objSegmentSectn+23 \ section
+ SBC objSectionSegmt+23 \ section
  TAY                    \
                         \ So Y contains the length of the track section that
                         \ driver 23 has yet to cover
@@ -5859,7 +5860,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: SetTrackSegment (Part 3 of 3)
+\       Name: GetTrackSegment (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Set the inner and outer track coordinates for the new track
@@ -5870,16 +5871,16 @@ ORG &0B00
 \ This part calculates the inner track section coordinates for the new track
 \ segment, as follows:
 \
-\   [ xSegmentCoordI ]   [ previous xSegmentCoordI ]   [ xTrackVectorI ]
-\   [ ySegmentCoordI ] = [ previous ySegmentCoordI ] + [ yTrackVectorI ]
-\   [ zSegmentCoordI ]   [ previous zSegmentCoordI ]   [ zTrackVectorI ]
+\   [ xSegmentCoordI ]   [ previous xSegmentCoordI ]   [ xTrackSegmentI ]
+\   [ ySegmentCoordI ] = [ previous ySegmentCoordI ] + [ yTrackSegmentI ]
+\   [ zSegmentCoordI ]   [ previous zSegmentCoordI ]   [ zTrackSegmentI ]
 \
 \ It then calculates the outer track section coordinates for the new track
 \ segment, as follows:
 \
-\   [ xSegmentCoordO ]   [ xSegmentCoordI ]   [ xTrackVectorO ]
-\   [ ySegmentCoordO ] = [ ySegmentCoordI ] + [       0       ] * 4
-\   [ zSegmentCoordO ]   [ zSegmentCoordI ]   [ zTrackVectorO ]
+\   [ xSegmentCoordO ]   [ xSegmentCoordI ]   [ xTrackSegmentO ]
+\   [ ySegmentCoordO ] = [ ySegmentCoordI ] + [        0       ] * 4
+\   [ zSegmentCoordO ]   [ zSegmentCoordI ]   [ zTrackSegmentO ]
 \
 \ ******************************************************************************
 
@@ -5906,9 +5907,9 @@ ORG &0B00
                         \   [ ySegmentCoordI ] = [ previous ySegmentCoordI ]
                         \   [ zSegmentCoordI ]   [ previous zSegmentCoordI ]
                         \
-                        \                        [ xTrackVectorI ]
-                        \                      + [ yTrackVectorI ]
-                        \                        [ zTrackVectorI ]
+                        \                        [ xTrackSegmentI ]
+                        \                      + [ yTrackSegmentI ]
+                        \                        [ zTrackSegmentI ]
 
  JSR CopySectionData    \ Copy the X-th ySegmentCoordI to ySegmentCoordO
 
@@ -5919,15 +5920,15 @@ ORG &0B00
                         \   [ ySegmentCoordO ] = [ ySegmentCoordI ]
                         \   [ zSegmentCoordO ]   [ zSegmentCoordI ]
                         \
-                        \                        [ xTrackVectorO ]
-                        \                      + [       0       ] * 4
-                        \                        [ zTrackVectorO ]
+                        \                        [ xTrackSegmentO ]
+                        \                      + [        0       ] * 4
+                        \                        [ zTrackSegmentO ]
                         \
                         \ Note that we don't have to do the y-coordinate
                         \ addition, as ySegmentCoordO was already set to
                         \ ySegmentCoordI when the track segment was set up
 
- LDY thisVectorNumber   \ Set Y to the number of the track vector for the new
+ LDY thisVectorNumber   \ Set Y to the number of the segment vector for the new
                         \ track segment
 
  LDA #0                 \ Set SS = 0, to use as the high byte in (SS A) below
@@ -5935,8 +5936,8 @@ ORG &0B00
 
  STA UU                 \ Set UU = 0, to use as the high byte in (UU A) below
 
- LDA xTrackVectorO,Y    \ Set A = the 3D x-coordinate of the outer track vector
-                        \ for the new track segment
+ LDA xTrackSegmentO,Y   \ Set A = the 3D x-coordinate of the outer segment
+                        \ vector for the new track segment
 
  BPL sets11             \ If A is negative, decrement SS to &FF so (SS A) has
  DEC SS                 \ the correct sign
@@ -5944,7 +5945,7 @@ ORG &0B00
 .sets11
 
  ASL A                  \ Set (SS A) = (SS A) * 4
- ROL SS                 \            = xTrackVectorO * 4
+ ROL SS                 \            = xTrackSegmentO * 4
  ASL A
  ROL SS
 
@@ -5956,8 +5957,8 @@ ORG &0B00
  ADC xSegmentCoordIHi,X
  STA xSegmentCoordOHi,X
 
- LDA zTrackVectorO,Y    \ Set A = the z-coordinate of the outer track vector for
-                        \ the new track segment
+ LDA zTrackSegmentO,Y   \ Set A = the z-coordinate of the outer segment vector
+                        \ for the new track segment
 
  BPL sets12             \ If A is negative, decrement UU to &FF so (UU A) has
  DEC UU                 \ the correct sign
@@ -5965,7 +5966,7 @@ ORG &0B00
 .sets12
 
  ASL A                  \ Set (UU A) = (UU A) * 4
- ROL UU                 \            = zTrackVectorO * 4
+ ROL UU                 \            = zTrackSegmentO * 4
  ASL A
  ROL UU
 
@@ -5978,7 +5979,7 @@ ORG &0B00
  STA zSegmentCoordOHi,X
 
  JSR UpdateCurveVector  \ If this is a curved track section, update the value of
-                        \ thisVectorNumber to the next track vector along the
+                        \ thisVectorNumber to the next segment vector along the
                         \ track in the direction we are facing
 
 .sets13
@@ -5986,12 +5987,12 @@ ORG &0B00
  LDX segmentIndex       \ Set X to the index * 3 of the new track segment
 
  LDA thisVectorNumber   \ Set segmentVector for the new track segment to the
- STA segmentVector,X    \ number of the track vector for the track section
+ STA segmentVector,X    \ number of the segment vector for the track section
                         \ (which will be unchanged from the previous section if
-                        \ this is a straight, or the next track vector if this
+                        \ this is a straight, or the next segment vector if this
                         \ is a curve)
 
- JSR SetSegmentIndex96  \ Update the segmentIndex96 index to be 96 ahead of
+ JSR GetSegmentIndex96  \ Update the segmentIndex96 index to be 96 ahead of
                         \ segmentIndex
 
  JSR GetBestRacingLine  \ Set segmentSteering for the new track segment to the
@@ -6004,7 +6005,7 @@ ORG &0B00
 \       Name: UpdateCurveVector
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Move to the next track vector along in the direction we are
+\    Summary: Move to the next segment vector along in the direction we are
 \             facing, but only for curved track sections
 \
 \ ******************************************************************************
@@ -6025,13 +6026,14 @@ ORG &0B00
 \       Name: UpdateVectorNumber
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Move to the next track vector along in the direction we are facing
+\    Summary: Move to the next segment vector along the track in the direction
+\             we are facing
 \
 \ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
-\   thisVectorNumber    Set to the number of the next track vector along the
+\   thisVectorNumber    Set to the number of the next segment vector along the
 \                       track in the direction in which we are facing
 \
 \ ******************************************************************************
@@ -6041,9 +6043,9 @@ ORG &0B00
  LDA directionFacing    \ If our car is facing backwards, jump to uvec1
  BMI uvec1
 
- LDY thisVectorNumber   \ Set Y to the current track vector number
+ LDY thisVectorNumber   \ Set Y to the current segment vector number
 
- INY                    \ Increment Y to point to the next track vector number
+ INY                    \ Increment Y to point to the next segment vector number
                         \ along the track
 
  CPY trackVectorCount   \ If Y <> trackVectorCount, then we have not reached the
@@ -6060,17 +6062,18 @@ ORG &0B00
 
                         \ If we get here then our car is facing backwards
 
- LDY thisVectorNumber   \ Set Y to the current track vector number
+ LDY thisVectorNumber   \ Set Y to the current segment vector number
 
- BNE uvec2              \ If Y <> 0, then we are not on the first track vector,
-                        \ so jump to uvec2 to decrement to the previous vector
+ BNE uvec2              \ If Y <> 0, then we are not on the first segment
+                        \ vector, so jump to uvec2 to decrement to the previous
+                        \ vector
 
  LDY trackVectorCount   \ Set Y = trackVectorCount, so we wrap around to the
                         \ last vector
 
 .uvec2
 
- DEY                    \ Decrement Y to point to the previous track vector
+ DEY                    \ Decrement Y to point to the previous segment vector
                         \ number, i.e. backwards along the track
 
 .uvec3
@@ -6192,7 +6195,7 @@ ORG &0B00
  STA directionFacing
 
  JSR UpdateCurveVector  \ If this is a curved track section, update the value of
-                        \ thisVectorNumber to the next track vector along the
+                        \ thisVectorNumber to the next segment vector along the
                         \ track in the new direction we are facing
 
  STX segmentCounter     \ We now want to initialise X track segments in the new
@@ -6201,7 +6204,7 @@ ORG &0B00
 
 .turn1
 
- JSR SetTrackSegment    \ Initialise the next track segment
+ JSR GetTrackSegment    \ Initialise the next track segment
 
  DEC segmentCounter     \ Decrement the loop counter
 
@@ -6272,13 +6275,13 @@ ORG &0B00
 \
 \ Returns:
 \
-\   (SS T)              The Y-th entry from xTrackVectorI as a 16-bit signed
+\   (SS T)              The Y-th entry from xTrackSegmentI as a 16-bit signed
 \                       integer
 \
-\   (TT U)              The Y-th entry from yTrackVectorI as a 16-bit signed
+\   (TT U)              The Y-th entry from yTrackSegmentI as a 16-bit signed
 \                       integer
 \
-\   (UU V)              The Y-th entry from zTrackVectorI as a 16-bit signed
+\   (UU V)              The Y-th entry from zTrackSegmentI as a 16-bit signed
 \                       integer
 \
 \ ******************************************************************************
@@ -6290,7 +6293,7 @@ ORG &0B00
  STA TT
  STA UU
 
- LDA xTrackVectorI,Y    \ Set T = the Y-th entry from xTrackVectorI
+ LDA xTrackSegmentI,Y   \ Set T = the Y-th entry from xTrackSegmentI
  STA T
 
  BPL coor1              \ If the byte we just fetched is negative, decrement
@@ -6299,7 +6302,7 @@ ORG &0B00
 
 .coor1
 
- LDA yTrackVectorI,Y    \ Set U = the Y-th entry from yTrackVectorI
+ LDA yTrackSegmentI,Y   \ Set U = the Y-th entry from yTrackSegmentI
  STA U
 
  BPL coor2              \ If the byte we just fetched is negative, decrement
@@ -6308,7 +6311,7 @@ ORG &0B00
 
 .coor2
 
- LDA zTrackVectorI,Y    \ Set V = the Y-th entry from zTrackVectorI
+ LDA zTrackSegmentI,Y   \ Set V = the Y-th entry from zTrackSegmentI
  STA V
 
  BPL coor3              \ If the byte we just fetched is negative, decrement
@@ -6368,7 +6371,7 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves object X forwards, updating objTrackSection, objSegmentSectn and
+\ Moves object X forwards, updating objTrackSection, objSectionSegmt and
 \ objectSegment accordingly, as well as the lap number and lap time (but only if
 \ this is a driver and bit 7 of updateLapTimes is clear).
 \
@@ -6395,7 +6398,7 @@ ORG &0B00
 
  LDY objTrackSection,X  \ Set Y to the track section number * 8 for object X
 
- LDA objSegmentSectn,X  \ Set A = objSegmentSectn + 1
+ LDA objSectionSegmt,X  \ Set A = objSectionSegmt + 1
  CLC                    \
  ADC #1                 \ This increments the track section counter, which keeps
                         \ track of the object's segment number in the current
@@ -6435,7 +6438,7 @@ ORG &0B00
 
 .fore2
 
- STA objSegmentSectn,X  \ Set the track section counter to the new value
+ STA objSectionSegmt,X  \ Set the track section counter to the new value
 
                         \ We now need to increment the object's segment number
                         \ in (objectSegmentHi objectSegmentLo)
@@ -6479,7 +6482,7 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves object X backwards, updating objTrackSection, objSegmentSectn,
+\ Moves object X backwards, updating objTrackSection, objSectionSegmt,
 \ objectSegment and the current lap number accordingly.
 \
 \ Arguments:
@@ -6502,7 +6505,7 @@ ORG &0B00
 
  LDY objTrackSection,X  \ Set Y to the track section number * 8 for object X
 
- LDA objSegmentSectn,X  \ Set A = objSegmentSectn, which keeps track of the
+ LDA objSectionSegmt,X  \ Set A = objSectionSegmt, which keeps track of the
                         \ object's segment number in the current track section
 
  CLC                    \ If A is non-zero then the object can move backwards by
@@ -6560,7 +6563,7 @@ ORG &0B00
  SBC #1                 \ track section, so subtract 1 to move the object
                         \ backwards
 
- STA objSegmentSectn,X  \ Set the track section counter to the new value
+ STA objSectionSegmt,X  \ Set the track section counter to the new value
 
 .back3
 
@@ -6649,7 +6652,7 @@ ORG &0B00
  LSR A                  \ curved track section, so jump to rlin2
  BCS rlin2
 
- LDA objSegmentSectn+23 \ If driver 23's segment number in the track section is
+ LDA objSectionSegmt+23 \ If driver 23's segment number in the track section is
  CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to rlin3
  BCS rlin3              \ to move on to the next track section
 
@@ -7938,7 +7941,7 @@ ENDIF
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
  LDX #23                \ We now zero the 24-byte blocks at objTrackSection and
-                        \ objSegmentSectn, and initialise all 24 bytes in
+                        \ objSectionSegmt, and initialise all 24 bytes in
                         \ (objectSegmentHi objectSegmentLo), so set up a loop
                         \ counter in X
 
@@ -7954,7 +7957,7 @@ ENDIF
  LDA #0                 \ Zero the X-th byte of objTrackSection
  STA objTrackSection,X
 
- STA objSegmentSectn,X  \ Zero the X-th byte of objSegmentSectn
+ STA objSectionSegmt,X  \ Zero the X-th byte of objSectionSegmt
 
  DEX                    \ Decrement the loop counter
 
@@ -12093,7 +12096,7 @@ IF _SUPERIOR
 .sub_C1FA8
 
  BCC C1FAF
- LDA objSegmentSectn,X
+ LDA objSectionSegmt,X
  CMP #3
 
 .C1FAF
@@ -14902,7 +14905,7 @@ ENDIF
 \
 \ The track verge, which is shown in black-and-white or red-and-white verge
 \ marks according to the track data, extends outwards from the track edge, where
-\ the track edge is the line defined by the track vectors.
+\ the track edge is the line defined by the segment vectors.
 \
 \ This routine calculates the verge colours and the coordinates of the outside
 \ of the verge, and it also calculates the coordinates and colours of the corner
@@ -16285,14 +16288,14 @@ ENDIF
                         \   T = A / 4
                         \     = (trackDriverSpeed - carSpeedHi - 1) / 4
 
- LDA objSegmentSectn,X  \ Set A = objSegmentSectn - trackSectionTurn
+ LDA objSectionSegmt,X  \ Set A = objSectionSegmt - trackSectionTurn
  SEC                    \
  SBC trackSectionTurn,Y \ so this takes the driver's current segment number in
                         \ the track section and subtracts the trackSectionTurn
                         \ for this track section
 
  BCS mcar11             \ If the subtraction didn't underflow, then
-                        \ objSegmentSectn >= trackSectionTurn, so jump to mcar11
+                        \ objSectionSegmt >= trackSectionTurn, so jump to mcar11
                         \ to skip changing the car's speed
 
  CMP T                  \ If A >= T, jump to mcar8 to apply the brakes
@@ -16770,23 +16773,23 @@ ENDIF
 \ This routine calculates the 3D coordinate of the specified car, given its
 \ progress through the current segment and the racing line, as follows:
 \
-\   [ xVector4 ]     [ xSegmentCoordI        ]   [ xTrackVectorI ]
-\   [ yVector4 ]  =  [ ySegmentCoordI mod 32 ] + [ yTrackVectorI ] * carProgress
-\   [ zVector4 ]     [ zSegmentCoordI        ]   [ zTrackVectorI ]
+\   [ xVector4 ]   [ xSegmentCoordI        ]   [ xTrackSegmentI ]
+\   [ yVector4 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
+\   [ zVector4 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
 \
-\                    [ xTrackVectorO ]
-\                  + [       0       ] * carRacingLine * 4
-\                    [ zTrackVectorO ]
+\                   [ xTrackSegmentO ]
+\                 + [        0       ] * carRacingLine * 4
+\                   [ zTrackSegmentO ]
 \
-\                    [  0  ]
-\                  + [ 144 ]
-\                    [  0  ]
+\                   [  0  ]
+\                 + [ 144 ]
+\                   [  0  ]
 \
 \ In the above:
 \
-\   * trackVectorI is the inner track vector for the car's position
+\   * xTrackSegmentI is the inner segment vector for the car's position
 \
-\   * trackVectorO is the outer track vector for the car's position
+\   * xTrackSegmentO is the outer segment vector for the car's position
 \
 \   * xSegmentCoordI is the coordinate for the start of the car's track segment
 \
@@ -16796,9 +16799,9 @@ ENDIF
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
 \
-\   [ xVector4 ]   [ xSegmentCoordI        ]   [ xTrackVectorI ]
-\   [ yVector4 ] = [ ySegmentCoordI mod 32 ] + [ yTrackVectorI ] * carProgress
-\   [ zVector4 ]   [ zSegmentCoordI        ]   [ zTrackVectorI ]
+\   [ xVector4 ]   [ xSegmentCoordI        ]   [ xTrackSegmentI ]
+\   [ yVector4 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
+\   [ zVector4 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
 \
 \ Arguments:
 \
@@ -16823,16 +16826,16 @@ ENDIF
 
 .BuildCarObjects
 
- LDA segmentVector,Y    \ Fetch the track vector number for track segment Y,
-                        \ which gives us the track vector number of the car
+ LDA segmentVector,Y    \ Fetch the segment vector number for track segment Y,
+                        \ which gives us the segment vector number of the car
                         \ object we want to build
 
- STA yStore1            \ Store the track vector number in yStore1 so we can
+ STA yStore1            \ Store the segment vector number in yStore1 so we can
                         \ retrieve it in parts 2 and 3
 
  STY T                  \ Store the index * 3 of the track segment in T
 
- TAY                    \ Set Y to the track vector number of the car object
+ TAY                    \ Set Y to the segment vector number of the car object
 
  LDA carProgress,X      \ Set TT to the lowest byte of the car's progress
  STA TT                 \ through the current segment
@@ -16840,19 +16843,19 @@ ENDIF
  LDA carRacingLine,X    \ Set UU to the car's current racing line
  STA UU
 
- LDA xTrackVectorI,Y    \ Set VV to the 3D x-coordinate of the inner track
+ LDA xTrackSegmentI,Y   \ Set VV to the 3D x-coordinate of the inner segment
  STA VV                 \ vector for the car object
 
- LDA yTrackVectorI,Y    \ Set VV+1 to the 3D y-coordinate of the inner track
+ LDA yTrackSegmentI,Y   \ Set VV+1 to the 3D y-coordinate of the inner segment
  STA VV+1               \ vector for the car object
 
- LDA zTrackVectorI,Y    \ Set VV+2 to the 3D z-coordinate of the inner track
+ LDA zTrackSegmentI,Y   \ Set VV+2 to the 3D z-coordinate of the inner segment
  STA VV+2               \ vector for the car object
 
                         \ We now calculate the following:
                         \
                         \   xVector4 =   xSegmentCoordI
-                        \              + trackVectorI * carProgress
+                        \              + xTrackSegmentI * carProgress
 
  LDX #0                 \ We are about to work our way through the three axes,
                         \ so set X = 0 to use as an axis counter, working
@@ -16872,7 +16875,7 @@ ENDIF
  LDA #0                 \ Set (V A) = 0
  STA V
 
- LDA VV,X               \ Set A to the x-coordinate of the inner track vector
+ LDA VV,X               \ Set A to the x-coordinate of the inner segment vector
 
                         \ We now calculate (V A T) = A * U, making sure we get
                         \ the signs right
@@ -16912,7 +16915,7 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = trackVectorI * carProgress
+                        \           = xTrackSegmentI * carProgress
                         \
                         \ We now add (V A) to the Y-th entry in xSegmentCoordI,
                         \ which is the xSegmentCoordI entry for the track
@@ -16970,9 +16973,9 @@ ENDIF
 \ This part adds in the vector from the inside edge of the track to the car,
 \ i.e. the second part of the above:
 \
-\   [ xVector4 ]   [ xVector4 ]   [ xTrackVectorO ]
-\   [ yVector4 ] = [ yVector4 ] + [       0       ] * carRacingLine * 4
-\   [ zVector4 ]   [ zVector4 ]   [ zTrackVectorO ]
+\   [ xVector4 ]   [ xVector4 ]   [ xTrackSegmentO ]
+\   [ yVector4 ] = [ yVector4 ] + [        0       ] * carRacingLine * 4
+\   [ zVector4 ]   [ zVector4 ]   [ zTrackSegmentO ]
 \
 \                                 [  0  ]
 \                               + [ 144 ]
@@ -16983,23 +16986,25 @@ ENDIF
                         \ We start by calculating the following:
                         \
                         \   xVector4 =   xSegmentCoordI
-                        \              + trackVectorO * carRacingLine * 4
+                        \              + xTrackSegmentO * carRacingLine * 4
                         \
                         \ for the x-axis and z-axis only
 
- LDY yStore1            \ Set Y to the track vector number that we stored above
+ LDY yStore1            \ Set Y to the segment vector number that we stored
+                        \ above
 
- LDA xTrackVectorO,Y    \ Set VV to the 3D x-coordinate of the outer track
+ LDA xTrackSegmentO,Y   \ Set VV to the 3D x-coordinate of the outer segment
  STA VV                 \ vector for the car object
 
- LDA zTrackVectorO,Y    \ Set VV+2 to the 3D x-coordinate of the outer track
+ LDA zTrackSegmentO,Y   \ Set VV+2 to the 3D x-coordinate of the outer segment
  STA VV+2               \ vector for the car object
 
                         \ Note that VV+1 still contains the y-coordinate for the
-                        \ inner track vector, which we can reuse as the height
+                        \ inner segment vector, which we can reuse as the height
                         \ of the track from side-to-side is always the same,
-                        \ i.e. yTrackVectorI = yTrackVectorO for the same vector
-                        \ which means the track is always level along the y-axis
+                        \ i.e. yTrackSegmentI = yTrackSegmentO for the same
+                        \ vector which means the track is always level along the
+                        \ y-axis
 
  LDX #0                 \ We are about to work our way through the three axes,
                         \ so set X = 0 to use as an axis counter, working
@@ -17015,7 +17020,7 @@ ENDIF
  LDA #0                 \ Set (V A) = 0
  STA V
 
- LDA VV,X               \ Set A to the x-coordinate of the outer track vector
+ LDA VV,X               \ Set A to the x-coordinate of the outer segment vector
 
                         \ We now calculate (V A T) = A * U, making sure we get
                         \ the signs right
@@ -17055,10 +17060,10 @@ ENDIF
                         \ By this point, we have the following, signed result:
                         \
                         \   (V A T) = A * U
-                        \           = trackVectorO * carRacingLine
+                        \           = xTrackSegmentO * carRacingLine
 
  ASL A                  \ Set (V A) = (V A) * 4
- ROL V                  \           = trackVectorO * carRacingLine * 4
+ ROL V                  \           = xTrackSegmentO * carRacingLine * 4
  ASL A
  ROL V
 
@@ -17106,17 +17111,17 @@ ENDIF
 \ close enough and is visible), then we calculate the coordinates for the three
 \ extra objects as follows:
 \
-\                     [ xVector4 ]   [ xTrackVectorI ]
-\   Front tyres =     [ yVector4 ] + [ yTrackVectorI ] / 2
-\                     [ zVector4 ]   [ zTrackVectorI ]
+\                     [ xVector4 ]   [ xTrackSegmentI ]
+\   Front tyres =     [ yVector4 ] + [ yTrackSegmentI ] / 2
+\                     [ zVector4 ]   [ zTrackSegmentI ]
 \
-\                     [ xVector4 ]   [ xTrackVectorI ]
-\   Body and helmet = [ yVector4 ] + [ yTrackVectorI ] / 4
-\                     [ zVector4 ]   [ zTrackVectorI ]
+\                     [ xVector4 ]   [ xTrackSegmentI ]
+\   Body and helmet = [ yVector4 ] + [ yTrackSegmentI ] / 4
+\                     [ zVector4 ]   [ zTrackSegmentI ]
 \
-\                     [ xVector4 ]   [ xTrackVectorI ]
-\   Rear tyres =      [ yVector4 ] + [ yTrackVectorI ] / 8
-\                     [ zVector4 ]   [ zTrackVectorI ]
+\                     [ xVector4 ]   [ xTrackSegmentI ]
+\   Rear tyres =      [ yVector4 ] + [ yTrackSegmentI ] / 8
+\                     [ zVector4 ]   [ zTrackSegmentI ]
 \
 \ ******************************************************************************
 
@@ -17163,14 +17168,15 @@ ENDIF
 
 .bcar9
 
- LDY yStore1            \ Set Y to the track vector number that we stored above
+ LDY yStore1            \ Set Y to the segment vector number that we stored
+                        \ above
 
- JSR GetTrackData       \ Fetch the inner track vector for the part of the track
-                        \ that the car is on:
+ JSR GetTrackData       \ Fetch the inner segment vector for the part of the
+                        \ track that the car is on:
                         \
-                        \   [ (SS T) ]   [ xTrackVectorI ]
-                        \   [ (TT U) ] = [ yTrackVectorI ]
-                        \   [ (UU V) ]   [ yTrackVectorI ]
+                        \   [ (SS T) ]   [ xTrackSegmentI ]
+                        \   [ (TT U) ] = [ yTrackSegmentI ]
+                        \   [ (UU V) ]   [ yTrackSegmentI ]
                         \
                         \ So this contains the direction of the track where the
                         \ car is
@@ -25604,10 +25610,10 @@ NEXT
  LDY segmentVector,X
  LDA L000D
  STA V
- LDA xTrackVectorI,Y
- EOR zTrackVectorI,Y
+ LDA xTrackSegmentI,Y
+ EOR zTrackSegmentI,Y
  PHP
- LDA zTrackVectorI,Y
+ LDA zTrackSegmentI,Y
  PHP
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -25615,7 +25621,7 @@ NEXT
  CMP #&3C
  PHP
  BCC C454F
- LDA xTrackVectorI,Y
+ LDA xTrackSegmentI,Y
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -25775,9 +25781,9 @@ NEXT
 \
 \ ------------------------------------------------------------------------------
 \
-\ For track vector Y, calculate:
+\ For segment vector Y, calculate:
 \
-\   A = A * yTrackVectorI
+\   A = A * yTrackSegmentI
 \
 \ flipping the sign if we are facing backwards.
 \
@@ -25785,7 +25791,7 @@ NEXT
 \
 \   A                   The number to multiply the height by
 \
-\   Y                   Index of the track vector to multiply
+\   Y                   Index of the segment vector to multiply
 \
 \ Returns:
 \
@@ -25797,19 +25803,19 @@ NEXT
 
  STA U                  \ Set U to the multiplication factor in A
 
- LDA yTrackVectorI,Y    \ Store the sign of the height * directionFacing on
+ LDA yTrackSegmentI,Y   \ Store the sign of the height * directionFacing on
  EOR directionFacing    \ the stack
  PHP
 
- LDA yTrackVectorI,Y    \ Set A to the track height in the Y-th yTrackVectorI
+ LDA yTrackSegmentI,Y   \ Set A to the track height in the Y-th yTrackSegmentI
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |yTrackVectorI|
+                        \       = |yTrackSegmentI|
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = U * |yTrackVectorI|
+                        \           = U * |yTrackSegmentI|
 
- PLP                    \ Set the N flag to the sign of yTrackVectorI *
+ PLP                    \ Set the N flag to the sign of yTrackSegmentI *
                         \ directionFacing, so this will be set if the height
                         \ sign is different to bit 7 of directionFacing, clear
                         \ if the height sign matches bit 7 of directionFacing
@@ -30684,23 +30690,23 @@ ENDIF
 
  SKIP 16
 
-.xTrackVectorI
+.xTrackSegmentI
 
  SKIP 256
 
-.yTrackVectorI
+.yTrackSegmentI
 
  SKIP 256
 
-.zTrackVectorI
+.zTrackSegmentI
 
  SKIP 256
 
-.xTrackVectorO
+.xTrackSegmentO
 
  SKIP 256
 
-.zTrackVectorO
+.zTrackSegmentO
 
  SKIP 256
 
