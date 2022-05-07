@@ -479,21 +479,13 @@ ORG &0000
                         \   * 11 = Right turn road sign
                         \   * 12 = Left turn road sign
 
-.var15Lo
+.var15
 
- SKIP 1                 \ 
+ SKIP 2                 \ 
 
-.var15Hi
+.var16
 
- SKIP 1                 \ 
-
-.var16Lo
-
- SKIP 1                 \ 
-
-.var16Hi
-
- SKIP 1                 \ 
+ SKIP 2                 \ 
 
 .revCount
 
@@ -1595,11 +1587,16 @@ ORG &0880
  SKIP 24                \ Each object's segment number within the current track
                         \ section, counting from the start of the section
                         \
-                        \ Increments along with objectSegment as the object
-                        \ moves through the section, until it reaches the
-                        \ section's trackSectionSize (the section's length in
-                        \ terms of segments), at which point it resets to zero
-                        \ for the next section
+                        \ This value increments along with objectSegment as the
+                        \ object moves through each segment along the track,
+                        \ until it reaches the section's trackSectionSize (the
+                        \ section's length in terms of segments), at which point
+                        \ it resets to zero for the next section
+                        \
+                        \ So while objectSegment is the object's segment number
+                        \ when looking at the entire track, objSectionSegmt is
+                        \ the object's segment number within the current track
+                        \ section only
 
 .totalRaceTenths
 
@@ -1622,16 +1619,15 @@ ORG &0880
  SKIP 24                \ Low byte of each object's segment, i.e. its position
                         \ around on the track
                         \
-                        \ Segment 0 on the starting line, and segment numbers
-                        \ go up to (trackLengthHi trackLengthLo) as we move
-                        \ along the track, before wrapping back to zero again
-                        \ at the end of the lap
+                        \ Segment 0 is on the starting line, and segment numbers
+                        \ go from 0 to trackLength as we move along the track,
+                        \ before wrapping back to zero again at the end of the
+                        \ lap
                         \
-                        \ Set to (trackPracticeHi trackPracticeLo) in
-                        \ ResetVariables
+                        \ Set to the value of trackPractice in ResetVariables
                         \
-                        \ For the Silverstone track, objectSegment is
-                        \ initialised to &034B and has a maximum value of &0400
+                        \ The Silverstone track has a total of 1024 segments and
+                        \ practice laps start at segment 43
                         \
                         \ Stored as a 16-bit value (objectSegmentHi
                         \ objectSegmentLo)
@@ -1641,16 +1637,15 @@ ORG &0880
  SKIP 24                \ High byte of each object's segment, i.e. its position
                         \ around on the track
                         \
-                        \ Segment 0 on the starting line, and segment numbers
-                        \ go up to (trackLengthHi trackLengthLo) as we move
-                        \ along the track, before wrapping back to zero again
-                        \ at the end of the lap
+                        \ Segment 0 is on the starting line, and segment numbers
+                        \ go from 0 to trackLength as we move along the track,
+                        \ before wrapping back to zero again at the end of the
+                        \ lap
                         \
-                        \ Set to (trackPracticeHi trackPracticeLo) in
-                        \ ResetVariables
+                        \ Set to the value of trackPractice in ResetVariables
                         \
-                        \ For the Silverstone track, objectSegment is
-                        \ initialised to &034B and has a maximum value of &0400
+                        \ The Silverstone track has a total of 1024 segments and
+                        \ practice laps start at segment 43
                         \
                         \ Stored as a 16-bit value (objectSegmentHi
                         \ objectSegmentLo)
@@ -4408,10 +4403,10 @@ ORG &0B00
                         \ track
                         \
                         \ In Silverstone, all the cars start at an objectSegment
-                        \ value of &034B, so the following loop moves all the
+                        \ value of 843, so the following loop moves all the
                         \ cars forwards one step at a time, until objectSegment
                         \ wraps round to 0 (which it does after reaching the
-                        \ value of trackLength, which is &0400 for Silverstone)
+                        \ value of trackLength, which is 1024 for Silverstone)
 
 .rcar1
 
@@ -5296,7 +5291,7 @@ ORG &0B00
                         \ player's car enters a new section
 
  LDA resetSectionList   \ If resetSectionList = 0, then we do not need to reset
- BEQ gets1              \ the track section list, so jump to gets1 to skip the
+ BEQ getf1              \ the track section list, so jump to getf1 to skip the
                         \ following instruction
 
                         \ If we get here then resetSectionList is non-zero,
@@ -5306,10 +5301,10 @@ ORG &0B00
                         \ section list contains no valid entries, so the list
                         \ gets regenerated over the coming iterations
 
-.gets1
+.getf1
 
- LDA directionFacing    \ If our car is facing backwards, jump to gets2
- BMI gets2
+ LDA directionFacing    \ If our car is facing backwards, jump to getf2
+ BMI getf2
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
                         \ driver 23
@@ -5322,9 +5317,9 @@ ORG &0B00
                         \ bits 0-2 can be set as the value for sectionListSize
                         \ below
 
- JMP gets3              \ Jump to gets3 to skip the following
+ JMP getf3              \ Jump to getf3 to skip the following
 
-.gets2
+.getf2
 
  LDY sectionBehind      \ Set Y to the number * 8 of the track section in
                         \ sectionBehind
@@ -5339,7 +5334,7 @@ ORG &0B00
  LDA #2                 \ Set A = 2, to use as the value for sectionListSize
                         \ below
 
-.gets3
+.getf3
 
  AND #%00000111         \ Set sectionListSize = bits 0-2 from A
  STA sectionListSize
@@ -5621,21 +5616,21 @@ ORG &0B00
                         \ to move on to the next track segment
 
  CMP #120               \ If A < 120, then we haven't reached the end of the
- BCC sets1              \ track segment buffer, so jump to sets1 to store the
+ BCC gets1              \ track segment buffer, so jump to gets1 to store the
                         \ updated value
 
  LDA #0                 \ We just reached the end of the track segment buffer,
                         \ so set A = 0 to wrap round to the start
 
-.sets1
+.gets1
 
  STA segmentIndex       \ Set segmentIndex to the index * 3 of the new track
                         \ segment
 
  LDX #23                \ Set X to driver 23
 
- LDA directionFacing    \ If our car is facing backwards, jump to sets3
- BMI sets3
+ LDA directionFacing    \ If our car is facing backwards, jump to gets3
+ BMI gets3
 
  LDA trackSectionCount  \ Set A to half the total number of track sections * 4
  LSR A
@@ -5643,8 +5638,8 @@ ORG &0B00
  AND #%11111000         \ Reduce A to the nearest multiple of 8
 
  CMP objTrackSection,X  \ If A <> the number of the track section * 8 for driver
- BNE sets2              \ 23, then we are not halfway through all the track
-                        \ sections, so jump to sets2
+ BNE gets2              \ 23, then we are not halfway through all the track
+                        \ sections, so jump to gets2
 
                         \ If we get here then driver 23 is at the halfway point
                         \ round the track in terms of track section numbers
@@ -5652,14 +5647,14 @@ ORG &0B00
  LDA #1                 \ Set pastHalfway = 1, to denote that driver 23 is in
  STA pastHalfway        \ the second half of the track
 
-.sets2
+.gets2
 
  JSR MoveObjectForward  \ Move driver 23 forwards along the track, setting the
                         \ C flag if this moves the driver into the next track
                         \ section
 
- BCC sets4              \ If driver 23 is still in the same track section, jump
-                        \ to sets4
+ BCC gets4              \ If driver 23 is still in the same track section, jump
+                        \ to gets4
 
  JSR GetFirstSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
@@ -5667,12 +5662,12 @@ ORG &0B00
                         \ setting thisVectorNumber to the number of the segment
                         \ vector for the new track segment
 
- JMP sets13             \ Jump to sets13 to finish setting up the track segment,
+ JMP gets13             \ Jump to gets13 to finish setting up the track segment,
                         \ skipping the part that sets the coordinates and flags,
                         \ as those have just been set when creating the entry
                         \ for the new track section
 
-.sets3
+.gets3
 
                         \ If we get here then our car is facing backwards
 
@@ -5683,8 +5678,8 @@ ORG &0B00
                         \ C flag if this moves the driver into the next track
                         \ section
 
- BCC sets4              \ If driver 23 is still in the same track section, jump
-                        \ to sets4
+ BCC gets4              \ If driver 23 is still in the same track section, jump
+                        \ to gets4
 
  JSR GetFirstSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
@@ -5692,7 +5687,7 @@ ORG &0B00
                         \ setting thisVectorNumber to the number of the segment
                         \ vector for the new track segment
 
-.sets4
+.gets4
 
  LDY thisVectorNumber   \ Set Y to the number of the segment vector for the new
                         \ track segment
@@ -5751,8 +5746,8 @@ ORG &0B00
 
  LDA thisSectionFlags   \ Set A to the current section's flags
 
- BCS sets6              \ If bit 0 of the current section's flag byte is set,
-                        \ then this is a curved section, so jump to sets6 with
+ BCS gets6              \ If bit 0 of the current section's flag byte is set,
+                        \ then this is a curved section, so jump to gets6 with
                         \ A set to the current section's flags, so the new
                         \ track segment retains the same flags
 
@@ -5761,19 +5756,19 @@ ORG &0B00
  LDY objSectionSegmt+23 \ Set Y to driver 23's segment number within the track
                         \ section
 
- CPY #1                 \ If Y < 1, jump to sets5
- BCC sets5
+ CPY #1                 \ If Y < 1, jump to gets5
+ BCC gets5
 
- CPY #10                \ If Y < 10, jump to sets6 with A set to
- BCC sets6              \ thisSectionFlags
+ CPY #10                \ If Y < 10, jump to gets6 with A set to
+ BCC gets6              \ thisSectionFlags
 
-.sets5
+.gets5
 
                         \ If we get here then Y < 1 or Y >= 10
 
  AND #%11111001         \ Clear bits 1 and 2 of the current section's flags in A
 
-.sets6
+.gets6
 
  STA W                  \ Store A in W, so W contains:
                         \
@@ -5794,7 +5789,7 @@ ORG &0B00
  LDA trackSectionSize,Y \ Set A to the size of the track section for driver 23
 
  PLP                    \ If bit 0 of the current section's flag byte is clear,
- BCC sets7              \ then this is a straight section, so jump to sets7 with
+ BCC gets7              \ then this is a straight section, so jump to gets7 with
                         \ A set to the size of the track section for driver 23
 
                         \ If we get here then this is a curved track section
@@ -5807,14 +5802,14 @@ ORG &0B00
                         \ for the new track segment
 
  CPY objSectionSegmt+23 \ If Y = driver 23's segment number in the track
- BEQ sets10             \ section, then the driver is exactly halfway round the
-                        \ curve, so jump to sets10 to store A in the track
+ BEQ gets10             \ section, then the driver is exactly halfway round the
+                        \ curve, so jump to gets10 to store A in the track
                         \ segment's flags
 
- BNE sets8              \ Otherwise jump to sets8 to clear bits 3-5 of A before
+ BNE gets8              \ Otherwise jump to gets8 to clear bits 3-5 of A before
                         \ storing it in the track segment's flags
 
-.sets7
+.gets7
 
                         \ If we get here then this is a straight section and A
                         \ is set to the size of the track section for driver 23
@@ -5828,28 +5823,28 @@ ORG &0B00
  LDA W                  \ Set A = W, which contains the flags we are building
                         \ for the new track segment
 
- CPY #7                 \ If Y = 7, jump to sets10 to store A in the track
- BEQ sets10             \ segment's flags
+ CPY #7                 \ If Y = 7, jump to gets10 to store A in the track
+ BEQ gets10             \ segment's flags
 
- CPY #14                \ If Y = 14 or 21, jump to sets9 to clear bit 5 of A
- BEQ sets9              \ and store it in the track segment's flags
+ CPY #14                \ If Y = 14 or 21, jump to gets9 to clear bit 5 of A
+ BEQ gets9              \ and store it in the track segment's flags
  CPY #21
- BEQ sets9
+ BEQ gets9
 
                         \ Otherwise we clear bits 3-5 of A and store it in the
                         \ track segment's flags
 
-.sets8
+.gets8
 
  AND #%11100111         \ Clear bits 3 and 4 of A, so we don't show any corner
                         \ markers for this segment
 
-.sets9
+.gets9
 
  AND #%11011111         \ Clear bit 5 of A, so any markers for this segment are
                         \ shown in white
 
-.sets10
+.gets10
 
  AND thisSectionFlags   \ Clear any bits in A that are already clear in the
                         \ current section's flags, to ensure that the track
@@ -5939,10 +5934,10 @@ ORG &0B00
  LDA xTrackSegmentO,Y   \ Set A = the 3D x-coordinate of the outer segment
                         \ vector for the new track segment
 
- BPL sets11             \ If A is negative, decrement SS to &FF so (SS A) has
+ BPL gets11             \ If A is negative, decrement SS to &FF so (SS A) has
  DEC SS                 \ the correct sign
 
-.sets11
+.gets11
 
  ASL A                  \ Set (SS A) = (SS A) * 4
  ROL SS                 \            = xTrackSegmentO * 4
@@ -5960,10 +5955,10 @@ ORG &0B00
  LDA zTrackSegmentO,Y   \ Set A = the z-coordinate of the outer segment vector
                         \ for the new track segment
 
- BPL sets12             \ If A is negative, decrement UU to &FF so (UU A) has
+ BPL gets12             \ If A is negative, decrement UU to &FF so (UU A) has
  DEC UU                 \ the correct sign
 
-.sets12
+.gets12
 
  ASL A                  \ Set (UU A) = (UU A) * 4
  ROL UU                 \            = zTrackSegmentO * 4
@@ -5982,7 +5977,7 @@ ORG &0B00
                         \ thisVectorNumber to the next segment vector along the
                         \ track in the direction we are facing
 
-.sets13
+.gets13
 
  LDX segmentIndex       \ Set X to the index * 3 of the new track segment
 
@@ -6452,10 +6447,10 @@ ORG &0B00
 .fore3
 
  LDA objectSegmentLo,X  \ If objectSegment <> trackLength, then the object has
- CMP trackLengthLo      \ not yet reached the end of the track, so jump to fore4
+ CMP trackLength        \ not yet reached the end of the track, so jump to fore4
  BNE fore4              \ to return from the subroutine as we are done
  LDA objectSegmentHi,X
- CMP trackLengthHi
+ CMP trackLength+1
  BNE fore4
 
  LDA #0                 \ The object has just reached the end of the track, so
@@ -6585,9 +6580,9 @@ ORG &0B00
                         \ backwards across the starting line, into the previous
                         \ lap
 
- LDA trackLengthLo      \ Set objectSegment for driver X = trackLength
+ LDA trackLength        \ Set objectSegment for driver X = trackLength
  STA objectSegmentLo,X  \
- LDA trackLengthHi      \ So objectSegment wraps around to the segment number
+ LDA trackLength+1      \ So objectSegment wraps around to the segment number
  STA objectSegmentHi,X  \ for the end of the track, as trackLength contains the
                         \ length of the full track (in terms of segments)
 
@@ -7949,9 +7944,9 @@ ENDIF
 
 .rese3
 
- LDA trackPracticeHi    \ Set the X-th byte of (objectSegmentHi objectSegmentLo)
- STA objectSegmentHi,X  \ to the value of (trackPracticeHi trackPracticeLo),
- LDA trackPracticeLo    \ which is &034B for the Silverstone track
+ LDA trackPractice+1    \ Set the X-th byte of (objectSegmentHi objectSegmentLo)
+ STA objectSegmentHi,X  \ to the value of trackPractice, which is 843 for the
+ LDA trackPractice      \ Silverstone track
  STA objectSegmentLo,X
 
  LDA #0                 \ Zero the X-th byte of objTrackSection
@@ -15997,6 +15992,10 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ Extends the distance calculation in CompareSegments by rounding the segment
+\ numbers used in the calculations, depending on the cars' progress within their
+\ current segments.
+\
 \ Arguments:
 \
 \   X                   The number of driver X
@@ -16012,26 +16011,26 @@ ENDIF
  SBC carProgress,X      \    carProgress for driver ahead
                         \  - carProgress for this driver
                         \
-                        \ so the progress figures act like a fractional byte
+                        \ The progress figures act like a fractional byte
                         \ in the subtraction at the start of the following
                         \ routine, though because only the C flag is kept, they
                         \ only serve to round the result to the nearest integer,
                         \ rather than giving a full 24-bit result
 
                         \ Fall through into CompareSegments to calculate the
-                        \ distance between the two cars
+                        \ distance between the two cars, rounding the result
+                        \ according to the difference in the cars' progress
+                        \ values
 
 \ ******************************************************************************
 \
 \       Name: CompareSegments
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the distance between two objects, in terms of segment
-\             numbers
+\    Summary: Calculate the distance between two objects, in terms of the
+\             difference in their segment numbers
 \
 \ ------------------------------------------------------------------------------
-\
-\ Calculate the distance between two objects.
 \
 \ Arguments:
 \
@@ -16084,8 +16083,11 @@ ENDIF
 
  LDA objectSegmentHi,Y  \ And then the high bytes
  SBC objectSegmentHi,X  \
-                        \ So (A T) now contains the distance between the two
-                        \ objects - let's call it distance
+                        \ So (A T) now contains the difference between the two
+                        \ objects in terms of their segment numbers, i.e. the
+                        \ distance between the two in terms of segment numbers
+                        \
+                        \ Let's call this dSegments
 
  PHP                    \ Store the status register on the stack, so the N flag
                         \ on the stack is the sign of the above subtraction, so
@@ -16102,21 +16104,23 @@ ENDIF
 .dist1
 
  STA U                  \ Set (U T) = (A T)
-                        \           = |distance|
+                        \           = |dSegments|
 
  SEC                    \ Set the C flag to shift into bit 7 of H below
 
- BEQ dist2              \ If the high byte of the distance is zero, jump to
-                        \ dist2 to check the low byte
+ BEQ dist2              \ If the high byte of the segment difference is zero,
+                        \ jump to dist2 to check the low byte
 
-                        \ If we get here then the high byte of the distance
+                        \ If we get here then the high byte of the difference
                         \ is non-zero, so now we need to check whether this is
                         \ down to the objects being close but either side of the
-                        \ starting line (as the segment number resets to zero at
+                        \ starting line 
+                        \
+                        \ This is because the segment number resets to zero at
                         \ the starting line, so objects that are on either side
-                        \ of the line will have a big difference in
-                        \ objectSegment values even though they are actually
-                        \ close together)
+                        \ of the line will have a big difference in their
+                        \ segment numbers even though they are actually quite
+                        \ close together
 
  PLA                    \ Flip the N flag in the status register on the stack
  EOR #%10000000         \ (as the N flag is bit 7 of the status register), so
@@ -16131,15 +16135,16 @@ ENDIF
                         \ result, so this flips the order of the two objects to
                         \ be correct
 
-                        \ In the following, (trackLengthHi trackLengthLo)
-                        \ contains the length of the full track
+                        \ In the following, the 16-bit number at trackLength
+                        \ contains the length of the full track in terms of
+                        \ segments
 
- LDA trackLengthLo      \ Set (A T) = (trackLengthHi trackLengthLo) - (U T)
- SEC                    \           = trackLength - |distance|
+ LDA trackLength        \ Set (A T) = trackLength - (U T)
+ SEC                    \           = trackLength - |dSegments|
  SBC T                  \
  STA T                  \ starting with the high bytes
 
- LDA trackLengthHi      \ And then the low bytes
+ LDA trackLength+1      \ And then the low bytes
  SBC U
 
  BNE dist3              \ If the high byte is non-zero, then that means the
@@ -16157,17 +16162,18 @@ ENDIF
 .dist2
 
                         \ If we get here then the objects are close together
-                        \ (the high byte of the distance between then is zero)
+                        \ (the high byte of the difference in segment numbers is
+                        \ zero)
 
  ROR H                  \ Set bit 7 of H to the C flag, so it's clear if the
                         \ objects are quite close but on opposite sides of the
                         \ starting line, otherwise it is set
 
- LDA T                  \ If T >= 128, then the distance between the objects is
- CMP #128               \ >= 128, so jump to dist3 to return from the subroutine
- BCS dist3              \ with the C flag set
+ LDA T                  \ If T >= 128, then the difference between the objects
+ CMP #128               \ is >= 128 segments, so jump to dist3 to return from
+ BCS dist3              \ the subroutine with the C flag set
 
-                        \ If we get here then the distance between the objects
+                        \ If we get here then the difference between the objects
                         \ is 127 or less, so the objects are determined to be
                         \ close
 
@@ -16186,7 +16192,8 @@ ENDIF
 .dist3
 
                         \ We get here if the objects are far away from each
-                        \ other, i.e. the distance between them is >= 128
+                        \ other, i.e. the segment difference between them is
+                        \ >= 128
 
  PLP                    \ Retrieve the status flags from the stack, to return
                         \ from the subroutine
@@ -26023,9 +26030,9 @@ ENDIF
  JSR sub_C48B9
 
  LDA var07Lo
- STA var15Lo
+ STA var15
  LDA var07Hi
- STA var15Hi
+ STA var15+1
 
  LDA var08Lo
  STA T
@@ -26051,16 +26058,16 @@ ENDIF
  JSR sub_C49CE
  LDX #1
  JSR sub_C4779
- LDA var15Lo
+ LDA var15
  STA var07Lo
- LDA var15Hi
+ LDA var15+1
  STA var07Hi
  LDA var07Lo
  CLC
- ADC var16Lo
+ ADC var16
  STA var07Lo
  LDA var07Hi
- ADC var16Hi
+ ADC var16+1
  STA var07Hi
  JSR sub_C47A5
  LDX #0
@@ -26118,9 +26125,9 @@ ENDIF
  SBC U
  STA var07Hi
  JSR sub_C4765
- STA var16Hi
+ STA var16+1
  LDA T
- STA var16Lo
+ STA var16
  RTS
 
 \ ******************************************************************************
@@ -27446,7 +27453,7 @@ ENDIF
 
 .sub_C4C65
 
- LDA var15Hi
+ LDA var15+1
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -27469,7 +27476,7 @@ ENDIF
 
  STA U
  LDY #6
- LDA var15Hi
+ LDA var15+1
  JSR sub_C48A0
  LDA speedHi
  STA U
@@ -28405,18 +28412,18 @@ ENDIF
  BCC hand6              \ Loop back until the addition overflows after we send
                         \ &F3 to the ULA
 
- LDA #&3C               \ Set (timer2Hi timer2Lo) = &153C - (timer1Hi timer1Lo)
+ LDA #&3C               \ Set screenTimer2 = &153C - screenTimer1
  SEC                    \
- SBC timer1Lo           \ starting with the low bytes
- STA timer2Lo
+ SBC screenTimer1       \ starting with the low bytes
+ STA screenTimer2
 
  LDA #&15               \ And then the high bytes
- SBC timer1Hi
- STA timer2Hi
+ SBC screenTimer1+1
+ STA screenTimer2+1
 
- LDA timer1Lo           \ Set (X A) = (timer1Hi timer1Lo) to latch into the User
- LDX timer1Hi           \ VIA timer 1, so on the next timer loop it counts down
-                        \ from (timer1Hi timer1Lo)
+ LDA screenTimer1       \ Set (X A) = screenTimer1 to latch into the User VIA
+ LDX screenTimer1+1     \ timer 1, so on the next timer loop it counts down from
+                        \ screenTimer1
 
  BCS hand13             \ Jump to hand13 to latch (X A) into User VIA timer 1
                         \ and return from the subroutine (this BCS is
@@ -28440,9 +28447,9 @@ ENDIF
 
  BPL hand8              \ Loop back until we have sent all 16 bytes
 
- LDA timer2Lo           \ Set (X A) = (timer2Hi timer2Lo) to latch into the User
- LDX timer2Hi           \ VIA timer 1, so on the next timer loop it counts down
-                        \ from (timer2Hi timer2Lo)
+ LDA screenTimer2       \ Set (X A) = screenTimer2 to latch into the User VIA
+ LDX screenTimer2+1     \ timer 1, so on the next timer loop it counts down from
+                        \ screenTimer2
 
  BNE hand13             \ Jump to hand13 to latch (X A) into User VIA timer 1
                         \ and return from the subroutine (this BNE is
@@ -28678,63 +28685,33 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: timer1Lo
+\       Name: screenTimer1
 \       Type: Variable
 \   Category: Screen mode
-\    Summary: Low byte of the timer offset between the start of section 2 and
-\             the start of section 3
+\    Summary: The screen timer offset between the start of section 2 and the
+\             start of section 3
 \  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
-.timer1Lo
+.screenTimer1
 
- EQUB &D8
+ EQUW &04D8
 
 \ ******************************************************************************
 \
-\       Name: timer1Hi
+\       Name: screenTimer2
 \       Type: Variable
 \   Category: Screen mode
-\    Summary: High byte of the timer offset between the start of section 2 and
-\             the start of section 3
+\    Summary: The screen timer offset between the start of section 3 and the
+\             start of section 4
 \  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
 
-.timer1Hi
+.screenTimer2
 
- EQUB &04
-
-\ ******************************************************************************
-\
-\       Name: timer2Lo
-\       Type: Variable
-\   Category: Screen mode
-\    Summary: Low byte of the timer offset between the start of section 3 and
-\             the start of section 4
-\  Deep dive: Hidden secrets of the custom screen mode
-\
-\ ******************************************************************************
-
-.timer2Lo
-
- EQUB &64
-
-\ ******************************************************************************
-\
-\       Name: timer2Hi
-\       Type: Variable
-\   Category: Screen mode
-\    Summary: High byte of the timer offset between the start of section 3 and
-\             the start of section 4
-\  Deep dive: Hidden secrets of the custom screen mode
-\
-\ ******************************************************************************
-
-.timer2Hi
-
- EQUB &10
+ EQUW &1064
 
 \ ******************************************************************************
 \
@@ -28869,7 +28846,7 @@ ENDIF
                         \ when we are cresting a hill), and smaller when the
                         \ horizon is high (i.e. when we are in a dip)
                         \
-                        \ We now add this figure to (timer1Hi timer1Lo), which
+                        \ We now add this figure to screenTimer1, which
                         \ determines the height of the horizon portion of the
                         \ custom screen mode, i.e. where the palette switches
                         \ from blue sky to the green ground
@@ -28883,8 +28860,8 @@ ENDIF
                         \ and so is timer 1, so the size of the sky section
                         \ above the horizon is smaller, so the horizon rises up
                         \
-                        \ The range of (timer1Hi timer1Lo) values from the
-                        \ following calculation is therefore:
+                        \ The range of screenTimer1 values from the following
+                        \ calculation is therefore:
                         \
                         \   Minimum: &04D8 - 704 = &0218 (we are in a dip)
                         \
@@ -28893,13 +28870,13 @@ ENDIF
  SEI                    \ Disable interrupts so we can update the custom screen
                         \ variables
 
- CLC                    \ Set (timer1Hi timer1Lo) = (U A) + &04D8
+ CLC                    \ Set screenTimer1 = (U A) + &04D8
  ADC #&D8               \
- STA timer1Lo           \ starting with the low bytes
+ STA screenTimer1       \ starting with the low bytes
 
  LDA #&04               \ And then the high bytes
  ADC U
- STA timer1Hi
+ STA screenTimer1+1
 
  CLI                    \ Re-enable interrupts
 
@@ -30764,21 +30741,13 @@ ENDIF
 
  SKIP 1
 
-.trackLengthLo
+.trackLength
 
- SKIP 1
+ SKIP 2
 
-.trackLengthHi
+.trackPractice
 
- SKIP 1
-
-.trackPracticeLo
-
- SKIP 1
-
-.trackPracticeHi
-
- SKIP 1
+ SKIP 2
 
 .trackLapTimeSec
 

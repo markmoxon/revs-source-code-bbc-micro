@@ -2461,57 +2461,25 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackLengthLo
+\       Name: trackLength
 \       Type: Variable
 \   Category: Track data
-\    Summary: Low byte of the length of the full track (in terms of segments)
+\    Summary: The length of the full track (in terms of segments)
 \
 \ ******************************************************************************
 
- EQUB &00               \ (trackLengthHi trackLengthLo) = &0400
-                        \
-                        \ (objectSegmentHi objectSegmentLo) wraps round to 0
-                        \ when it reaches this figure
+ EQUW 1024
 
 \ ******************************************************************************
 \
-\       Name: trackLengthHi
+\       Name: trackPractice
 \       Type: Variable
 \   Category: Track data
-\    Summary: High byte of the length of the full track (in terms of segments)
+\    Summary: The starting segment for practice laps
 \
 \ ******************************************************************************
 
- EQUB &04               \ (trackLengthHi trackLengthLo) = &0400
-                        \
-                        \ (objectSegmentHi objectSegmentLo) wraps round to 0
-                        \ when it reaches this figure
-
-\ ******************************************************************************
-\
-\       Name: trackPracticeLo
-\       Type: Variable
-\   Category: Track data
-\    Summary: Low byte of the starting segment for practice laps
-\
-\ ******************************************************************************
-
- EQUB &4B               \ (trackPracticeHi trackPracticeLo) = &034B
-                        \
-                        \ This is out of a full track length of &0400 segments
-
-\ ******************************************************************************
-\
-\       Name: trackPracticeHi
-\       Type: Variable
-\   Category: Track data
-\    Summary: High byte of the starting segment for practice laps
-\
-\ ******************************************************************************
-
- EQUB &03               \ (trackPracticeHi trackPracticeLo) = &034B
-                        \
-                        \ This is out of a full track length of &0400 segments
+ EQUW 843
 
 \ ******************************************************************************
 \
