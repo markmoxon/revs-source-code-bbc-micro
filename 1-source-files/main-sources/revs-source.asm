@@ -739,7 +739,7 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.edgeAngle
+.edgeRotation
 
  SKIP 1                 \ The rotation angle of the track segment that is
                         \ closest to the player's car
@@ -4603,7 +4603,8 @@ ORG &0B00
 
 .rcar10
 
- JSR GetTrackSegment    \ Initialise the next track segment
+ JSR GetTrackSegment    \ Initialise the next track segment in the track segment
+                        \ buffer
 
  DEC segmentCounter     \ Decrement the counter in segmentCounter
 
@@ -4634,12 +4635,12 @@ ORG &0B00
 
                         \ If we get here then we are quite far off the track
 
- LDA edgeAngle          \ Set A to the rotation angle of the track segment that
+ LDA edgeRotation       \ Set A to the rotation angle of the track segment that
                         \ is closest to the player's car, from the point of view
                         \ of the car
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |edgeAngle|
+                        \       = |edgeRotation|
 
  CMP #96                \ If A >= 96, then the nearest track segment to the
  BCS cras1              \ player is within a cone stretching out behind the car
@@ -5573,10 +5574,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: GetTrackSegment (Part 1 of 1)
+\       Name: GetTrackSegment (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Set up the next track segment
+\    Summary: Set up the next track segment in the track segment buffer
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5637,8 +5638,8 @@ ORG &0B00
 
  AND #%11111000         \ Reduce A to the nearest multiple of 8
 
- CMP objTrackSection,X  \ If A <> the number of the track section * 8 for driver
- BNE gets2              \ 23, then we are not halfway through all the track
+ CMP objTrackSection,X  \ If A <> number of the track section * 8 for driver 23,
+ BNE gets2              \ then we are not halfway through all the track
                         \ sections, so jump to gets2
 
                         \ If we get here then driver 23 is at the halfway point
@@ -6199,11 +6200,12 @@ ORG &0B00
 
 .turn1
 
- JSR GetTrackSegment    \ Initialise the next track segment
+ JSR GetTrackSegment    \ Initialise the next track segment in the track segment
+                        \ buffer
 
  DEC segmentCounter     \ Decrement the loop counter
 
- BNE turn1              \ Loop back until we have set all the stack entries
+ BNE turn1              \ Loop back until we have set all X track segments
 
  RTS                    \ Return from the subroutine
 
@@ -6362,13 +6364,15 @@ ORG &0B00
 \       Name: MoveObjectForward
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Move a specified object forwards along the track
+\    Summary: Move a specified object forwards along the track by one segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves object X forwards, updating objTrackSection, objSectionSegmt and
-\ objectSegment accordingly, as well as the lap number and lap time (but only if
-\ this is a driver and bit 7 of updateLapTimes is clear).
+\ Moves object X forwards by one segment, updating the section number if we
+\ cross into a new section.
+\
+\ Also updates the lap number and lap time, but only if this is a driver and bit
+\ 7 of updateLapTimes is clear.
 \
 \ Arguments:
 \
@@ -6395,9 +6399,10 @@ ORG &0B00
 
  LDA objSectionSegmt,X  \ Set A = objSectionSegmt + 1
  CLC                    \
- ADC #1                 \ This increments the track section counter, which keeps
-                        \ track of the object's segment number in the current
-                        \ track section, so it moves forwards
+ ADC #1                 \ This increments the segment section counter, which
+                        \ keeps track of the object's segment number within the
+                        \ current track section, so it moves forwards by one
+                        \ segment
 
  CMP trackSectionSize,Y \ If A < Y-th trackSectionSize, then the object is still
  PHP                    \ within the current track section, so clear the C flag
@@ -6473,12 +6478,14 @@ ORG &0B00
 \       Name: MoveObjectBack
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Move a specified object backwards along the track
+\    Summary: Move a specified object backwards along the track by one segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ Moves object X backwards, updating objTrackSection, objSectionSegmt,
-\ objectSegment and the current lap number accordingly.
+\ Moves object X backwards by one segment, updating the section number if we
+\ cross into a new section.
+\
+\ Also updates the lap number if this is the current player.
 \
 \ Arguments:
 \
@@ -14219,7 +14226,7 @@ ENDIF
 \                       section/segment list (i.e. from xVergeRight) that is
 \                       closest to the player's car
 \
-\   edgeAngle           The rotation angle of the segment that is closest to the
+\   edgeRotation        The rotation angle of the segment that is closest to the
 \                       player's car
 \
 \   xVergeRight/Left    Entries in the second part of the track segment list for
@@ -14305,9 +14312,10 @@ ENDIF
                         \ list (i.e. from xVergeRight) that is closest to the
                         \ player's car
 
- LDA xVergeRightHi,Y    \ Set edgeAngle = the segment's entry in xVergeRightHi
- STA edgeAngle          \
-                        \ So edgeAngle contains the rotation angle of the
+ LDA xVergeRightHi,Y    \ Set edgeRotation = the segment's entry in
+ STA edgeRotation       \ xVergeRightHi
+                        \
+                        \ So edgeRotation contains the rotation angle of the
                         \ segment that is closest to the player's car
 
 .gseg3
@@ -14590,7 +14598,7 @@ ENDIF
                         \ processing segments
 
  LDA segmentStep,Y      \ Set T to the segment step for segment number Y, so to
- STA T                  \ get the nest segment, we step back T steps in the
+ STA T                  \ get the next segment, we step back T steps in the
                         \ track segment buffer
                         \
                         \ This makes us step a long way backwards for the first
@@ -25846,7 +25854,7 @@ NEXT
 
 .sub_C4626
 
- LDA edgeAngle
+ LDA edgeRotation
  SEC
  SBC L0044
 
