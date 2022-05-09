@@ -240,9 +240,9 @@ ORG &0000
  SKIP 1                 \ The number of the segment within the track segment
                         \ list that is closest to the player's car
 
-.prevSegmentIndex
+.prevSegmentOffset
 
- SKIP 1                 \ The segment coordinate index from the previous segment
+ SKIP 1                 \ The segment coordinate offset for the previous segment
                         \ when adding segments to the track segment list
 
 .leftSegmentPointer
@@ -333,19 +333,27 @@ ORG &0000
                         \ Track sections are numbered from 0 to 23, so this
                         \ ranges from 0 to 184
 
-.segmentIndex96
+.playerSegmentIndex
 
- SKIP 1                 \ Contains segmentIndex - 96
+ SKIP 1                 \ Used to store the index * 3 of the track segment
+                        \ containing the player's car in the track segment
+                        \ buffer
+                        \
+                        \ The player's car is always 32 segments behind the
+                        \ front segment in the track segment buffer, so this
+                        \ always contains frontSegmentIndex - 96, wrapped around
+                        \ as required (as there are three bytes per buffer
+                        \ entry)
 
-.segmentIndexPrev
+.prevSegmentIndex
 
  SKIP 1                 \ Used to store the index * 3 of the previous track
                         \ segment
 
-.segmentIndex
+.frontSegmentIndex
 
- SKIP 1                 \ Used to store the index * 3 of the current track
-                        \ segment
+ SKIP 1                 \ Used to store the index * 3 of the front track
+                        \ segment in the track segment buffer
                         \
                         \ Track segment indexes are numbered from 0 to 39, so
                         \ this ranges from 0 to 117
@@ -4525,7 +4533,7 @@ ORG &0B00
                         \ of the track (i.e. just before the start line), to
                         \ position 19 at the back of the pack
 
-                        \ We now use the currently unused driver 23 to work out
+                        \ We now use the currently unused object 23 to work out
                         \ the number of track segments we need to initialise in
                         \ front of the current driver, by first moving forwards
                         \ until we are exactly 32 segments in front of the
@@ -4538,11 +4546,11 @@ ORG &0B00
 
 .rcar6
 
- LDX #23                \ Set X to driver 23
+ LDX #23                \ Set X to object 23
 
- JSR MoveObjectForward  \ Move driver 23 forwards along the track
+ JSR MoveObjectForward  \ Move object 23 forwards along the track
 
- LDY #23                \ Set Y to driver 23
+ LDY #23                \ Set Y to object 23
 
  LDX currentPlayer      \ Set X to the driver number of the current player
 
@@ -4552,17 +4560,17 @@ ORG &0B00
  JSR CompareSegments    \ Set A and T to the distance between drivers X and Y
 
  BCS rcar6              \ If the C flag is set then the cars are far apart, so
-                        \ jump to rcar6 to keep moving driver 23 forwards
+                        \ jump to rcar6 to keep moving object 23 forwards
 
- CMP #32                \ If A <> 32, jump to rcar6 to keep moving driver 23
+ CMP #32                \ If A <> 32, jump to rcar6 to keep moving object 23
  BNE rcar6              \ forwards
 
-                        \ At this point, driver 23 is a distance of exactly 32
+                        \ At this point, object 23 is a distance of exactly 32
                         \ segments in front of the current player
 
-                        \ We now move driver 23 back by 49 segments
+                        \ We now move object 23 back by 49 segments
 
- LDX #23                \ Set X to driver 23
+ LDX #23                \ Set X to object 23
 
  LDA #49                \ Set V = 49, to use as a loop counter from 49 to 1
  STA V
@@ -4571,14 +4579,14 @@ ORG &0B00
 
 .rcar7
 
- JSR MoveObjectBack     \ Move driver 23 backwards along the track
+ JSR MoveObjectBack     \ Move object 23 backwards along the track
 
  DEC V                  \ Decrement the loop counter
 
- BNE rcar7              \ Loop back until we have moved driver 23 backwards by
+ BNE rcar7              \ Loop back until we have moved object 23 backwards by
                         \ 49 segments
 
-                        \ We now move driver 23 backwards until it moves into a
+                        \ We now move object 23 backwards until it moves into a
                         \ new track section, incrementing segmentCounter for
                         \ each segment moved (which we set to 49 above, so it
                         \ will keep tally of the total number of segments we
@@ -4588,13 +4596,13 @@ ORG &0B00
 
  INC segmentCounter     \ Increment segmentCounter
 
- JSR MoveObjectBack     \ Move driver 23 backwards along the track, setting the
+ JSR MoveObjectBack     \ Move object 23 backwards along the track, setting the
                         \ C flag if we move into a new track section
 
- BCC rcar8              \ Loop back to keep moving driver 23 backwards until it
+ BCC rcar8              \ Loop back to keep moving object 23 backwards until it
                         \ moves into a new track section
                         \
-                        \ We don't care where driver 23 has ended up, but we
+                        \ We don't care where object 23 has ended up, but we
                         \ will use the value of segmentCounter below when
                         \ populating the segment buffer
 
@@ -4622,18 +4630,20 @@ ORG &0B00
 
  BPL rcar9              \ Loop back until we have staggered the whole pack
 
- LDA #0                 \ Set segmentIndex = 0, so it points at the front
- STA segmentIndex       \ segment in the buffer, i.e. the one that is 32
-                        \ segments in front of the current driver
+ LDA #0                 \ Set frontSegmentIndex = 0, as the segment buffer is
+ STA frontSegmentIndex  \ currently empty (and we are about to fill it, which
+                        \ will update frontSegmentIndex accordingly)
 
                         \ We now call GetTrackSegment segmentCounter times,
                         \ where segmentCounter is the number of times we moved
-                        \ driver 23 backwards in the above
+                        \ object 23 backwards in the above
                         \
                         \ This populates the track segment buffer, making sure
                         \ it is fully populated by working forwards from where
-                        \ driver 23 ended up, one segment at a time, all the way
-                        \ to 32 segments in front of the current player
+                        \ object 23 ended up, one segment at a time, all the way
+                        \ to 32 segments in front of the current player, which
+                        \ is where we want the front segment of the track
+                        \ segment buffer to be
 
 .rcar10
 
@@ -4645,10 +4655,14 @@ ORG &0B00
 
  BNE rcar10             \ Loop back until we have called GetTrackSegment
                         \ segmentCounter times, by which time the buffer entry
-                        \ at segmentIndex is 32 segments in front of the current
-                        \ player, the buffer entry at segmentIndex96 is the
-                        \ current player, and all 40 entries in the buffer are
-                        \ populated with the correct segments
+                        \ at frontSegmentIndex is 32 segments in front of the
+                        \ current player, the buffer entry at playerSegmentIndex
+                        \ is the current player, and all 40 entries in the
+                        \ buffer are populated with the correct segments
+                        \
+                        \ So from this point onwards, object 23 is the object
+                        \ that corresponds to the front segment of the track
+                        \ segment buffer
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
                         \ MoveObjectForward will update the lap number and lap
@@ -5004,9 +5018,9 @@ ORG &0B00
 
  STX L0042              \ Set L0042 to the driver number of the current player
 
- LDY segmentIndex96     \ Build the car object for the current player using
- JSR BuildCarObjects    \ track segment segmentIndex96, returning the car's 3D
-                        \ coordinates in xVector4
+ LDY playerSegmentIndex \ Build the car object for the current player using
+ JSR BuildCarObjects    \ the player's track segment from the track segment
+                        \ buffer, returning the car's 3D coordinates in xVector4
 
  LDX #2                 \ We are about to copy the three axes of the resulting
                         \ vectors, so set an axis counter in X
@@ -5022,7 +5036,7 @@ ORG &0B00
 
  BPL bpla1              \ Loop back until we have copied all three axes
 
- LDA segmentIndex96     \ Set A = segmentIndex96 + 3
+ LDA playerSegmentIndex \ Set A = playerSegmentIndex + 3
  CLC                    \
  ADC #3                 \ to move on to the next track segment
 
@@ -5254,19 +5268,21 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: GetSegmentIndex96
+\       Name: GetPlayerIndex
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Set the segmentIndex96 index to 96 + the current track section
-\             index * 3
+\    Summary: Set the index for the player's segment in the track section buffer
+\             to be 32 segments behind the front segment
 \
 \ ******************************************************************************
 
-.GetSegmentIndex96
+.GetPlayerIndex
 
- LDA segmentIndex       \ Set A = the current track segment index * 3 - 96
- SEC
- SBC #96
+ LDA frontSegmentIndex  \ Set A = the front track segment index * 3 - 96
+ SEC                    \
+ SBC #96                \ So this is 32 segments before the front track segment
+                        \ in the track segment buffer, as each buffer entry has
+                        \ three bytes
 
  BPL zsta1              \ If A < 0, set A = A + 120, so the index number wraps
  CLC                    \ around to the end of the stack
@@ -5274,7 +5290,7 @@ ORG &0B00
 
 .zsta1
 
- STA segmentIndex96     \ Set segmentIndex96 to the updated index
+ STA playerSegmentIndex \ Set playerSegmentIndex to the updated index
 
  RTS                    \ Return from the subroutine
 
@@ -5289,7 +5305,7 @@ ORG &0B00
 \ ------------------------------------------------------------------------------
 \
 \ This routine is called when we move into a new track section, and is used to
-\ populate the current track segment with the data from the start of the new
+\ populate the front track segment with the data from the start of the new
 \ track section.
 \
 \ Arguments:
@@ -5297,7 +5313,8 @@ ORG &0B00
 \   sectionBehind       The number * 8 of the track section behind us, for when
 \                       we are facing backwards
 \
-\   segmentIndex        The index * 3 of the current track segment
+\   frontSegmentIndex   The index * 3 of the new front track segment in the
+\                       track segment buffer
 \
 \ Returns:
 \
@@ -5305,23 +5322,24 @@ ORG &0B00
 \                       backwards
 \
 \   xSegmentCoordI      Start coordinates for the inside of the track section,
-\                       stored in the current track segment
+\                       stored in the new front track segment
 \
 \   xSegmentCoordO      Start coordinates for the outside of the track section,
-\                       stored in the current track segment
+\                       stored in the new front track segment
 \
 \   thisVectorNumber    The vector number from the start of the track section
 \
-\   thisSectionFlags    The track section flags for the section containing
-\                       driver 23
+\   thisSectionFlags    The track section flags for the section containing the
+\                       new front track segment
 \
-\   segmentFlags        Zeroed for the current track segment
+\   segmentFlags        Zeroed for the new front track segment
 \
 \ ******************************************************************************
 
 .GetFirstSegment
 
- LDX segmentIndex       \ Set X to the index * 3 of the current track segment
+ LDX frontSegmentIndex  \ Set X to the index * 3 of the front track segment in
+                        \ the track segment buffer
 
  LDY #6                 \ Set Y = 6
 
@@ -5346,8 +5364,8 @@ ORG &0B00
  LDA directionFacing    \ If our car is facing backwards, jump to getf2
  BMI getf2
 
- LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
-                        \ driver 23
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
+                        \ front segment of the track segment buffer
 
  JSR GetSectionCoords   \ Copy the start coordinates for the track section
                         \ into xSegmentCoordI and xSegmentCoordO, and set
@@ -5379,13 +5397,13 @@ ORG &0B00
  AND #%00000111         \ Set sectionListSize = bits 0-2 from A
  STA sectionListSize
 
- LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
-                        \ driver 23
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
+                        \ new front segment
 
  LDA trackSectionFlag,Y \ Set thisSectionFlags to the track section flags for
- STA thisSectionFlags   \ the section containing driver 23
+ STA thisSectionFlags   \ the section containing the new front track segment
 
- LDA #0                 \ Zero the flags for the current track segment
+ LDA #0                 \ Zero the flags for the front track segment
  STA segmentFlags,X
 
  RTS                    \ Return from the subroutine
@@ -5646,14 +5664,17 @@ ORG &0B00
 
 .GetTrackSegment
 
- LDA segmentIndex       \ Set A to the index * 3 of the current track segment
+ LDA frontSegmentIndex  \ Set A to the index * 3 of the front track segment in
+                        \ the track segment buffer
 
- STA segmentIndexPrev   \ Store A in segmentIndexPrev, as we are about to move
+ STA prevSegmentIndex   \ Store A in prevSegmentIndex, as we are about to move
                         \ on to the next track segment
 
- CLC                    \ Set A = segmentIndex + 3
+ CLC                    \ Set A = frontSegmentIndex + 3
  ADC #3                 \
-                        \ to move on to the next track segment
+                        \ to move on to the next track segment ahead of the
+                        \ current front segment in the track segment buffer,
+                        \ which will become the new front segment
 
  CMP #120               \ If A < 120, then we haven't reached the end of the
  BCC gets1              \ track segment buffer, so jump to gets1 to store the
@@ -5664,10 +5685,11 @@ ORG &0B00
 
 .gets1
 
- STA segmentIndex       \ Set segmentIndex to the index * 3 of the new track
-                        \ segment
+ STA frontSegmentIndex  \ Set frontSegmentIndex to the index * 3 of the new
+                        \ front track segment
 
- LDX #23                \ Set X to driver 23
+ LDX #23                \ Set X to 23, the object number we use to store the
+                        \ front segment of the track segment buffer
 
  LDA directionFacing    \ If our car is facing backwards, jump to gets3
  BMI gets3
@@ -5677,24 +5699,25 @@ ORG &0B00
 
  AND #%11111000         \ Reduce A to the nearest multiple of 8
 
- CMP objTrackSection,X  \ If A <> number of the track section * 8 for driver 23,
- BNE gets2              \ then we are not halfway through all the track
+ CMP objTrackSection,X  \ If A <> number of the track section * 8 for the front
+ BNE gets2              \ segment, then we are not halfway through all the track
                         \ sections, so jump to gets2
 
-                        \ If we get here then driver 23 is at the halfway point
-                        \ round the track in terms of track section numbers
+                        \ If we get here then the front segment is at the
+                        \ halfway point round the track in terms of track
+                        \ section numbers
 
- LDA #1                 \ Set pastHalfway = 1, to denote that driver 23 is in
- STA pastHalfway        \ the second half of the track
+ LDA #1                 \ Set pastHalfway = 1, to denote that the front segment
+ STA pastHalfway        \ is in the second half of the track
 
 .gets2
 
- JSR MoveObjectForward  \ Move driver 23 forwards along the track, setting the
-                        \ C flag if this moves the driver into the next track
-                        \ section
+ JSR MoveObjectForward  \ Move the front segment forwards along the track,
+                        \ setting the C flag if this moves the driver into the
+                        \ next track section
 
- BCC gets4              \ If driver 23 is still in the same track section, jump
-                        \ to gets4
+ BCC gets4              \ If the front segment is still in the same track
+                        \ section, jump to gets4
 
  JSR GetFirstSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
@@ -5712,14 +5735,14 @@ ORG &0B00
                         \ If we get here then our car is facing backwards
 
  LDA objTrackSection+23 \ Set sectionBehind to the number * 8 of the track
- STA sectionBehind      \ section for driver 23
+ STA sectionBehind      \ section for the front segment
 
- JSR MoveObjectBack     \ Move driver 23 backwards along the track, setting the
-                        \ C flag if this moves the driver into the next track
-                        \ section
+ JSR MoveObjectBack     \ Move the front segment backwards along the track,
+                        \ setting the C flag if this moves the driver into the
+                        \ next track section
 
- BCC gets4              \ If driver 23 is still in the same track section, jump
-                        \ to gets4
+ BCC gets4              \ If the front segment is still in the same track
+                        \ section, jump to gets4
 
  JSR GetFirstSegment    \ Otherwise we just moved into a new track section, so
                         \ get the track section coordinates and flags from the
@@ -5751,25 +5774,27 @@ ORG &0B00
 \       Name: GetTrackSegment (Part 2 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Set the flags for the new track segment
+\    Summary: Set the flags for the new front segment in the track segment
+\             buffer
 \
 \ ------------------------------------------------------------------------------
 \
 \ This part does the following:
 \
-\   * Set the flags for the new track segment
+\   * Set the flags for the new front track segment in the track segment buffer
 \
 \ Set the flags for the new track segment to the flags for the track section
 \ from the track data, but with these changes:
 \
 \ Curve:
 \
-\   * If driver 23 is not exactly halfway through the section, clear bits 3-5
+\   * If the new front segment is not exactly halfway through the section,
+\     clear bits 3-5
 \
 \ Straight:
 \
-\   * If driver 23's segment number within the track section is not in the range
-\     1 to 9, clear bits 1, 2
+\   * If the new front segment's segment number within the track section is not
+\     in the range 1 to 9, clear bits 1, 2
 \
 \   * If the distance yet to cover in this section = 14 or 21, clear bit 5
 \
@@ -5778,7 +5803,8 @@ ORG &0B00
 \
 \ ******************************************************************************
 
- LDX segmentIndex       \ Set X to the index * 3 of the new track segment
+ LDX frontSegmentIndex  \ Set X to the index * 3 of the front track segment in
+                        \ the track segment buffer
 
  LDA thisSectionFlags   \ Store bit 0 of the current section's flags on the
  LSR A                  \ stack using the C flag
@@ -5793,8 +5819,8 @@ ORG &0B00
 
                         \ If we get here then this is a straight track section
 
- LDY objSectionSegmt+23 \ Set Y to driver 23's segment number within the track
-                        \ section
+ LDY objSectionSegmt+23 \ Set Y to the new front segment's segment number within
+                        \ the track section
 
  CPY #1                 \ If Y < 1, jump to gets5
  BCC gets5
@@ -5813,24 +5839,26 @@ ORG &0B00
  STA W                  \ Store A in W, so W contains:
                         \
                         \   * The current section's flags if this is a curve, or
-                        \     if this is a straight and driver 23's segment 
-                        \     number in the track section is in the range 1 to 9
+                        \     if this is a straight and the new segment's number
+                        \     within the track section is in the range 1 to 9
                         \
                         \   * The current section's flags with bits 1 and 2
                         \     cleared otherwise (i.e. if this is a straight and
-                        \     driver 23's segment number in the track section is
-                        \     not in the range 1 to 9)
+                        \     the new segment's number within the track section
+                        \     is not in the range 1 to 9)
                         \
                         \ We use W to build the flags for the new track segment
 
- LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
-                        \ driver 23
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
+                        \ new front segment
 
- LDA trackSectionSize,Y \ Set A to the size of the track section for driver 23
+ LDA trackSectionSize,Y \ Set A to the size of the track section for the new
+                        \ front segment
 
  PLP                    \ If bit 0 of the current section's flag byte is clear,
  BCC gets7              \ then this is a straight section, so jump to gets7 with
-                        \ A set to the size of the track section for driver 23
+                        \ A set to the size of the track section for the new
+                        \front segment
 
                         \ If we get here then this is a curved track section
 
@@ -5841,7 +5869,7 @@ ORG &0B00
  LDA W                  \ Set A = W, which contains the flags we are building
                         \ for the new track segment
 
- CPY objSectionSegmt+23 \ If Y = driver 23's segment number in the track
+ CPY objSectionSegmt+23 \ If Y = the new front segment's number within the track
  BEQ gets10             \ section, then the driver is exactly halfway round the
                         \ curve, so jump to gets10 to store A in the track
                         \ segment's flags
@@ -5852,13 +5880,14 @@ ORG &0B00
 .gets7
 
                         \ If we get here then this is a straight section and A
-                        \ is set to the size of the track section for driver 23
+                        \ is set to the size of the track section for the new
+                        \ front segment
 
- SEC                    \ Set Y = A - driver 23's segment number in the track
- SBC objSectionSegmt+23 \ section
+ SEC                    \ Set Y = A - the new front segment's number within the
+ SBC objSectionSegmt+23 \ track section
  TAY                    \
-                        \ So Y contains the length of the track section that
-                        \ driver 23 has yet to cover
+                        \ So Y contains the length of the track section between
+                        \ the new front segment and the end of the section
 
  LDA W                  \ Set A = W, which contains the flags we are building
                         \ for the new track segment
@@ -5919,7 +5948,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
- LDY segmentIndexPrev   \ Set Y to the index * 3 of the previous track segment
+ LDY prevSegmentIndex   \ Set Y to the index * 3 of the previous track segment
 
  JSR AddVectors         \ Add the (SS T), (TT U) and (UU V) vectors to the
                         \ inner track section coordinates for the previous
@@ -6019,7 +6048,8 @@ ORG &0B00
 
 .gets13
 
- LDX segmentIndex       \ Set X to the index * 3 of the new track segment
+ LDX frontSegmentIndex  \ Set X to the index * 3 of the front track segment in
+                        \ the track segment buffer
 
  LDA thisVectorNumber   \ Set segmentVector for the new track segment to the
  STA segmentVector,X    \ number of the segment vector for the track section
@@ -6027,8 +6057,8 @@ ORG &0B00
                         \ this is a straight, or the next segment vector if this
                         \ is a curve)
 
- JSR GetSegmentIndex96  \ Update the segmentIndex96 index to be 96 ahead of
-                        \ segmentIndex
+ JSR GetPlayerIndex     \ Update the index for the segment containing the player
+                        \ in the track segment buffer
 
  JSR GetBestRacingLine  \ Set segmentSteering for the new track segment to the
                         \ best racing line to take at this point in the section
@@ -6674,13 +6704,13 @@ ORG &0B00
 
 .GetBestRacingLine
 
- LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for
-                        \ driver 23
+ LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
+                        \ front segment of the track segment buffer
 
  TYA                    \ Set X = Y / 8
  LSR A                  \
- LSR A                  \ So X contains the number of the track section for
- LSR A                  \ driver 23
+ LSR A                  \ So X contains the number of the track section for the
+ LSR A                  \ front segment
  TAX
 
  LDA turnCounter        \ If turnCounter is non-zero, then a turn is already in
@@ -6692,9 +6722,9 @@ ORG &0B00
  LSR A                  \ curved track section, so jump to rlin2
  BCS rlin2
 
- LDA objSectionSegmt+23 \ If driver 23's segment number in the track section is
- CMP trackSectionTurn,Y \ >= the trackSectionTurn for the section, jump to rlin3
- BCS rlin3              \ to move on to the next track section
+ LDA objSectionSegmt+23 \ If the front segment's number within the track section
+ CMP trackSectionTurn,Y \ is >= the trackSectionTurn for the section, jump to
+ BCS rlin3              \ rlin3 to move on to the next track section
 
                         \ If we get here, then:
                         \
@@ -6703,9 +6733,9 @@ ORG &0B00
                         \   * Bit 0 of thisSectionFlags is clear, so this is a
                         \     straight track section
                         \
-                        \   * Driver 23's segment number in the track section is
-                        \     less than the trackSectionTurn value for the
-                        \     section
+                        \   * The front segment's number within the track
+                        \     section is less than the trackSectionTurn value
+                        \     for the section
                         \
                         \ So we are not already turning from a previous call, we
                         \ are on a straight, and we haven't yet reached the
@@ -6738,7 +6768,7 @@ ORG &0B00
 
 .rlin3
 
-                        \ If we jump here, then driver 23 is past the
+                        \ If we jump here, then the front segment is past the
                         \ trackSectionTurn point in this section, so we start
                         \ looking at the next section for the best racing line
 
@@ -6832,8 +6862,8 @@ ORG &0B00
 
 .rlin7
 
- LDY segmentIndex       \ Set segmentSteering for this track segment to A
- STA segmentSteering,Y
+ LDY frontSegmentIndex  \ Set segmentSteering for the front segment in the track
+ STA segmentSteering,Y  \ segment buffer to A
 
  RTS                    \ Return from the subroutine
 
@@ -7572,9 +7602,9 @@ ENDIF
  JSR DrawBackground     \ Set the background colour for all the track lines in
                         \ the track view
 
- JSR BuildRoadSign      \ Build the road sign (if one is visible) in driver 23
+ JSR BuildRoadSign      \ Build the road sign (if one is visible)
 
- LDX #23                \ Draw any visible road signs
+ LDX #23                \ Draw the road sign we just built
  JSR DrawCarOrSign
 
  JSR DrawCornerMarkers  \ Draw any visible corner markers
@@ -11986,7 +12016,8 @@ IF _SUPERIOR
  STA V                  \ Set (V T) = (A T)
                         \           = |X-th xVergeRight - (W V)|
 
- LDY segmentIndex96     \ Set Y to segmentIndex - 96
+ LDY playerSegmentIndex \ Set Y to the index of the player's segment in the
+                        \ track segment buffer
 
  LDA #60                \ Set A = 60 - speedHi
  SEC
@@ -12007,7 +12038,7 @@ IF _SUPERIOR
                         \ with lower speeds
 
  LDA segmentSteering,Y  \ Fetch the carSteering value to steer round the corner
-                        \ for track segment segmentIndex96
+                        \ for the player's track segment
 
  AND #%01111111         \ Zero the driving direction in bit 7
 
@@ -13708,7 +13739,7 @@ ENDIF
 \   * Update the entry at sectionListPointer as follows:
 \
 \     * Part 2: Calculate the track section number for this entry, relative to
-\       driver 23
+\       the front segment in the track segment buffer
 \
 \     * Part 3: Set the rotation and elevation angles for this section in the
 \       xVergeRight/Left and yVergeRight/Left tables
@@ -13830,24 +13861,27 @@ ENDIF
 \ This part of the routine calculates the number of the track section that we
 \ want to update, i.e. the section at entry sectionListPointer in the list.
 \
-\ The track section list contains up to six segments in front of driver 23, as
-\ follows (for when we are facing forwards):
+\ The track section list contains up to six segments behind the front segment
+\ in the track segment buffer, as follows (for when we are facing forwards):
 \
-\   * Entry #5 in the list corresponds to the section in front of driver 23
-\   * Entry #4 in the list corresponds to two sections in front of driver 23
-\   * Entry #3 in the list corresponds to three sections in front of driver 23
-\   * Entry #2 in the list corresponds to four sections in front of driver 23
-\   * Entry #1 in the list corresponds to five sections in front of driver 23
-\   * Entry #0 in the list corresponds to six sections in front of driver 23
+\   * Entry #5 in the list corresponds to the section behind the front segment
+\   * Entry #4 in the list corresponds to two sections behind the front segment
+\   * Entry #3 in the list corresponds to three sections behind the front
+\     segment
+\   * Entry #2 in the list corresponds to four sections behind the front segment
+\   * Entry #1 in the list corresponds to five sections behind the front segment
+\   * Entry #0 in the list corresponds to six sections behind the front segment
 \
 \ And the following for when we are facing backwards:
 \
-\   * Entry #5 in the list corresponds to the section containing driver 23
-\   * Entry #4 in the list corresponds to the section behind driver 23
-\   * Entry #3 in the list corresponds to two sections behind driver 23
-\   * Entry #2 in the list corresponds to three sections behind driver 23
-\   * Entry #1 in the list corresponds to four sections behind driver 23
-\   * Entry #0 in the list corresponds to five sections behind driver 23
+\   * Entry #5 in the list corresponds to the section containing the front
+\     segment
+\   * Entry #4 in the list corresponds to the section behind the front segment
+\   * Entry #3 in the list corresponds to two sections behind the front segment
+\   * Entry #2 in the list corresponds to three sections behind the front
+\     segment
+\   * Entry #1 in the list corresponds to four sections behind the front segment
+\   * Entry #0 in the list corresponds to five sections behind the front segment
 \
 \ Note that entry #5 is the last in the list, and for most track sections, we
 \ only store the last few entries (e.g. for track section 0, sectionListSize is
@@ -13875,21 +13909,21 @@ ENDIF
 
  STA T                  \ Set T = A
 
- LDA objTrackSection+23 \ Set A to the number * 8 of the track section for
-                        \ driver 23
+ LDA objTrackSection+23 \ Set Y to the number * 8 of the track section for the
+                        \ front segment of the track segment buffer
 
  CLC                    \ Set A = A + 8 - T
- ADC #8                 \       = section23 * 8 + 8 - T
- SEC                    \       = (section23 + 1 - (T / 8)) * 8
+ ADC #8                 \       = frontSection * 8 + 8 - T
+ SEC                    \       = (frontSection + 1 - (T / 8)) * 8
  SBC T                  \
                         \ So A contains:
                         \
-                        \   * (section23 - 0) * 8 for entry #5
-                        \   * (section23 - 1) * 8 for entry #4
-                        \   * (section23 - 2) * 8 for entry #3
-                        \   * (section23 - 3) * 8 for entry #2
-                        \   * (section23 - 4) * 8 for entry #1
-                        \   * (section23 - 5) * 8 for entry #0
+                        \   * (frontSection - 0) * 8 for entry #5
+                        \   * (frontSection - 1) * 8 for entry #4
+                        \   * (frontSection - 2) * 8 for entry #3
+                        \   * (frontSection - 3) * 8 for entry #2
+                        \   * (frontSection - 4) * 8 for entry #1
+                        \   * (frontSection - 5) * 8 for entry #0
                         \
                         \ So A now contains the correct section number for
                         \ entry number number sectionListPointer
@@ -13907,17 +13941,18 @@ ENDIF
 
                         \ If we get here then we are facing forwards
 
- CLC                    \ Set A = A + number * 8 of track section for driver 23
- ADC objTrackSection+23 \       = A + section23 * 8
+ CLC                    \ Set A = A + number * 8 of track section for the
+ ADC objTrackSection+23 \              front segment
+                        \       = A + frontSection * 8
                         \
                         \ So A contains:
                         \
-                        \   * (1 + section23) * 8 for entry #5
-                        \   * (2 + section23) * 8 for entry #4
-                        \   * (3 + section23) * 8 for entry #3
-                        \   * (4 + section23) * 8 for entry #2
-                        \   * (5 + section23) * 8 for entry #1
-                        \   * (6 + section23) * 8 for entry #0
+                        \   * (1 + frontSection) * 8 for entry #5
+                        \   * (2 + frontSection) * 8 for entry #4
+                        \   * (3 + frontSection) * 8 for entry #3
+                        \   * (4 + frontSection) * 8 for entry #2
+                        \   * (5 + frontSection) * 8 for entry #1
+                        \   * (6 + frontSection) * 8 for entry #0
                         \
                         \ So A now contains the correct section number for
                         \ entry number number sectionListPointer
@@ -14409,7 +14444,7 @@ ENDIF
  LDA #0                 \ Set U = 0, to use as an axis counter below
  STA U
 
- LDY prevSegmentIndex   \ Set Y to the offset from xSegmentCoordILo of the
+ LDY prevSegmentOffset  \ Set Y to the offset from xSegmentCoordILo of the
                         \ previous segment's 3D coordinates
 
  STX W                  \ Store the segment offset that's in X in W, so we can
@@ -14526,7 +14561,7 @@ ENDIF
                         \ store the results as our final entry in the track
                         \ segment list
 
- LDX prevSegmentIndex   \ Set X to the offset from xSegmentCoordILo of the
+ LDX prevSegmentOffset  \ Set X to the offset from xSegmentCoordILo of the
                         \ previous segment's 3D coordinates, so the call to
                         \ GetVergeAndMarkers uses the previous segment's verge
                         \ data for our quarter segment's calculation
@@ -14615,8 +14650,8 @@ ENDIF
                         \ If we get here then we have successfully processed a
                         \ visible segment
 
- STX prevSegmentIndex   \ Store the offset from xSegmentCoordILo of this
-                        \ segment's 3D coordinates in prevSegmentIndex, to use
+ STX prevSegmentOffset  \ Store the offset from xSegmentCoordILo of this
+                        \ segment's 3D coordinates in prevSegmentOffset, to use
                         \ in the next iteration if the next segment is not
                         \ visible
 
@@ -14894,17 +14929,20 @@ ENDIF
 \
 \   X                   Returns:
 \
-\                         * segmentIndex when our car is facing in direction A
+\                         * frontSegmentIndex when our car is facing in
+\                           direction A
 \
-\                         * segmentIndex + 120 when our car is facing opposite
-\                           direction A (which is the outer xSegmentCoordOLo
-\                           rather than the inner xSegmentCoordILo)
+\                         * frontSegmentIndex + 120 when our car is facing the
+\                           opposite direction to A (so we use the outer
+\                           xSegmentCoordOLo rather than the inner
+\                           xSegmentCoordILo)
 \
 \ ******************************************************************************
 
 .GetSegmentDetails
 
- LDX segmentIndex       \ Set X to the index * 3 of the current track segment
+ LDX frontSegmentIndex  \ Set X to the index * 3 of the front track segment in
+                        \ the track segment buffer
 
  EOR directionFacing    \ If bit 7 of A and bit 7 of directionFacing are the
  BPL segd1              \ same, jump to segd1
@@ -16726,13 +16764,15 @@ ENDIF
 
  TAX                    \ Set X to the driver number
 
- LDY #23                \ Set Y to driver 23
+ LDY #23                \ Set Y to 23, the object number we use to store the
+                        \ front segment of the track segment buffer
 
  SEC                    \ Set the C flag for a 16-bit calculation in the call
                         \ to CompareSegments
 
  JSR CompareSegments    \ Set A and T to the distance between driver X and
-                        \ driver 23 in object Y
+                        \ the front segment in the track segment buffer in
+                        \ object Y
 
  BCS bvis1              \ If the C flag is set then the two cars are far apart,
                         \ i.e. |T| < 128, so jump to bvis1 to hide the car
@@ -16742,10 +16782,12 @@ ENDIF
                         \ if either of the following is true:
                         \
                         \   * We are facing forwards (0) and driver X is ahead
-                        \     of driver 23 (1)
+                        \     of the front segment in the track segment buffer
+                        \     (1)
                         \
                         \   * We are facing backwards (1) and driver X is not
-                        \     ahead of driver 23 (0)
+                        \     ahead of the front segment in the track segment
+                        \     buffer (0)
                         \
                         \ In both cases driver X is too far away from us to be
                         \ seen, and bit 7 of the result of the EOR will be set,
@@ -16754,13 +16796,15 @@ ENDIF
  LDA T                  \ Set T = |T|
  JSR Absolute8Bit       \
  STA T                  \ so A and T contain the absolute value of the distance
-                        \ between the car and driver 23
+                        \ between the car and the front segment in the track
+                        \ segment buffer
 
  CMP #40                \ If |A| < 40, jump to bvis2 to skip the following
  BCC bvis2              \ instruction and continue creating the car object
 
-                        \ If we get here then the car and driver 23 are far
-                        \ apart, so we hide the car
+                        \ If we get here then the car and the front segment in
+                        \ the track segment buffer are far apart, so we hide the
+                        \ car
 
 .bvis1
 
@@ -16771,7 +16815,8 @@ ENDIF
 .bvis2
 
                         \ If we get here, A and T contain the absolute value of
-                        \ the distance between the car and driver 23
+                        \ the distance between the car and the front segment in
+                        \ the track segment buffer
 
  ASL A                  \ Set A = A * 2
                         \       = distance * 2
@@ -16780,16 +16825,16 @@ ENDIF
  ADC T                  \       = ~(distance * 2 + distance)
  EOR #&FF               \       = ~(distance * 3)
 
- SEC                    \ Set A = A + 1 + segmentIndex
- ADC segmentIndex       \       = ~(distance * 3) + 1 + segmentIndex
-                        \       = -(distance * 3) + segmentIndex
-                        \       = segmentIndex - distance * 3
+ SEC                    \ Set A = A + 1 + frontSegmentIndex
+ ADC frontSegmentIndex  \       = ~(distance * 3) + 1 + frontSegmentIndex
+                        \       = -(distance * 3) + frontSegmentIndex
+                        \       = frontSegmentIndex - distance * 3
                         \
-                        \ segmentIndex contains the index * 3 of the track
-                        \ segment that was last processed, so this is the same
-                        \ as:
+                        \ frontSegmentIndex contains the index * 3 of the front
+                        \ segment in the track segment buffer, so this is the
+                        \ same as:
                         \
-                        \   (track segment index - distance) * 3
+                        \   (front segment index - distance) * 3
 
  BPL bvis3              \ If the result was positive, i.e. track segment index
                         \ > distance, jump to bvis3 to skip the following
@@ -25661,7 +25706,7 @@ NEXT
 
 .C452D
 
- LDX segmentIndex96
+ LDX playerSegmentIndex
  LDY segmentVector,X
  LDA L000D
  STA V
@@ -25798,7 +25843,7 @@ NEXT
 
 .C45DF
 
- LDY segmentIndex96
+ LDY playerSegmentIndex
  CLC
  ADC ySegmentCoordILo,Y
  PHP
@@ -27629,9 +27674,8 @@ ENDIF
                         \ to the player (i.e. relative to the camera)
                         \
                         \ We then calculate the rotation and elevation angles
-                        \ and create an object in driver 23, so it can be drawn
-                        \ by the call to DrawCarOrSign from the main driving
-                        \ loop
+                        \ and store them in object 23, so it can be drawn by
+                        \ the call to DrawCarOrSign from the main driving loop
 
  LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 6
@@ -27714,8 +27758,8 @@ ENDIF
                         \ y-axis, returning it in (JJ II)
 
  LDA II                 \ Set the rotation about the y-axis in (objRotationHi+23
- STA objRotationLo+23   \ objRotationLo+23) to (JJ II), so we use driver 23 to
- LDA JJ                 \ store the sign's object
+ STA objRotationLo+23   \ objRotationLo+23) to (JJ II), using the entries for
+ LDA JJ                 \ object 23 to store the sign's object
  STA objRotationHi+23
 
                         \ Now that the sign object has been built and the angles
