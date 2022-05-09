@@ -5789,17 +5789,22 @@ ORG &0B00
 \ Curve:
 \
 \   * If the new front segment is not exactly halfway through the section,
-\     clear bits 3-5
+\     clear bits 3-5, to hide all corner markers (so they only get shown halfway
+\     through the section)
 \
 \ Straight:
 \
 \   * If the new front segment's segment number within the track section is not
-\     in the range 1 to 9, clear bits 1, 2
+\     in the range 1 to 9, clear bits 1, 2 to show a black-and-white verge
 \
-\   * If the distance yet to cover in this section = 14 or 21, clear bit 5
+\   * If the distance yet to cover in this section = 7, leave bit 5 alone, so if
+\     red corner markers are configured, they are left as red
+\
+\   * If the distance yet to cover in this section = 14 or 21, clear bit 5 to
+\     show all corner markers in white
 \
 \   * If the distance yet to cover in this section <> 7, 14 or 21, clear bits
-\     3, 4, 5
+\     3-5, to hide all corner markers
 \
 \ ******************************************************************************
 
@@ -5858,7 +5863,7 @@ ORG &0B00
  PLP                    \ If bit 0 of the current section's flag byte is clear,
  BCC gets7              \ then this is a straight section, so jump to gets7 with
                         \ A set to the size of the track section for the new
-                        \front segment
+                        \ front segment
 
                         \ If we get here then this is a curved track section
 
@@ -8870,14 +8875,16 @@ ENDIF
  BEQ corn7              \ markers, so jump to corn7 to reset markersToDraw to
                         \ zero and return from the subroutine
 
- LDX markerListIndex,Y  \ Set X = markerListIndex for marker Y
+ LDX markerListIndex,Y  \ Set X = markerListIndex for marker Y, so X contains
+                        \ the index of the corresponding entry in the track
+                        \ segment list for this corner markers
 
  STY temp1              \ Store the marker number in temp1, so we can retrieve
                         \ it at the end of the loop
 
  LDA markerData,Y       \ If bit 5 of markerData for marker Y is clear, then the
- AND #%00100000         \ marker is white, so skip the following two
- BEQ corn2              \ instructions
+ AND #%00100000         \ marker is white, so jump to corn2 to skip the
+ BEQ corn2              \ following two instructions
 
  LDA #%00001111         \ Map logical colour 2 in the colour palette to physical
  STA colourPalette+2    \ colour 1 (red in the track view), so the corner marker
@@ -8886,21 +8893,25 @@ ENDIF
 .corn2
 
  LDA xMarkerHi,Y        \ Set (U A) = (xMarkerHi xMarkerLo) for marker Y
- STA U
- LDA xMarkerLo,Y
+ STA U                  \
+ LDA xMarkerLo,Y        \ So (U A) contains the x-axis distance between the
+                        \ track edge and the marker
 
  ASL A                  \ Set (U A) = (U A) << 1
- ROL U                  \           = xMarker << 1
+ ROL U                  \           = xMarker * 2
 
  STA T                  \ Set (U T) = (U A)
-                        \           = xMarker << 1
+                        \           = xMarker * 2
 
  CLC                    \ Set (A V) = (U A) + X-th value from xVergeRight
  ADC xVergeRightLo,X    \
  STA V                  \ starting with the low bytes
 
  LDA xVergeRightHi,X    \ And then the high bytes
- ADC U
+ ADC U                  \
+                        \ So (A V) contains the verge's x-coordinate plus the
+                        \ distance between the track edge and the marker
+                        \ (doubled), to give the x-coordinate of the marker
 
  CMP #24                \ If A < 24, jump to corn3
  BCC corn3
@@ -8910,7 +8921,8 @@ ENDIF
 
 .corn3
 
-                        \ If we get here then A < 24 or A >= -24
+                        \ If we get here then A < 24 or A >= -24, so the marker
+                        \ is on-screen
 
  ASL V                  \ Set (A V) = (A V) << 2
  ROL A                  \
@@ -8923,7 +8935,9 @@ ENDIF
                         \ screen (as the screen is 160 pixels wide)
 
  LDA yVergeRight,X      \ Set yCoord = X-th value from yVergeRight
- STA yCoord
+ STA yCoord             \
+                        \ Which is the elevation angle (i.e. y-coordinate) of
+                        \ the verge that has the corner markes
 
  LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
                         \ two places
@@ -8937,17 +8951,23 @@ ENDIF
 
  BNE corn4              \ Loop back until we have left-shifted by Y places
 
- LDA U                  \ Set A = U
+ LDA U                  \ Set A = U, so we now have:
+                        \
+                        \   (A T) = (U T) << 2
+                        \         = xMarker * 2 * 2
 
  BPL corn5              \ If A is positive, jump to corn5 to skip the following
 
  EOR #&FF               \ A is negative, so negate A using two's complement, so
- CLC                    \ A now contains |U|
+ CLC                    \ A now contains |A|
  ADC #1
 
 .corn5
 
- STA scaleUp            \ Set scaleUp = |U|
+ STA scaleUp            \ Set scaleUp = |A|
+                        \
+                        \ So the size of the corner marker is based on the
+                        \ x-axis distance between the track edge and the marker
 
  LDA #6                 \ Set objectType = 6, the object type for a corner
  STA objectType         \ marker
@@ -14733,67 +14753,194 @@ ENDIF
 \   Category: Driving model
 \    Summary: Move the player's car in the correct direction
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
 .MovePlayerCar
 
- LDA L0044
+ LDA L0044              \ Set A = L0044 - spinRotationHi
  SEC
  SBC spinRotationHi
- BPL mpla1
- EOR #&FF
+
+                        \ A is an angle thet represents the new direction in
+                        \ which our car will be facing, after applying spin,
+                        \ with respect to the track, like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ An angle of 0 means our car is facing forwards along
+                        \ the track, while and angle of +32 means we are facing
+                        \ 45 degrees to the right of straight on, and an angle
+                        \ of 128 means we are facing backwards along the track
+
+ BPL mpla1              \ If A is positive, jump to mpla1 to skip the following
+
+ EOR #&FF               \ Invert A, so this effectively reflects the angle into
+                        \ the right half of the above diagram:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   96
+                        \           127
 
 .mpla1
 
- ASL A
- CMP #&80
- EOR directionFacing
- BPL mpla3
- BCC mpla2
- EOR #%01111111
+ ASL A                  \ Set A = A << 1, so we now have:
+                        \
+                        \            0
+                        \            |   64
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 128
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   192
+                        \           254
+
+ CMP #128               \ Clear the C flag if A < 128 (i.e. top-right quadrant)
+                        \ is set the C flag if A >= 128 (i.e. bottom-right
+                        \ quadrant)
+
+                        \ Note that bit 7 is similar, so we have:
+                        \
+                        \            0
+                        \            |   64
+                        \            |  /       <-- C flag and bit 7 clear
+                        \            | /
+                        \            |/
+                        \            +----- 128
+                        \            |\
+                        \            | \
+                        \            |  \       <-- C flag and bit 7 set
+                        \            |   192
+                        \           254
+
+
+ EOR directionFacing    \ If we are facing forwards, leave A alone, but if we
+                        \ are currently facing backwards, flip bit 7 of A
+
+ BPL mpla3              \ If we are facing forwards and we are in the top-right
+                        \ quadrant, or we are facing backwards and we are in the
+                        \ bottom-right quadrant, then the direction we are
+                        \ facing is still correct, so jump to mpla3 to get on
+                        \ with moving the car
+                        \
+                        \ Otherwise we may now be facing in a different
+                        \ direction to before, and bit 7 of A is set
+
+ BCC mpla2              \ If bit 7 of A was clear before the above EOR, then we
+                        \ are in the top-right quadrant but are currently facing
+                        \ backwards, so jump to mpla2 to skip the following
+                        \ instruction
+
+ EOR #%01111111         \ Bit 7 of A was set before the above EOR, so we are in
+                        \ the bottom-right quadrant, but are currently facing
+                        \ forwards, so flip bits 0-6 of A, changing the range of
+                        \ the bottom-right quadrant from 128 to 254 to
+                        \ 255 to 129
 
 .mpla2
 
- CMP #&FC
- BCS mpla3
+                        \ By this point, we are pointing in the opposite
+                        \ direction to the setting of directionFacing, and the
+                        \ angles are as follows:
+                        \
+                        \            0
+                        \            |   64
+                        \            |  /       <-- C flag and bit 7 clear
+                        \            | /
+                        \            |/_.- 127
+                        \            +----- 255
+                        \            |\-._ 252
+                        \            | \
+                        \            |  \       <-- C flag and bit 7 set
+                        \            |   192
+                        \           129
+                        \
+                        \ So 0 to 127 is in the top-right quadrant, while 255 to
+                        \ 129 is the bottom-right quadrant
 
- JSR ChangeDirection
+ CMP #252               \ If A >= 252, then the new angle we are facing is in
+ BCS mpla3              \ the top sliver of the bottom-right quadrant, so jump
+                        \ to mpla3 to get on with moving the car
 
- RTS
+                        \ If we get here then A < 252, which means we are either
+                        \ now in the top-right quadrant, or we are in the bottom
+                        \ part of the bottom-right quadrant, and we are facing
+                        \ in a different direction to directionFacing
+                        \
+                        \ So we have now officially turned in the opposite
+                        \ direction, and need to update all the various buffers
+                        \ and variables
+
+ JSR ChangeDirection    \ Turn the player around, updating the track segment
+                        \ buffer for the new direction, resetting the track
+                        \ section list, and updating all the direction-related
+                        \ variables
+
+ RTS                    \ Return from the subroutine
 
 .mpla3
 
- LDA edgeSegmentNumber
+ LDA edgeSegmentNumber  \ If edgeSegmentNumber = 12, jump to mpla4
  CMP #12
  BEQ mpla4
- BCS mpla5
- JSR MovePlayerForward
+
+ BCS mpla5              \ If edgeSegmentNumber > 12, jump to mpla5
+
+                        \ If we get here then edgeSegmentNumber < 12
+
+ JSR MovePlayerForward  \ Move the player forwards and get the next track segment
 
 .mpla4
 
- BIT L0043
- BPL mpla7
- JSR MovePlayerForward
- RTS
+ BIT L0043              \ If bit 0 of L0043 is clear, jump to mpla7 to return
+ BPL mpla7              \ from the subroutine
+
+ JSR MovePlayerForward  \ Move the player forwards and get the next track segment
+
+ RTS                    \ Return from the subroutine
 
 .mpla5
 
- CMP #14
- BCC mpla7
- BEQ mpla6
- JSR MovePlayerBack
+                        \ If we get here then edgeSegmentNumber > 12
+
+ CMP #14                \ If edgeSegmentNumber < 14, i.e. edgeSegmentNumber is
+ BCC mpla7              \ 13, jump to mpla7 to return from the subroutine
+
+ BEQ mpla6              \ If edgeSegmentNumber = 14, jump to mpla6
+
+                        \ If we get here then edgeSegmentNumber > 14
+
+ JSR MovePlayerBack     \ Move the player backwards and get the next track
+                        \ segment
 
 .mpla6
 
- JSR MovePlayerBack
+ JSR MovePlayerBack     \ Move the player backwards and get the next track
+                        \ segment
 
 .mpla7
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
