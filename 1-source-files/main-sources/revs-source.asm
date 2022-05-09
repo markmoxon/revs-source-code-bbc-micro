@@ -1624,7 +1624,7 @@ ORG &0880
                         \ before wrapping back to zero again at the end of the
                         \ lap
                         \
-                        \ Set to the value of trackPractice in ResetVariables
+                        \ Set to the value of trackStartLine in ResetVariables
                         \
                         \ The Silverstone track has a total of 1024 segments and
                         \ practice laps start at segment 43
@@ -1642,7 +1642,7 @@ ORG &0880
                         \ before wrapping back to zero again at the end of the
                         \ lap
                         \
-                        \ Set to the value of trackPractice in ResetVariables
+                        \ Set to the value of trackStartLine in ResetVariables
                         \
                         \ The Silverstone track has a total of 1024 segments and
                         \ practice laps start at segment 43
@@ -4372,12 +4372,17 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ResetCarsOnTrack
+\       Name: PlaceCarsOnTrack
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Position the cars on the track, ready for a race or qualifying lap
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine places the cars on the track, correctly spaced out and on
+\ alternating sides, and populates the track segment buffer so the first entry
+\ is 32 segments in front of the current player, and the whole buffer is full
+\ of buffered segments.
 \
 \ Arguments:
 \
@@ -4390,7 +4395,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.ResetCarsOnTrack
+.PlaceCarsOnTrack
 
  STA V                  \ Store the value of A in V, so V contains the size of
                         \ the gap that we want to insert between the cars
@@ -4399,14 +4404,26 @@ ORG &0B00
  ROR updateLapTimes     \ forward in MoveObjectForward, the lap number and lap
                         \ time are not affected
 
-                        \ We start by moving all the cars to the end of the
-                        \ track
+                        \ We start by incrementing the segment numbers for each
+                        \ car, to "move" the cars along the track, stopping when
+                        \ driver 0 is on segment 0 (i.e. when it has reached the
+                        \ start line)
                         \
-                        \ In Silverstone, all the cars start at an objectSegment
-                        \ value of 843, so the following loop moves all the
-                        \ cars forwards one step at a time, until objectSegment
-                        \ wraps round to 0 (which it does after reaching the
-                        \ value of trackLength, which is 1024 for Silverstone)
+                        \ Before the call to PlaceCarsOnTrack, we set each car's
+                        \ objectSegment to the value of trackStartLine, which is
+                        \ 843 for Silverstone
+                        \
+                        \ The following loop moves all the cars forwards one
+                        \ segment at a time, until objectSegment wraps round to
+                        \ zero (which it does when it reaches the value of
+                        \ trackLength, which is 1024 for Silverstone, so the
+                        \ segment numbers go from 843 to 1023 and then to 0)
+                        \
+                        \ In other words, the following moves the cars forward
+                        \ by 1024 - 843 segments from the start of section 0,
+                        \ or 181 segments, so the starting line at Silverstone
+                        \ is at segment 181, and this value is defined by the
+                        \ trackStartLine value in the track data file
 
 .rcar1
 
@@ -4424,7 +4441,9 @@ ORG &0B00
  ORA objectSegmentHi    \ to rcar1 to repeat the above loop
  BNE rcar1
 
-                        \ All 20 cars are now at the end of the track
+                        \ The drivers are now all at segment 0 at the start of
+                        \ the track (as they were at the same place before the
+                        \ above moves)
 
  LDA #&FF               \ Set G = -1, so it can be incremented to 0 as the start
  STA G                  \ of the outer loop at rcar5
@@ -4446,9 +4465,9 @@ ORG &0B00
                         \ Specifically, the first iteration of the inner loop
                         \ moves the cars in positions 0 to 19 backwards, then
                         \ the cars in positions 1 to 19, then 2 to 19 and so on,
-                        \ leaving a trail of cars behind it as it works
-                        \ backwards so position 0 is first, then position 1, and
-                        \ so on to position 19
+                        \ leaving a trail of cars behind it as it works back
+                        \ along the track, so the car in position 0 is first,
+                        \ then the car in position 1, and so on to position 19
 
  BNE rcar5              \ Jump to rcar5 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -4509,10 +4528,13 @@ ORG &0B00
                         \ We now use the currently unused driver 23 to work out
                         \ the number of track segments we need to initialise in
                         \ front of the current driver, by first moving forwards
-                        \ until we are exactly 32 from the current player, then
-                        \ moving backwards by 49, and then moving backwards to
-                        \ the start of the track section, leaving segmentCounter
-                        \ set to the total distance moved backwards
+                        \ until we are exactly 32 segments in front of the
+                        \ current player, then moving backwards by 49 segments,
+                        \ and then moving backwards until we reach the start of
+                        \ the track section, leaving segmentCounter set to the
+                        \ total number of segments we have moved, starting from
+                        \ the start position of 32 segments in front of the
+                        \ current driver
 
 .rcar6
 
@@ -4536,9 +4558,9 @@ ORG &0B00
  BNE rcar6              \ forwards
 
                         \ At this point, driver 23 is a distance of exactly 32
-                        \ from the current player
+                        \ segments in front of the current player
 
-                        \ We now move driver 23 back by 49
+                        \ We now move driver 23 back by 49 segments
 
  LDX #23                \ Set X to driver 23
 
@@ -4554,11 +4576,13 @@ ORG &0B00
  DEC V                  \ Decrement the loop counter
 
  BNE rcar7              \ Loop back until we have moved driver 23 backwards by
-                        \ 49
+                        \ 49 segments
 
                         \ We now move driver 23 backwards until it moves into a
-                        \ new track section, incrementing segmentCounter by the
-                        \ distance moved
+                        \ new track section, incrementing segmentCounter for
+                        \ each segment moved (which we set to 49 above, so it
+                        \ will keep tally of the total number of segments we
+                        \ have moved backwards)
 
 .rcar8
 
@@ -4569,6 +4593,10 @@ ORG &0B00
 
  BCC rcar8              \ Loop back to keep moving driver 23 backwards until it
                         \ moves into a new track section
+                        \
+                        \ We don't care where driver 23 has ended up, but we
+                        \ will use the value of segmentCounter below when
+                        \ populating the segment buffer
 
                         \ We now move the cars to alternating sides of the track
                         \ so the grid is staggered
@@ -4594,22 +4622,33 @@ ORG &0B00
 
  BPL rcar9              \ Loop back until we have staggered the whole pack
 
- LDA #0                 \ Set segmentIndex = 0
- STA segmentIndex
+ LDA #0                 \ Set segmentIndex = 0, so it points at the front
+ STA segmentIndex       \ segment in the buffer, i.e. the one that is 32
+                        \ segments in front of the current driver
 
                         \ We now call GetTrackSegment segmentCounter times,
                         \ where segmentCounter is the number of times we moved
                         \ driver 23 backwards in the above
+                        \
+                        \ This populates the track segment buffer, making sure
+                        \ it is fully populated by working forwards from where
+                        \ driver 23 ended up, one segment at a time, all the way
+                        \ to 32 segments in front of the current player
 
 .rcar10
 
  JSR GetTrackSegment    \ Initialise the next track segment in the track segment
-                        \ buffer
+                        \ buffer, setting up the track segment indexes
+                        \ accordingly
 
  DEC segmentCounter     \ Decrement the counter in segmentCounter
 
  BNE rcar10             \ Loop back until we have called GetTrackSegment
-                        \ segmentCounter times
+                        \ segmentCounter times, by which time the buffer entry
+                        \ at segmentIndex is 32 segments in front of the current
+                        \ player, the buffer entry at segmentIndex96 is the
+                        \ current player, and all 40 entries in the buffer are
+                        \ populated with the correct segments
 
  LSR updateLapTimes     \ Clear bit 7 of updateLapTimes, so any further calls to
                         \ MoveObjectForward will update the lap number and lap
@@ -6399,10 +6438,9 @@ ORG &0B00
 
  LDA objSectionSegmt,X  \ Set A = objSectionSegmt + 1
  CLC                    \
- ADC #1                 \ This increments the segment section counter, which
-                        \ keeps track of the object's segment number within the
-                        \ current track section, so it moves forwards by one
-                        \ segment
+ ADC #1                 \ This increments the section segment counter, which
+                        \ keeps track of the object's segment number in the
+                        \ current track section, so it moves forward one segment
 
  CMP trackSectionSize,Y \ If A < Y-th trackSectionSize, then the object is still
  PHP                    \ within the current track section, so clear the C flag
@@ -7951,10 +7989,12 @@ ENDIF
 
 .rese3
 
- LDA trackPractice+1    \ Set the X-th byte of (objectSegmentHi objectSegmentLo)
- STA objectSegmentHi,X  \ to the value of trackPractice, which is 843 for the
- LDA trackPractice      \ Silverstone track
- STA objectSegmentLo,X
+ LDA trackStartLine+1   \ Set the X-th byte of (objectSegmentHi objectSegmentLo)
+ STA objectSegmentHi,X  \ to the value of trackStartLine, which is 843 for the
+ LDA trackStartLine     \ Silverstone track and contains the segment number of
+ STA objectSegmentLo,X  \ the starting line, expressed as the number of segments
+                        \ between the starting line and the start of section 0,
+                        \ counting forwards round the track
 
  LDA #0                 \ Zero the X-th byte of objTrackSection
  STA objTrackSection,X
@@ -7970,7 +8010,7 @@ ENDIF
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
- LDA #1                 \ Set A = 1, to pass to ResetCarsOnTrack as the spacing
+ LDA #1                 \ Set A = 1, to pass to PlaceCarsOnTrack as the spacing
                         \ for the cars when this is a race
 
  BIT raceStarted        \ If bit 7 of raceStarted is set then this is a race
@@ -7988,13 +8028,13 @@ ENDIF
 
  JSR SwapDriverPosition \ Swap the positions of drivers in positions X and Y in
                         \ the driversInOrder table, so for Silverstone this sets
-                        \ the current player's position to 4
+                        \ the current player's position to 4 (i.e. fifth place)
 
  JSR SetPlayerPositions \ Set the current player's position in currentPosition,
                         \ plus the number of the position ahead in positionAhead
                         \ and number of the position behind in positionBehind
 
- LDA trackCarSpacing    \ Set A to trackCarSpacing, to pass to ResetCarsOnTrack
+ LDA trackCarSpacing    \ Set A to trackCarSpacing, to pass to PlaceCarsOnTrack
                         \ as the spacing for the cars when this is a qualifying
                         \ lap (this value is 40 for the Silverstone track)
 
@@ -8004,7 +8044,7 @@ ENDIF
                         \ of trackCarSpacing if this is practice or qualifying
                         \ (40 for Silverstone)
 
- JSR ResetCarsOnTrack   \ Reset the cars on the track, placing them on the
+ JSR PlaceCarsOnTrack   \ Reset the cars on the track, placing them on the
                         \ starting grid if this is a race, or spread out along
                         \ the track if this is a qualifying lap
 
@@ -16695,17 +16735,17 @@ ENDIF
                         \ driver 23 in object Y
 
  BCS bvis1              \ If the C flag is set then the two cars are far apart,
-                        \ so jump to bvis1 to hide the car
+                        \ i.e. |T| < 128, so jump to bvis1 to hide the car
 
  EOR directionFacing    \ This tests whether bit 7 of directionFacing and bit 7
  BMI bvis1              \ of the distance in A are different, which will happen
                         \ if either of the following is true:
                         \
                         \   * We are facing forwards (0) and driver X is ahead
-                        \     of driver 23 by more than 256 (1)
+                        \     of driver 23 (1)
                         \
                         \   * We are facing backwards (1) and driver X is not
-                        \     ahead of driver 23 by more than 256 (0)
+                        \     ahead of driver 23 (0)
                         \
                         \ In both cases driver X is too far away from us to be
                         \ seen, and bit 7 of the result of the EOR will be set,
@@ -30753,7 +30793,7 @@ ENDIF
 
  SKIP 2
 
-.trackPractice
+.trackStartLine
 
  SKIP 2
 

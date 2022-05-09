@@ -2466,20 +2466,34 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The length of the full track (in terms of segments)
 \
+\ ------------------------------------------------------------------------------
+\
+\ The highest segment number is this value minus 1, as segment numbers start
+\ from zero.
+\
 \ ******************************************************************************
 
- EQUW 1024
+ EQUW 1024              \ Segments are numbered from 0 to 1023
 
 \ ******************************************************************************
 \
-\       Name: trackPractice
+\       Name: trackStartLine
 \       Type: Variable
 \   Category: Track data
-\    Summary: The starting segment for practice laps
+\    Summary: The segment number of the starting line
+\
+\ ------------------------------------------------------------------------------
+\
+\ This is the segment number of the starting line, expressed as the number of
+\ segments from the starting line to the start of section 0, counting forwards
+\ round the track.
+\
+\ If she starting line is at segment n, this value is the track length minus n,
+\ which is 1024 - 181 at Silverstone.
 \
 \ ******************************************************************************
 
- EQUW 843
+ EQUW 1024 - 181        \ The starting line is at segment 181
 
 \ ******************************************************************************
 \
