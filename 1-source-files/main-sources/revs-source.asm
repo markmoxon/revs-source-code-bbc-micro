@@ -567,13 +567,23 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0043
+.playerPastSegment
 
- SKIP 1                 \ 
+ SKIP 1                 \ Determines whether the player has gone past the
+                        \ closest segment to the player (i.e. whether the
+                        \ relative rotation angle of the segment is greater
+                        \ than 90 degrees)
+                        \
+                        \   * Bit 7 clear = not yet
+                        \
+                        \   * Bit 7 set = player has gone past the closest
+                        \                 segment
 
-.L0044
+.playerHeading
 
- SKIP 1                 \ 
+ SKIP 1                 \ The player's rotation angle, relative to the direction
+                        \ of the track, where a heading of 0 means the player is
+                        \ pointing straight along the track
 
 .driverPrinted
 
@@ -750,7 +760,8 @@ ORG &0000
 .edgeRotation
 
  SKIP 1                 \ The rotation angle of the track segment that is
-                        \ closest to the player's car
+                        \ closest to the player's car, from the point of view
+                        \ of the car
 
 .soundRevTarget
 
@@ -4439,7 +4450,7 @@ ORG &0B00
 
 .rcar2
 
- JSR MoveObjectForward  \ Move driver X forwards along the track
+ JSR MoveObjectForward  \ Move driver X forwards by one segment
 
  DEX                    \ Decrement the loop counter
 
@@ -4548,7 +4559,7 @@ ORG &0B00
 
  LDX #23                \ Set X to object 23
 
- JSR MoveObjectForward  \ Move object 23 forwards along the track
+ JSR MoveObjectForward  \ Move object 23 forwards by one segment
 
  LDY #23                \ Set Y to object 23
 
@@ -5615,7 +5626,8 @@ ORG &0B00
 \       Name: MovePlayerForward
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Move the player's car forwards
+\    Summary: Move the player's car forwards by one track segment and add the
+\             segment to the track segment buffer
 \
 \ ******************************************************************************
 
@@ -5624,7 +5636,7 @@ ORG &0B00
  CLC                    \ Clear the C flag so the call to MovePlayer moves the
                         \ player's car in the direction it is pointing
 
- JSR MovePlayer         \ Drive the player's car forwards
+ JSR MovePlayer         \ Move the player's car forwards by one track segment
 
                         \ Fall through into GetTrackSegment to set up the
                         \ next track segment
@@ -5712,7 +5724,7 @@ ORG &0B00
 
 .gets2
 
- JSR MoveObjectForward  \ Move the front segment forwards along the track,
+ JSR MoveObjectForward  \ Move the front segment forwards by one segment,
                         \ setting the C flag if this moves the driver into the
                         \ next track section
 
@@ -6198,11 +6210,12 @@ ORG &0B00
 \       Name: MovePlayerBack
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Move the player's car backwards (i.e. in reverse gear)
+\    Summary: Move the player's car backwards by one track segment and update
+\             the track segment buffer
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine reverses the player, updating the track segments in both
+\ This routine reverses the player, updating the track segment buffer in both
 \ directions.
 \
 \ ******************************************************************************
@@ -6213,7 +6226,7 @@ ORG &0B00
                         \ player's car in the opposite direction to which it is
                         \ pointing
 
- JSR MovePlayer         \ Drive the player's car backwards (i.e. reverse it)
+ JSR MovePlayer         \ Drive the player's car backwards by one track segment
 
  LDX #40                \ Set X = 40, so the call to TurnPlayerAround
                         \ initialises 64 track segments in the new direction
@@ -6288,7 +6301,7 @@ ORG &0B00
 \       Name: MovePlayer
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Move the player's car forwards or backwards
+\    Summary: Move the player's car forwards or backwards by one segment
 \
 \ ------------------------------------------------------------------------------
 \
@@ -6321,13 +6334,13 @@ ORG &0B00
                         \     track, in which case it is reversing along the
                         \     track while facing forwards
 
- JSR MoveObjectForward  \ Move the current player forwards along the track
+ JSR MoveObjectForward  \ Move the current player forwards by one segment
 
  RTS                    \ Return from the subroutine
 
 .play1
 
- JSR MoveObjectBack     \ Move current player backwards along the track
+ JSR MoveObjectBack     \ Move current player backwards by one segment
 
  RTS                    \ Return from the subroutine
 
@@ -7588,9 +7601,10 @@ ENDIF
  JSR GetTrackAndMarkers \ Calculate the coordinates for the track sides and
                         \ corner markers
 
- JSR sub_C4626
+ JSR MovePlayerOnTrack  \ Update the position of the player's car within the
+                        \ current track segment
 
- JSR MovePlayerCar      \ Move the player's car in the correct direction
+ JSR MovePlayerSegment  \ Move the player's car into the correct segment
 
  JSR UpdateLapTimers    \ Update the lap timers and display timer-related
                         \ messages at the top of the screen
@@ -12175,12 +12189,12 @@ ENDIF
 \
 \       Name: sub_C1FA8
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is only present in the Superior Software release.
 \
 \ ******************************************************************************
 
@@ -12188,16 +12202,24 @@ IF _SUPERIOR
 
 .sub_C1FA8
 
- BCC C1FAF
- LDA objSectionSegmt,X
- CMP #3
+ BCC C1FAF              \ If the C flag is clear, jump to C1FAF to skip the
+                        \ following
+
+ LDA objSectionSegmt,X  \ Set A = objSectionSegmt, which keeps track of the
+                        \ player's segment number in the current track section
+
+ CMP #3                 \ If A < 3, clear the C flag, if A >= 3, set the C
+                        \ flag
 
 .C1FAF
 
- ROR L62FB
- RTS
+ ROR L62FB              \ Store the C flag in bit 7 of L62FB, so this will be
+                        \ set if the original A >= 22 and if the second A >= 3
 
- NOP
+ RTS                    \ Return from the subroutine
+
+ NOP                    \ These instruction is unused, and is included to
+                        \ pad out the code
 
 ENDIF
 
@@ -14411,7 +14433,8 @@ ENDIF
  STA edgeRotation       \ xVergeRightHi
                         \
                         \ So edgeRotation contains the rotation angle of the
-                        \ segment that is closest to the player's car
+                        \ segment that is closest to the player's car, from the
+                        \ point of view of the car
 
 .gseg3
 
@@ -14680,7 +14703,7 @@ ENDIF
 
  INC segmentCounter     \ Increment the segment counter to indicate that we have
                         \ populated a visible segment (so this will become 1 if
-                        \ this is the first visible segment we have processes,
+                        \ this is the first visible segment we have processed,
                         \ 2 for the second visible segment, and so on)
 
  LDY segmentCounter     \ Set Y to the number of visible segments we have
@@ -14748,18 +14771,31 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: MovePlayerCar
+\       Name: MovePlayerSegment
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Move the player's car in the correct direction
 \
+\ ------------------------------------------------------------------------------
+\
+\ This routine checks whether the player has turned enough to be in a different
+\ direction (i.e. pointing forwards to pointing backwards or vice versa), and if
+\ so, it turns the player around by updating the track segment buffer for the
+\ new direction, resetting the track section list, and updating all the
+\ direction-related variables.
+\
+\ Otherwise it works out whether the player has moved into a new segment, and if
+\ so, it updates the car's segment and section numbers accordingly.
+\
 \ ******************************************************************************
 
-.MovePlayerCar
+.MovePlayerSegment
 
- LDA L0044              \ Set A = L0044 - spinRotationHi
- SEC
- SBC spinRotationHi
+ LDA playerHeading      \ Set A = playerHeading - spinRotationHi
+ SEC                    \
+ SBC spinRotationHi     \ So A contains the new heading of the player's car,
+                        \ once the current spin is added (i.e. it's the new
+                        \ heading of the car)
 
                         \ A is an angle thet represents the new direction in
                         \ which our car will be facing, after applying spin,
@@ -14891,7 +14927,7 @@ ENDIF
                         \ direction, and need to update all the various buffers
                         \ and variables
 
- JSR ChangeDirection    \ Turn the player around, updating the track segment
+ JSR ChangeDirection    \ Turn the player around by updating the track segment
                         \ buffer for the new direction, resetting the track
                         \ section list, and updating all the direction-related
                         \ variables
@@ -14900,22 +14936,53 @@ ENDIF
 
 .mpla3
 
- LDA edgeSegmentNumber  \ If edgeSegmentNumber = 12, jump to mpla4
- CMP #12
+                        \ The GetSegmentAngles routine, which has already been
+                        \ called by this point, sets up the track segment list
+                        \ and sets edgeSegmentNumber to the entry number within
+                        \ the track segment list that is closest to the player's
+                        \ car
+                        \
+                        \ Entry 13 in the track segment list corresponds to the
+                        \ segment that's 32 behind the front segment of the
+                        \ track segment buffer, which is the position of the
+                        \ player's car, so if edgeSegmentNumber does not equal
+                        \ 13, then it means that the car has moved into a new
+                        \ segment
+                        \
+                        \ Specifically, the values of edgeSegmentNumber mean
+                        \ the following:
+                        \
+                        \   * 11 = player has moved forward two segments
+                        \   * 12 = player has moved forward one segment
+                        \   * 13 = player is still in the same segment
+                        \   * 14 = player has moved back one segment
+                        \   * 15 = player has moved back two segments
+                        \
+                        \ The player can't travel more than two segments in one
+                        \ iteration of the main driving loop
+
+ LDA edgeSegmentNumber  \ If edgeSegmentNumber = 12, jump to mpla4 to move the
+ CMP #12                \ player forward by one segment
  BEQ mpla4
 
- BCS mpla5              \ If edgeSegmentNumber > 12, jump to mpla5
+ BCS mpla5              \ If edgeSegmentNumber > 12, then the player is either
+                        \ in the same segment, or has moved backwards, so jump
+                        \ to mpla5
 
-                        \ If we get here then edgeSegmentNumber < 12
+                        \ If we get here then edgeSegmentNumber < 12, so
+                        \ edgeSegmentNumber must be 11, so we move the player
+                        \ forwards by two segments
 
- JSR MovePlayerForward  \ Move the player forwards and get the next track segment
+ JSR MovePlayerForward  \ Move the player forwards by one segment
 
 .mpla4
 
- BIT L0043              \ If bit 0 of L0043 is clear, jump to mpla7 to return
- BPL mpla7              \ from the subroutine
+ BIT playerPastSegment  \ If bit 0 of playerPastSegment is clear, then the
+ BPL mpla7              \ player has not yet gone past the closest segment, so
+                        \ jump to mpla7 to return from the subroutine without
+                        \ moving forward by this segment
 
- JSR MovePlayerForward  \ Move the player forwards and get the next track segment
+ JSR MovePlayerForward  \ Move the player forwards by one segment
 
  RTS                    \ Return from the subroutine
 
@@ -14924,19 +14991,21 @@ ENDIF
                         \ If we get here then edgeSegmentNumber > 12
 
  CMP #14                \ If edgeSegmentNumber < 14, i.e. edgeSegmentNumber is
- BCC mpla7              \ 13, jump to mpla7 to return from the subroutine
+ BCC mpla7              \ 13, then the player has not changed segment, so jump
+                        \ to mpla7 to return from the subroutine
 
- BEQ mpla6              \ If edgeSegmentNumber = 14, jump to mpla6
+ BEQ mpla6              \ If edgeSegmentNumber = 14, jump to mpla6 to move the
+                        \ player backwards by one segment
 
-                        \ If we get here then edgeSegmentNumber > 14
+                        \ If we get here then edgeSegmentNumber > 14, so
+                        \ edgeSegmentNumber must be 15, so we move the player
+                        \ backward by two segments
 
- JSR MovePlayerBack     \ Move the player backwards and get the next track
-                        \ segment
+ JSR MovePlayerBack     \ Move the player backwards by one segment
 
 .mpla6
 
- JSR MovePlayerBack     \ Move the player backwards and get the next track
-                        \ segment
+ JSR MovePlayerBack     \ Move the player backwards by one segment
 
 .mpla7
 
@@ -16734,8 +16803,7 @@ ENDIF
                         \ the next loop
 
  JSR MoveObjectForward  \ The addition overflowed, so carProgress has filled up
-                        \ and we need to update (objectSegmentHi
-                        \ objectSegmentLo) for driver X
+                        \ and we need to move the car forwards by one segment
 
 .mcar13
 
@@ -23953,27 +24021,35 @@ NEXT
 
 .segmentStep
 
- EQUB 0                 \ Not used, as the index into the table starts at 1
+ EQUB 0                 \ Not used as segmentStep is only accessed with indexes
+                        \ greater than zero, but this represents starting at
+                        \ the front segment in the track segment buffer, so we
+                        \ step backwards through the buffer
+                        \
+                        \ Entry 32 in the track segment buffer is the player's
+                        \ car (as it is 32 segments behind the front segment),
+                        \ so the player's car is at entry 13 in the track
+                        \ segment list
 
- EQUB 13 * 3            \ Visible segment  1, jump back 13 segments
- EQUB 6 * 3             \ Visible segment  2, jump back 6 segments
- EQUB 3 * 3             \ Visible segment  3, jump back 3 segments
- EQUB 3                 \ Visible segment  4, jump back 1 segment
- EQUB 3                 \ Visible segment  5, jump back 1 segment
- EQUB 3                 \ Visible segment  6, jump back 1 segment
- EQUB 3                 \ Visible segment  7, jump back 1 segment
- EQUB 3                 \ Visible segment  8, jump back 1 segment
- EQUB 3                 \ Visible segment  9, jump back 1 segment
- EQUB 3                 \ Visible segment 10, jump back 1 segment
- EQUB 3                 \ Visible segment 11, jump back 1 segment
- EQUB 3                 \ Visible segment 12, jump back 1 segment
- EQUB 3                 \ Visible segment 13, jump back 1 segment
- EQUB 3                 \ Visible segment 14, jump back 1 segment
- EQUB 3                 \ Visible segment 15, jump back 1 segment
- EQUB 3                 \ Visible segment 16, jump back 1 segment
+ EQUB 13 * 3            \ Step back 13 segments to 13 for segment list entry  1
+ EQUB 6 * 3             \ Step back  6 segments to 19 for segment list entry  2
+ EQUB 3 * 3             \ Step back  3 segments to 22 for segment list entry  3
+ EQUB 3                 \ Step back  1 segment  to 23 for segment list entry  4
+ EQUB 3                 \ Step back  1 segment  to 24 for segment list entry  5
+ EQUB 3                 \ Step back  1 segment  to 25 for segment list entry  6
+ EQUB 3                 \ Step back  1 segment  to 26 for segment list entry  7
+ EQUB 3                 \ Step back  1 segment  to 27 for segment list entry  8
+ EQUB 3                 \ Step back  1 segment  to 28 for segment list entry  9
+ EQUB 3                 \ Step back  1 segment  to 29 for segment list entry 10
+ EQUB 3                 \ Step back  1 segment  to 30 for segment list entry 11
+ EQUB 3                 \ Step back  1 segment  to 31 for segment list entry 12
+ EQUB 3                 \ Step back  1 segment  to 32 for segment list entry 13
+ EQUB 3                 \ Step back  1 segment  to 33 for segment list entry 14
+ EQUB 3                 \ Step back  1 segment  to 34 for segment list entry 15
+ EQUB 3                 \ Step back  1 segment  to 35 for segment list entry 16
 
- EQUB 3                 \ Visible segment 17 (not used as there is a maximum of
-                        \ 16 visible segments)
+ EQUB 3                 \ Not used as there is a maximum of 16 segments in the
+                        \ track segment list
 
 \ ******************************************************************************
 \
@@ -25853,52 +25929,76 @@ NEXT
 
 .C452D
 
- LDX playerSegmentIndex
- LDY segmentVector,X
- LDA L000D
+ LDX playerSegmentIndex \ Set X to the number of the player's track segment from
+                        \ the track segment buffer
+
+ LDY segmentVector,X    \ Fetch the segment vector number for track segment X,
+                        \ which gives us the number of the segment vector for
+                        \ the track segment containing the player
+
+ LDA L000D              \ Set V = L000D
  STA V
- LDA xTrackSegmentI,Y
- EOR zTrackSegmentI,Y
- PHP
- LDA zTrackSegmentI,Y
- PHP
+
+ LDA xTrackSegmentI,Y   \ Store the sign of the segment vector's x-coordinate
+ EOR zTrackSegmentI,Y   \ multiplied by the segment vector's z-coordinate on the
+ PHP                    \ stack, i.e. xTrackSegmentI * zTrackSegmentI
+
+ LDA zTrackSegmentI,Y   \ Set A to the segment vector's z-coordinate in
+                        \ zTrackSegmentI
+
+ PHP                    \ Store the sign of zTrackSegmentI on the stack
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |zTrackSegmentI|
 
- CMP #&3C
- PHP
- BCC C454F
- LDA xTrackSegmentI,Y
+ CMP #60                \ Store the comparison of |zTrackSegmentI| and 60 on the
+ PHP                    \ stack
+
+ BCC C454F              \ If |zTrackSegmentI| < 60, jump to C454F
+
+ LDA xTrackSegmentI,Y   \ Set A to the segment vector's x-coordinate
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |xTrackSegmentI|
 
 .C454F
 
- STA T
+ STA T                  \ Set T = A
+
+ LSR A                  \ Set A = (A / 2 + T) / 4
+ CLC                    \       = (A / 2 + A) / 4
+ ADC T                  \       = A * 3 / 8
  LSR A
- CLC
- ADC T
  LSR A
- LSR A
- PLP
- BCS C455C
- EOR #&3F
+
+ PLP                    \ Pull the result of the comparison of |zTrackSegmentI|
+                        \ and 60 from the stack
+
+ BCS C455C              \ If |zTrackSegmentI| >= 60, jump to C455C
+
+ EOR #%00111111
 
 .C455C
 
- PLP
- BPL C4561
- EOR #&80
+ PLP                    \ Pull the sign of zTrackSegmentI from the stack
+
+ BPL C4561              \ If zTrackSegmentI is positive, jump to C4561
+
+ EOR #%10000000
 
 .C4561
 
- PLP
+ PLP                    \ Pull the sign of xTrackSegmentI * zTrackSegmentI from
+                        \ the stack
 
- JSR Absolute8Bit       \ Set A = |A|
+ JSR Absolute8Bit       \ Set the sign of A to the sign of xTrackSegmentI *
+                        \ zTrackSegmentI
 
- SEC
+ SEC                    \ Set A = A - playerRotationHi
  SBC playerRotationHi
- STA L0044
+
+ STA playerHeading      \ Set playerHeading = A
+
  BPL C456E
  EOR #&FF
 
@@ -26073,123 +26173,189 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C4626
+\       Name: MovePlayerOnTrack
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Update the position of the player's car within the current track
+\             segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine sets the racing line and progress for the player's car.
 \
 \ ******************************************************************************
 
-.sub_C4626
+.MovePlayerOnTrack
 
- LDA edgeRotation
- SEC
- SBC L0044
+ LDA edgeRotation       \ Set A = edgeRotation - playerHeading
+ SEC                    \
+ SBC playerHeading      \ So A contains the rotation angle of the closest
+                        \ segment, from the point of view of the player's car
 
  JSR Absolute8Bit       \ Set A = |A|
 
- CMP #&40
- ROR L0043
- BPL C4639
- EOR #&7F
- CLC
+ CMP #64                \ If A < 64, clear the C flag, if A >= 64, set the C
+                        \ flag
+
+ ROR playerPastSegment  \ Store the C flag in bit 7 of playerPastSegment, so
+                        \ this will be set if the rotation angle is >= 64,
+                        \ which is 90 degrees
+                        \
+                        \ So bit 7 will be set if the closest segment is at a
+                        \ rotation angle of than 90 degrees from the point of
+                        \ view of the player - in other words, when the player
+                        \ has driven past the segment
+
+ BPL mseg1              \ If bit 7 of playerPastSegment is clear, i.e. the C
+                        \ flag is clear, then A < 64 and the player has not gone
+                        \ past the closest segment, so jump to mseg1
+
+                        \ The player has gone past the closest segment, so A is
+                        \ in the range 64 to 127, with the higher figure
+                        \ indicating that the segment is way behind us, so we
+                        \ now flip that around to the range 63 to 0, where 0
+                        \ indicates that the segment is way behind us, and 63
+                        \ indicates that we've just passed it
+                        \
+                        \ We use this value later to calculate the player's
+                        \ carProgress
+
+ EOR #%01111111         \ Negate A using two's complement, leaving bit 7 alone
+ CLC                    \ to leave the result in the range 63 to 0
  ADC #1
 
-.C4639
+.mseg1
 
- PHA
+ PHA                    \ Store A on the stack, which we retrieve below to use
+                        \ when calculating carProgress for the player's car
 
- LDY #186
- JSR sub_C4676
+ LDY #186               \ Set A = edgeDistanceLo * (A' / 256) * (186 / 256)
+ JSR sub_C4676          \
+                        \ where A' is A, scaled by the sub_C4687 routine
 
  LDX edgePointerNumber
- CPX #&28
- BCC C4647
+
+ CPX #40
+ BCC mseg2
+
  EOR #&FF
 
-.C4647
+.mseg2
 
- LDX currentPlayer
- BIT directionFacing
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
- JSR Absolute8Bit       \ Set A = |A|
+ BIT directionFacing    \ Set the sign of A to that of directionFacing, so A
+ JSR Absolute8Bit       \ gets negated when we are facing backwards
 
- PHA
- SBC carRacingLine,X
- BCS C4656
- EOR #&FF
+ PHA                    \ Store A on the stack, which we retrieve below to store
+                        \ as carRacingLine for the player's car
+ 
+ SBC carRacingLine,X    \ Set A = A - the racing line for the player
 
-.C4656
+ BCS mseg3
 
- CMP #&16
+ EOR #&FF               \ Set A = ~A
+
+.mseg3
+
+ CMP #22                \ If A < 22, clear the C flag, if A >= 22, set the C
+                        \ flag
 
 IF _ACORNSOFT
 
- ROR L62FB
+ ROR L62FB              \ Store the C flag in bit 7 of L62FB, so this will be
+                        \ set if A >= 22
 
 ELIF _SUPERIOR
 
- JSR sub_C1FA8
+ JSR sub_C1FA8          \ Set bit 7 of L62FB if A >= 22 and if objSectionSegmt
+                        \ for the player is >= 3
 
 ENDIF
 
- PLA
- STA carRacingLine,X
- PLA
- EOR #&FF
- CLC
- ADC #&41
+ PLA                    \ Set carRacingLine,X to the second value we stored on
+ STA carRacingLine,X    \ the stack above
 
- LDY #136
- JSR sub_C4676
+ PLA                    \ Set A to the first value we stored on the stack above
 
+ EOR #&FF               \ Set A = 64 - A
+ CLC                    \
+ ADC #65                \ This works because ~A = -A - 1, so we have:
+                        \
+                        \   A = ~A + 65
+                        \     = -A - 1 + 65
+                        \     = 64 - A
+
+ LDY #136               \ Set A = edgeDistanceLo * (A' / 256) * (136 / 256)
+ JSR sub_C4676          \
+                        \ where A' is A, scaled by the sub_C4687 routine
+
+ ASL A                  \ Set A = A * 2
  ASL A
- ASL A
- BIT L0043
- BMI C4672
- EOR #&FF
 
-.C4672
+ BIT playerPastSegment  \ If bit 7 of playerPastSegment is set, jump to mseg4
+ BMI mseg4
 
- STA carProgress,X
- RTS
+ EOR #&FF               \ Set A = ~A
+
+.mseg4
+
+ STA carProgress,X      \ Set the car's progress to A
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: sub_C4676
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine scales the value in A as follows:
+\
+\   edgeDistanceLo * (A' / 256) * (Y / 256)
+\
+\ where A' is A, scaled by the sub_C4687 routine as follows:
+\
+\   When            Calculate               Range of result
+\
+\   A < 26          A' = 3 * A              0 to 78
+\   26 <= A < 46    A' = 4 * A + 52         156 to 232
+\   A >= 46         A' = A + 190            236 to 253
+\
 \ Arguments:
 \
-\   A                   
+\   A                   The number to be scaled
 \
 \   Y                   Called with Y = 136 or 186
+\
+\
+\ Returns:
+\
+\   A                  edgeDistanceLo * A+ * (Y / 256)
 \
 \ ******************************************************************************
 
 .sub_C4676
 
- JSR sub_C4687          \ Set U = A, scaled up by sub_C4687
- STA U                  \ Call it A+
+ JSR sub_C4687          \ Set U = A, scaled up by sub_C4687 (let's call it A')
+ STA U
 
  TYA                    \ Set (A T) = A * U
- JSR Multiply8x8        \           = Y * A+
+ JSR Multiply8x8        \           = Y * A'
 
  STA U                  \ Set (U T) = (A T)
-                        \           = Y * A+
+                        \           = Y * A'
 
  LDA edgeDistanceLo     \ Set (A T) = A * U
  JSR Multiply8x8        \           = edgeDistanceLo * U
-                        \           = edgeDistanceLo * (Y * A+ / 256)
-                        \           = edgeDistanceLo * A+ * (Y / 256)
+                        \           = edgeDistanceLo * (Y * A' / 256)
+                        \           = edgeDistanceLo * A' * (Y / 256)
+                        \
+                        \ So A = (A T) / 256
+                        \      = edgeDistanceLo * (A' / 256) * (Y / 256)
 
  RTS                    \ Return from the subroutine
 
@@ -26197,16 +26363,24 @@ ENDIF
 \
 \       Name: sub_C4687
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
 \   When            Calculate               Range of result
 \
-\   A < 26          A = 3 * A               0 to 78
-\   26 <= A < 46    A = 4 * A + 52          156 to 232
-\   A >= 46         A = A + 190             236 and up
+\   A < 26          A' = 3 * A              0 to 78
+\   26 <= A < 46    A' = 4 * A + 52         156 to 232
+\   A >= 46         A' = A + 190            236 to 253
+\
+\ Arguments:
+\
+\   A                   A is in the range 0 to 63
+\
+\ Returns:
+\
+\   A                   The scaled value of A, shown as A' above
 \
 \ ******************************************************************************
 
@@ -33598,7 +33772,7 @@ ELIF _SUPERIOR
  LDA #190               \ Call OSBYTE with A = 190, X = %00100000 and Y = 0 to
  LDY #0                 \ configure the digital joystick port on the BBC Master
  LDX #%00100000         \ Compact conversion type to 32-bit conversion (as the
- JSR OSBYTE             \ Superior Software version was released for this
+ JSR OSBYTE             \ Superior Software release was updated to work on this
                         \ machine)
                         \
                         \ The configuration does the following:

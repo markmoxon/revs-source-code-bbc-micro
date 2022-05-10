@@ -503,11 +503,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xTrackVectorI
+\       Name: xSegmentVectorI
 \       Type: Variable
 \   Category: Track data
-\    Summary: Vector x-coordinates between two consecutive points on the inside
-\             of the track
+\    Summary: Vector x-coordinates between two consecutive segments on the
+\             inside of the track
 \
 \ ******************************************************************************
 
@@ -793,11 +793,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: yTrackVectorI
+\       Name: ySegmentVectorI
 \       Type: Variable
 \   Category: Track data
-\    Summary: Vector y-coordinates between two consecutive points on the inside
-\             of the track
+\    Summary: Vector y-coordinates between two consecutive segments on the
+\             inside of the track
 \
 \ ******************************************************************************
 
@@ -1083,11 +1083,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: zTrackVectorI
+\       Name: zSegmentVectorI
 \       Type: Variable
 \   Category: Track data
-\    Summary: Vector z-coordinates between two consecutive points on the inside
-\             of the track
+\    Summary: Vector z-coordinates between two consecutive segments on the
+\             inside of the track
 \
 \ ******************************************************************************
 
@@ -1373,10 +1373,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xTrackVectorO
+\       Name: xSegmentVectorO
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector x-coordinates from the inside to the outside of the track
+\             for each segment
 \
 \ ******************************************************************************
 
@@ -1662,10 +1663,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: zTrackVectorO
+\       Name: zSegmentVectorO
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector z-coordinates from the inside to the outside of the track
+\             for each segment
 \
 \ ******************************************************************************
 
@@ -2450,10 +2452,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackVectorCount
+\       Name: SegmentVectorCount
 \       Type: Variable
 \   Category: Track data
-\    Summary: The total number of track vectors in the trackVector tables
+\    Summary: The total number of track vectors in the segment vector tables
 \
 \ ******************************************************************************
 
