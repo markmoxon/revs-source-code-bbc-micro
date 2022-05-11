@@ -90,6 +90,9 @@ ORG CODE%
 \   -> is a right corner
 \   <- is a left corner
 \
+\ The track data file format supports up to 26 sections, but Silverstone only
+\ uses 24 of them.
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionData      Various data for the track section:
@@ -117,23 +120,24 @@ ORG CODE%
 \                           section data byte, i.e. the first digit in the
 \                           hexadecimal value
 \
-\ xTrackSectionIHi      High byte of the start x-coordinate of the inside verge
-\                       of each track section
+\ xTrackSectionIHi      High byte of the x-coordinate of the starting point of
+\                       the inside verge of each track section
 \
-\ yTrackSectionIHi      High byte of the start y-coordinate of the inside verge
-\                       of each track section
+\ yTrackSectionIHi      High byte of the y-coordinate of the starting point of
+\                       the inside verge of each track section
 \
-\ zTrackSectionIHi      High byte of the start z-coordinate of the inside verge
-\                       of each track section
+\ zTrackSectionIHi      High byte of the z-coordinate of the starting point of
+\                       the inside verge of each track section
 \
-\ xTrackSectionOHi      High byte of the start x-coordinate of the outside verge
-\                       of each track section
+\ xTrackSectionOHi      High byte of the x-coordinate of the starting point of
+\                       the outside verge of each track section
 \
-\ trackSectionTurn      The number of the segment at the end of the section
-\                       where cars should start turning for the next section
+\ trackSectionTurn      The number of the segment towards the end of the section
+\                       where non-player cars should start turning in
+\                       preparation for the next section
 \
-\ zTrackSectionOHi      High byte of the start z-coordinate of the outside verge
-\                       of each track section
+\ zTrackSectionOHi      High byte of the z-coordinate of the starting point of
+\                       the outside verge of each track section
 \
 \ trackDriverSpeed      The maximum speed for non-player drivers on this section
 \                       of the track
@@ -404,19 +408,18 @@ ORG CODE%
  EQUB &FD               \ zTrackSectionOHi       zTrackSectionO = &FDC5 =   -571
  EQUB 255               \ trackDriverSpeed
 
-                        \ Same as track section 0
+                        \ Track section 24
 
- EQUB &03               \ trackSectionData       sign = 0, sectionListSize = 3
- EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D120 = -12000
- EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C80 =   3200
- EQUB &0F               \ zTrackSectionIHi       zTrackSectionI = &0FA0 =   4000
- EQUB &CF               \ xTrackSectionOHi       xTrackSectionO = &CFC0 = -12352
- EQUB 96                \ trackSectionTurn
- EQUB &0F               \ zTrackSectionOHi       zTrackSectionO = &0F94 =   3988
- EQUB 136               \ trackDriverSpeed
+ EQUB &03, &D1          \ These bytes appear to be unused (Silverstone only uses
+ EQUB &0C, &0F          \ sections 0 to 23)
+ EQUB &CF, &60
+ EQUB &0F, &88
 
- EQUB &00, &8E          \ These bytes appear to be unused
- EQUB &41, &40
+.L53CF
+                        \ Track section 25
+
+ EQUB &00, &8E          \ These bytes appear to be unused (Silverstone only uses
+ EQUB &41, &40          \ sections 0 to 23)
  EQUB &00, &00
  EQUB &C9, &54
 
@@ -1994,6 +1997,9 @@ ORG CODE%
 \   -> is a right corner
 \   <- is a left corner
 \
+\ The track data file format supports up to 26 sections, but Silverstone only
+\ uses 24 of them.
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionFlag      Various flags for the track section
@@ -2003,21 +2009,21 @@ ORG CODE%
 \
 \                         * Bit 0: Section shape (Sh)
 \
-\                           * 0 = straight section (i.e. only one track vector)
+\                           * 0 = straight section (only one segment vector)
 \
-\                           * 1 = curved section (i.e. multiple track vectors)
+\                           * 1 = curved section (multiple segment vectors)
 \
 \                         * Bit 1: Colour of left verge marks (Vcol)
 \
-\                           * 0 = black and white verge
+\                           * 0 = black-and-white verge
 \
-\                           * 1 = red and white verge
+\                           * 1 = red-and-white verge
 \
 \                         * Bit 2: Colour of right verge marks (Vcol)
 \
-\                           * 0 = black and white verge
+\                           * 0 = black-and-white verge
 \
-\                           * 1 = red and white verge
+\                           * 1 = red-and-white verge
 \
 \                         * Bit 3: Show corner markers on right (Mlr)
 \
@@ -2045,24 +2051,24 @@ ORG CODE%
 \
 \                           * 1 = next section has a maximum approach speed
 \
-\ xTrackSectionILo      Low byte of the start x-coordinate of the inside verge
-\                       of each track section
+\ xTrackSectionILo      Low byte of the x-coordinate of the starting point of
+\                       the inside verge of each track section
 \
-\ yTrackSectionILo      Low byte of the start y-coordinate of the inside verge
-\                       of each track section
+\ yTrackSectionILo      Low byte of the y-coordinate of the starting point of
+\                       the inside verge of each track section
 \
-\ zTrackSectionILo      Low byte of the start z-coordinate of the inside verge
-\                       of each track section
+\ zTrackSectionILo      Low byte of the z-coordinate of the starting point of
+\                       the inside verge of each track section
 \
-\ xTrackSectionOLo      Low byte of the start x-coordinate of the outside verge
-\                       of each track section
+\ xTrackSectionOLo      Low byte of the x-coordinate of the starting point of
+\                       the outside verge of each track section
 \
-\ trackSectionFrom      The number of the first track vector in each section, so
-\                       this enables us to fetch the track vectors for a given
-\                       track section
+\ trackSectionFrom      The number of the first segment vector in each section,
+\                       which enables us to fetch the segment vectors for a
+\                       given track section
 \
-\ zTrackSectionOLo      Low byte of the start z-coordinate of the outside verge
-\                       of each track section
+\ zTrackSectionOLo      Low byte of the z-coordinate of the starting point of
+\                       the outside verge of each track section
 \
 \ trackSectionSize      The length of each track section in terms of segments
 \
@@ -2332,19 +2338,17 @@ ORG CODE%
  EQUB &C5               \ zTrackSectionOLo       zTrackSectionO = &FDC5 =   -571
  EQUB 38                \ trackSectionSize
 
-                        \ Same as track section 0
+                        \ Track section 24
 
- EQUB %00110000         \ trackSectionFlag       Sp=0 Mcol=1 Mlr=10 Vcol=00 Sh=0
- EQUB &20               \ xTrackSectionILo       xTrackSectionI = &D120 = -12000
- EQUB &80               \ yTrackSectionILo       yTrackSectionI = &0C80 =   3200
- EQUB &A0               \ zTrackSectionILo       zTrackSectionI = &0FA0 =   4000
- EQUB &C0               \ xTrackSectionOLo       xTrackSectionO = &CFC0 = -12352
- EQUB 0                 \ trackSectionFrom
- EQUB &94               \ zTrackSectionOLo       zTrackSectionO = &0F94 =   3988
- EQUB 99                \ trackSectionSize
+ EQUB &30, &20          \ These bytes appear to be unused (Silverstone only uses
+ EQUB &80, &A0          \ sections 0 to 23)
+ EQUB &C0, &00
+ EQUB &94, &63
 
- EQUB &64, &F0          \ These bytes appear to be unused
- EQUB &00, &00
+                        \ Track section 25
+
+ EQUB &64, &F0          \ These bytes appear to be unused (Silverstone only uses
+ EQUB &00, &00          \ sections 0 to 23)
  EQUB &48, &00
  EQUB &50, &52
 
@@ -2353,18 +2357,21 @@ ORG CODE%
 \       Name: trackRacingLine
 \       Type: Variable
 \   Category: Track data
-\    Summary: The optimum racing line for each track section
+\    Summary: The optimum racing line for non-player drivers on each track
+\             section
 \
 \ ------------------------------------------------------------------------------
 \
-\ These 24 bytes are copied to bestRacingLine by the SetBestRacingLine routine,
-\ and are processed on the way.
+\ The following bytes are copied to bestRacingLine by the SetBestRacingLine
+\ routine, and are processed on the way.
 \
 \   * Bit 0 becomes bit 7 of the result
 \
 \   * Bit 1 clear means the result is multiplied by baseSpeed
 \
-\ The processed values are shown below.
+\ The processed values are shown below. There are 26 bytes, one for each
+\ section, but the last two bytes are unused, as Silverstone only uses sections
+\ 0 to 23).
 \
 \ ******************************************************************************
 
@@ -2393,9 +2400,8 @@ ORG CODE%
  EQUB %01010100         \ 010101 0 0    +21 * baseSpeed    Track section 22
  EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 23
  
- EQUB %00010100         \ Same as track section 0
-
- EQUB &67               \ This byte appears to be unused
+ EQUB &14, &67          \ These bytes appear to be unused (Silverstone only uses
+                        \ sections 0 to 23)
 
 \ ******************************************************************************
 \
@@ -2410,9 +2416,9 @@ ORG CODE%
 \
 \   * Bits 0-2 = Object type of road sign (add 7 to get the type)
 \
-\   * Bits 3-7 = The track section coordinates to use as the base coordinates
-\                for the sign (i.e. we add the track sign vector to this
-\                section's start coordinates to get the sign coordinates)
+\   * Bits 3-7 = The number of track section to use as the base coordinates for
+\                the sign (i.e. we add the scaled track sign vector to this
+\                section's start coordinates to get the sign's 3D coordinates)
 \
 \ Note that this simply defines the sign's 3D coordinates. The mapping between
 \ track sections and the signs in those sections is defined in each section's
@@ -2452,10 +2458,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: SegmentVectorCount
+\       Name: trackVectorCount
 \       Type: Variable
 \   Category: Track data
-\    Summary: The total number of track vectors in the segment vector tables
+\    Summary: The total number of segment vectors in the segment vector tables
 \
 \ ******************************************************************************
 
@@ -2466,7 +2472,7 @@ ORG CODE%
 \       Name: trackLength
 \       Type: Variable
 \   Category: Track data
-\    Summary: The length of the full track (in terms of segments)
+\    Summary: The length of the full track in terms of segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2488,9 +2494,9 @@ ORG CODE%
 \
 \ This is the segment number of the starting line, expressed as the number of
 \ segments from the starting line to the start of section 0, counting forwards
-\ round the track.
+\ around the track.
 \
-\ If she starting line is at segment n, this value is the track length minus n,
+\ If the starting line is at segment n, this value is the track length minus n,
 \ which is 1024 - 181 at Silverstone.
 \
 \ ******************************************************************************
@@ -2596,8 +2602,8 @@ ORG CODE%
 \       Name: trackBaseSpeed
 \       Type: Variable
 \   Category: Track data
-\    Summary: The base speed for the class, used when generating the best racing
-\             lines and individual driver speeds
+\    Summary: The base speed for each race class, used when generating the best
+\             racing lines and individual driver speeds
 \
 \ ******************************************************************************
 
@@ -2624,7 +2630,8 @@ ORG CODE%
 \       Name: trackCarSpacing
 \       Type: Variable
 \   Category: Track data
-\    Summary: The spacing between the cars at the start of a qualifying lap
+\    Summary: The spacing between the cars at the start of a qualifying lap, in
+\             segments
 \
 \ ******************************************************************************
 
@@ -2695,7 +2702,7 @@ ORG CODE%
 \       Name: trackChecksum
 \       Type: Variable
 \   Category: Track data
-\    Summary: The track file's checksum
+\    Summary: The track file's checksum and track name
 \
 \ ******************************************************************************
 

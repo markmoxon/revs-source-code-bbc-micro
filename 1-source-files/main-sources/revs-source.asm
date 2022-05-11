@@ -4426,7 +4426,7 @@ ORG &0B00
                         \ We start by incrementing the segment numbers for each
                         \ car, to "move" the cars along the track, stopping when
                         \ driver 0 is on segment 0 (i.e. when it has reached the
-                        \ start line)
+                        \ starting line)
                         \
                         \ Before the call to PlaceCarsOnTrack, we set each car's
                         \ objectSegment to the value of trackStartLine, which is
@@ -4460,9 +4460,9 @@ ORG &0B00
  ORA objectSegmentHi    \ to rcar1 to repeat the above loop
  BNE rcar1
 
-                        \ The drivers are now all at segment 0 at the start of
-                        \ the track (as they were at the same place before the
-                        \ above moves)
+                        \ The drivers are now all at the starting line (as they
+                        \ all started out at the same place before the above
+                        \ moves)
 
  LDA #&FF               \ Set G = -1, so it can be incremented to 0 as the start
  STA G                  \ of the outer loop at rcar5
@@ -4541,7 +4541,7 @@ ORG &0B00
 
                         \ At this point the cars are spaced out by the correct
                         \ distance, working backwards from position 0 at the end
-                        \ of the track (i.e. just before the start line), to
+                        \ of the track (i.e. just before the starting line), to
                         \ position 19 at the back of the pack
 
                         \ We now use the currently unused object 23 to work out
