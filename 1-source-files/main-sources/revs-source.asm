@@ -1645,8 +1645,7 @@ ORG &0880
                         \
                         \ Set to the value of trackStartLine in ResetVariables
                         \
-                        \ The Silverstone track has a total of 1024 segments and
-                        \ practice laps start at segment 43
+                        \ The Silverstone track has a total of 1024 segments
                         \
                         \ Stored as a 16-bit value (objectSegmentHi
                         \ objectSegmentLo)
@@ -1663,8 +1662,7 @@ ORG &0880
                         \
                         \ Set to the value of trackStartLine in ResetVariables
                         \
-                        \ The Silverstone track has a total of 1024 segments and
-                        \ practice laps start at segment 43
+                        \ The Silverstone track has a total of 1024 segments
                         \
                         \ Stored as a 16-bit value (objectSegmentHi
                         \ objectSegmentLo)
@@ -31021,6 +31019,8 @@ ENDIF
 \       Type: Variable
 \   Category: Track data
 \    Summary: This is where the track data gets loaded
+\  Deep dive: The jigsaw puzzle binary
+\             The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31237,6 +31237,7 @@ ORG &594A               \ moved to trackData after the game binary has loaded
 \       Type: Subroutine
 \   Category: Setup
 \    Summary: The track file's hook code
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 

@@ -20,6 +20,7 @@
 \ This source file produces the following binary file:
 \
 \   * Silvers.bin
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -28,6 +29,7 @@ GUARD &7C00             \ Guard against assembling over screen memory
 \ ******************************************************************************
 \
 \ Configuration variables
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -40,6 +42,7 @@ CODE% = &5300           \ The assembly address of the track data
 \ REVS SILVERSTONE TRACK
 \
 \ Produces the binary file Silverstone.bin that contains the Silverstone track.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -53,6 +56,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: Data for the track sections
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -121,13 +125,13 @@ ORG CODE%
 \                           hexadecimal value
 \
 \ xTrackSectionIHi      High byte of the x-coordinate of the starting point of
-\                       the inside verge of each track section
+\                       the inner verge of each track section
 \
 \ yTrackSectionIHi      High byte of the y-coordinate of the starting point of
-\                       the inside verge of each track section
+\                       the inner verge of each track section
 \
 \ zTrackSectionIHi      High byte of the z-coordinate of the starting point of
-\                       the inside verge of each track section
+\                       the inner verge of each track section
 \
 \ xTrackSectionOHi      High byte of the x-coordinate of the starting point of
 \                       the outside verge of each track section
@@ -141,6 +145,7 @@ ORG CODE%
 \
 \ trackDriverSpeed      The maximum speed for non-player drivers on this section
 \                       of the track
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -430,6 +435,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The x-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -457,6 +463,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The z-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -484,6 +491,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The y-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -511,6 +519,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Vector x-coordinates between two consecutive segments on the
 \             inside of the track
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -792,7 +801,8 @@ ORG CODE%
  EQUB -2                \ Vector 253 = (  -2,   0,  120)
 
  EQUB -5                \ Vector 254 = (  -5,   0,  120)              Section 23
- EQUB 0                 \ Vector 255 = (   0,   0,   83)
+
+ EQUB 0                 \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -801,6 +811,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Vector y-coordinates between two consecutive segments on the
 \             inside of the track
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -1082,7 +1093,8 @@ ORG CODE%
  EQUB 0                 \ Vector 253 = (  -2,   0,  120)
 
  EQUB 0                 \ Vector 254 = (  -5,   0,  120)              Section 23
- EQUB 0                 \ Vector 255 = (   0,   0,   83)
+
+ EQUB 0                 \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -1091,6 +1103,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Vector z-coordinates between two consecutive segments on the
 \             inside of the track
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -1372,7 +1385,8 @@ ORG CODE%
  EQUB 120               \ Vector 253 = (  -2,   0,  120)
 
  EQUB 120               \ Vector 254 = (  -5,   0,  120)              Section 23
- EQUB 83                \ Vector 255 = (   0,   0,   83)
+
+ EQUB 83                \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -1381,6 +1395,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Vector x-coordinates from the inside to the outside of the track
 \             for each segment
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -1662,7 +1677,8 @@ ORG CODE%
  EQUB -87               \ Vector 253 = ( -87,   0,   -3)
 
  EQUB -87               \ Vector 254 = ( -87,   0,   -3)              Section 23
- EQUB 118               \ Vector 255 = ( 118,   0,   50)
+
+ EQUB 118               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -1671,6 +1687,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Vector z-coordinates from the inside to the outside of the track
 \             for each segment
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -1952,7 +1969,8 @@ ORG CODE%
  EQUB -3                \ Vector 253 = ( -87,   0,   -3)
 
  EQUB -3                \ Vector 254 = ( -87,   0,   -3)              Section 23
- EQUB 50                \ Vector 255 = ( 118,   0,   50)
+
+ EQUB 50                \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -1960,6 +1978,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: Data for the track sections
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2015,50 +2034,55 @@ ORG CODE%
 \
 \                         * Bit 1: Colour of left verge marks (Vcol)
 \
-\                           * 0 = black-and-white verge
+\                           * 0 = black-and-white verge marks
 \
-\                           * 1 = red-and-white verge
+\                           * 1 = red-and-white verge marks
 \
 \                         * Bit 2: Colour of right verge marks (Vcol)
 \
-\                           * 0 = black-and-white verge
+\                           * 0 = black-and-white verge marks
 \
-\                           * 1 = red-and-white verge
+\                           * 1 = red-and-white verge marks
 \
 \                         * Bit 3: Show corner markers on right (Mlr)
 \
-\                           * 0 = do not show corner markers to right of track
+\                           * 0 = do not show corner markers to the right of the
+\                                 track
 \
-\                           * 1 = show corner markers to right of track
+\                           * 1 = show corner markers to the right of the track,
+\                                 where applicable
 \
 \                         * Bit 4: Show corner markers on left (Mlr)
 \
-\                           * 0 = do not show corner markers to left of track
+\                           * 0 = do not show corner markers to the left of the
+\                                 track
 \
-\                           * 1 = show corner markers to left of track
+\                           * 1 = show corner markers to the left of the track,
+\                                 where applicable
 \
 \                         * Bit 5: Corner marker colours (Mcol)
 \
 \                           * 0 = show all corner markers in white
 \
-\                           * 1 = show corner markers in red and white
+\                           * 1 = show corner markers in red and white, as
+\                                 appropriate
 \
 \                         * Bit 6 is unused
 \
 \                         * Bit 7: Maximum approach speed for next section (Sp)
 \
-\                           * 0 = next section has no maximum approach speed
+\                           * 0 = the next section has no maximum approach speed
 \
-\                           * 1 = next section has a maximum approach speed
+\                           * 1 = the next section has a maximum approach speed
 \
 \ xTrackSectionILo      Low byte of the x-coordinate of the starting point of
-\                       the inside verge of each track section
+\                       the inner verge of each track section
 \
 \ yTrackSectionILo      Low byte of the y-coordinate of the starting point of
-\                       the inside verge of each track section
+\                       the inner verge of each track section
 \
 \ zTrackSectionILo      Low byte of the z-coordinate of the starting point of
-\                       the inside verge of each track section
+\                       the inner verge of each track section
 \
 \ xTrackSectionOLo      Low byte of the x-coordinate of the starting point of
 \                       the outside verge of each track section
@@ -2071,6 +2095,7 @@ ORG CODE%
 \                       the outside verge of each track section
 \
 \ trackSectionSize      The length of each track section in terms of segments
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2359,6 +2384,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The optimum racing line for non-player drivers on each track
 \             section
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2372,6 +2398,7 @@ ORG CODE%
 \ The processed values are shown below. There are 26 bytes, one for each
 \ section, but the last two bytes are unused, as Silverstone only uses sections
 \ 0 to 23).
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2409,6 +2436,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: Base coordinates and object types for 16 road signs
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2425,6 +2453,7 @@ ORG CODE%
 \ trackSectionData byte.
 \
 \ The last sign in this table is the one we see at the start of practice.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2451,6 +2480,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: The total number of track sections * 8
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2462,6 +2492,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: The total number of segment vectors in the segment vector tables
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2473,11 +2504,13 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: The length of the full track in terms of segments
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
 \ The highest segment number is this value minus 1, as segment numbers start
 \ from zero.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2489,6 +2522,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: The segment number of the starting line
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2498,6 +2532,7 @@ ORG CODE%
 \
 \ If the starting line is at segment n, this value is the track length minus n,
 \ which is 1024 - 181 at Silverstone.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2509,11 +2544,13 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: Lap times for adjusting the race class (seconds)
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
 \ If the slowest lap time is a human player, and it's slower than one of these
 \ times, then we change the race class to the relevant difficulty.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2529,11 +2566,13 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: Lap times for adjusting the race class (minutes)
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
 \ If the slowest lap time is a human player, and it's slower than one of these
 \ times, then we change the race class to the relevant difficulty.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2549,11 +2588,12 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: 
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
 \ 
-\
+
 \ ******************************************************************************
 
  EQUB 103               \ Reverse
@@ -2576,6 +2616,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: 
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2603,7 +2644,8 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: The base speed for each race class, used when generating the best
-\             racing lines and individual driver speeds
+\             racing lines and non-player driver speeds
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2620,6 +2662,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The starting race position of the player during a practice or
 \             qualifying lap
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2632,6 +2675,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The spacing between the cars at the start of a qualifying lap, in
 \             segments
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2644,6 +2688,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Adjustment factor for the speed of the timers to allow for
 \             fine-tuning of time on a per-track basis
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2654,6 +2699,7 @@ ORG CODE%
 \ speed to be adjusted on a per-track basis.
 \
 \ Setting this value to 255 disables the timer adjustment.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2664,12 +2710,14 @@ ORG CODE%
 \       Name: trackRaceSlowdown
 \       Type: Variable
 \   Category: Track data
-\    Summary: Slowdown factor for non-player cars in the race
+\    Summary: Slowdown factor for non-player drivers in the race
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
 \ Reduce the speed of all cars in a race by this amount (this does not affect
 \ the speed during qualifying). I suspect this is used for testing purposes.
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2686,6 +2734,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Track data
 \    Summary: The track file's hook code
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2702,7 +2751,8 @@ ORG CODE%
 \       Name: trackChecksum
 \       Type: Variable
 \   Category: Track data
-\    Summary: The track file's checksum and track name
+\    Summary: The track file's checksum
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2716,7 +2766,42 @@ ORG CODE%
  
  EQUB &C7               \ Counts the number of data bytes ending in %11
 
+\ ******************************************************************************
+\
+\       Name: trackGameName
+\       Type: Variable
+\   Category: Track data
+\    Summary: The game name
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This string is checked by the loader to see whether a track file has been
+\ loaded (and if not, it loads one).
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+.trackGameName
+
  EQUS "REVS"            \ Game name
+
+\ ******************************************************************************
+\
+\       Name: trackName
+\       Type: Variable
+\   Category: Track data
+\    Summary: The track name
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This string is shown on the loading screen.
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+.trackName
 
  EQUS "Silverstone"     \ Track name
  EQUB 13
@@ -2724,6 +2809,7 @@ ORG CODE%
 \ ******************************************************************************
 \
 \ Save Silverstone.bin
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
