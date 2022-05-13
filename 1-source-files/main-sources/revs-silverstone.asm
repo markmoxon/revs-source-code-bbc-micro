@@ -85,13 +85,18 @@ ORG CODE%
 \   20   ->   Club Corner
 \   21   ||   Club Corner to Abbey Curve
 \   22   <-   Abbey Curve
-\   23   {}   Abbey Curve to Woodcote Corner
+\   23   ||   Abbey Curve to Woodcote Corner
 \
 \ where:
 \
-\   || is a straight, with just two vectors defined (start and end)
-\   {} is a very gentle curve
+\   || is a straight
+\
+\   {} is a straight in terms of steering left or right, but because the track
+\      elevation changes at this point, it is encoded as a curve (as it is a
+\      curve in the y-axis)
+\
 \   -> is a right corner
+\
 \   <- is a left corner
 \
 \ The track data file format supports up to 26 sections, but Silverstone only
@@ -2007,13 +2012,18 @@ ORG CODE%
 \   20   ->   Club Corner
 \   21   ||   Club Corner to Abbey Curve
 \   22   <-   Abbey Curve
-\   23   {}   Abbey Curve to Woodcote Corner
+\   23   ||   Abbey Curve to Woodcote Corner
 \
 \ where:
 \
-\   || is a straight, with just two vectors defined (start and end)
-\   {} is a very gentle curve
+\   || is a straight
+\
+\   {} is a straight in terms of steering left or right, but because the track
+\      elevation changes at this point, it is encoded as a curve (as it is a
+\      curve in the y-axis)
+\
 \   -> is a right corner
+\
 \   <- is a left corner
 \
 \ The track data file format supports up to 26 sections, but Silverstone only
