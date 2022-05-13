@@ -5081,6 +5081,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Copy a three-part 16-bit coordinate from the track section data
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5155,6 +5156,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Copy two three-part 16-bit coordinates from the track section data
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5252,6 +5254,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Copy a 16-bit y-coordinate from the track section data
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5645,6 +5648,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Set up the next track segment in the track segment buffer
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5765,7 +5769,7 @@ ORG &0B00
  LDY thisVectorNumber   \ Set Y to the number of the segment vector for the new
                         \ track segment
 
- JSR GetTrackData       \ Set (SS T), (TT U) and (UU V) to the coordinates of
+ JSR GetSegmentVector   \ Set (SS T), (TT U) and (UU V) to the coordinates of
                         \ the segment vector for the new track segment, so:
                         \
                         \   [ (SS T) ]   [ xTrackSegmentI ]
@@ -5786,6 +5790,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Set the flags for the new front segment in the track segment
 \             buffer
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5944,6 +5949,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Set the inner and outer track coordinates for the new track
 \             segment
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -6087,6 +6093,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Move to the next segment vector along in the direction we are
 \             facing, but only for curved track sections
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ******************************************************************************
 
@@ -6108,6 +6115,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Move to the next segment vector along the track in the direction
 \             we are facing
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -6344,10 +6352,11 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: GetTrackData
+\       Name: GetSegmentVector
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Fetch a three-axis coordinate from the track data
+\    Summary: Fetch a segment vector from the track data file
+\  Deep dive: Building a 3D track from sections and segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -6368,7 +6377,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.GetTrackData
+.GetSegmentVector
 
  LDA #0                 \ Zero the high bytes of (SS T), (TT U) and (UU V)
  STA SS
@@ -17484,7 +17493,7 @@ ENDIF
  LDY yStore1            \ Set Y to the segment vector number that we stored
                         \ above
 
- JSR GetTrackData       \ Fetch the inner segment vector for the part of the
+ JSR GetSegmentVector   \ Fetch the inner segment vector for the part of the
                         \ track that the car is on:
                         \
                         \   [ (SS T) ]   [ xTrackSegmentI ]
