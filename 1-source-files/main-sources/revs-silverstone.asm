@@ -91,9 +91,9 @@ ORG CODE%
 \
 \   || is a straight
 \
-\   {} is a straight in terms of steering left or right, but because the track
-\      elevation changes at this point, it is encoded as a curve (as it is a
-\      curve in the y-axis)
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but because the track elevation changes at this point, it is encoded as
+\      a curve (as it is a curve, just in the y-axis)
 \
 \   -> is a right corner
 \
@@ -2018,9 +2018,9 @@ ORG CODE%
 \
 \   || is a straight
 \
-\   {} is a straight in terms of steering left or right, but because the track
-\      elevation changes at this point, it is encoded as a curve (as it is a
-\      curve in the y-axis)
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but because the track elevation changes at this point, it is encoded as
+\      a curve (as it is a curve, just in the y-axis)
 \
 \   -> is a right corner
 \

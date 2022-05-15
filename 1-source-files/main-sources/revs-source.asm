@@ -180,15 +180,13 @@ ORG &0000
                         \
                         \ Set to 7 in ResetVariables
 
-.playerRotationLo
+.playerYawAngleLo
 
- SKIP 1                 \ Low byte of the player's rotation about the y-axis
-                        \ (left-right rotation)
+ SKIP 1                 \ Low byte of the player's yaw angle
 
-.playerRotationHi
+.playerYawAngleHi
 
- SKIP 1                 \ High byte of the player's rotation about the y-axis
-                        \ (left-right rotation)
+ SKIP 1                 \ High byte of the player's yaw angle
 
 .yStore1
 
@@ -571,8 +569,8 @@ ORG &0000
 
  SKIP 1                 \ Determines whether the player has gone past the
                         \ closest segment to the player (i.e. whether the
-                        \ relative rotation angle of the segment is greater
-                        \ than 90 degrees)
+                        \ relative yaw angle of the segment is greater than 90
+                        \ degrees)
                         \
                         \   * Bit 7 clear = not yet
                         \
@@ -581,8 +579,8 @@ ORG &0000
 
 .playerHeading
 
- SKIP 1                 \ The player's rotation angle, relative to the direction
-                        \ of the track, where a heading of 0 means the player is
+ SKIP 1                 \ The player's yaw angle, relative to the direction of
+                        \ the track, where a heading of 0 means the player is
                         \ pointing straight along the track
 
 .driverPrinted
@@ -671,7 +669,7 @@ ORG &0000
                         \
                         \ The position ahead of the leader is last place
 
-.spinElevation
+.spinPitchAngle
 
  SKIP 1                 \ 
 
@@ -757,11 +755,10 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.edgeRotation
+.edgeYawAngle
 
- SKIP 1                 \ The rotation angle of the track segment that is
-                        \ closest to the player's car, from the point of view
-                        \ of the car
+ SKIP 1                 \ The yaw angle of the track segment that is closest to
+                        \ the player's car, from the point of view of the car
 
 .soundRevTarget
 
@@ -1282,19 +1279,17 @@ ORG &0100
 
 ORG &0380
 
-.objRotationLo
+.objYawAngleLo
 
- SKIP 24                \ Low byte of each object's rotation about the y-axis
-                        \ (left-right rotation)
+ SKIP 24                \ Low byte of each object's yaw angle
 
-.objRotationHi
+.objYawAngleHi
 
- SKIP 24                \ High byte of each object's rotation about the y-axis
-                        \ (left-right rotation)
+ SKIP 24                \ High byte of each object's yaw angle
 
-.objElevation
+.objectPitchAngle
 
- SKIP 24                \ Each object's elevation angle (up-down)
+ SKIP 24                \ Each object's pitch angle
 
 .objectScaleUp
 
@@ -2590,10 +2585,10 @@ ORG &0B00
 \
 \                         * Reset vergeDataRight to zero
 \
-\                         * Subtract spinRotation from the rotation angles in
+\                         * Subtract spinYawAngle from the yaw angles in
 \                           xVergeRightLo, xVergeRightHi
 \
-\                         * Subtract spinElevation from the elevation angle in
+\                         * Subtract spinPitchAngle from the pitch angle in
 \                            yVergeRight
 \
 \                         * Update horizonListIndex and horizonLine
@@ -2602,10 +2597,10 @@ ORG &0B00
 \
 \                         * Reset vergeDataLeft to zero
 \
-\                         * Subtract spinRotation from the rotation angles in
+\                         * Subtract spinYawAngle from the yaw angles in
 \                           xVergeLeftLo, xVergeLeftHi
 \
-\                         * Subtract spinElevation from the elevation angle in
+\                         * Subtract spinPitchAngle from the pitch angle in
 \                            yVergeLeft
 \
 \                         * Update horizonListIndex and horizonLine
@@ -2617,18 +2612,18 @@ ORG &0B00
  LDA #0                 \ Set the Y-th entry in vergeDataRight to 0
  STA vergeDataRight,Y
 
- LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinRotation
+ LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinYawAngle
  SEC                    \
- SBC spinRotationLo     \ starting with the high bytes
+ SBC spinYawAngleLo     \ starting with the high bytes
  STA xVergeRightLo,Y
 
  LDA xVergeRightHi,Y    \ And then the low bytes
- SBC spinRotationHi
+ SBC spinYawAngleHi
  STA xVergeRightHi,Y
 
- LDA yVergeRight,Y      \ Set A = Y-th entry in yVergeRight - spinElevation
+ LDA yVergeRight,Y      \ Set A = Y-th entry in yVergeRight - spinPitchAngle
  SEC
- SBC spinElevation
+ SBC spinPitchAngle
 
  STA yVergeRight,Y      \ Store the result in the Y-th entry in yVergeRight
 
@@ -2637,9 +2632,9 @@ ORG &0B00
                         \ from the subroutine
 
  STA horizonLine        \ Otherwise this track section is higher than the
-                        \ current horizon height, so the track obscures the
+                        \ current horizon pitch angle, so the track obscures the
                         \ horizon and we need to update horizonLine to this
-                        \ new height
+                        \ new pitch angle
 
  STY horizonListIndex   \ Set horizonListIndex to the track section list index
                         \ number in Y
@@ -2939,8 +2934,8 @@ ORG &0B00
 \
 \ This routine is called with the smaller viewing angle of the object, where 0
 \ to 255 represents 0 to 45 degrees, so 103 = 18.2 degrees. The smaller viewing
-\ angle is taken from the arctan calculation for the rotation calculation in
-\ GetObjRotation, so that's the triangle whose hypoteneuse is the line between
+\ angle is taken from the arctan calculation for the yaw angle calculation in
+\ GetObjYawAngle, so that's the triangle whose hypoteneuse is the line between
 \ the player and the object, and whose other sides are parallel to the x-axis
 \ and z-axis.
 \
@@ -4697,12 +4692,12 @@ ORG &0B00
 
                         \ If we get here then we are quite far off the track
 
- LDA edgeRotation       \ Set A to the rotation angle of the track segment that
-                        \ is closest to the player's car, from the point of view
-                        \ of the car
+ LDA edgeYawAngle       \ Set A to the yaw angle of the track segment that is
+                        \ closest to the player's car, from the point of view of
+                        \ the car
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |edgeRotation|
+                        \       = |edgeYawAngle|
 
  CMP #96                \ If A >= 96, then the nearest track segment to the
  BCS cras1              \ player is within a cone stretching out behind the car
@@ -4727,17 +4722,17 @@ ORG &0B00
                         \ If we get here then we have not hit the fence but we
                         \ are off the track, so we spin out
 
- LDA #20                \ Set A = 20 so we apply a rotation of magnitude 20 to
-                        \ the car
+ LDA #20                \ Set A = 20 so we apply a yaw angle spin of magnitude
+                        \ 20 to the car
 
- BIT spinRotationHi     \ Set the flags according to the sign of spinRotationHi,
+ BIT spinYawAngleHi     \ Set the flags according to the sign of spinYawAngleHi,
                         \ so the call to Absolute8Bit sets the sign of A to the
-                        \ same sign as the spin rotation (so the car spins out
-                        \ in the same direction as it is currently apinning)
+                        \ same sign as the spin yaw angle (so the car spins out
+                        \ in the same direction as it is currently spinning)
 
- JSR Absolute8Bit       \ Set A = 20 * abs(spinRotation)
+ JSR Absolute8Bit       \ Set A = 20 * abs(spinYawAngle)
 
- JMP SquealTyres        \ Jump to SquealTyres to update spinRotation and make
+ JMP SquealTyres        \ Jump to SquealTyres to update spinYawAngle and make
                         \ the tyres squeal, returning from the subroutine using
                         \ a tail call
 
@@ -5010,8 +5005,7 @@ ORG &0B00
 \
 \   xPlayerCoord        The 3D coordinates of the player's car
 \
-\   playerRotation      The rotation of the player's car around the y-axis
-\                       (left-right)
+\   playerYawAngle      The yaw angle of the player's car around the y-axis
 \
 \ Other entry points:
 \
@@ -5063,15 +5057,15 @@ ORG &0B00
  LDX L0045              \ Set X to the driver number of the current player
 
  JSR BuildCarObjects    \ Build the car object for the current player using the
-                        \ updated track segment, returning the object's rotation
-                        \ about the y-axis in objRotation
+                        \ updated track segment, returning the object's yaw
+                        \ angle in objYawAngle
 
- LDA objRotationLo,X    \ Copy the low byte of the rotation about the y-axis to
- STA playerRotationLo   \ playerRotationLo
+ LDA objYawAngleLo,X    \ Copy the low byte of the yaw angle to playerYawAngleLo
+ STA playerYawAngleLo
 
- LDA objRotationHi,X    \ Copy the high byte of the rotation about the y-axis to
- EOR directionFacing    \ playerRotationHi, flipping the sign of the coordinate
- STA playerRotationHi   \ if we are facing backwards along the track
+ LDA objYawAngleHi,X    \ Copy the high byte of the yaw angle to
+ EOR directionFacing    \ playerYawAngleHi, flipping the sign of the
+ STA playerYawAngleHi   \ coordinate if we are facing backwards along the track
 
  RTS                    \ Return from the subroutine
 
@@ -7649,7 +7643,7 @@ ENDIF
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
  JSR MoveHorizon        \ Move the position of the horizon palette switch up or
-                        \ down, depending on the current track height
+                        \ down, depending on the current track pitch angle
 
  JSR ProcessContact     \ Process any car-on-car contact, if there has been any
 
@@ -8957,7 +8951,7 @@ ENDIF
 
  LDA yVergeRight,X      \ Set yCoord = X-th value from yVergeRight
  STA yCoord             \
-                        \ Which is the elevation angle (i.e. y-coordinate) of
+                        \ Which is the pitch angle (i.e. y-coordinate) of
                         \ the verge that has the corner markes
 
  LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
@@ -9175,15 +9169,15 @@ ENDIF
 
 .cont2
 
- LDA objRotationHi,X    \ Set A to the rotation about the y-axis for the other
- SEC                    \ car minus the rotation about the y-axis for the
- SBC playerRotationHi   \ player, which we will call dRotation
+ LDA objYawAngleHi,X    \ Set A to the yaw angle for the other car minus the yaw
+ SEC                    \ angle for the player, which we will call dYawAngle
+ SBC playerYawAngleHi
 
  ASL A                  \ Set A = A * 4
- ASL A                  \       = dRotation * 4
+ ASL A                  \       = dYawAngle * 4
 
  PHP                    \ Push the N flag onto the stack, which contains the
-                        \ sign of dRotation
+                        \ sign of dYawAngle
 
  LDA carSpeedHi,Y       \ Set A to the high byte of the player's speed
 
@@ -9237,12 +9231,12 @@ ENDIF
                         \ By this point, (A T) is a measurement of how dangerous
                         \ the collision was, on a scale of 0 to 16
 
- PLP                    \ Restore the sign of dRotation, which we stored on the
+ PLP                    \ Restore the sign of dYawAngle, which we stored on the
                         \ stack above, so the N flag is positive if the other
-                        \ car's rotation angle is larger (i.e. the other car is
-                        \ to the right of the player's car), or negative if the
-                        \ other car's rotation angle is smaller (i.e. the other
-                        \ car is to the left of the player's car)
+                        \ car's yaw angle is larger (i.e. the other car is to
+                        \ the right of the player's car), or negative if the
+                        \ other car's yaw angle is smaller (i.e. the other car
+                        \ is to the left of the player's car)
 
  JSR Absolute16Bit      \ Set the sign of (A T) to match the result of the
                         \ subtraction above, so A is now in the range -16 to
@@ -9253,7 +9247,7 @@ ENDIF
                         \
                         \   * 0 to +16 if the other car is to the right
 
-                        \ Fall through into SquealTyres to set spinRotationHi
+                        \ Fall through into SquealTyres to set spinYawAngleHi
                         \ and make the sound of squealing tyres
 
 \ ******************************************************************************
@@ -9267,13 +9261,13 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   The new value for spinRotationHi
+\   A                   The new value for spinYawAngleHi
 \
 \ ******************************************************************************
 
 .SquealTyres
 
- STA spinRotationHi     \ Set spinRotationHi = A
+ STA spinYawAngleHi     \ Set spinYawAngleHi = A
 
  LDA #%10000000         \ Set bit 7 in L62A6 and L62A7, so the tyres squeal
  STA L62A6
@@ -12958,10 +12952,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetObjRotation (Part 1 of 4)
+\       Name: GetObjYawAngle (Part 1 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate an object's rotation angle about the y-axis
+\    Summary: Calculate an object's yaw angle
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12984,7 +12978,7 @@ ENDIF
 \
 \ Returns:
 \
-\   (JJ II)             The rotation about the y-axis of the object
+\   (JJ II)             The yaw angle of the object
 \
 \   (J I)               max(|x-delta|, |z-delta|)
 \
@@ -12997,14 +12991,14 @@ ENDIF
 \
 \ Other entry points:
 \
-\   GetObjRotation-2    Use xPlayerCoord (Y = 0)
+\   GetObjYawAngle-2    Use xPlayerCoord (Y = 0)
 \
 \ ******************************************************************************
 
  LDY #0                 \ Use xPlayerCoord for the second variable when calling
-                        \ the routine via GetObjRotation-2
+                        \ the routine via GetObjYawAngle-2
 
-.GetObjRotation
+.GetObjYawAngle
 
                         \ The vectors used in this routine are configured by the
                         \ values of X and Y, but for the purposes of simplicity,
@@ -13156,10 +13150,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetObjRotation (Part 2 of 4)
+\       Name: GetObjYawAngle (Part 2 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate rotation angle for when |x-delta| > |z-delta|
+\    Summary: Calculate yaw angle for when |x-delta| > |z-delta|
 \
 \ ******************************************************************************
 
@@ -13186,7 +13180,7 @@ ENDIF
                         \   * |x-delta| > |z-delta|
                         \
                         \ We now do the following division so we can use
-                        \ trigonometry to calculate the rotation angle:
+                        \ trigonometry to calculate the yaw angle:
                         \
                         \   |z-delta| / |x-delta|
                         \
@@ -13238,8 +13232,8 @@ ENDIF
                         \ using the lower byte of the |z-delta| numerator for
                         \ rounding ???
 
- LDA #0                 \ Set II = 0 to use as the low byte for the final
- STA II                 \ rotation angle
+ LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
+ STA II                 \ angle
 
  LDY T                  \ Set A = arctanR(T)
  LDA arctanR,Y          \       = arctanR(|z-delta| / |x-delta|)
@@ -13297,10 +13291,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetObjRotation (Part 3 of 4)
+\       Name: GetObjYawAngle (Part 3 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate rotation angle for when |x-delta| = |z-delta|
+\    Summary: Calculate yaw angle for when |x-delta| = |z-delta|
 \
 \ ******************************************************************************
 
@@ -13317,8 +13311,8 @@ ENDIF
  LDA #255               \ Set M = 255, to represent a viewing angle of 45
  STA M                  \ degrees
 
- LDA #0                 \ Set II = 0 to use as the low byte for the final
- STA II                 \ rotation angle
+ LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
+ STA II                 \ angle
 
  BIT VV                 \ If x-delta is positive, jump to rotn11
  BPL rotn11
@@ -13373,10 +13367,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetObjRotation (Part 4 of 4)
+\       Name: GetObjYawAngle (Part 4 of 4)
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate rotation angle for when |x-delta| < |z-delta|
+\    Summary: Calculate yaw angle for when |x-delta| < |z-delta|
 \
 \ ******************************************************************************
 
@@ -13403,7 +13397,7 @@ ENDIF
                         \   * |x-delta| < |z-delta|
                         \
                         \ We now do the following division so we can use
-                        \ trigonometry to calculate the rotation angle:
+                        \ trigonometry to calculate the yaw angle:
                         \
                         \   |x-delta| / |z-delta|
                         \
@@ -13455,8 +13449,8 @@ ENDIF
                         \ using the lower byte of the |x-delta| numerator for
                         \ rounding ???
 
- LDA #0                 \ Set II = 0 to use as the low byte for the final
- STA II                 \ rotation angle
+ LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
+ STA II                 \ angle
 
  LDY T                  \ Set A = arctanR(T)
  LDA arctanR,Y          \       = arctanR(|x-delta| / |z-delta|)
@@ -13514,10 +13508,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetObjElevation
+\       Name: GetObjPitchAngle
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate an object's elevation angle
+\    Summary: Calculate an object's pitch angle
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13539,13 +13533,13 @@ ENDIF
 \                         * 6 = yVector6
 \
 \   (L K)               The result from GetObjectDistance, which is called
-\                       between GetObjRotation and GetObjElevation
+\                       between GetObjYawAngle and GetObjPitchAngle
 \
 \ Returns:
 \
-\   LL                  The elevation angle of the object
+\   LL                  The pitch angle of the object
 \
-\   A                   The elevation angle of the object (same as LL)
+\   A                   The pitch angle of the object (same as LL)
 \
 \   scaleUp             The scale up factor for the object
 \
@@ -13562,14 +13556,14 @@ ENDIF
 \
 \ Other entry points:
 \
-\   GetObjElevation-2   Use yPlayerCoord (Y = 0)
+\   GetObjPitchAngle-2  Use yPlayerCoord (Y = 0)
 \
 \ ******************************************************************************
 
  LDY #0                 \ Use xPlayerCoord for the second variable when calling
-                        \ the routine via GetObjElevation-2
+                        \ the routine via GetObjPitchAngle-2
 
-.GetObjElevation
+.GetObjPitchAngle
 
                         \ The vectors used in this routine are configured by the
                         \ values of X and Y, but for the purposes of simplicity,
@@ -13681,7 +13675,7 @@ ENDIF
                         \   * Y = 0
                         \
                         \ We now do the following division so we can use
-                        \ trigonometry to calculate the elevation angle:
+                        \ trigonometry to calculate the pitch angle:
                         \
                         \   (|y-delta| / 8) / |x-delta|
                         \
@@ -13770,8 +13764,8 @@ ENDIF
 \       Name: GetSectionAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Get the rotation and elevation angles for the inner and outer
-\             track sections
+\    Summary: Get the yaw and pitch angles for the inner and outer track
+\             sections
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13790,19 +13784,19 @@ ENDIF
 \     * Part 2: Calculate the track section number for this entry, relative to
 \       the front segment in the track segment buffer
 \
-\     * Part 3: Set the rotation and elevation angles for this section in the
+\     * Part 3: Store the yaw and pitch angles for this section in the
 \       xVergeRight/Left and yVergeRight/Left tables
 \
 \ Returns:
 \
-\   xVergeRight/Left    Updated rotation angles for the entries in the track
+\   xVergeRight/Left    Updated yaw angles for the entries in the track section
+\                       list (i.e. indexes 0 to 5)
+\
+\   yVergeRight/Left    Updated pitch angles for the entries in the track
 \                       section list (i.e. indexes 0 to 5)
 \
-\   yVergeRight/Left    Updated elevation angles for the entries in the track
-\                       section list (i.e. indexes 0 to 5)
-\
-\   horizonLine         Updated to cater for the heights of the updated track
-\                       sections
+\   horizonLine         Updated to cater for the pitch angles of the updated
+\                       track sections
 \
 \   horizonListIndex    Updated to the index of the track section that contains
 \                       the horizon (i.e. the index within the track section
@@ -13845,9 +13839,9 @@ ENDIF
 
                         \ Otherwise we now loop from Y = sectionListValid up to
                         \ 5 to work through the valid entries in the list,
-                        \ applying spin rotation to each one, and skipping entry
-                        \ number sectionListPointer as we are going to update
-                        \ that entry below
+                        \ applying the yaw angle spin to each one, and skipping
+                        \ entry number sectionListPointer as we are going to
+                        \ update that entry below
 
 .gsec2
 
@@ -13868,10 +13862,10 @@ ENDIF
                         \
                         \   * Reset vergeDataRight to zero
                         \
-                        \   * Subtract spinRotation from the rotation angles in
+                        \   * Subtract spinYawAngle from the yaw angles in
                         \     xVergeRightLo, xVergeRightHi
                         \
-                        \   * Subtract spinElevation from the elevation angle in
+                        \   * Subtract spinPitchAngle from the pitch angle in
                         \     yVergeRight
                         \
                         \   * Update horizonListIndex and horizonLine
@@ -13883,10 +13877,10 @@ ENDIF
                         \
                         \   * Reset vergeDataLeft to zero
                         \
-                        \   * Subtract spinRotation from the rotation angles in
+                        \   * Subtract spinYawAngle from the yaw angles in
                         \     xVergeLeftLo, xVergeLeftHi
                         \
-                        \   * Subtract spinElevation from the elevation angle in
+                        \   * Subtract spinPitchAngle from the pitch angle in
                         \     yVergeLeft
                         \
                         \   * Update horizonListIndex and horizonLine
@@ -14020,13 +14014,13 @@ ENDIF
 \       Name: GetSectionAngles (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Calculate the rotation and elevation angles for the track section
-\             entry that we want to update
+\    Summary: Calculate the yaw and pitch angles for the track section entry
+\             that we want to update
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part of the routine sets the rotation and elevation angles for this track
-\ section in the xVergeRight/Left and yVergeRight/Left tables.
+\ This part of the routine sets the yaw and pitch angles for this track section
+\ in the xVergeRight/Left and yVergeRight/Left tables.
 \
 \ ******************************************************************************
 
@@ -14057,9 +14051,8 @@ ENDIF
                         \ been incremented by 3, xVector4 is the 3D coordinate
                         \ of the outer track)
 
- JSR GetObjRotation-2   \ Calculate xVector4's rotation about the y-axis, from
-                        \ the point of view of the player, returning it in
-                        \ (JJ II)
+ JSR GetObjYawAngle-2   \ Calculate xVector4's yaw angle, from the point of view
+                        \ of the player, returning it in (JJ II)
 
  LDY sectionCounter     \ Set Y to the loop counter
 
@@ -14075,42 +14068,42 @@ ENDIF
 
 .gsec8
 
- JSR GetSectionRotation \ Set the following for the Y-th section, to calculate
-                        \ the difference in rotation angle between the track
-                        \ section and the player:
+ JSR GetSectionYawAngle \ Set the following for the Y-th section, to calculate
+                        \ the difference in yaw angle between the track section
+                        \ and the player:
                         \
-                        \   xVergeRight = (JJ II) - playerRotation
+                        \   xVergeRight = (JJ II) - playerYawAngle
                         \
                         \ Also set (L K) to the distance between the track
                         \ section and the player's car
 
  LDX sectionCounter     \ If the loop counter in X >= 40, then we are dealing
  CPX #40                \ with the outer track section, so jump to gsec10 as we
- BCS gsec10             \ don't need to repeat the elevation calculation (the
+ BCS gsec10             \ don't need to repeat the pitch angle calculation (the
                         \ track is level from left to right, so the outer track
-                        \ is the same height as the inner track)
+                        \ is the same pitch angle as the inner track)
 
- LDX #&FD               \ Set X = &FD so the call to GetObjElevation uses
+ LDX #&FD               \ Set X = &FD so the call to GetObjPitchAngle uses
                         \ xVector4, which we set above to the 3D coordinate of
                         \ the inner track at the start of the section
 
- JSR GetObjElevation-2  \ Calculate xVector4's elevation angle, from the point
+ JSR GetObjPitchAngle-2 \ Calculate xVector4's pitch angle, from the point
                         \ of view of the player, returning it in A and LL
 
  LDX sectionCounter     \ Set X to the loop counter, which we know is less than
                         \ 40 at this point (and which is therefore equal to
                         \ sectionListPointer)
 
- LDA LL                 \ Set A to the elevation angle that we just calculated
+ LDA LL                 \ Set A to the pitch angle that we just calculated
                         \ for the track section
 
- STA yVergeRight,X      \ Store the elevation angle in the X-th yVergeRight
+ STA yVergeRight,X      \ Store the pitch angle in the X-th yVergeRight
                         \ entry, for this point on the right track section
 
- STA yVergeLeft,X       \ Store the same elevation angle in the X-th yVergeLeft,
+ STA yVergeLeft,X       \ Store the same pitch angle in the X-th yVergeLeft,
                         \ for this point on the left track section, which will
-                        \ at the same height as the track is level from left to
-                        \ right
+                        \ at the same pitch angle as the track is level from
+                        \ left to right
 
  CMP horizonLine        \ If A < horizonLine, then this track section is lower
  BCC gsec10             \ than the current horizon, so jump to gsec10 to move on
@@ -14120,11 +14113,11 @@ ENDIF
  BNE gsec9              \ If A <> horizonLine, i.e. A > horizonLine, then this
                         \ means the track section is higher than the current
                         \ horizon line, so jump to gsec9 to set the horizon
-                        \ line to the elevation of this track section, as the
+                        \ line to the pitch angle of this track section, as the
                         \ section is obscuring the horizon
 
                         \ If we get here, then A = horizonLine, so this section
-                        \ is at the same height as the current horizon line
+                        \ is at the same pitch angle as the current horizon line
 
  CPX horizonListIndex   \ If X < horizonListIndex, then this section has a lower
  BCC gsec10             \ index than the current horizon section, so jump to
@@ -14135,11 +14128,12 @@ ENDIF
 .gsec9
 
                         \ If we get here then we want to update the horizon to
-                        \ to the height of the track section we are updating, as
-                        \ it obscures the horizon
+                        \ the pitch angle of the track section we are updating,
+                        \ as it obscures the horizon
 
- STA horizonLine        \ Set horizonLine to the elevation in A, so the horizon
-                        \ is set to the height of this track section
+ STA horizonLine        \ Set horizonLine to the pitch angle in A, so the
+                        \ horizon is set to the pitch angle of this track
+                        \ section
 
  STX horizonListIndex   \ Store the index of this section in the track section
                         \ list in horizonListIndex
@@ -14199,11 +14193,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetSegmentRotation
+\       Name: GetSegmentYawAngle
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Calculate the difference in rotation angle between a track segment
-\             and the player
+\    Summary: Calculate the difference in yaw angle between a track segment and
+\             the player
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14227,44 +14221,42 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetSegmentRotation
+.GetSegmentYawAngle
 
- JSR GetObjRotation-2   \ Calculate the segment's rotation about the y-axis,
-                        \ from the point of view of the player, returning it in
-                        \ (JJ II)
+ JSR GetObjYawAngle-2   \ Calculate the segment's yaw angle, from the point of
+                        \ view of the player, returning it in (JJ II)
 
  LDY segmentListPointer \ Set Y = segmentListPointer, so the result gets stored
                         \ in the correct position in the track segment list
 
-                        \ Fall through into GetSectionRotation to set the
+                        \ Fall through into GetSectionYawAngle to set the
                         \ specified xVergeRight or xVergeLeft to the difference
-                        \ in the rotation angle between the player and the
-                        \ segment
+                        \ in the yaw angle between the player and the segment
 
 \ ******************************************************************************
 \
-\       Name: GetSectionRotation
+\       Name: GetSectionYawAngle
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Calculate the difference in rotation angle between an object and
-\             the player
+\    Summary: Calculate the difference in yaw angle between an object and the
+\             player
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is typically used to calculate the difference in rotation angle
+\ This routine is typically used to calculate the difference in yaw angle
 \ between a track section and the player.
 \
 \ Arguments:
 \
-\   Y                   Index from xVergeRight to store the difference in
-\                       rotation angle between the object and the player
+\   Y                   Index from xVergeRight to store the difference in yaw
+\                       angle between the object and the player
 \
-\   (JJ II)             The rotation about the y-axis of the object
+\   (JJ II)             The yaw angle of the object
 \
 \ Returns:
 \
-\   xVergeRight/Left    The difference in the rotation angle between the object
-\                       and the player
+\   xVergeRight/Left    The difference in the yaw angle between the object and
+\                       the player
 \
 \   (L K)               The distance between the object and the player's car
 \
@@ -14275,16 +14267,16 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetSectionRotation
+.GetSectionYawAngle
 
  LDA II                 \ Set the following for the Y-th section:
  SEC                    \
- SBC playerRotationLo   \   xVergeRight = (JJ II) - playerRotation
+ SBC playerYawAngleLo   \   xVergeRight = (JJ II) - playerYawAngle
  STA xVergeRightLo,Y    \
                         \ starting with the low bytes
 
  LDA JJ                 \ And then the high bytes
- SBC playerRotationHi
+ SBC playerYawAngleHi
  STA xVergeRightHi,Y
 
  JMP GetObjectDistance  \ Set (L K) to the distance between the object and the
@@ -14296,8 +14288,7 @@ ENDIF
 \       Name: GetSegmentAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track
-\    Summary: Get the rotation and elevation angles for the inner or outer
-\             track segments
+\    Summary: Get the yaw and pitch angles for the inner or outer track segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14334,10 +14325,10 @@ ENDIF
 \
 \ Returns:
 \
-\   xVergeRight/Left    Updated rotation angles for the entries in the track
-\                       segment list (i.e. indexes 6 to 21)
+\   xVergeRight/Left    Updated yaw angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21)
 \
-\   yVergeRight/Left    Updated elevation angles for the entries in the track
+\   yVergeRight/Left    Updated pitch angles for the entries in the track
 \                       segment list (i.e. indexes 6 to 21)
 \
 \   edgeDistance        The distance between the player's car and the nearest
@@ -14350,15 +14341,15 @@ ENDIF
 \                       section/segment list (i.e. from xVergeRight) that is
 \                       closest to the player's car
 \
-\   edgeRotation        The rotation angle of the segment that is closest to the
+\   edgeYawAngle        The yaw angle of the segment that is closest to the
 \                       player's car
 \
 \   xVergeRight/Left    Entries in the second part of the track segment list for
 \                       the coordinates of the outside of the track verge
-\                       (i.e. indexes 22 to 37, which correspond to the rotation
+\                       (i.e. indexes 22 to 37, which correspond to the yaw
 \                       angles in the track segment list in indexes 6 to 21)
 \
-\   yVergeRight/Left    Elevation angles for the entries in the track segment
+\   yVergeRight/Left    Pitch angles for the entries in the track segment
 \                       list (i.e. indexes 6 to 21)
 \
 \   xMarker             Distance in the x-axis between the track edge and the
@@ -14381,7 +14372,7 @@ ENDIF
 
 .gseg1
 
- JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
+ JSR GetSegmentYawAngle \ Calculate the yaw angle and distance between the
                         \ player's car and the track segment specified in X, and
                         \ store the results in the track segment list at the
                         \ segment list pointer
@@ -14436,16 +14427,16 @@ ENDIF
                         \ list (i.e. from xVergeRight) that is closest to the
                         \ player's car
 
- LDA xVergeRightHi,Y    \ Set edgeRotation = the segment's entry in
- STA edgeRotation       \ xVergeRightHi
+ LDA xVergeRightHi,Y    \ Set edgeYawAngle = the segment's entry in
+ STA edgeYawAngle       \ xVergeRightHi
                         \
-                        \ So edgeRotation contains the rotation angle of the
-                        \ segment that is closest to the player's car, from the
-                        \ point of view of the car
+                        \ So edgeYawAngle contains the yaw angle of the segment
+                        \ that is closest to the player's car, from the point of
+                        \ view of the car
 
 .gseg3
 
- JSR GetObjElevation-2  \ Calculate the segment's elevation angle, from the
+ JSR GetObjPitchAngle-2 \ Calculate the segment's pitch angle, from the
                         \ point of view of the player, returning it in A and LL
                         \
                         \ If the segment is not visible on-screen, the C flag is
@@ -14453,7 +14444,7 @@ ENDIF
 
  BCS gseg4              \ If the segment is not visible on-screen, jump to gseg4
 
- BPL gseg10             \ If the elevation angle is positive, jump to gseg10
+ BPL gseg10             \ If the pitch angle is positive, jump to gseg10
 
 \ ******************************************************************************
 \
@@ -14468,7 +14459,7 @@ ENDIF
 .gseg4
 
                         \ If we get here then the segment is not visible or the
-                        \ segment's elevation angle is negative, so we need to
+                        \ segment's pitch angle is negative, so we need to
                         \ stop processing segments
                         \
                         \ However, before we stop, we try to eek as much
@@ -14588,17 +14579,17 @@ ENDIF
                         \ of the vector from the previous segment to the current
                         \ segment
 
- LDX #&FA               \ Set X = &FA so the call to GetSegmentRotation uses
+ LDX #&FA               \ Set X = &FA so the call to GetSegmentYawAngle uses
                         \ xVector3
 
- JSR GetSegmentRotation \ Calculate the rotation angle and distance between the
+ JSR GetSegmentYawAngle \ Calculate the yaw angle and distance between the
                         \ player's car and xVector3, and store the results in
                         \ the track segment list at the segment list pointer
                         \
                         \ Also set (A K) = (L K) = the distance between the car
                         \ and xvector3
 
- JSR GetObjElevation-2  \ Calculate xVector3's elevation angle, from the point
+ JSR GetObjPitchAngle-2 \ Calculate xVector3's pitch angle, from the point
                         \ of view of the player, returning it in A and LL
                         \
                         \ If xVector3 is not visible on-screen, the C flag is
@@ -14648,7 +14639,7 @@ ENDIF
 
 .gseg10
 
-                        \ If we get here then the segment's elevation angle is
+                        \ If we get here then the segment's pitch angle is
                         \ positive and the segment is visible on-screen
 
  JSR GetVergeAndMarkers \ Get the details for this segment's corner markers and
@@ -14666,11 +14657,11 @@ ENDIF
 
  LDY segmentListPointer \ Set Y to the segment list pointer
 
- LDA xVergeRightHi,Y    \ Set A to the high byte of the rotation angle of the
+ LDA xVergeRightHi,Y    \ Set A to the high byte of the yaw angle of the
                         \ segment's right verge
 
  BPL gseg11             \ If the angle is negative, negate it, so we now have
- EOR #&FF               \ A = |rotation angle|
+ EOR #&FF               \ A = |yaw angle|
 
 .gseg11
 
@@ -14678,11 +14669,11 @@ ENDIF
  BCC gseg13             \ field of view, so jump to gseg13 to keep checking
                         \ segments
 
- LDA xVergeRightHi-1,Y  \ Set A to the high byte of the rotation angle of the
+ LDA xVergeRightHi-1,Y  \ Set A to the high byte of the yaw angle of the
                         \ previous segment's right verge
 
  BPL gseg12             \ If the angle is negative, negate it, so we now have
- EOR #&FF               \ A = |rotation angle|
+ EOR #&FF               \ A = |yaw angle|
 
 .gseg12
 
@@ -14798,9 +14789,9 @@ ENDIF
 
 .MovePlayerSegment
 
- LDA playerHeading      \ Set A = playerHeading - spinRotationHi
+ LDA playerHeading      \ Set A = playerHeading - spinYawAngleHi
  SEC                    \
- SBC spinRotationHi     \ So A contains the new heading of the player's car,
+ SBC spinYawAngleHi     \ So A contains the new heading of the player's car,
                         \ once the current spin is added (i.e. it's the new
                         \ heading of the car)
 
@@ -15029,13 +15020,12 @@ ENDIF
 
 .GetTrackAndMarkers
 
- LDA #0                 \ Set horizonLine = 0, so we can calculate a new height
- STA horizonLine        \ for the horizon in the following process
+ LDA #0                 \ Set horizonLine = 0, so we can calculate a new pitch
+ STA horizonLine        \ angle for the horizon in the following process
 
- JSR GetSectionAngles   \ Get the rotation and elevation angles for the inner
-                        \ and outer track sections in the track section list
-                        \ and store the results in xVergeRight/Left and
-                        \ yVergeRight/Left
+ JSR GetSectionAngles   \ Get the yaw and pitch angles for the inner and outer
+                        \ track sections in the track section list and store the
+                        \ results in xVergeRight/Left and yVergeRight/Left
 
  LDA #255               \ Set edgeDistanceHi = 255, so GetSegmentAngles can set
  STA edgeDistanceHi     \ it to the distance of the nearest verge
@@ -15047,10 +15037,10 @@ ENDIF
  LDA #0                 \ Fetch the index details of the right track segments
  JSR GetSegmentDetails
 
- LDA #6                 \ Get the rotation and elevation angles for the segments
- JSR GetSegmentAngles   \ (and the verge marks and corner markers) along the
-                        \ right side of the track and store the results in
-                        \ xVergeRight, yVergeRight, xMarker and vergeDataRight
+ LDA #6                 \ Get the yaw and pitch angles for the segments (and the
+ JSR GetSegmentAngles   \ verge marks and corner markers) along the right side
+                        \ of the track and store the results in xVergeRight,
+                        \ yVergeRight, xMarker and vergeDataRight
 
  LDA segmentListPointer \ Set leftSegmentPointer = segmentListPointer
  STA leftSegmentPointer \
@@ -15061,10 +15051,10 @@ ENDIF
  LDA #%10000000         \ Fetch the index details of the left track segments
  JSR GetSegmentDetails
 
- LDA #46                \ Get the rotation and elevation angles for the segments
- JSR GetSegmentAngles   \ (and the verge marks and corner markers) along the
-                        \ left side of the track and store the results in
-                        \ xVergeLeft, yVergeLeft, xMarker and vergeDataLeft
+ LDA #46                \ Get the yaw and pitch angles for the segments (and the
+ JSR GetSegmentAngles   \ verge marks and corner markers) along the left side
+                        \ of the track and store the results in xVergeRight,
+                        \ yVergeRight, xMarker and vergeDataRight
 
  LDA horizonListIndex   \ If horizonListIndex < 40, then this is a valid index
  CMP #40                \ into the track section/segment list so jump to gtrm1
@@ -15093,11 +15083,11 @@ ENDIF
 
 .gtrm2
 
- STA yVergeRight,Y      \ Set the elevation angle for the right side of the
+ STA yVergeRight,Y      \ Set the pitch angle for the right side of the
                         \ horizon line in the track section/segment list to the
                         \ updated value of horizonLine
 
- STA yVergeLeft,Y       \ Set the elevation angle for the left side of the
+ STA yVergeLeft,Y       \ Set the pitch angle for the left side of the
                         \ horizon line in the track section/segment list to the
                         \ updated value of horizonLine
 
@@ -15224,7 +15214,7 @@ ENDIF
 \
 \                         * X + 120 for outer track segment coordinates
 \
-\   LL                  The segment's elevation angle, from the point of view of
+\   LL                  The segment's pitch angle, from the point of view of
 \                       the player
 \
 \   scaleUp             The scale up factor for the segment
@@ -15235,10 +15225,10 @@ ENDIF
 \
 \   xVergeRight/Left    Entries in the second part of the track segment list for
 \                       the coordinates of the outside of the track verge
-\                       (i.e. indexes 22 to 37, which correspond to the rotation
+\                       (i.e. indexes 22 to 37, which correspond to the yaw
 \                       angles in the track segment list in indexes 6 to 21)
 \
-\   yVergeRight/Left    Elevation angles for the entries in the track segment
+\   yVergeRight/Left    Pitch angles for the entries in the track segment
 \                       list (i.e. indexes 6 to 21)
 \
 \   xMarker             Distance in the x-axis between the track edge and the
@@ -15597,24 +15587,24 @@ ENDIF
                         \ so that's 2 for a white verge mark, 1 for a red verge
                         \ mark, and 0 for a black verge mark
 
- LDA LL                 \ Set A to the segment's elevation angle, from the point
+ LDA LL                 \ Set A to the segment's pitch angle, from the point
                         \ of view of the player
 
  STA yVergeRight,Y      \ Store the result in the segment's entry in yVergeRight
-                        \ to set the segment's elevation
+                        \ to set the segment's pitch angle
 
- CMP #80                \ If the elevation angle is 80 or more, jump to gmar12
+ CMP #80                \ If the pitch angle is 80 or more, jump to gmar12
  BCS gmar12             \ to return from the subroutine
 
- CMP horizonLine        \ If the elevation angle is less than horizonLine, jump
+ CMP horizonLine        \ If the pitch angle is less than horizonLine, jump
  BCC gmar12             \ to gmar12 to return from the subroutine
 
-                        \ If we get here then the elevation angle in A is less
+                        \ If we get here then the pitch angle in A is less
                         \ than 80 and is greater or equal to horizonLine
 
  STA horizonLine        \ This track segment is higher than the current horizon
-                        \ height, so the track obscures the horizon and we need
-                        \ to update horizonLine to this new height
+                        \ pitch angle, so the track obscures the horizon and we
+                        \ need to update horizonLine to this new pitch angle
 
  STY horizonListIndex   \ Set horizonListIndex to the track segment number in Y
 
@@ -17115,8 +17105,8 @@ ENDIF
 \
 \   * xSegmentCoordI is the coordinate for the start of the car's track segment
 \
-\ The routine then calculates the rotation and elevation angles for the car
-\ object (or objects).
+\ The routine then calculates the yaw and pitch angles for the car object (or
+\ objects).
 \
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
@@ -17142,7 +17132,7 @@ ENDIF
 \                       car) or the coordinates of the rear tyres (for the
 \                       four-object car
 \
-\   objRotation         The object's rotation about the y-axis
+\   objYawAngle         The object's yaw angle
 \
 \ ******************************************************************************
 
@@ -17426,8 +17416,8 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ Now that we have the car's 3D coordinates in xVector4, we calculate the car's
-\ rotation and elevation angles, and use them to create either one car object,
-\ or four car objects if this is the four-object car.
+\ yaw and pitch angles, and use them to create either one car object, or four
+\ car objects if this is the four-object car.
 \
 \ If this is the four-object car (i.e. the car is directly in front of us, is
 \ close enough and is visible), then we calculate the coordinates for the three
@@ -17453,9 +17443,9 @@ ENDIF
                         \ start with the object type of the standard car, and
                         \ change this later if required)
 
- JSR GetObjectAngles-2  \ Calculate the object's rotation and elevation angles,
-                        \ using the coordinates in xVector4, and set the
-                        \ object's visibility, scale and type
+ JSR GetObjectAngles-2  \ Calculate the object's yaw and pitch angles, using the
+                        \ coordinates in xVector4, and set the object's
+                        \ visibility, scale and type
 
  LDX L0045              \ Set X = L0045 (driver number of car we are driving)
 
@@ -17546,8 +17536,8 @@ ENDIF
 
                         \ Now that we have the 3D coordinates of the extra three
                         \ parts of the four-object car, we can calculate the
-                        \ object's rotation and elevation angles, and store the
-                        \ details in objects 20, 21 and 22 (for the rear tyres,
+                        \ object's yaw and pitch angles, and store the details
+                        \ in objects 20, 21 and 22 (for the rear tyres,
                         \ body/helmet and front tyres respectively)
 
  LDA #20                \ Set objectNumber = 20, to use as then object number
@@ -17556,9 +17546,9 @@ ENDIF
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR GetObjectAngles-2  \ Calculate the object's rotation and elevation angles,
-                        \ using the coordinates of the rear tyres in xVector4,
-                        \ and set the object's visibility, scale and type
+ JSR GetObjectAngles-2  \ Calculate the object's yaw and pitch angles, using the
+                        \ coordinates of the rear tyres in xVector4, and set the
+                        \ object's visibility, scale and type
 
  LDA #21                \ Set objectNumber = 21, to use as then object number
  STA objectNumber       \ for the body and helmet in the four-object car
@@ -17569,10 +17559,9 @@ ENDIF
  LDX #&F4               \ Set X = &F4 so the call to GetObjectAngles uses
                         \ xVector7
 
- JSR GetObjectAngles    \ Calculate the object's rotation and elevation angles,
-                        \ using the coordinates of the body and helmet in
-                        \ xVector7, and set the object's visibility, scale and
-                        \ type
+ JSR GetObjectAngles    \ Calculate the object's yaw and pitch angles, using the
+                        \ coordinates of the body and helmet in xVector7, and
+                        \ set the object's visibility, scale and type
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -17583,10 +17572,9 @@ ENDIF
  LDX #&FA               \ Set X = &FA so the call to GetObjectAngles uses
                         \ xVector3
 
- JSR GetObjectAngles    \ Calculate the object's rotation and elevation angles,
-                        \ using the coordinates of the front tyres using
-                        \ xVector3, and set the object's visibility, scale and
-                        \ type
+ JSR GetObjectAngles    \ Calculate the object's yaw and pitch angles, using the
+                        \ coordinates of the front tyres using xVector3, and set
+                        \ the object's visibility, scale and type
 
 .bcar10
 
@@ -17626,8 +17614,8 @@ ENDIF
 \       Name: GetObjectAngles
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the object's rotation and elevation angles, and set the
-\             object's visibility, scale and type
+\    Summary: Calculate the object's yaw and pitch angles, and set the object's
+\             visibility, scale and type
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17636,7 +17624,7 @@ ENDIF
 \   A                   Object type
 \
 \   X                   The offset of the variable to use for the object's 3D
-\                       coordinates in the GetObjRotation routine:
+\                       coordinates in the GetObjYawAngle routine:
 \
 \                         * &F4 = xVector7
 \
@@ -17647,34 +17635,33 @@ ENDIF
 \ Other entry points:
 \
 \   GetObjectAngles-2   Use xVector4 for the object's 3D coordinates in the call
-\                       to GetObjRotation
+\                       to GetObjYawAngle
 \
 \ ******************************************************************************
 
- LDX #&FD               \ Set X = &FD so the calls to GetObjRotation and
-                        \ GetObjElevation use xVector4 and yVector4 for the
+ LDX #&FD               \ Set X = &FD so the calls to GetObjYawAngle and
+                        \ GetObjPitchAngle use xVector4 and yVector4 for the
                         \ object's 3D coordinates
 
 .GetObjectAngles
 
  STA objectType         \ Store the object type in objectType
 
- JSR GetObjRotation-2   \ Calculate the object's rotation about the y-axis,
-                        \ from the point of view of the player, returning it in
-                        \ (JJ II)
+ JSR GetObjYawAngle-2   \ Calculate the object's yaw angle, from the point of
+                        \ view of the player, returning it in (JJ II)
 
  LDY objectNumber       \ Set Y to the number of the object we are processing
 
- LDA II                 \ Set the rotation about the y-axis for this object in
- STA objRotationLo,Y    \ (objRotationHi objRotationLo) to (JJ II)
+ LDA II                 \ Set the yaw angle for this object in (objYawAngleHi
+ STA objYawAngleLo,Y    \ objYawAngleLo) to (JJ II)
  LDA JJ
- STA objRotationHi,Y
+ STA objYawAngleHi,Y
 
  JSR CheckForContact-2  \ Check to see if the object and the player's car are
                         \ close enough for contact, specifically if they are
                         \ within a distance of 37 from each other
 
- JSR GetObjElevation-2  \ Calculate the object's elevation angle, from the point
+ JSR GetObjPitchAngle-2 \ Calculate the object's pitch angle, from the point
                         \ of view of the player, returning it in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
@@ -17695,14 +17682,14 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   The object's elevation angle, as returned by
-\                       GetObjElevation
+\   A                   The object's pitch angle, as returned by
+\                       GetObjPitchAngle
 \
 \   C flag              If the C flag is set, hide the object
 \
-\   scaleUp             The scale up factor, as returned by GetObjElevation
+\   scaleUp             The scale up factor, as returned by GetObjPitchAngle
 \
-\   scaleDown           The scale down factor, as returned by GetObjElevation
+\   scaleDown           The scale down factor, as returned by GetObjPitchAngle
 \
 \ ******************************************************************************
 
@@ -17721,7 +17708,7 @@ ENDIF
                         \ the object and return from the subroutine using a tail
                         \ call
 
- STA objElevation,Y     \ Store the object's elevation angle in objElevation
+ STA objectPitchAngle,Y \ Store the object's pitch angle in objectPitchAngle
 
                         \ We now set the object's scaleUp value (i.e. its size)
                         \ to the following:
@@ -17729,7 +17716,7 @@ ENDIF
                         \   scaleUp / 2 ^ (scaleDown - 10)
                         \
                         \ where scaleUp and scaleDown were set by the call to
-                        \ GetObjElevation
+                        \ GetObjPitchAngle
 
  LDA scaleDown          \ Set X = scaleDown - 9
  SEC
@@ -17975,13 +17962,13 @@ ENDIF
  AND #%00001111         \ Extract the object's object type from bits 0-3 and
  STA objectType         \ store it in objectType
 
- LDA objRotationLo,X    \ Set (A T) =   objRotation for this object
- SEC                    \             - playerRotation
- SBC playerRotationLo   \
+ LDA objYawAngleLo,X    \ Set (A T) =   objYawAngle for this object
+ SEC                    \             - playerYawAngle
+ SBC playerYawAngleLo   \
  STA T                  \ starting with the low bytes
 
- LDA objRotationHi,X    \ And then the high bytes
- SBC playerRotationHi   \
+ LDA objYawAngleHi,X    \ And then the high bytes
+ SBC playerYawAngleHi   \
                         \ So (A T) now contains the amount that the object we
                         \ are drawing is to the left or right of the player's
                         \ car
@@ -18017,7 +18004,7 @@ ENDIF
                         \ screen, as the centre x-coordinate of the screen is
                         \ at 80 pixels
 
- LDA objElevation,X     \ Set yCoord to this object's elevation angle
+ LDA objectPitchAngle,X \ Set yCoord to this object's pitch angle
  STA yCoord
 
  LDA objectScaleUp,X    \ Set scaleUp to this object's scale factor (i.e. the
@@ -26001,8 +25988,8 @@ NEXT
  JSR Absolute8Bit       \ Set the sign of A to the sign of xTrackSegmentI *
                         \ zTrackSegmentI
 
- SEC                    \ Set A = A - playerRotationHi
- SBC playerRotationHi
+ SEC                    \ Set A = A - playerYawAngleHi
+ SBC playerYawAngleHi
 
  STA playerHeading      \ Set playerHeading = A
 
@@ -26042,7 +26029,7 @@ NEXT
  STA L000D
  SEC
  SBC V
- STA spinElevation
+ STA spinPitchAngle
  LDA #0
  STA W
  LDA L0026
@@ -26194,10 +26181,10 @@ NEXT
 
 .MovePlayerOnTrack
 
- LDA edgeRotation       \ Set A = edgeRotation - playerHeading
+ LDA edgeYawAngle       \ Set A = edgeYawAngle - playerHeading
  SEC                    \
- SBC playerHeading      \ So A contains the rotation angle of the closest
-                        \ segment, from the point of view of the player's car
+ SBC playerHeading      \ So A contains the yaw angle of the closest segment,
+                        \ from the point of view of the player's car
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -26205,13 +26192,13 @@ NEXT
                         \ flag
 
  ROR playerPastSegment  \ Store the C flag in bit 7 of playerPastSegment, so
-                        \ this will be set if the rotation angle is >= 64,
-                        \ which is 90 degrees
+                        \ this will be set if the yaw angle is >= 64, which is
+                        \ 90 degrees
                         \
                         \ So bit 7 will be set if the closest segment is at a
-                        \ rotation angle of than 90 degrees from the point of
-                        \ view of the player - in other words, when the player
-                        \ has driven past the segment
+                        \ yaw angle of than 90 degrees from the point of view
+                        \ of the player - in other words, when the player has
+                        \ driven past the segment
 
  BPL mseg1              \ If bit 7 of playerPastSegment is clear, i.e. the C
                         \ flag is clear, then A < 64 and the player has not gone
@@ -26445,8 +26432,8 @@ ENDIF
 
 .sub_C46A1
 
- LDA playerRotationHi
- LDX playerRotationLo
+ LDA playerYawAngleHi
+ LDX playerYawAngleLo
  JSR sub_C0D01
  JSR sub_C48B9
 
@@ -26532,10 +26519,10 @@ ENDIF
 
 .sub_C4729
 
- LDA spinRotationLo
+ LDA spinYawAngleLo
  STA T
  LDY #&58
- LDA spinRotationHi
+ LDA spinYawAngleHi
  JSR sub_C4753
  STA U
  LDA var07Lo
@@ -27049,13 +27036,13 @@ ENDIF
  DEY
  DEX
  BPL C48F3
- LDA playerRotationLo
+ LDA playerYawAngleLo
  CLC
- ADC spinRotationLo
- STA playerRotationLo
- LDA playerRotationHi
- ADC spinRotationHi
- STA playerRotationHi
+ ADC spinYawAngleLo
+ STA playerYawAngleLo
+ LDA playerYawAngleHi
+ ADC spinYawAngleHi
+ STA playerYawAngleHi
  RTS
 
 \ ******************************************************************************
@@ -28001,9 +27988,9 @@ ENDIF
                         \ player's coordinates to get the sign's vector relative
                         \ to the player (i.e. relative to the camera)
                         \
-                        \ We then calculate the rotation and elevation angles
-                        \ and store them in object 23, so it can be drawn by
-                        \ the call to DrawCarOrSign from the main driving loop
+                        \ We then calculate the yaw and pitch angles and store
+                        \ them in object 23, so it can be drawn by the call to
+                        \ DrawCarOrSign from the main driving loop
 
  LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 6
@@ -28051,7 +28038,7 @@ ENDIF
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
-                        \ GetObjRotation and GetObjElevation use xVector4,
+                        \ GetObjYawAngle and GetObjPitchAngle use xVector4,
                         \ yVector4 and zVector4
 
  JSR GetSectionCoord    \ Copy the first trackSectionI coordinate for track
@@ -28063,9 +28050,9 @@ ENDIF
                         \   [ yVector4 ] = [ yTrackSectionI ]
                         \   [ zVector4 ]   [ zTrackSectionI ]
 
- LDY #6                 \ Set Y = 6 so the call to GetObjRotation uses xVector6
-                        \ for the second variable, so we calculate the rotation
-                        \ and elevation angles for an object at the following 3D
+ LDY #6                 \ Set Y = 6 so the call to GetObjYawAngle uses xVector6
+                        \ for the second variable, so we calculate the yaw and
+                        \ pitch angles for an object at the following 3D
                         \ coordinates (if we just consider the the x-axis, for
                         \ clarity):
                         \
@@ -28082,23 +28069,23 @@ ENDIF
                         \ angles, to show the sign in the correct place by the
                         \ side of the track from the viewpoint of the player
 
- JSR GetObjRotation     \ Calculate the object's rotation angle about the
-                        \ y-axis, returning it in (JJ II)
+ JSR GetObjYawAngle     \ Calculate the object's yaw angle, returning it in
+                        \ (JJ II)
 
- LDA II                 \ Set the rotation about the y-axis in (objRotationHi+23
- STA objRotationLo+23   \ objRotationLo+23) to (JJ II), using the entries for
+ LDA II                 \ Set the yaw angle in (objYawAngleHi+23
+ STA objYawAngleLo+23   \ objYawAngleLo+23) to (JJ II), using the entries for
  LDA JJ                 \ object 23 to store the sign's object
- STA objRotationHi+23
+ STA objYawAngleHi+23
 
                         \ Now that the sign object has been built and the angles
                         \ calculated, we can check for any collisions between
                         \ the player and the sign
 
- SEC                    \ Set A = JJ - playerRotationHi
- SBC playerRotationHi
+ SEC                    \ Set A = JJ - playerYawAngleHi
+ SBC playerYawAngleHi
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |JJ - playerRotationHi|
+                        \       = |JJ - playerYawAngleHi|
                         \
                         \ So A contains the screen distance between the player
                         \ and the sign in the x-axis
@@ -28130,12 +28117,13 @@ ENDIF
                         \ close enough for contact, specifically if they are
                         \ within a distance of Y from each other
 
-                        \ The final step is to calculate the object's elevation
+                        \ The final step is to calculate the object's pitch
                         \ angle, and then we are done building the sign object
 
- LDY #6                 \ Set Y = 6 so the call to GetObjElevation uses xVector6
+ LDY #6                 \ Set Y = 6 so the call to GetObjPitchAngle uses
+                        \ xVector6
 
- JSR GetObjElevation    \ Calculate the object's elevation angle, returning it
+ JSR GetObjPitchAngle   \ Calculate the object's pitch angle, returning it
                         \ in A and LL
                         \
                         \ If the object is not visible on-screen, the C flag is
@@ -28507,7 +28495,7 @@ ENDIF
  STA L0028
  INC L002D
  SEC
- ROR spinRotationLo
+ ROR spinYawAngleLo
 
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
@@ -29203,7 +29191,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Screen mode
 \    Summary: Move the position of the horizon palette switch up or down,
-\             depending on the current track height
+\             depending on the current track pitch angle
 \  Deep dive: Hidden secrets of the custom screen mode
 \
 \ ******************************************************************************
@@ -31467,8 +31455,8 @@ ORG &594A               \ moved to trackData after the game binary has loaded
 \       Name: xVergeRightLo
 \       Type: Variable
 \   Category: Track
-\    Summary: Low byte of segment rotation angles along the right track verge
-\             in front of the player (i.e. along the left-right x-axis)
+\    Summary: Low byte of segment yaw angles along the right track verge in
+\             front of the player (i.e. along the x-axis)
 \
 \ ******************************************************************************
 
@@ -31483,8 +31471,8 @@ ORG &5E40
 \       Name: xVergeLeftLo
 \       Type: Variable
 \   Category: Track
-\    Summary: Low byte of segment rotation angles along the left track verge
-\             in front of the player (i.e. along the left-right x-axis)
+\    Summary: Low byte of segment yaw angles along the left track verge in front
+\             of the player (i.e. along the x-axis)
 \
 \ ******************************************************************************
 
@@ -31497,8 +31485,8 @@ ORG &5E40
 \       Name: xVergeRightLo
 \       Type: Variable
 \   Category: Track
-\    Summary: High byte of segment rotation angles along the right track verge
-\             in front of the player (i.e. along the left-right x-axis)
+\    Summary: High byte of segment yaw angles along the right track verge in
+\             front of the player (i.e. along the x-axis)
 \
 \ ******************************************************************************
 
@@ -31511,8 +31499,8 @@ ORG &5E40
 \       Name: xVergeLeftHi
 \       Type: Variable
 \   Category: Track
-\    Summary: High byte of segment rotation angles along the left track verge
-\             in front of the player (i.e. along the left-right x-axis)
+\    Summary: High byte of segment yaw angles along the left track verge in
+\             front of the player (i.e. along the x-axis)
 \
 \ ******************************************************************************
 
@@ -31587,7 +31575,7 @@ ORG &5E40
 \       Name: yVergeRight
 \       Type: Variable
 \   Category: Track
-\    Summary: Segment elevation angles along the right track verge in front of
+\    Summary: Segment pitch angles along the right track verge in front of
 \             the player (i.e. along the up-down y-axis)
 \
 \ ******************************************************************************
@@ -31767,7 +31755,7 @@ ORG &5E40
 \       Name: yVergeLeft
 \       Type: Variable
 \   Category: Track
-\    Summary: Segment elevation angles along the left track verge in front of
+\    Summary: Segment pitch angles along the left track verge in front of
 \             the player (i.e. along the up-down y-axis)
 \
 \ ******************************************************************************
@@ -31882,7 +31870,7 @@ ENDIF
 \       Name: arctanR
 \       Type: Variable
 \   Category: Maths
-\    Summary: Table for arctan values when calculating rotation angles
+\    Summary: Table for arctan values when calculating yaw angles
 \
 \ ******************************************************************************
 
@@ -31897,7 +31885,7 @@ ENDIF
 \       Name: arctanE
 \       Type: Variable
 \   Category: Maths
-\    Summary: Table for arctan values when calculating elevation angles
+\    Summary: Table for arctan values when calculating pitch angles
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32509,15 +32497,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: spinRotationLo
+\       Name: spinYawAngleLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the amount of rotational spin that is being applied to
+\    Summary: Low byte of the amount of yaw angle spin that is being applied to
 \             the player's car
 \
 \ ******************************************************************************
 
-.spinRotationLo
+.spinYawAngleLo
 
  EQUB 0
 
@@ -32711,15 +32699,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: spinRotationHi
+\       Name: spinYawAngleHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the amount of rotational spin that is being applied
+\    Summary: High byte of the amount of yaw angle spin that is being applied
 \             to the player's car
 \
 \ ******************************************************************************
 
-.spinRotationHi
+.spinYawAngleHi
 
  EQUB 0
 
@@ -35225,17 +35213,17 @@ ORG &7B00
  STA N
 
                         \ Next we calculate the mirror segment that the car
-                        \ should appear in, based on the objRotationHi value
-                        \ for the car, and playerRotationHi, storing the result
+                        \ should appear in, based on the objYawAngleHi value
+                        \ for the car, and playerYawAngleHi, storing the result
                         \ in A
                         \
                         \ This will then be matched with the values in
                         \ mirrorSegment to see which segment to update
 
- LDA objRotationHi,X    \ Set A = objRotationHi for the driver behind
+ LDA objYawAngleHi,X    \ Set A = objYawAngleHi for the driver behind
 
- SEC                    \ Set A = (A - playerRotationHi - 4) / 8
- SBC playerRotationHi   \       = (objRotationHi - playerRotationHi - 4) / 8
+ SEC                    \ Set A = (A - playerYawAngleHi - 4) / 8
+ SBC playerYawAngleHi   \       = (objYawAngleHi - playerYawAngleHi - 4) / 8
  SEC
  SBC #4
  LSR A
