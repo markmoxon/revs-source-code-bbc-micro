@@ -20,7 +20,6 @@
 \ This source file produces the following binary file:
 \
 \   * Silvers.bin
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -29,7 +28,6 @@ GUARD &7C00             \ Guard against assembling over screen memory
 \ ******************************************************************************
 \
 \ Configuration variables
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -42,7 +40,6 @@ CODE% = &5300           \ The assembly address of the track data
 \ REVS SILVERSTONE TRACK
 \
 \ Produces the binary file Silverstone.bin that contains the Silverstone track.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -150,7 +147,6 @@ ORG CODE%
 \
 \ trackDriverSpeed      The maximum speed for non-player drivers on this section
 \                       of the track
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2105,7 +2101,6 @@ ORG CODE%
 \                       the outside verge of each track section
 \
 \ trackSectionSize      The length of each track section in terms of segments
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2408,7 +2403,6 @@ ORG CODE%
 \ The processed values are shown below. There are 26 bytes, one for each
 \ section, but the last two bytes are unused, as Silverstone only uses sections
 \ 0 to 23).
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2463,7 +2457,6 @@ ORG CODE%
 \ trackSectionData byte.
 \
 \ The last sign in this table is the one we see at the start of practice.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2520,7 +2513,6 @@ ORG CODE%
 \
 \ The highest segment number is this value minus 1, as segment numbers start
 \ from zero.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2542,7 +2534,6 @@ ORG CODE%
 \
 \ If the starting line is at segment n, this value is the track length minus n,
 \ which is 1024 - 181 at Silverstone.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2560,7 +2551,6 @@ ORG CODE%
 \
 \ If the slowest lap time is a human player, and it's slower than one of these
 \ times, then we change the race class to the relevant difficulty.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2582,7 +2572,6 @@ ORG CODE%
 \
 \ If the slowest lap time is a human player, and it's slower than one of these
 \ times, then we change the race class to the relevant difficulty.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2709,7 +2698,6 @@ ORG CODE%
 \ speed to be adjusted on a per-track basis.
 \
 \ Setting this value to 255 disables the timer adjustment.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2727,7 +2715,6 @@ ORG CODE%
 \
 \ Reduce the speed of all cars in a race by this amount (this does not affect
 \ the speed during qualifying). I suspect this is used for testing purposes.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2788,7 +2775,6 @@ ORG CODE%
 \
 \ This string is checked by the loader to see whether a track file has been
 \ loaded (and if not, it loads one).
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2807,7 +2793,6 @@ ORG CODE%
 \ ------------------------------------------------------------------------------
 \
 \ This string is shown on the loading screen.
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -2819,7 +2804,6 @@ ORG CODE%
 \ ******************************************************************************
 \
 \ Save Silverstone.bin
-\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 

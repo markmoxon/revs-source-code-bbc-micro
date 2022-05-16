@@ -13235,8 +13235,8 @@ ENDIF
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
 
- LDY T                  \ Set A = arctanR(T)
- LDA arctanR,Y          \       = arctanR(|z-delta| / |x-delta|)
+ LDY T                  \ Set A = arctanY(T)
+ LDA arctanY,Y          \       = arctanY(|z-delta| / |x-delta|)
                         \
                         \ So this is the viewing angle of the object
 
@@ -13246,7 +13246,7 @@ ENDIF
  LSR A                  \ Set (JJ II) = (A 0) >> 3
  ROR II                 \             = A * 256 / 8
  LSR A                  \             = A * 32
- ROR II                 \             = arctanR(|z-delta| / |x-delta|) * 32
+ ROR II                 \             = arctanY(|z-delta| / |x-delta|) * 32
  LSR A
  ROR II
  STA JJ
@@ -13452,8 +13452,8 @@ ENDIF
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
 
- LDY T                  \ Set A = arctanR(T)
- LDA arctanR,Y          \       = arctanR(|x-delta| / |z-delta|)
+ LDY T                  \ Set A = arctanY(T)
+ LDA arctanY,Y          \       = arctanY(|x-delta| / |z-delta|)
                         \
                         \ So this is the viewing angle of the object
 
@@ -13463,7 +13463,7 @@ ENDIF
  LSR A                  \ Set (JJ II) = (A 0) >> 3
  ROR II                 \             = A * 256 / 8
  LSR A                  \             = A * 32
- ROR II                 \             = arctanR(|x-delta| / |z-delta|) * 32
+ ROR II                 \             = arctanY(|x-delta| / |z-delta|) * 32
  LSR A
  ROR II
  STA JJ
@@ -13714,8 +13714,8 @@ ENDIF
 
  STY scaleDown          \ Set scaleDown to the number of shifts in Y
 
- TAY                    \ Set scaleUp = arctanE(A)
- LDA arctanE-128,Y      \             = arctanE(|x-delta|)
+ TAY                    \ Set scaleUp = arctanP(A)
+ LDA arctanP-128,Y      \             = arctanP(|x-delta|)
  STA scaleUp
 
  LDA QQ                 \ Set T = QQ, the low byte of the scaled |y-delta|, to
@@ -31867,14 +31867,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: arctanR
+\       Name: arctanY
 \       Type: Variable
 \   Category: Maths
 \    Summary: Table for arctan values when calculating yaw angles
 \
 \ ******************************************************************************
 
-.arctanR
+.arctanY
 
  FOR I%, 0, 255
   EQUB INT(0.5 + ATN(I% / 256) * 325.95)
@@ -31882,7 +31882,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: arctanE
+\       Name: arctanP
 \       Type: Variable
 \   Category: Maths
 \    Summary: Table for arctan values when calculating pitch angles
@@ -31897,7 +31897,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.arctanE
+.arctanP
 
  EQUB &FF, &FE, &FC, &FA
  EQUB &F8, &F6, &F5, &F3, &F1, &EF, &ED, &EC, &EA, &E8, &E7, &E5
