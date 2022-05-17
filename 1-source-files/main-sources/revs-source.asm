@@ -13918,32 +13918,6 @@ ENDIF
 \ This part of the routine calculates the number of the track section that we
 \ want to update, i.e. the section at entry sectionListPointer in the list.
 \
-\ The track section list contains up to six segments behind the front segment
-\ in the track segment buffer, as follows (for when we are facing forwards):
-\
-\   * Entry #5 in the list corresponds to the section behind the front segment
-\   * Entry #4 in the list corresponds to two sections behind the front segment
-\   * Entry #3 in the list corresponds to three sections behind the front
-\     segment
-\   * Entry #2 in the list corresponds to four sections behind the front segment
-\   * Entry #1 in the list corresponds to five sections behind the front segment
-\   * Entry #0 in the list corresponds to six sections behind the front segment
-\
-\ And the following for when we are facing backwards:
-\
-\   * Entry #5 in the list corresponds to the section containing the front
-\     segment
-\   * Entry #4 in the list corresponds to the section behind the front segment
-\   * Entry #3 in the list corresponds to two sections behind the front segment
-\   * Entry #2 in the list corresponds to three sections behind the front
-\     segment
-\   * Entry #1 in the list corresponds to four sections behind the front segment
-\   * Entry #0 in the list corresponds to five sections behind the front segment
-\
-\ Note that entry #5 is the last in the list, and for most track sections, we
-\ only store the last few entries (e.g. for track section 0, sectionListSize is
-\ set to 3, so we only store entries #3 to #5).
-\
 \ ******************************************************************************
 
 .gsec4
@@ -15069,8 +15043,8 @@ ENDIF
 
  LDA #46                \ Get the yaw and pitch angles for the segments (and the
  JSR GetSegmentAngles   \ verge marks and corner markers) along the left side
-                        \ of the track and store the results in xVergeRight,
-                        \ yVergeRight, xMarker and vergeDataRight
+                        \ of the track and store the results in xVergeLeft,
+                        \ yVergeLeft, xMarker and vergeDataLeft
 
  LDA horizonListIndex   \ If horizonListIndex < 40, then this is a valid index
  CMP #40                \ into the track section/segment list so jump to gtrm1
