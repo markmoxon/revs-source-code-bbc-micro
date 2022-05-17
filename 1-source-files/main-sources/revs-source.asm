@@ -5279,6 +5279,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Set the index for the player's segment in the track section buffer
 \             to be 32 segments behind the front segment
+\  Deep dive: Data structures for the track calculations
 \
 \ ******************************************************************************
 
@@ -5307,6 +5308,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Get the track section coordinates and flags from the track data
 \             and populate the first track segment
+\  Deep dive: Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5420,6 +5422,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Shuffle the track section list along by one position
+\  Deep dive: Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5508,6 +5511,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Increment the track section list pointers following a shuffle
+\  Deep dive: Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5643,6 +5647,7 @@ ORG &0B00
 \   Category: Track
 \    Summary: Set up the next track segment in the track segment buffer
 \  Deep dive: Building a 3D track from sections and segments
+\             Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5785,6 +5790,7 @@ ORG &0B00
 \    Summary: Set the flags for the new front segment in the track segment
 \             buffer
 \  Deep dive: Building a 3D track from sections and segments
+\             Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5944,6 +5950,7 @@ ORG &0B00
 \    Summary: Set the inner and outer track coordinates for the new track
 \             segment
 \  Deep dive: Building a 3D track from sections and segments
+\             Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -12956,6 +12963,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate an object's yaw angle
+\  Deep dive: Pitch and yaw angles
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13154,6 +13162,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate yaw angle for when |x-delta| > |z-delta|
+\  Deep dive: Pitch and yaw angles
 \
 \ ******************************************************************************
 
@@ -13295,6 +13304,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate yaw angle for when |x-delta| = |z-delta|
+\  Deep dive: Pitch and yaw angles
 \
 \ ******************************************************************************
 
@@ -13371,6 +13381,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate yaw angle for when |x-delta| < |z-delta|
+\  Deep dive: Pitch and yaw angles
 \
 \ ******************************************************************************
 
@@ -13512,6 +13523,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Calculate an object's pitch angle
+\  Deep dive: Pitch and yaw angles
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13766,6 +13778,7 @@ ENDIF
 \   Category: Track
 \    Summary: Get the yaw and pitch angles for the inner and outer track
 \             sections
+\  Deep dive: Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13898,6 +13911,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Calculate the track section number for this track section entry
+\  Deep dive: Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14016,6 +14030,7 @@ ENDIF
 \   Category: Track
 \    Summary: Calculate the yaw and pitch angles for the track section entry
 \             that we want to update
+\  Deep dive: Data structures for the track calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14773,6 +14788,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Move the player's car in the correct direction
+\  Deep dive: Placing cars on the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16288,6 +16304,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Calculate the distance between two cars, in terms of segments and
 \             progress with the current segment
+\  Deep dive: Placing cars on the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16328,6 +16345,7 @@ ENDIF
 \   Category: 3D objects
 \    Summary: Calculate the distance between two objects, in terms of the
 \             difference in their segment numbers
+\  Deep dive: Placing cars on the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16507,6 +16525,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Move the cars around the track
+\  Deep dive: Placing cars on the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -16754,6 +16773,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Move the cars forward around the track, and apply steering
+\  Deep dive: Placing cars on the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17616,6 +17636,7 @@ ENDIF
 \   Category: 3D objects
 \    Summary: Calculate the object's yaw and pitch angles, and set the object's
 \             visibility, scale and type
+\  Deep dive: Pitch and yaw angles
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17921,6 +17942,9 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw a car or sign
+\  Deep dive: Object definitions
+\             Drawing a 3D car from 2D parts
+\             Road signs
 \
 \ ------------------------------------------------------------------------------
 \
@@ -26172,6 +26196,7 @@ NEXT
 \   Category: Driving model
 \    Summary: Update the position of the player's car within the current track
 \             segment
+\  Deep dive: Placing cars on the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -27911,32 +27936,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: 3D objects
 \    Summary: Create an object for the road sign
-\
-\ ------------------------------------------------------------------------------
-\
-\ This routine uses the track data to build the correct sign object for the
-\ player's current track section.
-\
-\ If we just entered a new track section and the sign number from the new track
-\ section's trackSectionData is different to the previous section, then we
-\ build the new sign number, otherwise we build the next sign number.
-\
-\ The 3D coordinates of the sign are calculated using the section number in the
-\ trackSignData for the sign. This section number is only used for calculating
-\ the 3D coordinates - it isn't related to the section we are currently in.
-\
-\ In Silverstone, the 16 signs are drawn when entering these sections (as
-\ defined in trackSectionData):
-\
-\   0,  1,  3,  5,  6,  7,  9, 11, 14, 15, 16, 17, 19, 20, 21, 22
-\
-\ and those signs are drawn relative to the following section coordinates (as
-\ defined in trackSignData):
-\
-\   0,  2,  3,  5,  7,  9, 12, 14, 14, 14, 18, 19, 20, 21, 22, 23
-\
-\ This can get a little confusing, but the first batch defines when to show the
-\ signs, and the second batch defines where to show them.
+\  Deep dive: Road signs
 \
 \ ******************************************************************************
 
