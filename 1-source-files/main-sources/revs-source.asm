@@ -2609,8 +2609,9 @@ ORG &0B00
 
 .SpinTrackSection
 
- LDA #0                 \ Set the Y-th entry in vergeDataRight to 0
- STA vergeDataRight,Y
+ LDA #0                 \ Set the Y-th entry in vergeDataRight to 0, to reset
+ STA vergeDataRight,Y   \ the colour of the verge mark to black (this is
+                        \ recalculated in the GetVergeAndMarkers routine)
 
  LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinYawAngle
  SEC                    \
@@ -5648,6 +5649,7 @@ ORG &0B00
 \    Summary: Set up the next track segment in the track segment buffer
 \  Deep dive: Building a 3D track from sections and segments
 \             Data structures for the track calculations
+\             Corner markers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5791,6 +5793,7 @@ ORG &0B00
 \             buffer
 \  Deep dive: Building a 3D track from sections and segments
 \             Data structures for the track calculations
+\             Corner markers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -5853,6 +5856,7 @@ ORG &0B00
                         \ If we get here then Y < 1 or Y >= 10
 
  AND #%11111001         \ Clear bits 1 and 2 of the current section's flags in A
+                        \ to give this segment a black-and-white verge
 
 .gets6
 
@@ -5951,6 +5955,7 @@ ORG &0B00
 \             segment
 \  Deep dive: Building a 3D track from sections and segments
 \             Data structures for the track calculations
+\             Corner markers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8876,6 +8881,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Graphics
 \    Summary: Draw any visible corner markers
+\  Deep dive: Corner markers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13779,6 +13785,7 @@ ENDIF
 \    Summary: Get the yaw and pitch angles for the inner and outer track
 \             sections
 \  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -13912,6 +13919,7 @@ ENDIF
 \   Category: Track
 \    Summary: Calculate the track section number for this track section entry
 \  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14005,6 +14013,7 @@ ENDIF
 \    Summary: Calculate the yaw and pitch angles for the track section entry
 \             that we want to update
 \  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14278,6 +14287,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the yaw and pitch angles for the inner or outer track segments
+\  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -14442,6 +14453,8 @@ ENDIF
 \   Category: Track
 \    Summary: Process a segment that is not visible by trying to process a
 \             segment that's one-quarter of the size
+\  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ******************************************************************************
 
@@ -14623,6 +14636,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Process a visible segment
+\  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ******************************************************************************
 
@@ -15005,6 +15020,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Calculate the 3D coordinates of the track and corner markers
+\  Deep dive: The track verges
+\             Corner markers
 \
 \ ******************************************************************************
 
@@ -15102,6 +15119,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the details for the segment in front or behind
+\  Deep dive: Data structures for the track calculations
+\             The track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15184,6 +15203,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Track
 \    Summary: Get the details for a segment's corner markers and verge marks
+\  Deep dive: The track verges
+\             Corner markers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -15353,8 +15374,8 @@ ENDIF
                         \ This gives the following:
                         \
                         \   * If both verges are black-and-white, then the
-                        \     verges are thin (vergeScale = 5), on both curves
-                        \     straight sections
+                        \     verges are thin (vergeScale = 5), on both curved
+                        \     and straight sections
                         \
                         \   * If this is a curve and at least one of the verges
                         \     is red-and-white, or we're on a straight and both
@@ -35652,6 +35673,7 @@ ORG &7B00
 \             data blocks
 \  Deep dive: Drawing around the dashboard
 \             Drawing the track view
+\             The track verges
 \
 \ ******************************************************************************
 
