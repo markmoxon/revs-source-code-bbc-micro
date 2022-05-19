@@ -2055,22 +2055,20 @@ ORG CODE%
 \                           * 0 = do not show corner markers to the right of the
 \                                 track
 \
-\                           * 1 = show corner markers to the right of the track,
-\                                 where applicable
+\                           * 1 = show corner markers to the right of the track
 \
 \                         * Bit 4: Show corner markers on left (Mlr)
 \
 \                           * 0 = do not show corner markers to the left of the
 \                                 track
 \
-\                           * 1 = show corner markers to the left of the track,
-\                                 where applicable
+\                           * 1 = show corner markers to the left of the track
 \
 \                         * Bit 5: Corner marker colours (Mcol)
 \
 \                           * 0 = show all corner markers in white
 \
-\                           * 1 = show corner markers in red and white, as
+\                           * 1 = show corner markers in red or white, as
 \                                 appropriate
 \
 \                         * Bit 6 is unused

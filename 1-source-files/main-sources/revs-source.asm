@@ -2509,7 +2509,7 @@ ORG &0B00
                         \ set a counter in X so we do the rear wing setting
                         \ first, and then the front wing setting
 
-.P0B79
+.wing1
 
  LDA frontWingSetting,X \ Set U = wing setting * 4
  ASL A
@@ -2539,7 +2539,7 @@ ORG &0B00
 
  DEX                    \ Decrement the loop counter
 
- BPL P0B79              \ Loop back until we have scaled both wing settings
+ BPL wing1              \ Loop back until we have scaled both wing settings
 
  LDA rearWingSetting    \ Set A = (rearWingSetting * 2 + rearWingSetting
  ASL A                  \         + frontWingSetting) / 2 + 60
@@ -2977,9 +2977,9 @@ ORG &0B00
 
 .GetObjectDistance
 
- LDA M                  \ If M >= 103, jump to C0CC2
+ LDA M                  \ If M >= 103, jump to odis1
  CMP #103
- BCS C0CC2
+ BCS odis1
 
  LDA G                  \ Set A = G
 
@@ -2999,7 +2999,7 @@ ORG &0B00
 
  RTS                    \ Return from the subroutine
 
-.C0CC2
+.odis1
 
  LSR H                  \ Set (H G) = (H G) >> 1
  ROR G
@@ -7609,7 +7609,7 @@ ENDIF
 
  JSR ProcessDrivingKeys \ Check for and process the main driving keys
 
- JSR sub_C46A1
+ JSR ApplyDrivingModel  \ Apply the driving model to the player's car
 
  JSR GetTrackAndMarkers \ Calculate the coordinates for the track sides and
                         \ corner markers
@@ -14464,13 +14464,12 @@ ENDIF
                         \ segment's pitch angle is negative, so we need to
                         \ stop processing segments
                         \
-                        \ However, before we stop, we try to eek as much
+                        \ However, before we stop, we try to eke out as much
                         \ accuracy out of the last (not visible) segment by
                         \ trying to process a segment that's one-quarter of the
                         \ size, just in case this smaller segment is visible, in
-                        \ which case we at least finish with something to show
-                        \ for the last visible segment (and if not, at least we
-                        \ tried)
+                        \ which case we finish with something to show for the
+                        \ last visible segment (and if not, at least we tried)
 
  LDA segmentCounter     \ If segmentCounter is non-zero then we have already
  BNE gseg5              \ found at least one visible segment, so jump to gseg5
@@ -24623,22 +24622,9 @@ ENDIF
 
  EQUB 255               \ End token
 
-\ ******************************************************************************
-\
-\       Name: L3F87
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L3F87
-
- EQUB &81, &81, &81, &81, &81
+ EQUB &81, &81          \ These bytes appear to be unused
+ EQUB &81, &81
+ EQUB &81
 
 \ ******************************************************************************
 \
@@ -25453,13 +25439,13 @@ NEXT
  LDX #3                 \ We are about to flush all four sound channel buffers
                         \ (0 to 3), so set a loop counter in X
 
-.P43F8
+.flub1
 
  JSR FlushSoundBuffer   \ Flush the buffer for sound channel X
 
  DEX                    \ Decrement the loop counter
 
- BPL P43F8              \ Loop back until we have flushed all four buffers
+ BPL flub1              \ Loop back until we have flushed all four buffers
 
  RTS                    \ Return from the subroutine
 
@@ -26439,10 +26425,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C46A1
+\       Name: ApplyDrivingModel
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Apply the driving model to the player's car
 \
 \ ------------------------------------------------------------------------------
 \
@@ -26450,7 +26436,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C46A1
+.ApplyDrivingModel
 
  LDA playerYawAngleHi
  LDX playerYawAngleLo
