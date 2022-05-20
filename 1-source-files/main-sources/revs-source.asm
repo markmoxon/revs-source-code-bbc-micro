@@ -231,6 +231,14 @@ ORG &0000
  SKIP 1                 \ The index of the current entry in the track segment
                         \ list
                         \
+                        \ As the segment list for the left side of the track is
+                        \ populated after the right side, this gives us the
+                        \ index of the last entry for the left side of the track
+                        \ once it has been populated
+                        \
+                        \ segmentListRight gives us the equivalent index for the
+                        \ the right side of the track
+                        \
                         \ The list runs from index 6 upwards
 
 .edgeSegmentNumber
@@ -243,12 +251,13 @@ ORG &0000
  SKIP 1                 \ The segment coordinate offset for the previous segment
                         \ when adding segments to the track segment list
 
-.leftSegmentPointer
+.segmentListRight
 
- SKIP 1                 \ The index of the first entry in the track segment list
-                        \ pointer for the segments on the left side of the track
-                        \ (i.e. the index of the first left segment that appears
-                        \ after the right-hand segments)
+ SKIP 1                 \ The index of the last entry in the track segment
+                        \ list for the right side of the track
+                        \
+                        \ segmentListPointer gives us the equivalent index for
+                        \ the left side of the track
 
 .previousRacingLine
 
@@ -1298,11 +1307,11 @@ ORG &0380
 
  SKIP 32                \ These bytes appear to be unused
 
-.L0400
+.L0400Left
 
  SKIP 80                \ 
 
-.L0450
+.L0400Right
 
  SKIP 80                \ 
 
@@ -8474,135 +8483,236 @@ ENDIF
 \
 \       Name: sub_C1933
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The index within the track section/segment list of the
+\                       horizon:
+\
+\                         * horizonListIndex + 40 for the left verge
+\
+\                         * horizonListIndex      for the right verge
+\
+\ Returns:
+\
+\   A                   Set to:
+\
+\                         * xVergeLeftHi + 20 for the left verge
+\
+\                         * xVergeRightHi + 20 for the right verge
+\
+\   V                   Rotated to the right, with bit 7 set as follows:
+\
+\                         * 0 = A < 40
+\
+\                         * 1 = A >= 40
 \
 \ ******************************************************************************
 
 .sub_C1933
 
- LDA xVergeRightHi,X
+ LDA xVergeRightHi,X    \ Set A = X-th xVergeRightHi + 20
  CLC
- ADC #&14
- CMP #&28
+ ADC #20
+
+ CMP #40                \ Rotate V, setting bit 7 if A >= 40
  ROR V
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: sub_C193E
 \       Type: Subroutine
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine populates the L0400Left or L0400Right table, from index Y down as
+\ we analyse verge data from X up.
+\
+\ Section/segment list stores distant segments first, coming towards us as we
+\ progress through the list, so L0400Left and L0400Right are the reverse of
+\ this, with closest segments at the start, furthest values at the end?
+\
+\ Arguments:
+\
+\   A                   The low byte of the table address to populate:
+\
+\                         * LO(L0400Right) = populate L0400Right
+\
+\                         * LO(L0400Left) = populate L0400Left
+\
+\   Y                   Index of the last entry in the track section/segment
+\                       list
+\
+\                         * segmentListRight for the right verge
+\
+\                         * segmentListPointer for the left verge
+\
+\   X                   The index within the track section/segment list of the
+\                       horizon:
+\
+\                         * horizonListIndex      for the right verge
+\
+\                         * horizonListIndex + 40 for the left verge
 \
 \ ******************************************************************************
 
 .sub_C193E
 
- STA P196F+1
- STY L004B
- DEY
+ STA P196F+1            \ Modify the instruction at P196F to use the low byte of
+                        \ the address in A, so the STA instruction writes to the
+                        \ table specified by A
+
+ STY L004B              \ Set L004B = Y
+
+ DEY                    \ Set U = Y - 1
  STY U
- JSR sub_C1933
- LDY horizonLine
- JMP C1977
+
+ JSR sub_C1933          \ Set A = xVergeRightHi,X + 20
+                        \
+                        \ Set bit 7 of V if A >= 40, clear it if A < 40
+
+ LDY horizonLine        \ Set Y to the track line number of the horizon
+
+ JMP C1977              \ Jump to C1977 to join the loop
+
+                        \ The loop below uses:
+                        \
+                        \   * Y as an index into L0400Left, starting at
+                        \     horizonLine and decrementing
+                        \
+                        \   * X as an index into xVergeRightHi, yVergeRight,
+                        \     starting at horizonListIndex and incrementing
 
 .C194E
 
- LDA V
+ LDA V                  \ If bit 7 of V is clear, jump to C1955
  BPL C1955
- JSR sub_C1933
+
+                        \ Bit 7 of V is set
+
+ JSR sub_C1933          \ Set A = xVergeRightHi,X + 20
+                        \
+                        \ Set bit 7 of V if A >= 40, clear it if A < 40
 
 .C1955
 
- LDA yVergeRight,X
- CMP #&50
+ LDA yVergeRight,X      \ Set A to the X-th yVergeRight
+
+ CMP #80                \ If A >= 80, jump to C1980
  BCS C1980
- BIT V
+
+ BIT V                  \ If bit 7 of V is clear, jump to C1965
  BPL C1965
- CMP yVergeRight+1,X
- BEQ C19A5
+
+                        \ If we get here then A < 80 and bit 7 of V is set
+
+ CMP yVergeRight+1,X    \ If A = the X+1-st yVergeRight, jump to C19A5 to set
+ BEQ C19A5              \ bit 7 of the X-th vergeDataRight and on to C1979 to
+                        \ move on to the next X
 
 .C1965
 
- CMP N
- BCS C19A5
+ CMP N                  \ If A >= N, jump to C19A5 to set bit 7 of the X-th
+ BCS C19A5              \ vergeDataRight and on to C1979 to move on to the next
+                        \ X
 
 .C1969
 
- STA RR
- TXA
- JMP C1973
+ STA RR                 \ Set RR = A
+
+ TXA                    \ Set A = X
+
+ JMP C1973              \ Jump to C1973
 
 .P196F
 
- STA L0400,Y
- DEY
+ STA L0400Left,Y        \ Store A in the Y-th entry in L0400Left
+
+ DEY                    \ Decrement the loop counter in Y
 
 .C1973
 
- CPY RR
+ CPY RR                 \ If Y <> RR, jump to P196F
  BNE P196F
 
 .C1977
 
- STY N
+ STY N                  \ Set N = Y
 
 .C1979
 
- INX
- BMI C1996
- CPX U
+ INX                    \ Increment the loop counter in X
+
+ BMI C1996              \ If X > 127, jump to C1996 to exit the loop
+
+ CPX U                  \ If X < U, loop back to C194E
  BCC C194E
 
 .C1980
 
- LDA yVergeRight,X
- BMI C198E
- CMP N
+ LDA yVergeRight,X      \ Set A to the X-th yVergeRight
+
+ BMI C198E              \ If A is negative, jump to C198E
+
+ CMP N                  \ If A < N, jump to C198E
  BCC C198E
- LDA N
+
+                        \ If we get here then A is positive and A >= N
+
+ LDA N                  \ Set the X-th yVergeRight = N
  STA yVergeRight,X
 
 .C198E
 
- TXA
- ORA #&80
+ TXA                    \ Set bit 7 of X
+ ORA #%10000000
  TAX
- LDA #0
- BEQ C1969
+
+ LDA #0                 \ Set A = 0
+
+ BEQ C1969              \ Jump to C1969 (this BEQ is effectively a JMP as A is
+                        \ always zero)
 
 .C1996
 
- LDX L0050
+                        \ Now we loop X from L0050 up until we find the first
+                        \ vergeDataRight entry with bit 7 clear, and set L0050
+                        \ to the updated X
+
+ LDX L0050              \ Set X = L0050
 
 .P1998
 
- LDA vergeDataRight,X
- BPL C19A2
- INX
- CPX U
+ LDA vergeDataRight,X   \ If bit 7 the X-th vergeDataRight is clear, jump to
+ BPL C19A2              \ C19A2 to store X in L0050
+
+ INX                    \ Increment the loop counter in X
+
+ CPX U                  \ If X < U, loop back to P1998
  BCC P1998
 
 .C19A2
 
- STX L0050
- RTS
+ STX L0050              \ Set L0050 = X
+
+ RTS                    \ Return from the subroutine
 
 .C19A5
 
- LDA #&80
+ LDA #%10000000         \ Set bit 7 of the X-th vergeDataRight
  ORA vergeDataRight,X
  STA vergeDataRight,X
- BMI C1979
+
+ BMI C1979              \ Jump to C1979 (this BMI is effectively a JMP as bit 7
+                        \ of A is always set)
 
 \ ******************************************************************************
 \
@@ -8709,71 +8819,133 @@ ENDIF
 
 .DrawTrack
 
- LDA #&80
+ LDA #&80               \ Set P = &80
  STA P
- LDA horizonListIndex
+
+ LDA horizonListIndex   \ Set A = horizonListIndex + 40
  CLC
- ADC #&28
- TAX
- CMP #&31
+ ADC #40
+
+ TAX                    \ Set X = horizonListIndex + 40
+                        \
+                        \ So X is the index within the track section/segment
+                        \ list of the horizon line's left verge (adding 40 moves
+                        \ the index from xVergeRightHi to xVergeLeftHi, which
+                        \ are 40 bytes apart in memory)
+
+ CMP #49                \ If A >= 49, jump to dtra1
  BCS dtra1
- LDA #&31
+
+ LDA #49                \ Set A = 49, so A has a minimum value of 49
 
 .dtra1
 
- STA L0050
- LDA #LO(L0400)
- STA R
- STA MM
- LDY segmentListPointer
- JSR sub_C193E
- LDY #0
- STY L0032
- LDA L0050
- JSR sub_C19AF
- LDA #8
+ STA L0050              \ Set L0050 = A
+                        \           = max(49, horizonListIndex + 40)
+
+ LDA #LO(L0400Left)     \ Set A to the low byte of L0400Left, so the call to
+                        \ sub_C193E populates the L0400Left table
+
+ STA R                  \ Set R = A
+ 
+ STA MM                 \ Set MM = A
+
+ LDY segmentListPointer \ Set Y to index of the last entry in the track segment
+                        \ list for the left side of the track
+
+ JSR sub_C193E          \ Populate the L0400Left table
+
+ LDY #0                 \ Set Y = 0, so the call to sub_C19AF populates the
+                        \ leftVergeStart table
+
+ STY L0032              \ Set L0032 = 0
+
+ LDA L0050              \ Set A = L0050
+
+ JSR sub_C19AF          \ Draw the leftVergeStart edge
+
+ LDA #8                 \ Set L0032 = 8
  STA L0032
- LDY #0
+
+ LDY #0                 \ Set KK = 0
  STY KK
- INY
- LDA horizonListIndex
+
+ INY                    \ Set Y = 1, so the call to sub_C19AF populates the
+                        \ leftTrackStart table
+
+ LDA horizonListIndex   \ Set A = horizonListIndex + 40
  CLC
- ADC #&28
- JSR sub_C19AF
- LDA L0050
- LDX #4
- JSR sub_C1A98
- STY L002C
- LDA horizonListIndex
- TAX
- CMP #9
+ ADC #40
+
+ JSR sub_C19AF          \ Draw the leftTrackStart edge
+
+ LDA L0050              \ Set A = L0050
+
+ LDX #4                 \ Set X = 4
+
+ JSR sub_C1A98          \ Fill to right of leftTrackStart edge?
+
+ STY L002C              \ Set L002C = Y
+
+ LDA horizonListIndex   \ Set A = horizonListIndex
+
+ TAX                    \ Set X = horizonListIndex
+
+ CMP #9                 \ If A >= 9, jump to dtra1
  BCS dtra2
- LDA #9
+
+ LDA #9                 \ Set A = 9, so A has a minimum value of 9
 
 .dtra2
 
- STA L0050
- LDX horizonListIndex
- LDA #LO(L0450)
- LDY leftSegmentPointer
- JSR sub_C193E
- LDA #&1C
+ STA L0050              \ Set L0050 = A
+                        \           = max(9, horizonListIndex)
+
+ LDX horizonListIndex   \ Set X = horizonListIndex
+                        \
+                        \ So X is the index in the track section/segment list
+                        \ for the horizon line's right verge
+
+ LDA #LO(L0400Right)    \ Set A to the low byte of L0400Right, so the call to
+                        \ sub_C193E populates the L0400Right table
+
+ LDY segmentListRight   \ Set Y to index of the last entry in the track segment
+                        \ list for the right side of the track
+
+ JSR sub_C193E          \ Populate the L0400Right table
+
+ LDA #28                \ Set KK = 28
  STA KK
- LDA #&10
+
+ LDA #16                \ Set L0032 = 16
  STA L0032
- LDY #2
- LDA horizonListIndex
- JSR sub_C19AF
- LDA #&1C
+
+ LDY #2                 \ Set Y = 2, so the call to sub_C19AF populates the
+                        \ rightVergeStart table
+
+ LDA horizonListIndex   \ Set A = horizonListIndex
+
+ JSR sub_C19AF          \ Draw the rightVergeStart edge
+
+ LDA #28                \ Set L0032 = 28
  STA L0032
- LDY #3
- LDA L0050
- JSR sub_C19AF
- LDA L0050
- LDX #&14
- JSR sub_C1A98
- STY L0029
- RTS
+
+ LDY #3                 \ Set Y = 3, so the call to sub_C19AF populates the
+                        \ rightGrassStart table
+
+ LDA L0050              \ Set A = L0050
+
+ JSR sub_C19AF          \ Draw the rightGrassStart edge
+
+ LDA L0050              \ Set A = L0050
+
+ LDX #20                \ Set X = 20
+
+ JSR sub_C1A98          \ Fill to right of rightGrassStart edge?
+
+ STY L0029              \ Set L0029 = Y
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -11621,7 +11793,7 @@ IF _ACORNSOFT
 
  CPY L002C
  BCS gcol6
- LDX L0400,Y
+ LDX L0400Left,Y
  BMI gcol15
  JSR gcol16
 
@@ -11649,7 +11821,7 @@ IF _ACORNSOFT
 
  CPY L0029
  BCS gcol6
- LDX L0450,Y
+ LDX L0400Right,Y
  BMI gcol15
  JSR gcol16
 
@@ -11799,7 +11971,7 @@ IF _SUPERIOR
  CPY L002C              \ If the track line in Y >= L002C, jump to scol3 to
  BCS scol3              \ return colour 3 (green)
 
- LDA L0400,Y            \ Set A to the L0400 entry for this track line
+ LDA L0400Left,Y        \ Set A to the L0400Left entry for this track line
 
  JMP scol6              \ Jump to scol6
 
@@ -11811,7 +11983,7 @@ IF _SUPERIOR
  CPY L0029              \ If the track line in Y >= L0029, jump to scol3 to
  BCS scol3              \ return colour 3 (green)
 
- LDA L0450,Y            \ Set A to the L0450 entry for this track line
+ LDA L0400Right,Y       \ Set A to the L0400Right entry for this track line
 
 .scol6
 
@@ -15048,11 +15220,10 @@ ENDIF
                         \ of the track and store the results in xVergeRight,
                         \ yVergeRight, xMarker and vergeDataRight
 
- LDA segmentListPointer \ Set leftSegmentPointer = segmentListPointer
- STA leftSegmentPointer \
-                        \ So it points to the first left track segment that
-                        \ comes after the right track segments in the track
-                        \ segment list
+ LDA segmentListPointer \ Set segmentListRight = segmentListPointer
+ STA segmentListRight   \
+                        \ So it contains the index of the last entry in the
+                        \ track segment list for the right side of the track
 
  LDA #%10000000         \ Fetch the index details of the left track segments
  JSR GetSegmentDetails
