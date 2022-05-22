@@ -756,9 +756,8 @@ ORG &0000
 
 .edgeSegmentPointer
 
- SKIP 1                 \ The index of the segment within the combined track
-                        \ section/segment list (i.e. from xVergeRight) that is
-                        \ closest to the player's car
+ SKIP 1                 \ The index of the segment within the track verge buffer
+                        \ that is closest to the player's car
 
 .L005D
 
@@ -8504,8 +8503,8 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   The index within the track section/segment list of the
-\                       verge to check:
+\   X                   The index within the track verge buffer of the verge to
+\                       check:
 \
 \                         * horizonListIndex + 40 for the left verge
 \
@@ -8551,11 +8550,11 @@ ENDIF
 \ the colour of the left and right track verges on each pixel line in the track
 \ view.
 \
-\ The track section/segment list stores distant segments first, coming towards
-\ us as we progress through the list, so leftSegment and rightSegment are the
-\ reverse of this, with closest segments at the start, furthest segments at the
-\ end. This matches the track lines, where small numbers are at the bottom of
-\ the screen (i.e. close), high numbers are up the screen (i.e. further away).
+\ The track verge buffer stores distant segments first, coming towards us as we
+\ progress through the list, so leftSegment and rightSegment are the reverse of
+\ this, with closest segments at the start, furthest segments at the end. This
+\ matches the track lines, where small numbers are at the bottom of the screen
+\ (i.e. close), high numbers are up the screen (i.e. further away).
 \
 \ Arguments:
 \
@@ -8565,15 +8564,13 @@ ENDIF
 \
 \                         * LO(leftSegment) = populate leftSegment
 \
-\   Y                   Index of the last entry in the track section/segment
-\                       list
+\   Y                   Index of the last entry in the track verge buffer:
 \
 \                         * segmentListRight for the right verge
 \
 \                         * segmentListPointer for the left verge
 \
-\   X                   The index within the track section/segment list of the
-\                       horizon:
+\   X                   The index within the track verge buffer of the horizon:
 \
 \                         * horizonListIndex      for the right verge
 \
@@ -8843,10 +8840,10 @@ ENDIF
 
  TAX                    \ Set X = horizonListIndex + 40
                         \
-                        \ So X is the index within the track section/segment
-                        \ list of the horizon line's left verge (adding 40 moves
-                        \ the index from xVergeRightHi to xVergeLeftHi, which
-                        \ are 40 bytes apart in memory)
+                        \ So X is the index within the track verge buffer of the
+                        \ horizon line's left verge (adding 40 moves the index
+                        \ from xVergeRightHi to xVergeLeftHi, which are 40 bytes
+                        \ apart in memory)
 
  CMP #49                \ If A >= 49, jump to dtra1
  BCS dtra1
@@ -8918,8 +8915,8 @@ ENDIF
 
  LDX horizonListIndex   \ Set X = horizonListIndex
                         \
-                        \ So X is the index in the track section/segment list
-                        \ for the horizon line's right verge
+                        \ So X is the index in the track verge buffer for the
+                        \ horizon line's right verge
 
  LDA #LO(rightSegment)  \ Set A to the low byte of rightSegment, so the call to
                         \ MapSegmentsToLines populates the rightSegment table
@@ -14526,9 +14523,8 @@ ENDIF
 \   edgeSegmentNumber   The number of the segment within the track segment list
 \                       that is closest to the player's car
 \
-\   edgeSegmentPointer  The index of the segment within the combined track
-\                       section/segment list (i.e. from xVergeRight) that is
-\                       closest to the player's car
+\   edgeSegmentPointer  The index of the segment within track verge buffer that
+\                       is closest to the player's car
 \
 \   edgeYawAngle        The yaw angle of the segment that is closest to the
 \                       player's car
@@ -14612,9 +14608,8 @@ ENDIF
  LDY segmentListPointer \ Set edgeSegmentPointer = segmentListPointer
  STY edgeSegmentPointer \
                         \ So edgeSegmentPointer contains the index of the
-                        \ segment within the combined track section/segment
-                        \ list (i.e. from xVergeRight) that is closest to the
-                        \ player's car
+                        \ segment within the track verge buffer (i.e. from
+                        \ xVergeRight) that is closest to the player's car
 
  LDA xVergeRightHi,Y    \ Set edgeYawAngle = the segment's entry in
  STA edgeYawAngle       \ xVergeRightHi
@@ -15251,8 +15246,8 @@ ENDIF
                         \ yVergeLeft, xMarker and vergeDataLeft
 
  LDA horizonListIndex   \ If horizonListIndex < 40, then this is a valid index
- CMP #40                \ into the track section/segment list so jump to gtrm1
- BCC gtrm1              \ to skip the following three instructions
+ CMP #40                \ into the track verge buffer so jump to gtrm1 to skip
+ BCC gtrm1              \ the following three instructions
 
  SEC                    \ Set horizonListIndex = horizonListIndex - 40
  SBC #40                \
@@ -15277,13 +15272,13 @@ ENDIF
 
 .gtrm2
 
- STA yVergeRight,Y      \ Set the pitch angle for the right side of the
-                        \ horizon line in the track section/segment list to the
-                        \ updated value of horizonLine
+ STA yVergeRight,Y      \ Set the pitch angle for the right side of the horizon
+                        \ line in the track verge buffer to the updated value of
+                        \ horizonLine
 
- STA yVergeLeft,Y       \ Set the pitch angle for the left side of the
-                        \ horizon line in the track section/segment list to the
-                        \ updated value of horizonLine
+ STA yVergeLeft,Y       \ Set the pitch angle for the left side of the horizon
+                        \ line in the track verge buffer to the updated value of
+                        \ horizonLine
 
  LDA xVergeRightHi,Y    \ Set A = xVergeRightHi - xVergeLeftHi for the horizon
  SEC                    \ section
