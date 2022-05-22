@@ -754,7 +754,7 @@ ORG &0000
                         \
                         \ The position behind last place is the leader
 
-.edgePointerNumber
+.edgeSegmentPointer
 
  SKIP 1                 \ The index of the segment within the combined track
                         \ section/segment list (i.e. from xVergeRight) that is
@@ -1307,13 +1307,15 @@ ORG &0380
 
  SKIP 32                \ These bytes appear to be unused
 
-.L0400Left
+.leftSegment
 
- SKIP 80                \ 
+ SKIP 80                \ For each track line, the index of the segment within
+                        \ the track segment list for the left verge
 
-.L0400Right
+.rightSegment
 
- SKIP 80                \ 
+ SKIP 80                \ For each track line, the index of the segment within
+                        \ the track segment list for the right verge
 
 .driverGridRow
 
@@ -8481,17 +8483,29 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1933
+\       Name: CheckVergeOnScreen
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Check whether a verge coordinate is on-screen
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine tests whether the magnitude of a signed x-coordinate is < 20. In
+\ other words, given a signed coordinate x, this tests whether |x| < 20.
+\
+\ It does this by adding 20 and then testing against 40, which gives the result
+\ we want as the following are all equivalent:
+\
+\   -20 < x < 20
+\
+\   -20 + 20 < x < 20 + 20
+\
+\   0 < x < 40
 \
 \ Arguments:
 \
 \   X                   The index within the track section/segment list of the
-\                       horizon:
+\                       verge to check:
 \
 \                         * horizonListIndex + 40 for the left verge
 \
@@ -8499,54 +8513,57 @@ ENDIF
 \
 \ Returns:
 \
-\   A                   Set to:
+\   V                   Rotated to the right, with bit 7 set as follows, where
+\                       x is the verge x-coordinate:
 \
-\                         * xVergeLeftHi + 20 for the left verge
+\                         * |x| < 20
 \
-\                         * xVergeRightHi + 20 for the right verge
-\
-\   V                   Rotated to the right, with bit 7 set as follows:
-\
-\                         * 0 = A < 40
-\
-\                         * 1 = A >= 40
+\                         * |x| >= 20
 \
 \ ******************************************************************************
 
-.sub_C1933
+.CheckVergeOnScreen
 
- LDA xVergeRightHi,X    \ Set A = X-th xVergeRightHi + 20
- CLC
+ LDA xVergeRightHi,X    \ Set A to the x-coordinate of the X-th entry in the
+                        \ track segment list
+
+ CLC                    \ Set A = A + 20
  ADC #20
 
- CMP #40                \ Rotate V, setting bit 7 if A >= 40
+ CMP #40                \ Set bit 7 if A >= 40, clear it if A < 40
  ROR V
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C193E
+\       Name: MapSegmentsToLines
 \       Type: Subroutine
 \   Category: Graphics
-\    Summary: 
+\    Summary: Map verges in the track segment list to track lines in the track
+\             view
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine populates the L0400Left or L0400Right table, from index Y down as
-\ we analyse verge data from X up.
+\ This routine populates the leftSegment or rightSegment table, from index Y
+\ down, as we analyse verge data from X up. These tables map track lines in the
+\ track view to verge data in the track segment list, which is used to determine
+\ the colour of the left and right track verges on each pixel line in the track
+\ view.
 \
-\ Section/segment list stores distant segments first, coming towards us as we
-\ progress through the list, so L0400Left and L0400Right are the reverse of
-\ this, with closest segments at the start, furthest values at the end?
+\ The track section/segment list stores distant segments first, coming towards
+\ us as we progress through the list, so leftSegment and rightSegment are the
+\ reverse of this, with closest segments at the start, furthest segments at the
+\ end. This matches the track lines, where small numbers are at the bottom of
+\ the screen (i.e. close), high numbers are up the screen (i.e. further away).
 \
 \ Arguments:
 \
 \   A                   The low byte of the table address to populate:
 \
-\                         * LO(L0400Right) = populate L0400Right
+\                         * LO(rightSegment) = populate rightSegment
 \
-\                         * LO(L0400Left) = populate L0400Left
+\                         * LO(leftSegment) = populate leftSegment
 \
 \   Y                   Index of the last entry in the track section/segment
 \                       list
@@ -8564,9 +8581,9 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C193E
+.MapSegmentsToLines
 
- STA P196F+1            \ Modify the instruction at P196F to use the low byte of
+ STA maps5+1            \ Modify the instruction at maps5 to use the low byte of
                         \ the address in A, so the STA instruction writes to the
                         \ table specified by A
 
@@ -8575,102 +8592,100 @@ ENDIF
  DEY                    \ Set U = Y - 1
  STY U
 
- JSR sub_C1933          \ Set A = xVergeRightHi,X + 20
-                        \
-                        \ Set bit 7 of V if A >= 40, clear it if A < 40
+ JSR CheckVergeOnScreen \ Set bit 7 of V if the segment in X is off-screen, or
+                        \ clear bit 7 if it is on-screen
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
- JMP C1977              \ Jump to C1977 to join the loop
+ JMP maps7              \ Jump to maps7 to join the loop
 
                         \ The loop below uses:
                         \
-                        \   * Y as an index into L0400Left, starting at
+                        \   * Y as an index into leftSegment, starting at
                         \     horizonLine and decrementing
                         \
                         \   * X as an index into xVergeRightHi, yVergeRight,
                         \     starting at horizonListIndex and incrementing
 
-.C194E
+.maps1
 
- LDA V                  \ If bit 7 of V is clear, jump to C1955
- BPL C1955
+ LDA V                  \ If bit 7 of V is clear, jump to maps2
+ BPL maps2
 
                         \ Bit 7 of V is set
 
- JSR sub_C1933          \ Set A = xVergeRightHi,X + 20
-                        \
-                        \ Set bit 7 of V if A >= 40, clear it if A < 40
+ JSR CheckVergeOnScreen \ Set bit 7 of V if the segment in X is off-screen, or
+                        \ clear bit 7 if it is on-screen
 
-.C1955
+.maps2
 
  LDA yVergeRight,X      \ Set A to the X-th yVergeRight
 
- CMP #80                \ If A >= 80, jump to C1980
- BCS C1980
+ CMP #80                \ If A >= 80, jump to maps9
+ BCS maps9
 
- BIT V                  \ If bit 7 of V is clear, jump to C1965
- BPL C1965
+ BIT V                  \ If bit 7 of V is clear, jump to maps3
+ BPL maps3
 
                         \ If we get here then A < 80 and bit 7 of V is set
 
- CMP yVergeRight+1,X    \ If A = the X+1-st yVergeRight, jump to C19A5 to set
- BEQ C19A5              \ bit 7 of the X-th vergeDataRight and on to C1979 to
+ CMP yVergeRight+1,X    \ If A = the X+1-st yVergeRight, jump to maps14 to set
+ BEQ maps14             \ bit 7 of the X-th vergeDataRight and on to maps8 to
                         \ move on to the next X
 
-.C1965
+.maps3
 
- CMP N                  \ If A >= N, jump to C19A5 to set bit 7 of the X-th
- BCS C19A5              \ vergeDataRight and on to C1979 to move on to the next
+ CMP N                  \ If A >= N, jump to maps14 to set bit 7 of the X-th
+ BCS maps14             \ vergeDataRight and on to maps8 to move on to the next
                         \ X
 
-.C1969
+.maps4
 
  STA RR                 \ Set RR = A
 
  TXA                    \ Set A = X
 
- JMP C1973              \ Jump to C1973
+ JMP maps6              \ Jump to maps6
 
-.P196F
+.maps5
 
- STA L0400Left,Y        \ Store A in the Y-th entry in L0400Left
+ STA leftSegment,Y      \ Store A in the Y-th entry in leftSegment
 
  DEY                    \ Decrement the loop counter in Y
 
-.C1973
+.maps6
 
- CPY RR                 \ If Y <> RR, jump to P196F
- BNE P196F
+ CPY RR                 \ If Y <> RR, jump to maps5
+ BNE maps5
 
-.C1977
+.maps7
 
  STY N                  \ Set N = Y
 
-.C1979
+.maps8
 
  INX                    \ Increment the loop counter in X
 
- BMI C1996              \ If X > 127, jump to C1996 to exit the loop
+ BMI maps11             \ If X > 127, jump to maps11 to exit the loop
 
- CPX U                  \ If X < U, loop back to C194E
- BCC C194E
+ CPX U                  \ If X < U, loop back to maps1
+ BCC maps1
 
-.C1980
+.maps9
 
  LDA yVergeRight,X      \ Set A to the X-th yVergeRight
 
- BMI C198E              \ If A is negative, jump to C198E
+ BMI maps10             \ If A is negative, jump to maps10
 
- CMP N                  \ If A < N, jump to C198E
- BCC C198E
+ CMP N                  \ If A < N, jump to maps10
+ BCC maps10
 
                         \ If we get here then A is positive and A >= N
 
  LDA N                  \ Set the X-th yVergeRight = N
  STA yVergeRight,X
 
-.C198E
+.maps10
 
  TXA                    \ Set bit 7 of X
  ORA #%10000000
@@ -8678,10 +8693,10 @@ ENDIF
 
  LDA #0                 \ Set A = 0
 
- BEQ C1969              \ Jump to C1969 (this BEQ is effectively a JMP as A is
+ BEQ maps4              \ Jump to maps4 (this BEQ is effectively a JMP as A is
                         \ always zero)
 
-.C1996
+.maps11
 
                         \ Now we loop X from L0050 up until we find the first
                         \ vergeDataRight entry with bit 7 clear, and set L0050
@@ -8689,29 +8704,29 @@ ENDIF
 
  LDX L0050              \ Set X = L0050
 
-.P1998
+.maps12
 
  LDA vergeDataRight,X   \ If bit 7 the X-th vergeDataRight is clear, jump to
- BPL C19A2              \ C19A2 to store X in L0050
+ BPL maps13             \ maps13 to store X in L0050
 
  INX                    \ Increment the loop counter in X
 
- CPX U                  \ If X < U, loop back to P1998
- BCC P1998
+ CPX U                  \ If X < U, loop back to maps12
+ BCC maps12
 
-.C19A2
+.maps13
 
  STX L0050              \ Set L0050 = X
 
  RTS                    \ Return from the subroutine
 
-.C19A5
+.maps14
 
  LDA #%10000000         \ Set bit 7 of the X-th vergeDataRight
  ORA vergeDataRight,X
  STA vergeDataRight,X
 
- BMI C1979              \ Jump to C1979 (this BMI is effectively a JMP as bit 7
+ BMI maps8              \ Jump to maps8 (this BMI is effectively a JMP as bit 7
                         \ of A is always set)
 
 \ ******************************************************************************
@@ -8843,8 +8858,8 @@ ENDIF
  STA L0050              \ Set L0050 = A
                         \           = max(49, horizonListIndex + 40)
 
- LDA #LO(L0400Left)     \ Set A to the low byte of L0400Left, so the call to
-                        \ sub_C193E populates the L0400Left table
+ LDA #LO(leftSegment)   \ Set A to the low byte of leftSegment, so the call to
+                        \ MapSegmentsToLines populates the leftSegment table
 
  STA R                  \ Set R = A
  
@@ -8853,7 +8868,7 @@ ENDIF
  LDY segmentListPointer \ Set Y to index of the last entry in the track segment
                         \ list for the left side of the track
 
- JSR sub_C193E          \ Populate the L0400Left table
+ JSR MapSegmentsToLines \ Populate the leftSegment table
 
  LDY #0                 \ Set Y = 0, so the call to sub_C19AF populates the
                         \ leftVergeStart table
@@ -8906,13 +8921,13 @@ ENDIF
                         \ So X is the index in the track section/segment list
                         \ for the horizon line's right verge
 
- LDA #LO(L0400Right)    \ Set A to the low byte of L0400Right, so the call to
-                        \ sub_C193E populates the L0400Right table
+ LDA #LO(rightSegment)  \ Set A to the low byte of rightSegment, so the call to
+                        \ MapSegmentsToLines populates the rightSegment table
 
  LDY segmentListRight   \ Set Y to index of the last entry in the track segment
                         \ list for the right side of the track
 
- JSR sub_C193E          \ Populate the L0400Right table
+ JSR MapSegmentsToLines \ Populate the rightSegment table
 
  LDA #28                \ Set KK = 28
  STA KK
@@ -11793,7 +11808,7 @@ IF _ACORNSOFT
 
  CPY L002C
  BCS gcol6
- LDX L0400Left,Y
+ LDX leftSegment,Y
  BMI gcol15
  JSR gcol16
 
@@ -11821,7 +11836,7 @@ IF _ACORNSOFT
 
  CPY L0029
  BCS gcol6
- LDX L0400Right,Y
+ LDX rightSegment,Y
  BMI gcol15
  JSR gcol16
 
@@ -11971,7 +11986,8 @@ IF _SUPERIOR
  CPY L002C              \ If the track line in Y >= L002C, jump to scol3 to
  BCS scol3              \ return colour 3 (green)
 
- LDA L0400Left,Y        \ Set A to the L0400Left entry for this track line
+ LDA leftSegment,Y      \ Set A to the index within the track segment list of
+                        \ the segment for the left verge on this track line
 
  JMP scol6              \ Jump to scol6
 
@@ -11983,7 +11999,8 @@ IF _SUPERIOR
  CPY L0029              \ If the track line in Y >= L0029, jump to scol3 to
  BCS scol3              \ return colour 3 (green)
 
- LDA L0400Right,Y       \ Set A to the L0400Right entry for this track line
+ LDA rightSegment,Y     \ Set A to the index within the track segment list of
+                        \ the segment for the right verge on this track line
 
 .scol6
 
@@ -14509,7 +14526,7 @@ ENDIF
 \   edgeSegmentNumber   The number of the segment within the track segment list
 \                       that is closest to the player's car
 \
-\   edgePointerNumber   The index of the segment within the combined track
+\   edgeSegmentPointer  The index of the segment within the combined track
 \                       section/segment list (i.e. from xVergeRight) that is
 \                       closest to the player's car
 \
@@ -14592,9 +14609,9 @@ ENDIF
                         \ segment within the track segment list that is closest
                         \ to the player's car
 
- LDY segmentListPointer \ Set edgePointerNumber = segmentListPointer
- STY edgePointerNumber  \
-                        \ So edgePointerNumber contains the index of the
+ LDY segmentListPointer \ Set edgeSegmentPointer = segmentListPointer
+ STY edgeSegmentPointer \
+                        \ So edgeSegmentPointer contains the index of the
                         \ segment within the combined track section/segment
                         \ list (i.e. from xVergeRight) that is closest to the
                         \ player's car
@@ -26448,7 +26465,7 @@ NEXT
  JSR sub_C4676          \
                         \ where A' is A, scaled by the sub_C4687 routine
 
- LDX edgePointerNumber
+ LDX edgeSegmentPointer
 
  CPX #40
  BCC mseg2
@@ -31720,7 +31737,7 @@ ORG &5E40
 \     * 1 = red
 \     * 2 = white
 \
-\   * Bit 7: gets set in sub_C193E
+\   * Bit 7: gets set in MapSegmentsToLines
 \
 \ ******************************************************************************
 
@@ -31758,7 +31775,7 @@ ORG &5E40
 \     * 1 = red
 \     * 2 = white
 \
-\   * Bit 7: gets set in sub_C193E
+\   * Bit 7: gets set in MapSegmentsToLines
 \
 \ ******************************************************************************
 
