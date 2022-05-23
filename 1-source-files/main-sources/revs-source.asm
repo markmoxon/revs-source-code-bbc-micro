@@ -377,9 +377,19 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0027
+.currentVerge
 
- SKIP 1                 \ 
+ SKIP 1                 \ Determines the verge that is currently being drawn in
+                        \ the DrawTrack routine, in terms of the table that is
+                        \ being populated:
+                        \
+                        \   * 0 = leftVergeStart
+                        \
+                        \   * 1 = leftTrackStart
+                        \
+                        \   * 2 = rightVergeStart
+                        \
+                        \   * 3 = rightGrassStart
 
 .L0028
 
@@ -660,13 +670,16 @@ ORG &0000
  SKIP 1                 \ The driver whose speed will be set on the next call to
                         \ the SetDriverSpeed routine
 
-.L004B
+.vergeBufferEnd
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the last entry in the track verge buffer
+                        \ for the side of the track we are currently drawing in
+                        \ DrawTrack
 
-.L004C
+.vergeIndexPitch
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the pitch angles in the verge buffer for
+                        \ the verge we are drawing in DrawVergeEdge
 
 .positionAhead
 
@@ -682,9 +695,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L004F
+.vergeIndexYaw
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index of the yaw angles in the verge buffer for
+                        \ the verge we are drawing in DrawVergeEdge
+
 
 .L0050
 
@@ -8484,13 +8499,16 @@ ENDIF
 \
 \       Name: CheckVergeOnScreen
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing the track
 \    Summary: Check whether a verge coordinate is on-screen
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine tests whether the magnitude of a signed x-coordinate is < 20. In
-\ other words, given a signed coordinate x, this tests whether |x| < 20.
+\ This routine tests whether the magnitude of a signed yaw angle is < 20. In
+\ other words, given a signed yaw angle x, this tests whether |x| < 20.
+\
+\ As the field of view in Revs is 20 degrees, this tests whether or not a yaw
+\ angle is visible on-screen.
 \
 \ It does this by adding 20 and then testing against 40, which gives the result
 \ we want as the following are all equivalent:
@@ -8512,12 +8530,11 @@ ENDIF
 \
 \ Returns:
 \
-\   V                   Rotated to the right, with bit 7 set as follows, where
-\                       x is the verge x-coordinate:
+\   V                   The result, where x is the verge yaw angle:
 \
-\                         * |x| < 20
+\                         * Bit 7 is clear if |x| < 20 (visible on-screen)
 \
-\                         * |x| >= 20
+\                         * Bit 7 is set if |x| >= 20 (not visible)
 \
 \ ******************************************************************************
 
@@ -8538,23 +8555,34 @@ ENDIF
 \
 \       Name: MapSegmentsToLines
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing the track
 \    Summary: Map verges in the track segment list to track lines in the track
 \             view
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine populates the leftSegment or rightSegment table, from index Y
-\ down, as we analyse verge data from X up. These tables map track lines in the
-\ track view to verge data in the track segment list, which is used to determine
-\ the colour of the left and right track verges on each pixel line in the track
-\ view.
+\ This routine populates the leftSegment or rightSegment table (depending on the
+\ arguments).
 \
-\ The track verge buffer stores distant segments first, coming towards us as we
-\ progress through the list, so leftSegment and rightSegment are the reverse of
-\ this, with closest segments at the start, furthest segments at the end. This
-\ matches the track lines, where small numbers are at the bottom of the screen
-\ (i.e. close), high numbers are up the screen (i.e. further away).
+\ It does this by working its way through the verge buffer, from distant entries
+\ at the start of the buffer, to closer entries at the end of the buffer. As it
+\ goes, it looks at the pitch angles of the entries, which equate to track lines
+\ in the track view, with high track lines matching high pitch values (which are
+\ higher up the screen). It then fills the corresponding entries in the
+\ leftSegment or rightSegment table, which have one entry per track line, with
+\ the index numbers of the relevant entries from the verge buffer.
+\
+\ In other words, if we fill five entries in the rightSegment table with an
+\ index n, then that means that the segment that's mapped to entry n in the
+\ verge buffer will take up five track lines on-screen, so it will be five
+\ pixels tall.
+\
+\ It's worth reiterating that the track verge buffer stores distant segments
+\ first, coming towards us as we progress through the list, so leftSegment
+\ and rightSegment are the reverse of this, with closest segments at the start,
+\ furthest segments at the end. This matches the track lines, where small
+\ numbers are at the bottom of the screen (i.e. close), high numbers are up
+\ the screen (i.e. further away).
 \
 \ Arguments:
 \
@@ -8576,6 +8604,10 @@ ENDIF
 \
 \                         * horizonListIndex + 40 for the left verge
 \
+\ Returns:
+\
+\   L0050               ???
+\
 \ ******************************************************************************
 
 .MapSegmentsToLines
@@ -8584,93 +8616,172 @@ ENDIF
                         \ the address in A, so the STA instruction writes to the
                         \ table specified by A
 
- STY L004B              \ Set L004B = Y
+ STY vergeBufferEnd     \ Set vergeBufferEnd to the index in Y, which points to
+                        \ the last entry in the track verge buffer for this side
+                        \ of the track
 
  DEY                    \ Set U = Y - 1
- STY U
+ STY U                  \
+                        \ In the following loop, X iterates up to U - 1, so this
+                        \ ensures that it increments to the end of the track
+                        \ verge buffer, but not past the end
 
  JSR CheckVergeOnScreen \ Set bit 7 of V if the segment in X is off-screen, or
                         \ clear bit 7 if it is on-screen
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
- JMP maps7              \ Jump to maps7 to join the loop
-
-                        \ The loop below uses:
+ JMP maps7              \ Jump to maps7 to join the loop below
                         \
-                        \   * Y as an index into leftSegment, starting at
-                        \     horizonLine and decrementing
+                        \ The loop below uses two loop counters:
                         \
-                        \   * X as an index into xVergeRightHi, yVergeRight,
-                        \     starting at horizonListIndex and incrementing
+                        \   * Y is an index into leftSegment or rightSegment,
+                        \     starting at horizonLine and decrementing down
+                        \     through the track lines, i.e. the ones that show
+                        \     land rather than sky
+                        \
+                        \     Y decrements from the horizon track line to 1
+                        \
+                        \   * X is an index into xVergeRightHi and yVergeRight,
+                        \     starting at horizonListIndex (the entry in the
+                        \     verge buffer that's on the horizon) and
+                        \     incrementing though the verge buffer, going from
+                        \     distant segments back towards the player
+                        \
+                        \     X increments from the horizon entry in the verge
+                        \     buffer, up to the end of the verge buffer (as per
+                        \     the value that we gave U above)
+                        \
+                        \ In other words, we work our way through the verge
+                        \ buffer from the horizon towards the player, inserting
+                        \ values into the leftSegment or rightSegment table
+                        \ for each corresponding track line, starting at the
+                        \ horizon track line and working down the screen
+                        \
+                        \ We also enter the loop with V set to the visibility of
+                        \ the horizon's entry in the verge buffer
 
 .maps1
 
- LDA V                  \ If bit 7 of V is clear, jump to maps2
- BPL maps2
+                        \ We loop back here when X is incremented to point to
+                        \ the next entry in the verge buffer
 
-                        \ Bit 7 of V is set
+ LDA V                  \ If bit 7 of V is clear, then we have already reached a
+ BPL maps2              \ visible entry in the verge buffer, so jump to maps2
+
+                        \ Bit 7 of V is set, so we haven't yet reached a visible
+                        \ entry in the verge buffer, so we test the new entry in
+                        \ X to see if it is visible
+                        \
+                        \ In this way, V is a flag that records when we reach
+                        \ the visible entries in the buffer, at which point we
+                        \ flip bit 7 of V from set to clear, and stop checking
 
  JSR CheckVergeOnScreen \ Set bit 7 of V if the segment in X is off-screen, or
                         \ clear bit 7 if it is on-screen
 
 .maps2
 
- LDA yVergeRight,X      \ Set A to the X-th yVergeRight
+ LDA yVergeRight,X      \ Set A to the pitch angle of the current entry in the
+                        \ verge buffer
 
- CMP #80                \ If A >= 80, jump to maps9
- BCS maps9
+ CMP #80                \ If A >= 80, then this pitch angle maps to a track line
+ BCS maps9              \ that's off the top of the screen, so jump to maps9 to
+                        \ pad out the rest of the leftSegment or rightSegment
+                        \ table and finish off
 
- BIT V                  \ If bit 7 of V is clear, jump to maps3
- BPL maps3
+ BIT V                  \ If bit 7 of V is clear, then we have already reached a
+ BPL maps3              \ visible entry in the verge buffer, so jump to maps3
 
-                        \ If we get here then A < 80 and bit 7 of V is set
+                        \ If we get here then bit 7 of V is set, so the current
+                        \ entry in the verge buffer is not on-screen in the
+                        \ x-axis, though it is on-screen in the y-axis as we
+                        \ know A < 80
 
- CMP yVergeRight+1,X    \ If A = the X+1-st yVergeRight, jump to maps14 to set
- BEQ maps14             \ bit 7 of the X-th vergeDataRight and on to maps8 to
-                        \ move on to the next X
+ CMP yVergeRight+1,X    \ If the pitch angle of this entry in the verge buffer
+ BEQ maps14             \ is the same as the angle of the next entry (i.e.
+                        \ the next entry closer to the player), then jump to
+                        \ maps14 to set bit 7 of this entry's vergeDataRight
+                        \ and move on to the next entry in the verge buffer
 
 .maps3
 
- CMP N                  \ If A >= N, jump to maps14 to set bit 7 of the X-th
- BCS maps14             \ vergeDataRight and on to maps8 to move on to the next
-                        \ X
+                        \ If we get here then either this entry in the verge
+                        \ buffer is on-screen, or it's off-screen but is at a
+                        \ different pitch angle to the next closest entry
+
+ CMP N                  \ If A >= N, then the entry is at a higher pitch angle
+ BCS maps14             \ than the current track line in N, so jump to maps14
+                        \ to set bit 7 of the X-th vergeDataRight and on to
+                        \ maps8 to move on to the next X
+
+                        \ Otherwise we fall through to fill index Y down to
+                        \ index A + 1 with the value in X, which sets the
+                        \ leftSegment or rightSegment entries for track lines
+                        \ Y down to A + 1 with the index in X
 
 .maps4
+
+                        \ If we get here then we fill index Y down to index
+                        \ A + 1 with the value in X
 
  STA RR                 \ Set RR = A
 
  TXA                    \ Set A = X
 
- JMP maps6              \ Jump to maps6
+ JMP maps6              \ Jump to maps6 to fill index Y down to index RR + 1
+                        \ with the value in A
 
 .maps5
 
- STA leftSegment,Y      \ Store A in the Y-th entry in leftSegment
+ STA leftSegment,Y      \ Store A in the Y-th entry in leftSegment or
+                        \ rightSegment
 
- DEY                    \ Decrement the loop counter in Y
+ DEY                    \ Decrement the loop counter in Y to point to the next
+                        \ track line down the screen
 
 .maps6
 
- CPY RR                 \ If Y <> RR, jump to maps5
- BNE maps5
+                        \ This loop fills leftSegment or rightSegment with the
+                        \ value in A, from index Y down to index RR + 1
+
+ CPY RR                 \ Loop back to maps5 until we have filled from index Y
+ BNE maps5              \ to RR + 1 with the value in A
 
 .maps7
 
- STY N                  \ Set N = Y
+                        \ This is where we first join the loop
+
+ STY N                  \ Set N = Y, so N contains the number of the track line
+                        \ we are currently processing
 
 .maps8
 
- INX                    \ Increment the loop counter in X
+ INX                    \ Increment the loop counter in X to point to the next
+                        \ entry in the verge buffer
 
- BMI maps11             \ If X > 127, jump to maps11 to exit the loop
+ BMI maps11             \ If bit 7 of X is set, then we must have called the
+                        \ loop from maps10 below, so we have now finished
+                        \ filling the leftSegment or rightSegment table all the
+                        \ way back to index 1, so jump to maps11 to exit the
+                        \ loop as we are done filling
 
- CPX U                  \ If X < U, loop back to maps1
- BCC maps1
+ CPX U                  \ If X < U, then we still have entries in the verge
+ BCC maps1              \ buffer to process, so loop back to maps1
 
 .maps9
 
- LDA yVergeRight,X      \ Set A to the X-th yVergeRight
+                        \ If we get here then we are nearly done, and just need
+                        \ to pad out the rest of the leftSegment or rightSegment
+                        \ table with a dummy value that has bit 7 set, working
+                        \ back to position 1 in the table
+
+                        \ First we cap the pitch angle of the current entry in
+                        \ the verge buffer to a maximum of N ???
+
+ LDA yVergeRight,X      \ Set A to the pitch angle of the current entry in the
+                        \ verge buffer (i.e. the last entry we will fill, which
+                        \ is the closest track line to the player)
 
  BMI maps10             \ If A is negative, jump to maps10
 
@@ -8679,18 +8790,25 @@ ENDIF
 
                         \ If we get here then A is positive and A >= N
 
- LDA N                  \ Set the X-th yVergeRight = N
- STA yVergeRight,X
+ LDA N                  \ Set the pitch angle of the current entry in the verge
+ STA yVergeRight,X      \ buffer to N
 
 .maps10
 
- TXA                    \ Set bit 7 of X
- ORA #%10000000
- TAX
+                        \ We now get ready to loop back to the fill loop above,
+                        \ to pad out the remainder of the leftSegment or
+                        \ rightSegment table
 
- LDA #0                 \ Set A = 0
+ TXA                    \ Set bit 7 of X, so when we jump back to the fill loop
+ ORA #%10000000         \ via maps4, we fill the rest of the leftSegment or
+ TAX                    \ rightSegment table with this value, and then exit the
+                        \ loop by jumping to maps11
 
- BEQ maps4              \ Jump to maps4 (this BEQ is effectively a JMP as A is
+ LDA #0                 \ Set A = 0, so we fill the leftSegment or rightSegment
+                        \ table back to position 1 with the value in X
+
+ BEQ maps4              \ Jump to maps4 to fill index Y down to index A + 1 with
+                        \ the value in X (this BEQ is effectively a JMP as A is
                         \ always zero)
 
 .maps11
@@ -8698,6 +8816,18 @@ ENDIF
                         \ Now we loop X from L0050 up until we find the first
                         \ vergeDataRight entry with bit 7 clear, and set L0050
                         \ to the updated X
+                        \
+                        \ This moves through the verge buffer, towards the
+                        \ player, starting at the horizon line, and skipping any
+                        \ entries that have bit 7 set in vergeDataRight
+                        \
+                        \ We set bit 7 of vergeDataRight for any entries whose
+                        \ pitch angles were higher than the current track line
+                        \ as we worked down the screen and towards the player in
+                        \ the verge buffer
+                        \
+                        \ So this skips any hills between the horizon and the
+                        \ player ???
 
  LDX L0050              \ Set X = L0050
 
@@ -8719,8 +8849,8 @@ ENDIF
 
 .maps14
 
- LDA #%10000000         \ Set bit 7 of the X-th vergeDataRight
- ORA vergeDataRight,X
+ LDA #%10000000         \ Set bit 7 of vergeDataRight for the current entry in
+ ORA vergeDataRight,X   \ the verge buffer
  STA vergeDataRight,X
 
  BMI maps8              \ Jump to maps8 (this BMI is effectively a JMP as bit 7
@@ -8728,103 +8858,218 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C19AF
+\       Name: DrawVergeEdge
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Drawing the track
+\    Summary: Draw one edge of a verge mark into the screen buffer
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   Y                   0 to 3
+\   A                   The index in the verge buffer of the start of the track
+\                       verge to draw
+\
+\   Y                   Determines the table that is populated:
+\
+\                         * 0 = leftVergeStart
+\
+\                         * 1 = leftTrackStart
+\
+\                         * 2 = rightVergeStart
+\
+\                         * 3 = rightGrassStart
+\
+\   vergeBufferEnd      The index of the last entry in the track verge buffer
+\                       for the side of the track we are currently drawing
+\
+\   L0032               ???
+\
+\                         * 0 for leftVergeStart
+\
+\                         * 8 for leftTrackStart
+\
+\                         * 16 for rightVergeStart
+\
+\                         * 28 for rightGrassStart
+\
+\   KK                  ???
 \
 \ ******************************************************************************
 
-.sub_C19AF
+.DrawVergeEdge
 
- STY L0027
- STA L004C
- CMP L004B
- BCS C1A1F
- CLC
- ADC L30FC,Y
- STA L004F
+ STY currentVerge       \ Set currentVerge to the number of the verge table that
+                        \ we are going to populate
 
- LDA var29Hi,Y          \ Modify the following instruction at mod_C2F4E and
+ STA vergeIndexPitch    \ Set vergeIndexPitch to the verge buffer index in A
+
+ CMP vergeBufferEnd     \ If A >= vergeBufferEnd, then it points to an index
+ BCS vedg6              \ after the end of the verge buffer data for this side
+                        \ of the track, so jump to vedg6 to return from the
+                        \ subroutine
+
+ CLC                    \ Set vergeIndexYaw = A + vergeEdgeInOut for verge Y
+ ADC vergeEdgeInOut,Y   \
+ STA vergeIndexYaw      \ This does the following:
+                        \
+                        \   * A for the inner edges of the verge mark in
+                        \     leftTrackStart and rightVergeStart
+                        \
+                        \   * A + 16 for the outer edges of the verge mark in
+                        \     leftVergeStart and rightGrassStart
+                        \
+                        \ This points vergeIndexYaw to the correct part of the
+                        \ track segment list for this entry in the buffer, as
+                        \ the angles for the outer edge of the verge mark are
+                        \ stored 16 bytes after the inner edge angles (the inner
+                        \ edge angles are in bytes 6 to 21 of the track segment
+                        \ list, while the outer edge angles are in bytes 22 to
+                        \ 37)
+
+ LDA vergeTableHi,Y     \ Modify the following instructions at mod_C2F4E and
  STA mod_C2F4E+2        \ mod_C2F90, depending on the value of Y:
  STA mod_C2F90+2        \
- LDA var29Lo,Y          \   * 0 = STA &7000,Y -> STA leftVergeStart,Y
+ LDA vergeTableLo,Y     \   * 0 = STA &7000,Y -> STA leftVergeStart,Y
  STA mod_C2F4E+1        \   * 1 = STA &7000,Y -> STA leftTrackStart,Y
  STA mod_C2F90+1        \   * 2 = STA &7000,Y -> STA rightVergeStart,Y
                         \   * 3 = STA &7000,Y -> STA rightGrassStart,Y
+                        \
+                        \ So this modifies the sub_C2F45 and sub_C2F87 routines
+                        \ to write to the verge table specified in Y
 
- LDX L004F
- LDY L004C
- SEC
- JSR sub_C2B26
+ LDX vergeIndexYaw      \ Set X = vergeIndexYaw, to use as the index to the
+                        \ verge's yaw angles
 
-.C19D7
+ LDY vergeIndexPitch    \ Set Y = vergeIndexPitch, to use as the index to the
+                        \ verge's pitch angles
 
- INX
- INY
- CPY L004B
- BCS C1A1F
- LDA vergeDataRight,Y
- BMI C19D7
- LDA L004C
- CMP L0050
- BCC C19F8
- BNE C19FD
- LDA vergeDataRight-1,Y
- AND #3
- BNE C1A10
- STY L0050
- SEC
- LDA L0027
- BEQ C1A15
+ SEC                    \ Set the C flag
 
-.C19F8
+ JSR sub_C2B26          \ Draw the verge edge ???
 
- LDA KK
- CLC
- BCC C1A15
+.vedg1
 
-.C19FD
+ INX                    \ Increment X to the index of the next yaw angle in the
+                        \ track segment list
 
- LDA vergeDataRight-1,Y
- AND #3
- BNE C1A10
- LDA L0027
- CMP #1
- BEQ C1A15
- CMP #2
- BEQ C1A15
- LDA #0
+ INY                    \ Increment Y to the index of the next pitch angle in
+                        \ the track segment list
 
-.C1A10
+ CPY vergeBufferEnd     \ If Y >= vergeBufferEnd then we have processed all the
+ BCS vedg6              \ entries in the verge buffer, so jump to vedg6 to
+                        \ return from the subroutine
 
- ASL A
+ LDA vergeDataRight,Y   \ If bit 7 is set in vergeDataRight for the next segment
+ BMI vedg1              \ from the track segment list, then this segment is
+                        \ hidden behind a hill, so jump to vedg1 move on to the
+                        \ next segment
+
+ LDA vergeIndexPitch    \ If vergeIndexPitch < L0050, then this segment is
+ CMP L0050              \ further away from the player than the segment at
+ BCC vedg2              \ index L0050, jump to vedg2 to set A = KK, clear the
+                        \ C flag and jump to vedg5 to draw the edge
+
+ BNE vedg3              \ If vergeIndexPitch <> L0050, i.e. vergeIndexPitch >
+                        \ L0050, jump to vedg3
+
+                        \ If we get here then vergeIndexPitch = L0050, so the
+                        \ current segment is the same segment as L0050
+
+ LDA vergeDataRight-1,Y \ Set A to the colour of the previous entry in the verge
+ AND #3                 \ buffer, which is stored in bits 0-2 of vergeDataRight
+                        \ (the -1 points to the previous entry, which will be
+                        \ one step further away from the player)
+                        \
+                        \ The colour values are:
+                        \
+                        \   * 0 = black
+                        \   * 1 = red
+                        \   * 2 = white
+
+ BNE vedg4              \ If the verge of the previous entry is red or white,
+                        \ jump to vedg4 to set A = L0032 + A * 4 and draw the
+                        \ edge
+
+                        \ If we get here then the verge of the previous entry
+                        \ is black
+
+ STY L0050              \ Set Y = L0050
+
+ SEC                    \ Set the C flag
+
+ LDA currentVerge       \ Set A to the the number of the verge table we are
+                        \ populating
+
+ BEQ vedg5              \ If we are updating leftVergeStart, jump to vedg5
+
+.vedg2
+
+ LDA KK                 \ Set A = KK
+
+ CLC                    \ Clear the C flag and jump to vedg5 (this BCC is
+ BCC vedg5              \ effectively a JMP as the C flag is clways clear)
+
+.vedg3
+
+                        \ If we get here then vergeIndexPitch > L0050, so the
+                        \ current segment is closer to the player than the
+                        \ segment at index L0050
+
+ LDA vergeDataRight-1,Y \ Set A to the colour of the previous entry in the verge
+ AND #3                 \ buffer, which is stored in bits 0-2 of vergeDataRight
+                        \ (the -1 points to the previous entry, which will be
+                        \ one step further away from the player)
+                        \
+                        \ The colour values are:
+                        \
+                        \   * 0 = black
+                        \   * 1 = red
+                        \   * 2 = white
+
+ BNE vedg4              \ If the verge of the previous entry is red or white,
+                        \ jump to vedg4 to set A = L0032 + A * 4 and draw the
+                        \ edge
+
+ LDA currentVerge       \ Set A to the the number of the verge table we are
+                        \ populating
+
+ CMP #1                 \ If we are updating leftTrackStart, jump to vedg5 to
+ BEQ vedg5              \ draw the edge
+
+ CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 to
+ BEQ vedg5              \ draw the edge
+
+ LDA #0                 \ Set A = 0
+
+.vedg4
+
+ ASL A                  \ Set A = L0032 + A * 4
  ASL A
  CLC
  ADC L0032
 
-.C1A15
+.vedg5
 
- JSR sub_C2B26
- STY L004C
- STX L004F
- JMP C19D7
+ JSR sub_C2B26          \ Draw the verge edge ???
 
-.C1A1F
+ STY vergeIndexPitch    \ Update the value of vergeIndexPitch to point to the
+                        \ entry we just processed
 
- RTS
+ STX vergeIndexYaw      \ Update the value of vergeIndexYaw to point to the
+                        \ entry we just processed
+
+ JMP vedg1              \ Loop back to vedg1 to process the next entry
+
+.vedg6
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: DrawTrack
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing the track
 \    Summary: Draw the track into the screen buffer
 \
 \ ******************************************************************************
@@ -8854,27 +9099,34 @@ ENDIF
 
  STA L0050              \ Set L0050 = A
                         \           = max(49, horizonListIndex + 40)
+                        \           = max(9, horizonListIndex) + 40
+                        \
+                        \ So L0050 contains the index of the horizon in the
+                        \ verge buffer, bumped up to at least 9, and with 40
+                        \ added so this refers to the left verge
 
  LDA #LO(leftSegment)   \ Set A to the low byte of leftSegment, so the call to
                         \ MapSegmentsToLines populates the leftSegment table
 
- STA R                  \ Set R = A
+ STA R                  \ Set R = LO(leftSegment)
  
- STA MM                 \ Set MM = A
+ STA MM                 \ Set MM = LO(leftSegment)
 
  LDY segmentListPointer \ Set Y to index of the last entry in the track segment
                         \ list for the left side of the track
 
- JSR MapSegmentsToLines \ Populate the leftSegment table
+ JSR MapSegmentsToLines \ Populate the leftSegment table with a mapping of track
+                        \ lines on-screen to the verge buffer for the left side
+                        \ of the track
 
- LDY #0                 \ Set Y = 0, so the call to sub_C19AF populates the
+ LDY #0                 \ Set Y = 0, so the call to DrawVergeEdge populates the
                         \ leftVergeStart table
 
  STY L0032              \ Set L0032 = 0
 
  LDA L0050              \ Set A = L0050
 
- JSR sub_C19AF          \ Draw the leftVergeStart edge
+ JSR DrawVergeEdge      \ Draw the left edge of the left verge
 
  LDA #8                 \ Set L0032 = 8
  STA L0032
@@ -8882,14 +9134,14 @@ ENDIF
  LDY #0                 \ Set KK = 0
  STY KK
 
- INY                    \ Set Y = 1, so the call to sub_C19AF populates the
+ INY                    \ Set Y = 1, so the call to DrawVergeEdge populates the
                         \ leftTrackStart table
 
  LDA horizonListIndex   \ Set A = horizonListIndex + 40
  CLC
  ADC #40
 
- JSR sub_C19AF          \ Draw the leftTrackStart edge
+ JSR DrawVergeEdge      \ Draw the right edge of the left verge
 
  LDA L0050              \ Set A = L0050
 
@@ -8924,7 +9176,9 @@ ENDIF
  LDY segmentListRight   \ Set Y to index of the last entry in the track segment
                         \ list for the right side of the track
 
- JSR MapSegmentsToLines \ Populate the rightSegment table
+ JSR MapSegmentsToLines \ Populate the rightSegment table with a mapping of
+                        \ track lines on-screen to the verge buffer for the
+                        \ right side of the track
 
  LDA #28                \ Set KK = 28
  STA KK
@@ -8932,22 +9186,22 @@ ENDIF
  LDA #16                \ Set L0032 = 16
  STA L0032
 
- LDY #2                 \ Set Y = 2, so the call to sub_C19AF populates the
+ LDY #2                 \ Set Y = 2, so the call to DrawVergeEdge populates the
                         \ rightVergeStart table
 
  LDA horizonListIndex   \ Set A = horizonListIndex
 
- JSR sub_C19AF          \ Draw the rightVergeStart edge
+ JSR DrawVergeEdge      \ Draw the left edge of the right verge
 
  LDA #28                \ Set L0032 = 28
  STA L0032
 
- LDY #3                 \ Set Y = 3, so the call to sub_C19AF populates the
+ LDY #3                 \ Set Y = 3, so the call to DrawVergeEdge populates the
                         \ rightGrassStart table
 
  LDA L0050              \ Set A = L0050
 
- JSR sub_C19AF          \ Draw the rightGrassStart edge
+ JSR DrawVergeEdge      \ Draw the right edge of the right verge
 
  LDA L0050              \ Set A = L0050
 
@@ -8963,7 +9217,7 @@ ENDIF
 \
 \       Name: sub_C1A98
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -8976,7 +9230,7 @@ ENDIF
 
  STX GG
  STA U
- DEC L004B
+ DEC vergeBufferEnd
  LDA L62F2
  CMP #&28
  BCC C1B05
@@ -9019,7 +9273,7 @@ ENDIF
  BPL C1AE4
  INX
  INC U
- CPX L004B
+ CPX vergeBufferEnd
  BCC P1AD8
 
 .C1AE4
@@ -9049,7 +9303,7 @@ ENDIF
 .C1B05
 
  LDX U
- CPX L004B
+ CPX vergeBufferEnd
  BCC C1AA7
 
 .C1B0B
@@ -18285,18 +18539,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var29Hi
+\       Name: vergeTableHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: High bytes of the addresses of the four verge tables
 \
 \ ******************************************************************************
 
-.var29Hi
+.vergeTableHi
 
  EQUB HI(leftVergeStart)
  EQUB HI(leftTrackStart)
@@ -18305,18 +18555,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var29Lo
+\       Name: vergeTableLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: Low bytes of the addresses of the four verge tables
 \
 \ ******************************************************************************
 
-.var29Lo
+.vergeTableLo
 
  EQUB LO(leftVergeStart)
  EQUB LO(leftTrackStart)
@@ -18327,12 +18573,25 @@ ENDIF
 \
 \       Name: sub_C2B26
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   
+\
+\   X                   Index in the verge buffer of the track segment list
+\                       entry for the verge, pointing to either the inner edge
+\                       or outer edge of the verge mark, depending on the verge
+\                       table we are drawing
+\
+\   Y                   Index in the verge buffer of the track segment list
+\                       entry for the verge, for the inner edge of the verge
+\                       mark
+\
+\   C flag              
 \
 \ ******************************************************************************
 
@@ -18406,7 +18665,7 @@ ENDIF
  AND #&C0
  BEQ C2BCD
  LDY L0045
- LDX L004F
+ LDX vergeIndexYaw
  LDA xVergeRightLo,Y
  SEC
  SBC xVergeRightLo,X
@@ -18498,8 +18757,8 @@ ENDIF
  STA C2F60
  STA C2FA2
  LDA #&EA
- STA C2F47
- STA C2F89
+ STA mod_C2F47
+ STA mod_C2F89
  LDY L0054
  LDX #0
 
@@ -18517,7 +18776,7 @@ ENDIF
  CPX #4
  BNE P2C13
 
- LDA L0027
+ LDA currentVerge
  ASL A
  ASL A
  ASL A
@@ -18560,7 +18819,7 @@ ENDIF
  LDA thisObjectIndex
  CLC
  ADC #1
- CMP L004B
+ CMP vergeBufferEnd
  BEQ C2C68
  LDA RR
  CMP #&50
@@ -18610,23 +18869,23 @@ ENDIF
  CMP #3
  BEQ C2CB4
  LDA #&60
- STA C2FD7
- STA C2FC0
+ STA sub_C2FD7
+ STA sub_C2FC0
  BNE C2CDF
 
 .C2CB4
 
  LDA #&E0
- STA C2FD7
- STA C2FC0
- LDA L0027
+ STA sub_C2FD7
+ STA sub_C2FC0
+ LDA currentVerge
  CMP #2
  ROR A
  EOR VV
  BPL C2CDF
  LDA C2F60
- STA C2F47
- STA C2F89
+ STA mod_C2F47
+ STA mod_C2F89
  LDA #&EA
  STA C2F60
  STA C2FA2
@@ -18689,7 +18948,7 @@ ENDIF
 \
 \       Name: sub_C2D17
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18700,25 +18959,55 @@ ENDIF
 
 .sub_C2D17
 
- LDA L3E50,X
- STA mod_C2D27+1
- LDX #&80
- LDA SS
+ LDA L3E50,X            \ Modify the BCC instruction at mod_C2D27 so that it
+ STA mod_C2D27+1        \ jumps to the destination given in the X-th entry in
+                        \ the L3E50 lookup table
+
+ LDX #&80               \ Set X = &80
+
+ LDA SS                 \ Set A = -SS
  EOR #&FF
  CLC
  ADC #1
- CLC
+
+ CLC                    \ Clear the C flag so the next instruction effectively
+                        \ becomes a JMP
 
 .mod_C2D27
 
- BCC C2D29
+ BCC C2D29              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the L3E50 table, as follows:
+                        \
+                        \   * C2D31 when X = 0
+                        \   * C2D3C when X = 1
+                        \   * C2D47 when X = 2
+                        \   * C2D52 when X = 3
+                        \   * C2D62 when X = 4
+                        \   * C2D6D when X = 5
+                        \   * C2D78 when X = 6
+                        \   * C2D83 when X = 7
+                        \
+                        \   * C2D2B when X = 8
+                        \   * C2D36 when X = 9
+                        \   * C2D41 when X = 10
+                        \   * C2D4C when X = 11
+                        \   * C2D5C when X = 12
+                        \   * C2D67 when X = 13
+                        \   * C2D72 when X = 14
+                        \   * C2D7D when X = 15
 
 .C2D29
 
- LDX #&80
+ LDX #&80               \ Set X = &80
+
+.C2D2B
+
  ADC TT
  BCC C2D36
  SBC SS
+
+.C2D31
+
  LDX #0
  JSR sub_C2F45
 
@@ -18727,6 +19016,9 @@ ENDIF
  ADC TT
  BCC C2D41
  SBC SS
+
+.C2D3C
+
  LDX #1
  JSR sub_C2F45
 
@@ -18735,6 +19027,9 @@ ENDIF
  ADC TT
  BCC C2D4C
  SBC SS
+
+.C2D47
+
  LDX #2
  JSR sub_C2F45
 
@@ -18743,16 +19038,25 @@ ENDIF
  ADC TT
  BCC C2D57
  SBC SS
+
+.C2D52
+
  LDX #3
  JSR sub_C2F45
 
 .C2D57
 
- JSR C2FD7
+ JSR sub_C2FD7
  INC UU
+
+.C2D5C
+
  ADC TT
  BCC C2D67
  SBC SS
+
+.C2D62
+
  LDX #0
  JSR sub_C2F87
 
@@ -18761,6 +19065,9 @@ ENDIF
  ADC TT
  BCC C2D72
  SBC SS
+
+.C2D6D
+
  LDX #1
  JSR sub_C2F87
 
@@ -18769,6 +19076,9 @@ ENDIF
  ADC TT
  BCC C2D7D
  SBC SS
+
+.C2D78
+
  LDX #2
  JSR sub_C2F87
 
@@ -18777,12 +19087,15 @@ ENDIF
  ADC TT
  BCC C2D88
  SBC SS
+
+.C2D83
+
  LDX #3
  JSR sub_C2F87
 
 .C2D88
 
- JSR C2FC0
+ JSR sub_C2FC0
  INC S
  INC Q
  INC NN
@@ -18796,7 +19109,7 @@ ENDIF
 \
 \       Name: sub_C2D9A
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18807,22 +19120,46 @@ ENDIF
 
 .sub_C2D9A
 
- LDA L40D0,X
- STA mod_C2DAA+1
- LDX #&80
- LDA SS
+ LDA L40D0,X            \ Modify the BCC instruction at mod_C2DAA so that it
+ STA mod_C2DAA+1        \ jumps to the destination given in the X-th entry in
+                        \ the L40D0 lookup table
+
+ LDX #&80               \ Set X = &80
+
+ LDA SS                 \ Set A = -SS
  EOR #&FF
  CLC
  ADC #1
- CLC
+
+ CLC                    \ Clear the C flag so the next instruction effectively
+                        \ becomes a JMP
 
 .mod_C2DAA
 
- BCC C2DAC
+ BCC C2DAC              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the L40D0 table, as follows:
+                        \
+                        \   * C2E06 when X = 0
+                        \   * C2DFB when X = 1
+                        \   * C2DF0 when X = 2
+                        \   * C2DE5 when X = 3
+                        \   * C2DD5 when X = 4
+                        \   * C2DCA when X = 5
+                        \   * C2DBF when X = 6
+                        \   * C2DB4 when X = 7
+                        \
+                        \   * C2E00 when X = 8
+                        \   * C2DF5 when X = 9
+                        \   * C2DEA when X = 10
+                        \   * C2DDF when X = 11
+                        \   * C2DCF when X = 12
+                        \   * C2DC4 when X = 13
+                        \   * C2DB9 when X = 14
+                        \   * C2DAE when X = 15
 
 .C2DAC
 
- LDX #&80
+ LDX #&80               \ Set X = &80
 
 .C2DAE
 
@@ -18869,7 +19206,7 @@ ENDIF
 
 .C2DDA
 
- JSR C2FC0
+ JSR sub_C2FC0
  DEC UU
 
 .C2DDF
@@ -18918,7 +19255,7 @@ ENDIF
 
 .C2E0B
 
- JSR C2FD7
+ JSR sub_C2FD7
  DEC S
  DEC Q
  DEC NN
@@ -18933,7 +19270,7 @@ ENDIF
 \
 \       Name: sub_C2E20
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -18944,17 +19281,31 @@ ENDIF
 
 .sub_C2E20
 
- LDA L3ED0,X
- STA mod_C2E2E+1
- LDA TT
+ LDA L3ED0,X            \ Modify the BCC instruction at mod_C2E2E so that it
+ STA mod_C2E2E+1        \ jumps to the destination given in the X-th entry in
+                        \ the L3ED0 lookup table
+
+ LDA TT                 \ Set A = -TT
  EOR #&FF
  CLC
  ADC #1
- CLC
+
+ CLC                    \ Clear the C flag so the next instruction effectively
+                        \ becomes a JMP
 
 .mod_C2E2E
 
- BCC C2E30
+ BCC C2E30              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the L3ED0 table, as follows:
+                        \
+                        \   * C2E30 when X = 0
+                        \   * P2E3B when X = 1
+                        \   * P2E46 when X = 2
+                        \   * P2E51 when X = 3
+                        \   * P2E5E when X = 4
+                        \   * P2E69 when X = 5
+                        \   * P2E74 when X = 6
+                        \   * P2E7F when X = 7
 
 .C2E30
 
@@ -19033,7 +19384,7 @@ ENDIF
 \
 \       Name: sub_C2E99
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19044,17 +19395,31 @@ ENDIF
 
 .sub_C2E99
 
- LDA L3ED8,X
- STA mod_C2EA7+1
- LDA TT
+ LDA L3ED8,X            \ Modify the BCC instruction at mod_C2EA7 so that it
+ STA mod_C2EA7+1        \ jumps to the destination given in the X-th entry in
+                        \ the L3ED8 lookup table
+
+ LDA TT                 \ Set A = -TT
  EOR #&FF
  CLC
  ADC #1
- CLC
+
+ CLC                    \ Clear the C flag so the next instruction effectively
+                        \ becomes a JMP
 
 .mod_C2EA7
 
- BCC C2EA9
+ BCC C2EA9              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the L3ED8 table, as follows:
+                        \
+                        \   * P2EF8 when X = 0
+                        \   * P2EED when X = 1
+                        \   * P2EE2 when X = 2
+                        \   * P2ED7 when X = 3
+                        \   * P2ECA when X = 4
+                        \   * P2EBF when X = 5
+                        \   * P2EB4 when X = 6
+                        \   * C2EA9 when X = 7
 
 .C2EA9
 
@@ -19131,14 +19496,27 @@ ENDIF
 
 .C2F12
 
- LDA C2F47
- STA C2F18
+ LDA mod_C2F47
+ STA mod_C2F18
 
-.C2F18
+.mod_C2F18
 
  NOP
 
-.C2F19
+\ ******************************************************************************
+\
+\       Name: sub_C2F19
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C2F19
 
  LDA L001E
  BMI C2F22
@@ -19178,7 +19556,7 @@ ENDIF
 \
 \       Name: sub_C2F45
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -19187,11 +19565,23 @@ ENDIF
 \
 \   A                   
 \
+\   X                   3, 2, 1, 0
+\
+\   RR                  
+\
 \   UU                  
+\
+\   (Q P)               
+\
+\   (S R)               
 \
 \ Returns:
 \
 \   C flag              
+\
+\ Other entry points:
+\
+\   C2F7E               
 \
 \ ******************************************************************************
 
@@ -19199,19 +19589,19 @@ ENDIF
 
  STA II                 \ Store A in II so we can retrieve it later
 
-.C2F47
+.mod_C2F47
 
- NOP                    \ This does nothing, and is presumably left over from
-                        \ development
+ NOP                    \ This gets modified
 
- CPY RR                 \ If Y = RR, jump to C2F7E to return from the subroutine
- BEQ C2F7E              \ with A unchanged and the C flag clear
+ CPY RR                 \ If Y = RR, jump to C2F7E
+ BEQ C2F7E
 
  LDA UU                 \ Set A = UU
 
 .mod_C2F4E
 
  STA &7000,Y
+
  LDA (R),Y
  BNE C2F63
 
@@ -19220,6 +19610,7 @@ ENDIF
 .C2F58
 
  STA (R),Y
+
  LDA JJ
  STA (P),Y
 
@@ -19250,12 +19641,14 @@ ENDIF
 
  CMP #&55
  BNE C2F72
+
  LDA #0
 
 .C2F72
 
  AND pixelsToLeft,X
  ORA L629C,X
+
  BNE C2F58
  LDA #&55
  BNE C2F58
@@ -19266,33 +19659,53 @@ ENDIF
  INX
  INX
  TXS
+
  LDA L0053
- BNE C2F19
+ BNE sub_C2F19
+
  RTS
 
 \ ******************************************************************************
 \
 \       Name: sub_C2F87
 \       Type: Subroutine
-\   Category: 
+\   Category: Drawing the track
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   
+\
+\   X                   3, 2, 1, 0
+\
+\   RR                  
+\
+\   UU                  
+\
+\   (Q P)               
+\
+\   (NN MM)
+\
+\ Returns:
+\
+\   C flag              
 \
 \ ******************************************************************************
 
 .sub_C2F87
 
- STA II
+ STA II                 \ Store A in II so we can retrieve it later
 
-.C2F89
+.mod_C2F89
 
- NOP
- CPY RR
+ NOP                    \ This gets modified
+
+ CPY RR                 \ If Y = RR, jump to C2F7E
  BEQ C2F7E
- LDA UU
+
+ LDA UU                 \ Set A = UU
 
 .mod_C2F90
 
@@ -19310,13 +19723,16 @@ ENDIF
 
 .P2FA0
 
- LDA II
+ LDA II                 \ Retrieve the value of A we stored above, so A is
+                        \ unchanged by the routine
 
 .C2FA2
 
  INY
- CLC
- RTS
+
+ CLC                    \ Clear the C flag
+
+ RTS                    \ Return from the subroutine
 
 .C2FA5
 
@@ -19342,55 +19758,117 @@ ENDIF
  LDA #&55
  BNE C2F9A
 
-.C2FC0
+\ ******************************************************************************
+\
+\       Name: sub_C2FC0
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   X                   
+\
+\   Y                   
+\
+\   (Q P)               
+\
+\ Returns:
+\
+\   X                   &80
+\
+\   A                   A is unchanged
+\
+\   C flag              Clear
+\
+\ ******************************************************************************
 
- CPX #&80
- BNE C2FD3
- CPY #44
+.sub_C2FC0
+
+ CPX #&80               \ If X <> &80, jump to C2FD3 to return from the
+ BNE C2FD3              \ subroutine
+
+ CPY #44                \ If Y >= 44, jump to C2FCD
  BCS C2FCD
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
- BCC C2FD3              \ If offset Y points to dash data, jump to C2FD3
+ BCC C2FD3              \ If offset Y points to dash data, jump to C2FD3 to
+                        \ return from the subroutine
 
 .C2FCD
 
- TAX
+ TAX                    \ Set the Y-th byte of (Q P) to &FF
  LDA #&FF
  STA (P),Y
  TXA
 
 .C2FD3
 
- LDX #&80
- CLC
- RTS
+ LDX #&80               \ Set X = &80
 
-.C2FD7
+ CLC                    \ Clear the C flag
 
- CPX #&80
- BNE C2FEA
- CPY #44
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: sub_C2FD7
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   X                   
+\
+\   Y                   
+\
+\   (S R)               
+\
+\ Returns:
+\
+\   X                   &80
+\
+\   A                   A is unchanged
+\
+\   C flag              Clear
+\
+\ ******************************************************************************
+
+.sub_C2FD7
+
+ CPX #&80               \ If X <> &80, jump to C2FEA to return from the
+ BNE C2FEA              \ subroutine
+
+ CPY #44                \ If Y >= 44, jump to C2FE4
  BCS C2FE4
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
- BCC C2FEA              \ If offset Y points to dash data, jump to C2FEA
+ BCC C2FEA              \ If offset Y points to dash data, jump to C2FEA to
+                        \ return from the subroutine
 
 .C2FE4
 
- TAX
+ TAX                    \ Set the Y-th byte of (S R) to &FF
  LDA #&FF
  STA (R),Y
  TXA
 
 .C2FEA
 
- LDX #&80
- CLC
- RTS
+ LDX #&80               \ Set X = &80
+
+ CLC                    \ Clear the C flag
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -19772,20 +20250,20 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L30FC
+\       Name: vergeEdgeInOut
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: Table for mapping verge tables to outer and inner edges of verge
+\             marks
 \
 \ ******************************************************************************
 
-.L30FC
+.vergeEdgeInOut
 
- EQUB &10, &00, &00, &10
+ EQUB 16                \ leftVergeStart is an outer edge of the verge mark
+ EQUB 0                 \ leftTrackStart is an inner edge of the verge mark
+ EQUB 0                 \ rightVergeStart is an inner edge of the verge mark
+ EQUB 16                \ rightGrassStart is an outer edge of the verge mark
 
 \ ******************************************************************************
 \
@@ -24451,19 +24929,30 @@ ENDIF
 \
 \       Name: L3E50
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: Branch labels for self-modifying code in the sub_C2D17 routine
 \
 \ ******************************************************************************
 
 .L3E50
 
- EQUB &08, &13, &1E, &29, &39, &44, &4F, &5A, &02, &0D, &18, &23
- EQUB &33, &3E, &49, &54
+ EQUB C2D31 - C2D29
+ EQUB C2D3C - C2D29
+ EQUB C2D47 - C2D29
+ EQUB C2D52 - C2D29
+ EQUB C2D62 - C2D29
+ EQUB C2D6D - C2D29
+ EQUB C2D78 - C2D29
+ EQUB C2D83 - C2D29
+
+ EQUB C2D2B - C2D29
+ EQUB C2D36 - C2D29
+ EQUB C2D41 - C2D29
+ EQUB C2D4C - C2D29
+ EQUB C2D5C - C2D29
+ EQUB C2D67 - C2D29
+ EQUB C2D72 - C2D29
+ EQUB C2D7D - C2D29
 
 \ ******************************************************************************
 \
@@ -24584,35 +25073,41 @@ ENDIF
 \
 \       Name: L3ED0
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: Branch labels for self-modifying code in the sub_C2E20 routine
 \
 \ ******************************************************************************
 
 .L3ED0
 
- EQUB &00, &0B, &16, &21, &2E, &39, &44, &4F
+ EQUB C2E30 - C2E30
+ EQUB P2E3B - C2E30
+ EQUB P2E46 - C2E30
+ EQUB P2E51 - C2E30
+ EQUB P2E5E - C2E30
+ EQUB P2E69 - C2E30
+ EQUB P2E74 - C2E30
+ EQUB P2E7F - C2E30
 
 \ ******************************************************************************
 \
 \       Name: L3ED8
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: Branch labels for self-modifying code in the sub_C2E99 routine
 \
 \ ******************************************************************************
 
 .L3ED8
 
- EQUB &4F, &44, &39, &2E, &21, &16, &0B, &00
+ EQUB P2EF8 - C2EA9
+ EQUB P2EED - C2EA9
+ EQUB P2EE2 - C2EA9
+ EQUB P2ED7 - C2EA9
+ EQUB P2ECA - C2EA9
+ EQUB P2EBF - C2EA9
+ EQUB P2EB4 - C2EA9
+ EQUB C2EA9 - C2EA9
 
 \ ******************************************************************************
 \
@@ -24964,12 +25459,8 @@ NEXT
 \
 \       Name: L40D0
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Drawing the track
+\    Summary: Branch labels for self-modifying code in the sub_C2D9A routine
 \
 \ ******************************************************************************
 
@@ -31732,7 +32223,8 @@ ORG &5E40
 \     * 1 = red
 \     * 2 = white
 \
-\   * Bit 7: gets set in MapSegmentsToLines
+\   * Bit 7 gets set in MapSegmentsToLines when this segment is hidden behind a
+\     hill
 \
 \ ******************************************************************************
 
