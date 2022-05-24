@@ -9051,13 +9051,14 @@ ENDIF
  CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
  BEQ vedg5              \ the C flag set to draw the edge
 
- LDA #0                 \ Set A = 0
+ LDA #0                 \ Set A = 0, so we pass the value of L0032 to
+                        \ DrawVergeEdge
 
 .vedg4
 
  ASL A                  \ Set A = L0032 + A * 4
  ASL A                  \
- CLC                    \ This clears the C flag ???
+ CLC                    \ This also clears the C flag
  ADC L0032
 
 .vedg5
@@ -18708,8 +18709,8 @@ ENDIF
 
  BCS dver8              \ If the C flag is set then this is either the first
                         \ call to the routine for this verge edge, or this is a
-                        \ trackside verge, so jump to dver28 via dver8 to return
-                        \ from the subroutine ???
+                        \ trackside verge, so jump to dver28 via dver8 to clean
+                        \ up and return from the subroutine ???
 
  BIT GG                 \ If bit 6 of GG is clear, then the previous segment's
  BVC dver3              \ verge edge from the last call to DrawVergeEdge was
@@ -18720,7 +18721,8 @@ ENDIF
 
  BMI dver8              \ If bit 7 of GG is set, then this segment's verge edge,
                         \ which we are now drawing, is also off-screen, so jump
-                        \ to dver28 via dver8 to return from the subroutine ???
+                        \ to dver28 via dver8 to clean up and return from the
+                        \ subroutine ???
 
                         \ If we get here then the previous verge edge was
                         \ off-screen but this one is on-screen
@@ -18784,7 +18786,7 @@ ENDIF
  LDX prevYawIndex       \ Set X to the index of the yaw angle in the track
                         \ segment list for the segment from the previous call
 
- LDA xVergeRightLo,Y    \ Set (TVV T) to the difference in yaw angle between the
+ LDA xVergeRightLo,Y    \ Set (VV T) to the difference in yaw angle between the
  SEC                    \ current segment and the previous segment, starting
  SBC xVergeRightLo,X    \ with the low bytes
  STA T
@@ -18866,46 +18868,73 @@ ENDIF
 
 .dver10
 
- STA SS
- BNE dver11
- ORA TT
- BEQ dver8
+ STA SS                 \ Set SS = A
+
+ BNE dver11             \ If A is non-zero, jump to dver11
+
+ ORA TT                 \ A is zero, so this sets A to TT
+
+ BEQ dver8              \ If A is zero (which means both SS and TT are zero),
+                        \ jump to dver28 via dver8 to clean up and return from
+                        \ the subroutine
 
 .dver11
 
- LDA GG
- AND #&C0
- BEQ dver12
- LDA VV
- AND #&80
+ LDA GG                 \ Set A to bits 6 and 7 of GG
+ AND #%11000000
+
+ BEQ dver12             \ If bits 6 and 7 of GG are clear, then both this and
+                        \ the previous segment's verge edges were on-screen, so
+                        \ jump to dver12
+
+ LDA VV                 \ Set A to bit 7 of VV, which is the sign bit of the
+ AND #%10000000         \ difference in yaw angles between the current segment
+                        \ and the previous segment (though it may have been
+                        \ altered)
 
 .dver12
 
- STA L0053
- LDA WW
+ STA L0053              \ Store A in L0053
+
+ LDA WW                 \ If WW is non-zero, jump to dver13
  BNE dver13
- LDA L001E
+
+ LDA L001E              \ Set WW = ~L001E
  EOR #&FF
  STA WW
 
 .dver13
 
- BPL dver14
- LDA #&88
- BNE dver15
+ BPL dver14             \ If WW is positive, jump to dver14
+
+ LDA #&88               \ Set A to the opcode for the DEY instruction
+
+ BNE dver15             \ Jump to dver15 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .dver14
 
- LDA #&C8
+ LDA #&C8               \ Set A to the opcode for the INY instruction
 
 .dver15
 
- STA C2F60
- STA C2FA2
- LDA #&EA
- STA mod_C2F47
- STA mod_C2F89
+ STA mod_C2F60          \ Modify the instructions at mod_C2F60 and mod_C2FA2 as
+ STA mod_C2FA2          \ follows:
+                        \
+                        \   * INY when WW is positive
+                        \
+                        \   * DEY when WW is negative
+
+ LDA #&EA               \ Set A to the opcode for the NOP instruction
+
+ STA mod_C2F47          \ Modify the instruction at mod_C2F47 to NOP, so the
+                        \ sub_C2F45 routine does something ???
+
+ STA mod_C2F89          \ Modify the instruction at mod_C2F89 to NOP, so the
+                        \ sub_C2F87 routine does something ???
+
  LDY L0054
+
  LDX #0
 
 .dver16
@@ -19048,12 +19077,16 @@ ENDIF
  ROR A
  EOR VV
  BPL dver23
- LDA C2F60
- STA mod_C2F47
- STA mod_C2F89
+
+ LDA mod_C2F60
+
+ STA mod_C2F47          \ sub_C2F45
+
+ STA mod_C2F89          \ sub_C2F87
+
  LDA #&EA
- STA C2F60
- STA C2FA2
+ STA mod_C2F60
+ STA mod_C2FA2
  LDA WW
  BPL dver22
  INY
@@ -19141,8 +19174,8 @@ ENDIF
 
 .sub_C2D17
 
- LDA L3E50,X            \ Modify the BCC instruction at mod_C2D27 so that it
- STA mod_C2D27+1        \ jumps to the destination given in the X-th entry in
+ LDA L3E50,X            \ Modify the BCC instruction at mod_C2D27 below so that
+ STA mod_C2D27+1        \ it jumps to the destination given in the X-th entry in
                         \ the L3E50 lookup table
 
  LDX #&80               \ Set X = &80
@@ -19302,8 +19335,8 @@ ENDIF
 
 .sub_C2D9A
 
- LDA L40D0,X            \ Modify the BCC instruction at mod_C2DAA so that it
- STA mod_C2DAA+1        \ jumps to the destination given in the X-th entry in
+ LDA L40D0,X            \ Modify the BCC instruction at mod_C2DAA below so that
+ STA mod_C2DAA+1        \ it jumps to the destination given in the X-th entry in
                         \ the L40D0 lookup table
 
  LDX #&80               \ Set X = &80
@@ -19463,8 +19496,8 @@ ENDIF
 
 .sub_C2E20
 
- LDA L3ED0,X            \ Modify the BCC instruction at mod_C2E2E so that it
- STA mod_C2E2E+1        \ jumps to the destination given in the X-th entry in
+ LDA L3ED0,X            \ Modify the BCC instruction at mod_C2E2E below so that
+ STA mod_C2E2E+1        \ it jumps to the destination given in the X-th entry in
                         \ the L3ED0 lookup table
 
  LDA TT                 \ Set A = -TT
@@ -19577,8 +19610,8 @@ ENDIF
 
 .sub_C2E99
 
- LDA L3ED8,X            \ Modify the BCC instruction at mod_C2EA7 so that it
- STA mod_C2EA7+1        \ jumps to the destination given in the X-th entry in
+ LDA L3ED8,X            \ Modify the BCC instruction at mod_C2EA7 below so that
+ STA mod_C2EA7+1        \ it jumps to the destination given in the X-th entry in
                         \ the L3ED8 lookup table
 
  LDA TT                 \ Set A = -TT
@@ -19678,8 +19711,9 @@ ENDIF
 
 .C2F12
 
- LDA mod_C2F47
- STA mod_C2F18
+ LDA mod_C2F47          \ sub_C2F45
+
+ STA mod_C2F18          \ Next instruction
 
 .mod_C2F18
 
@@ -19773,7 +19807,10 @@ ENDIF
 
 .mod_C2F47
 
- NOP                    \ This gets modified
+ NOP                    \ 
+                        \
+                        \ This instruction is modified by the DrawVergeEdge
+                        \ routine, depending on ???
 
  CPY RR                 \ If Y = RR, jump to C2F7E
  BEQ C2F7E
@@ -19801,9 +19838,12 @@ ENDIF
  LDA II                 \ Retrieve the value of A we stored above, so A is
                         \ unchanged by the routine
 
-.C2F60
+.mod_C2F60
 
- INY
+ INY                    \ 
+                        \
+                        \ This instruction is modified by the DrawVergeEdge
+                        \ routine, depending on ???
 
  CLC                    \ Clear the C flag
 
@@ -19882,7 +19922,10 @@ ENDIF
 
 .mod_C2F89
 
- NOP                    \ This gets modified
+ NOP                    \ 
+                        \
+                        \ This instruction is modified by the DrawVergeEdge
+                        \ routine, depending on ???
 
  CPY RR                 \ If Y = RR, jump to C2F7E
  BEQ C2F7E
@@ -19908,9 +19951,12 @@ ENDIF
  LDA II                 \ Retrieve the value of A we stored above, so A is
                         \ unchanged by the routine
 
-.C2FA2
+.mod_C2FA2
 
- INY
+ INY                    \ 
+                        \
+                        \ This instruction is modified by the DrawVergeEdge
+                        \ routine, depending on ???
 
  CLC                    \ Clear the C flag
 
@@ -32685,23 +32731,69 @@ ORG &5E40
 \
 \       Name: L5FD0
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Four bytes for each colour scheme, starting with four pixels of the background
+\ colour, and filling pixels 0, 1 and 2 with the foreground colour.
 \
 \ ******************************************************************************
 
 .L5FD0
 
- EQUB &00, &88, &CC, &EE, &0F, &8F, &CF, &EF, &F0, &F8, &FC, &FE
- EQUB &00, &08, &0C, &0E, &00, &80, &C0, &E0, &0F, &07, &03, &01
- EQUB &F0, &70, &30, &10, &FF, &77, &33, &11, &FF, &7F, &3F, &1F
- EQUB &FF, &F7, &F3, &F1
+ EQUB %00000000         \ Colour 3 on 0
+ EQUB %10001000
+ EQUB %11001100
+ EQUB %11101110
 
- EQUB &03, &60
+ EQUB %00001111         \ Colour 3 on 1
+ EQUB %10001111
+ EQUB %11001111
+ EQUB %11101111
+
+ EQUB %11110000         \ Colour 3 on 2
+ EQUB %11111000
+ EQUB %11111100
+ EQUB %11111110
+
+ EQUB %00000000         \ Colour 1 on 0
+ EQUB %00001000
+ EQUB %00001100
+ EQUB %00001110
+
+ EQUB %00000000         \ Colour 2 on 0
+ EQUB %10000000
+ EQUB %11000000
+ EQUB %11100000
+
+ EQUB %00001111         \ Colour 0 on 1
+ EQUB %00000111
+ EQUB %00000011
+ EQUB %00000001
+
+ EQUB %11110000         \ Colour 0 on 2
+ EQUB %01110000
+ EQUB %00110000
+ EQUB %00010000
+
+ EQUB %11111111         \ Colour 0 on 3
+ EQUB %01110111
+ EQUB %00110011
+ EQUB %00010001
+
+ EQUB %11111111         \ Colour 1 on 3
+ EQUB %01111111
+ EQUB %00111111
+ EQUB %00011111
+
+ EQUB %11111111         \ Colour 2 on 3
+ EQUB %11110111
+ EQUB %11110011
+ EQUB %11110001
+
+ EQUB &03, &60          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
