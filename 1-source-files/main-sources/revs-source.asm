@@ -295,6 +295,10 @@ ORG &0000
                         \ Perhaps it was used for debugging the spinning
                         \ routines?
 
+.thisPitchIndex
+
+ SKIP 0                 \ 
+
 .thisObjectIndex
 
  SKIP 0                 \ The index of the current object part's data as we work
@@ -614,7 +618,12 @@ ORG &0000
 .xStore2
 
  SKIP 0                 \ Temporary storage for X so it can be preserved through
-                        \ calls to DrawCarInPosition and DrawCarOrSign
+                        \ calls to DrawCarInPosition, DrawCarOrSign and
+                        \ DrawVergeEdge
+
+.thisYawIndex
+
+ SKIP 0                 \ 
 
 .temp4
 
@@ -676,10 +685,11 @@ ORG &0000
                         \ for the side of the track we are currently drawing in
                         \ DrawTrack
 
-.vergeIndexPitch
+.prevPitchIndex
 
  SKIP 1                 \ The index of the pitch angles in the verge buffer for
-                        \ the verge we are drawing in DrawVergeEdge
+                        \ the previous entry in the verge buffer when drawing
+                        \ the verge edges
 
 .positionAhead
 
@@ -695,11 +705,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.vergeIndexYaw
+.prevYawIndex
 
  SKIP 1                 \ The index of the yaw angles in the verge buffer for
-                        \ the verge we are drawing in DrawVergeEdge
-
+                        \ the previous entry in the verge buffer when drawing
+                        \ the verge edges
 
 .L0050
 
@@ -8858,10 +8868,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge
+\       Name: DrawVergeEdges
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: Draw one edge of a verge mark into the screen buffer
+\    Summary: Draw all the individual edges that make up an entire track verge
+\             edge in the screen buffer
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8897,21 +8908,21 @@ ENDIF
 \
 \ ******************************************************************************
 
-.DrawVergeEdge
+.DrawVergeEdges
 
  STY currentVerge       \ Set currentVerge to the number of the verge table that
                         \ we are going to populate
 
- STA vergeIndexPitch    \ Set vergeIndexPitch to the verge buffer index in A
+ STA prevPitchIndex     \ Set prevPitchIndex to the verge buffer index in A
 
  CMP vergeBufferEnd     \ If A >= vergeBufferEnd, then it points to an index
  BCS vedg6              \ after the end of the verge buffer data for this side
                         \ of the track, so jump to vedg6 to return from the
                         \ subroutine
 
- CLC                    \ Set vergeIndexYaw = A + vergeEdgeInOut for verge Y
+ CLC                    \ Set prevYawIndex = A + vergeEdgeInOut for verge Y
  ADC vergeEdgeInOut,Y   \
- STA vergeIndexYaw      \ This does the following:
+ STA prevYawIndex       \ This does the following:
                         \
                         \   * A for the inner edges of the verge mark in
                         \     leftTrackStart and rightVergeStart
@@ -8919,7 +8930,7 @@ ENDIF
                         \   * A + 16 for the outer edges of the verge mark in
                         \     leftVergeStart and rightGrassStart
                         \
-                        \ This points vergeIndexYaw to the correct part of the
+                        \ This points prevYawIndex to the correct part of the
                         \ track segment list for this entry in the buffer, as
                         \ the angles for the outer edge of the verge mark are
                         \ stored 16 bytes after the inner edge angles (the inner
@@ -8938,15 +8949,15 @@ ENDIF
                         \ So this modifies the sub_C2F45 and sub_C2F87 routines
                         \ to write to the verge table specified in Y
 
- LDX vergeIndexYaw      \ Set X = vergeIndexYaw, to use as the index to the
+ LDX prevYawIndex       \ Set X = prevYawIndex, to use as the index to the
                         \ verge's yaw angles
 
- LDY vergeIndexPitch    \ Set Y = vergeIndexPitch, to use as the index to the
+ LDY prevPitchIndex     \ Set Y = prevPitchIndex, to use as the index to the
                         \ verge's pitch angles
 
- SEC                    \ Set the C flag
+ SEC                    \ Set the C flag ???
 
- JSR sub_C2B26          \ Draw the verge edge ???
+ JSR DrawVergeEdge      \ Draw the verge edge for this entry in the verge buffer
 
 .vedg1
 
@@ -8965,15 +8976,15 @@ ENDIF
                         \ hidden behind a hill, so jump to vedg1 move on to the
                         \ next segment
 
- LDA vergeIndexPitch    \ If vergeIndexPitch < L0050, then this segment is
+ LDA prevPitchIndex     \ If prevPitchIndex < L0050, then this segment is
  CMP L0050              \ further away from the player than the segment at
  BCC vedg2              \ index L0050, jump to vedg2 to set A = KK, clear the
                         \ C flag and jump to vedg5 to draw the edge
 
- BNE vedg3              \ If vergeIndexPitch <> L0050, i.e. vergeIndexPitch >
+ BNE vedg3              \ If prevPitchIndex <> L0050, i.e. prevPitchIndex >
                         \ L0050, jump to vedg3
 
-                        \ If we get here then vergeIndexPitch = L0050, so the
+                        \ If we get here then prevPitchIndex = L0050, so the
                         \ current segment is the same segment as L0050
 
  LDA vergeDataRight-1,Y \ Set A to the colour of the previous entry in the verge
@@ -9012,7 +9023,7 @@ ENDIF
 
 .vedg3
 
-                        \ If we get here then vergeIndexPitch > L0050, so the
+                        \ If we get here then prevPitchIndex > L0050, so the
                         \ current segment is closer to the player than the
                         \ segment at index L0050
 
@@ -9034,30 +9045,31 @@ ENDIF
  LDA currentVerge       \ Set A to the the number of the verge table we are
                         \ populating
 
- CMP #1                 \ If we are updating leftTrackStart, jump to vedg5 to
- BEQ vedg5              \ draw the edge
+ CMP #1                 \ If we are updating leftTrackStart, jump to vedg5 with
+ BEQ vedg5              \ the C flag set to draw the edge
 
- CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 to
- BEQ vedg5              \ draw the edge
+ CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
+ BEQ vedg5              \ the C flag set to draw the edge
 
  LDA #0                 \ Set A = 0
 
 .vedg4
 
  ASL A                  \ Set A = L0032 + A * 4
- ASL A
- CLC
+ ASL A                  \
+ CLC                    \ This clears the C flag ???
  ADC L0032
 
 .vedg5
 
- JSR sub_C2B26          \ Draw the verge edge ???
+ JSR DrawVergeEdge      \ Draw the verge edge for this entry in the verge buffer
 
- STY vergeIndexPitch    \ Update the value of vergeIndexPitch to point to the
-                        \ entry we just processed
+ STY prevPitchIndex     \ Update the value of prevPitchIndex to point to the
+                        \ entry we just processed, which is now the previous
+                        \ entry
 
- STX vergeIndexYaw      \ Update the value of vergeIndexYaw to point to the
-                        \ entry we just processed
+ STX prevYawIndex       \ Update the value of prevYawIndex to point to the entry
+                        \ we just processed, which is now the previous entry
 
  JMP vedg1              \ Loop back to vedg1 to process the next entry
 
@@ -9119,14 +9131,14 @@ ENDIF
                         \ lines on-screen to the verge buffer for the left side
                         \ of the track
 
- LDY #0                 \ Set Y = 0, so the call to DrawVergeEdge populates the
+ LDY #0                 \ Set Y = 0, so the call to DrawVergeEdges populates the
                         \ leftVergeStart table
 
  STY L0032              \ Set L0032 = 0
 
  LDA L0050              \ Set A = L0050
 
- JSR DrawVergeEdge      \ Draw the left edge of the left verge
+ JSR DrawVergeEdges     \ Draw the left edge of the left verge
 
  LDA #8                 \ Set L0032 = 8
  STA L0032
@@ -9134,14 +9146,14 @@ ENDIF
  LDY #0                 \ Set KK = 0
  STY KK
 
- INY                    \ Set Y = 1, so the call to DrawVergeEdge populates the
+ INY                    \ Set Y = 1, so the call to DrawVergeEdges populates the
                         \ leftTrackStart table
 
  LDA horizonListIndex   \ Set A = horizonListIndex + 40
  CLC
  ADC #40
 
- JSR DrawVergeEdge      \ Draw the right edge of the left verge
+ JSR DrawVergeEdges     \ Draw the right edge of the left verge
 
  LDA L0050              \ Set A = L0050
 
@@ -9186,22 +9198,22 @@ ENDIF
  LDA #16                \ Set L0032 = 16
  STA L0032
 
- LDY #2                 \ Set Y = 2, so the call to DrawVergeEdge populates the
+ LDY #2                 \ Set Y = 2, so the call to DrawVergeEdges populates the
                         \ rightVergeStart table
 
  LDA horizonListIndex   \ Set A = horizonListIndex
 
- JSR DrawVergeEdge      \ Draw the left edge of the right verge
+ JSR DrawVergeEdges     \ Draw the left edge of the right verge
 
  LDA #28                \ Set L0032 = 28
  STA L0032
 
- LDY #3                 \ Set Y = 3, so the call to DrawVergeEdge populates the
+ LDY #3                 \ Set Y = 3, so the call to DrawVergeEdges populates the
                         \ rightGrassStart table
 
  LDA L0050              \ Set A = L0050
 
- JSR DrawVergeEdge      \ Draw the right edge of the right verge
+ JSR DrawVergeEdges     \ Draw the right edge of the right verge
 
  LDA L0050              \ Set A = L0050
 
@@ -18571,10 +18583,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2B26
+\       Name: DrawVergeEdge (Part 1 of 6)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a single segment's edge as part of a whole track verge edge
 \
 \ ------------------------------------------------------------------------------
 \
@@ -18585,174 +18597,308 @@ ENDIF
 \   X                   Index in the verge buffer of the track segment list
 \                       entry for the verge, pointing to either the inner edge
 \                       or outer edge of the verge mark, depending on the verge
-\                       table we are drawing
+\                       table we are drawing (so we can use this for fetching
+\                       yaw angles from the track segment list for the verge)
 \
 \   Y                   Index in the verge buffer of the track segment list
 \                       entry for the verge, for the inner edge of the verge
-\                       mark
+\                       mark (so we can use this for fetching pitch angles from
+\                       the track segment list for the verge)
 \
-\   C flag              
+\   C flag              The type of edge to draw:
+\
+\                         * Set = either the very first call for this verge, or
+\                                 a track edge (leftTrackStart, rightVergeStart)
+\
+\                         * Clear = a grassy edge (leftVergeStart,
+\                                   rightGrassStart)
+\
+\   M
+\
+\   N
+\
+\   W
+\
+\   RR
+\
+\   prevYawIndex        Same as X for the first call, or the yaw angle index of
+\                       the previous call (i.e. the previous segment) if this is
+\                       not the first call
+\
+\ Returns:
+\
+\   X                   X is unchanged
+\
+\   Y                   Y is unchanged
 \
 \ ******************************************************************************
 
-.sub_C2B26
+.DrawVergeEdge
 
- PHP
- STA L0054
- LDA #0
+ PHP                    \ Store the C flag on the stack so we can retrieve it
+                        \ later
+
+ STA L0054              \ Set L0054 = A
+
+ LDA #0                 \ Set L001E = 0
  STA L001E
- LDA yVergeRight,Y
- SEC
+
+ LDA yVergeRight,Y      \ Set A to the pitch angle - 1 of the verge edge we are
+ SEC                    \ drawing
  SBC #1
- CMP #&4E
- BCS C2B40
- LDA xVergeRightHi,X
- BPL C2B3E
- EOR #&FF
 
-.C2B3E
+ CMP #78                \ If A >= 78, jump to dver2 with the C flag set to
+ BCS dver2              \ indicate that this verge edge is off-screen
 
- CMP #&14
+ LDA xVergeRightHi,X    \ Set A to the high byte of the yaw angle of the verge
+                        \ edge we are drawing
 
-.C2B40
+ BPL dver1              \ If A is positive, jump to dver1 to skip the following
 
- ROR GG
- LDA xVergeRightHi,X
- STA W
+ EOR #&FF               \ Set A = ~A
+                        \       = -A - 1
+                        \       = |A| - 1
+                        \
+                        \ So A is now positive is approximately |A|
+
+.dver1
+
+ CMP #20                \ If A >= 20, set the C flag, otherwise clear the C flag
+                        \
+                        \ Because the field of view is 20 degrees, the C flag is
+                        \ now set if the verge edge is off-screen, or clear if
+                        \ it is on-screen
+
+.dver2
+
+ ROR GG                 \ Rotate the C flag into bit 7 of RR, so bit 7 is set if
+                        \ the edge is off-screen, or clear if it is on-screen
+                        \
+                        \ If this is not the first call to DrawVergeEdge, then
+                        \ bit 6 will now contain the on-screen/off-screen bit
+                        \ for the previous segment's verge edge
+
+ LDA xVergeRightHi,X    \ Set (W A) to the yaw angle of the verge edge we are
+ STA W                  \ drawing
  LDA xVergeRightLo,X
- ASL A
+
+ ASL A                  \ Set (W A) = (W A) * 4
+ ROL W                  \
+ ASL A                  \ So W is the high byte of the yaw angle * 4
  ROL W
- ASL A
- ROL W
- LDA W
- CLC
- ADC #&80
+
+ LDA W                  \ Set W = W + 128
+ CLC                    \
+ ADC #128               \ So W goes from the range -128 to +127, to 0 to 255
  STA W
- LDA yVergeRight,Y
- STA RR
- STX L0045
- STY thisObjectIndex
- PLP
- BCS C2BCA
- BIT GG
- BVC C2B7B
- BMI C2BCA
- LDX M
+
+ LDA yVergeRight,Y      \ Set RR to the pitch angle of the verge edge we are
+ STA RR                 \ drawing
+
+ STX thisYawIndex       \ Store the index of the yaw angle in the track segment
+                        \ list for this verge in thisYawIndex so we can use it
+                        \ later
+
+ STY thisPitchIndex     \ Store the index of the pitch angle in the track
+                        \ segment list for this verge in thisPitchIndex so we
+                        \ can use it later
+
+ PLP                    \ Retrieve the C flag that we passed to the routine and
+                        \ stored on the stack earlier
+
+ BCS dver8              \ If the C flag is set then this is either the first
+                        \ call to the routine for this verge edge, or this is a
+                        \ trackside verge, so jump to dver28 via dver8 to return
+                        \ from the subroutine ???
+
+ BIT GG                 \ If bit 6 of GG is clear, then the previous segment's
+ BVC dver3              \ verge edge from the last call to DrawVergeEdge was
+                        \ on-screen, so jump to dver3
+
+                        \ If we get here then previous segment's verge edge from
+                        \ the last call to DrawVergeEdge was off-screen
+
+ BMI dver8              \ If bit 7 of GG is set, then this segment's verge edge,
+                        \ which we are now drawing, is also off-screen, so jump
+                        \ to dver28 via dver8 to return from the subroutine ???
+
+                        \ If we get here then the previous verge edge was
+                        \ off-screen but this one is on-screen
+
+                        \ We now swap the values of M and W, and the values of
+                        \ N and RR
+
+ LDX M                  \ Set X = M and Y = N
  LDY N
- LDA W
+
+ LDA W                  \ Set M = W
  STA M
- LDA RR
+
+ LDA RR                 \ Set N = RR
  STA N
- STX W
- STY RR
- DEC L001E
 
-.C2B7B
+ STX W                  \ Set W = X
+                        \       = M
 
- LDA RR
+ STY RR                 \ Set RR = Y
+                        \        = N
+
+ DEC L001E              \ Set L001E = &FF (as it was set to 0 above)
+
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 2 of 6)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ******************************************************************************
+
+.dver3
+
+ LDA RR                 \ Set A = RR - N
  SEC
  SBC N
- STA WW
- BPL C2B89
- LDA #0
- SEC
- SBC WW
 
-.C2B89
+ STA WW                 \ Set WW = A
 
- STA TT
- LDA GG
- AND #&C0
- BEQ C2BCD
- LDY L0045
- LDX vergeIndexYaw
- LDA xVergeRightLo,Y
- SEC
- SBC xVergeRightLo,X
+ BPL dver4              \ If A is positive, jump to dver4
+
+ LDA #0                 \ Set A = -WW
+ SEC                    \       = -A
+ SBC WW                 \
+                        \ So A is now positive, i.e. A = |RR - N|
+
+.dver4
+
+ STA TT                 \ Set TT = A
+                        \        = |RR - N|
+
+ LDA GG                 \ If bits 6 and 7 of GG are clear, then both this and
+ AND #%11000000         \ the previous segment's verge edges were on-screen, so
+ BEQ dver9              \ jump to dver9
+
+ LDY thisYawIndex       \ Set Y to the index of the yaw angle in the track
+                        \ segment list for this verge
+
+ LDX prevYawIndex       \ Set X to the index of the yaw angle in the track
+                        \ segment list for the segment from the previous call
+
+ LDA xVergeRightLo,Y    \ Set (TVV T) to the difference in yaw angle between the
+ SEC                    \ current segment and the previous segment, starting
+ SBC xVergeRightLo,X    \ with the low bytes
  STA T
- LDA xVergeRightHi,Y
+
+ LDA xVergeRightHi,Y    \ And then the high bytes
  SBC xVergeRightHi,X
  STA VV
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
+                        \             |xVergeRightThis - xVergeRightPrev|
 
- CMP #&40
- BCS C2BB9
- ASL T
- ROL A
- CMP #&40
- BCS C2BBB
- ASL T
- ROL A
- BPL C2BBD
+ CMP #64                \ If A >= 64, jump to dver5
+ BCS dver5
 
-.C2BB9
+ ASL T                  \ Set (A T) = (A T) * 2
+ ROL A                  \           = |xVergeRightThis - xVergeRightPrev| * 2
 
- LSR TT
+ CMP #64                \ If A >= 64, jump to dver6
+ BCS dver6
 
-.C2BBB
+ ASL T                  \ Set (A T) = (A T) * 2
+ ROL A                  \           = |xVergeRightThis - xVergeRightPrev| * 4
 
- LSR TT
+ BPL dver7              \ If bit 7 of A is clear, jump to dver7
 
-.C2BBD
+.dver5
 
- STA SS
- LDA VV
+ LSR TT                 \ Set TT = TT / 2
+                        \        = |RR - N| / 2
+
+.dver6
+
+ LSR TT                 \ Set TT = TT / 2
+                        \        = |RR - N| / 2
+                        \
+                        \ So TT = |RR - N| / 4 if we did the 
+
+.dver7
+
+ STA SS                 \ Set SS = A
+
+ LDA VV                 \ If L001E = &FF, then this sets VV to ~VV
  EOR L001E
  STA VV
- LDA SS
- JMP C2BDB
 
-.C2BCA
+ LDA SS                 \ Set A = SS
 
- JMP C2CFC
+ JMP dver10             \ Jump to dver10 to continue in part 3
 
-.C2BCD
+.dver8
 
- LDA M
+ JMP dver28             \ Jump to dver28 (this is used as a way for branch
+                        \ instructions to jump to dver28, when it is too far
+                        \ for a branch instruction to reach
+
+.dver9
+
+ LDA M                  \ Set A = M - W
  SEC
  SBC W
- ROR VV
- BMI C2BDB
- EOR #&FF
- CLC
+
+ ROR VV                 \ Rotate the C flag into bit 7 of VV, so bit 7 is set if
+                        \ M >= W, or clear if M < W
+
+ BMI dver10             \ If A is negative, jump to dver10 to continue in part 3
+
+ EOR #&FF               \ Negate A using two's complement, so A is negative,
+ CLC                    \ i.e. A = -|A|
  ADC #1
 
-.C2BDB
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 3 of 6)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ******************************************************************************
+
+.dver10
 
  STA SS
- BNE C2BE3
+ BNE dver11
  ORA TT
- BEQ C2BCA
+ BEQ dver8
 
-.C2BE3
+.dver11
 
  LDA GG
  AND #&C0
- BEQ C2BED
+ BEQ dver12
  LDA VV
  AND #&80
 
-.C2BED
+.dver12
 
  STA L0053
  LDA WW
- BNE C2BF9
+ BNE dver13
  LDA L001E
  EOR #&FF
  STA WW
 
-.C2BF9
+.dver13
 
- BPL C2BFF
+ BPL dver14
  LDA #&88
- BNE C2C01
+ BNE dver15
 
-.C2BFF
+.dver14
 
  LDA #&C8
 
-.C2C01
+.dver15
 
  STA C2F60
  STA C2FA2
@@ -18762,7 +18908,7 @@ ENDIF
  LDY L0054
  LDX #0
 
-.P2C13
+.dver16
 
  LDA L5FD0,Y
  STA objectPalette,X
@@ -18774,7 +18920,16 @@ ENDIF
  INX
 
  CPX #4
- BNE P2C13
+ BNE dver16
+
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 4 of 6)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ******************************************************************************
 
  LDA currentVerge
  ASL A
@@ -18794,12 +18949,12 @@ ENDIF
 
  LDA objectPalette      \ Set A to logical colour 0 from the object palette
 
- BNE C2C44
+ BNE dver17
 
  LDA #&55
  STA objectPalette
 
-.C2C44
+.dver17
 
  STA JJ
 
@@ -18808,33 +18963,43 @@ ENDIF
  LSR A
  AND #1
  BIT objectPalette+3
- BPL C2C53
+ BPL dver18
  ORA #2
 
-.C2C53
+.dver18
 
  ORA #&80
  ORA T
  STA L0033
- LDA thisObjectIndex
+ LDA thisPitchIndex
  CLC
  ADC #1
  CMP vergeBufferEnd
- BEQ C2C68
+ BEQ dver19
  LDA RR
  CMP #&50
- BCC C2C70
+ BCC dver20
 
-.C2C68
+.dver19
 
  LDA #0
  BIT WW
- BMI C2C70
+ BMI dver20
  LDA #79
 
-.C2C70
+.dver20
 
  STA RR
+
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 5 of 6)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ******************************************************************************
+
  LDA M
  SEC
  SBC #&30
@@ -18843,7 +19008,7 @@ ENDIF
  LSR A
  STA UU
  CMP #&28
- BCS C2CE6
+ BCS dver24
  LSR A
  CLC
  ADC #&30
@@ -18858,22 +19023,22 @@ ENDIF
  LDY N
  LDA SS
  CMP TT
- BCC C2CEF
+ BCC dver26
 
  LDA objectPalette      \ Set A to logical colour 0 from the object palette
 
  CMP #&FF
- BEQ C2CB4
+ BEQ dver21
  LDA L0033
  AND #3
  CMP #3
- BEQ C2CB4
+ BEQ dver21
  LDA #&60
  STA sub_C2FD7
  STA sub_C2FC0
- BNE C2CDF
+ BNE dver23
 
-.C2CB4
+.dver21
 
  LDA #&E0
  STA sub_C2FD7
@@ -18882,7 +19047,7 @@ ENDIF
  CMP #2
  ROR A
  EOR VV
- BPL C2CDF
+ BPL dver23
  LDA C2F60
  STA mod_C2F47
  STA mod_C2F89
@@ -18890,59 +19055,76 @@ ENDIF
  STA C2F60
  STA C2FA2
  LDA WW
- BPL C2CDE
+ BPL dver22
  INY
- JMP C2CDF
+ JMP dver23
 
-.C2CDE
+.dver22
 
  DEY
 
-.C2CDF
+.dver23
 
  LDA VV
- BPL C2CE9
+ BPL dver25
  JSR sub_C2D9A
 
-.C2CE6
+.dver24
 
- JMP C2CFC
+ JMP dver28
 
-.C2CE9
+.dver25
 
  JSR sub_C2D17
- JMP C2CFC
+ JMP dver28
 
-.C2CEF
+.dver26
 
  LDA VV
- BPL C2CF9
+ BPL dver27
  JSR sub_C2E99
- JMP C2CFC
+ JMP dver28
 
-.C2CF9
+.dver27
 
  JSR sub_C2E20
 
-.C2CFC
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 6 of 6)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ******************************************************************************
 
- LDA L001E
- BMI C2D08
- LDA W
+.dver28
+
+ LDA L001E              \ If L001E is negative, jump to dver29 to skip the
+ BMI dver29             \ following
+
+                        \ If we get here then L001E is positive
+
+ LDA W                  \ Set M = W
  STA M
- LDA RR
+
+ LDA RR                 \ Set N = RR
  STA N
 
-.C2D08
+.dver29
 
- LDX L0045
- LDY thisObjectIndex
- RTS
+ LDX thisYawIndex       \ Set X to the original yaw angle index that we stored
+                        \ above, so X is preserved through calls to the routine
 
- LDA L0053
- BEQ C2CFC
+ LDY thisPitchIndex     \ Set Y to the original pitch angle index that we stored
+                        \ above, so Y is preserved through calls to the routine
+ 
+ RTS                    \ Return from the subroutine
+
+ LDA L0053              \ Is this code unused?
+ BEQ dver28
  JSR C2F12
- JMP C2CFC
+ JMP dver28
 
 \ ******************************************************************************
 \
