@@ -8881,20 +8881,22 @@ ENDIF
 \   A                   The index in the verge buffer of the start of the track
 \                       verge to draw
 \
-\   Y                   Determines the table that is populated:
+\   Y                   Determines the verge that we are drawing:
 \
-\                         * 0 = leftVergeStart
+\                         * 0 = leftVergeStart, the left edge of the left verge
 \
-\                         * 1 = leftTrackStart
+\                         * 1 = leftTrackStart, the right edge of the left verge
 \
-\                         * 2 = rightVergeStart
+\                         * 2 = rightVergeStart, the left edge of the right
+\                               verge
 \
-\                         * 3 = rightGrassStart
+\                         * 3 = rightGrassStart, the right edge of the right
+\                               verge
 \
 \   vergeBufferEnd      The index of the last entry in the track verge buffer
 \                       for the side of the track we are currently drawing
 \
-\   L0032               ???
+\   L0032               Offset within the vergePixelMask table for ???
 \
 \                         * 0 for leftVergeStart
 \
@@ -8904,14 +8906,22 @@ ENDIF
 \
 \                         * 28 for rightGrassStart
 \
-\   KK                  ???
+\   KK                  Offset within the vergePixelMask table for ???
+\
+\                         * n/a for leftVergeStart
+\
+\                         * 0 for leftTrackStart
+\
+\                         * 28 for rightVergeStart
+\
+\                         * 28 for rightGrassStart
 \
 \ ******************************************************************************
 
 .DrawVergeEdges
 
- STY currentVerge       \ Set currentVerge to the number of the verge table that
-                        \ we are going to populate
+ STY currentVerge       \ Set currentVerge to the number of the verge that we
+                        \ are going to draw
 
  STA prevPitchIndex     \ Set prevPitchIndex to the verge buffer index in A
 
@@ -8947,7 +8957,7 @@ ENDIF
                         \   * 3 = STA &7000,Y -> STA rightGrassStart,Y
                         \
                         \ So this modifies the sub_C2F45 and sub_C2F87 routines
-                        \ to write to the verge table specified in Y
+                        \ to draw the verge specified in Y
 
  LDX prevYawIndex       \ Set X = prevYawIndex, to use as the index to the
                         \ verge's yaw angles
@@ -8971,15 +8981,14 @@ ENDIF
  BCS vedg6              \ entries in the verge buffer, so jump to vedg6 to
                         \ return from the subroutine
 
- LDA vergeDataRight,Y   \ If bit 7 is set in vergeDataRight for the next segment
+ LDA vergeDataRight,Y   \ If bit 7 is set in vergeDataRight for the new segment
  BMI vedg1              \ from the track segment list, then this segment is
                         \ hidden behind a hill, so jump to vedg1 move on to the
                         \ next segment
 
- LDA prevPitchIndex     \ If prevPitchIndex < L0050, then this segment is
+ LDA prevPitchIndex     \ If prevPitchIndex < L0050, then the new segment is
  CMP L0050              \ further away from the player than the segment at
- BCC vedg2              \ index L0050, jump to vedg2 to set A = KK, clear the
-                        \ C flag and jump to vedg5 to draw the edge
+ BCC vedg2              \ index L0050, so jump to vedg2
 
  BNE vedg3              \ If prevPitchIndex <> L0050, i.e. prevPitchIndex >
                         \ L0050, jump to vedg3
@@ -9009,23 +9018,36 @@ ENDIF
 
  SEC                    \ Set the C flag
 
- LDA currentVerge       \ Set A to the the number of the verge table we are
-                        \ populating
+ LDA currentVerge       \ Set A to the the number of the verge we are drawing
 
- BEQ vedg5              \ If we are updating leftVergeStart, jump to vedg5
+ BEQ vedg5              \ If we are updating leftVergeStart, jump to vedg5 with
+                        \ the C flag set and A = 0 to draw the edge
 
 .vedg2
 
+                        \ If we get here then either prevPitchIndex < L0050, or
+                        \ prevPitchIndex = L0050 and the previous verge is red
+                        \ or white and we are not updating leftVergeStart
+                        \
+                        \ KK always points to a pixel byte that's green and
+                        \ black, so is this part for track lines shown beyond
+                        \ the hill ???
+
  LDA KK                 \ Set A = KK
 
- CLC                    \ Clear the C flag and jump to vedg5 (this BCC is
- BCC vedg5              \ effectively a JMP as the C flag is clways clear)
+ CLC                    \ Clear the C flag
+
+ BCC vedg5              \ Jump to vedg5 with the C flag clear and A = KK to draw
+                        \ the edge (this BCC is effectively a JMP as the C flag
+                        \ is always clear)
 
 .vedg3
 
                         \ If we get here then prevPitchIndex > L0050, so the
                         \ current segment is closer to the player than the
                         \ segment at index L0050
+                        \
+                        \ Is this for normal segments, in front of any hills ???
 
  LDA vergeDataRight-1,Y \ Set A to the colour of the previous entry in the verge
  AND #3                 \ buffer, which is stored in bits 0-2 of vergeDataRight
@@ -9039,20 +9061,23 @@ ENDIF
                         \   * 2 = white
 
  BNE vedg4              \ If the verge of the previous entry is red or white,
-                        \ jump to vedg4 to set A = L0032 + A * 4 and draw the
-                        \ edge
+                        \ jump to vedg4 to set:
+                        \
+                        \   * A = L0032 + 4 for red
+                        \
+                        \   * A = L0032 + 8 for white
+                        \
+                        \ And then pass this to DrawVergeEdge
 
- LDA currentVerge       \ Set A to the the number of the verge table we are
-                        \ populating
+ LDA currentVerge       \ Set A to the the number of the verge we are drawing
 
  CMP #1                 \ If we are updating leftTrackStart, jump to vedg5 with
- BEQ vedg5              \ the C flag set to draw the edge
+ BEQ vedg5              \ the C flag set and A = 1 to draw the edge
 
  CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
- BEQ vedg5              \ the C flag set to draw the edge
+ BEQ vedg5              \ the C flag set and A = 2 to draw the edge
 
- LDA #0                 \ Set A = 0, so we pass the value of L0032 to
-                        \ DrawVergeEdge
+ LDA #0                 \ Set A = 0, so we pass A = L0032 to DrawVergeEdge
 
 .vedg4
 
@@ -9132,8 +9157,8 @@ ENDIF
                         \ lines on-screen to the verge buffer for the left side
                         \ of the track
 
- LDY #0                 \ Set Y = 0, so the call to DrawVergeEdges populates the
-                        \ leftVergeStart table
+ LDY #0                 \ Set Y = 0, so the call to DrawVergeEdges draws the
+                        \ leftVergeStart verge (the left edge of the left verge)
 
  STY L0032              \ Set L0032 = 0
 
@@ -9147,8 +9172,9 @@ ENDIF
  LDY #0                 \ Set KK = 0
  STY KK
 
- INY                    \ Set Y = 1, so the call to DrawVergeEdges populates the
-                        \ leftTrackStart table
+ INY                    \ Set Y = 1, so the call to DrawVergeEdges draws the
+                        \ leftTrackStart verge (the right edge of the left
+                        \ verge)
 
  LDA horizonListIndex   \ Set A = horizonListIndex + 40
  CLC
@@ -9199,8 +9225,9 @@ ENDIF
  LDA #16                \ Set L0032 = 16
  STA L0032
 
- LDY #2                 \ Set Y = 2, so the call to DrawVergeEdges populates the
-                        \ rightVergeStart table
+ LDY #2                 \ Set Y = 2, so the call to DrawVergeEdges draws the
+                        \ rightVergeStart verge (the left edge of the right
+                        \ verge)
 
  LDA horizonListIndex   \ Set A = horizonListIndex
 
@@ -9209,8 +9236,9 @@ ENDIF
  LDA #28                \ Set L0032 = 28
  STA L0032
 
- LDY #3                 \ Set Y = 3, so the call to DrawVergeEdges populates the
-                        \ rightGrassStart table
+ LDY #3                 \ Set Y = 3, so the call to DrawVergeEdges draws the
+                        \ rightGrassStart verge (the right edge of the right
+                        \ verge)
 
  LDA L0050              \ Set A = L0050
 
@@ -18933,22 +18961,31 @@ ENDIF
  STA mod_C2F89          \ Modify the instruction at mod_C2F89 to NOP, so the
                         \ sub_C2F87 routine does something ???
 
- LDY L0054
+ LDY L0054              \ Set Y = L0054
 
- LDX #0
+ LDX #0                 \ We are about to populate four bytes in objectPalette
+                        \ and vergeEdgeRight, so set X as a loop counter that
+                        \ starts at 0
+                        \
+                        \ We now populate objectPalette with the four bytes at
+                        \ offset Y in vergePixelMask, and vergeEdgeRight with
+                        \ the same bytes, but masked to only include the
+                        \ rightmost 4, 3, 2 and 1 pixels 
 
 .dver16
 
- LDA L5FD0,Y
- STA objectPalette,X
+ LDA vergePixelMask,Y   \ Set A to the Y-th verge pixel mask in vergePixelMask
 
- AND pixelsEdgeRight,X
- STA L629C,X
+ STA objectPalette,X    \ Store the full pixel mask in objectPalette
 
- INY
- INX
+ AND pixelsEdgeRight,X  \ Store the pixel mask in vergeEdgeRight, with all the
+ STA vergeEdgeRight,X   \ pixels to the right of position X set, plus pixel X
 
- CPX #4
+ INY                    \ Increment Y so we fetch the next verge pixel mask
+
+ INX                    \ Increment X so we store in the next byte of four
+
+ CPX #4                 \ Loop back until we have populated all four bytes
  BNE dver16
 
 \ ******************************************************************************
@@ -18960,60 +18997,78 @@ ENDIF
 \
 \ ******************************************************************************
 
- LDA currentVerge
- ASL A
- ASL A
- ASL A
- STA T
+ LDA currentVerge       \ Set T = currentVerge << 3
+ ASL A                  \
+ ASL A                  \ So T is:
+ ASL A                  \
+ STA T                  \   * %00000000 if we are drawing leftVergeStart
+                        \
+                        \   * %00001000 if we are drawing leftTrackStart
+                        \
+                        \   * %00010000 if we are drawing rightVergeStart
+                        \
+                        \   * %00011000 if we are drawing rightGrassStart
 
- LDA objectPalette      \ Set A to logical colour 0 from the object palette
+ LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
+                        \ part 3
 
  LSR A
  LSR A
  LSR A
- AND #3
+ AND #%00000011
  ORA T
- ORA #&40
+ ORA #%01000000
  STA L0034
 
- LDA objectPalette      \ Set A to logical colour 0 from the object palette
+ LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
+                        \ part 3
 
- BNE dver17
+ BNE dver17             \ If A is non-zero, jump to dver17
 
- LDA #&55
- STA objectPalette
+ LDA #&55               \ A is zero, so store &55 in objectPalette for colour 0,
+ STA objectPalette      \ (as &55 in the screen buffer represents colour 0, or
+                        \ black)
 
 .dver17
 
  STA JJ
 
- LDA objectPalette+3    \ Set A to logical colour 3 from the object palette
+ LDA objectPalette+3    \ Set A to the fourth verge pixel mask that we stored in
+                        \ part 3
 
  LSR A
  AND #1
+
  BIT objectPalette+3
+
  BPL dver18
- ORA #2
+
+ ORA #%00000010
 
 .dver18
 
- ORA #&80
+ ORA #%10000000
  ORA T
  STA L0033
+
  LDA thisPitchIndex
  CLC
  ADC #1
  CMP vergeBufferEnd
  BEQ dver19
+
  LDA RR
- CMP #&50
+
+ CMP #80
  BCC dver20
 
 .dver19
 
  LDA #0
+
  BIT WW
  BMI dver20
+
  LDA #79
 
 .dver20
@@ -19031,50 +19086,68 @@ ENDIF
 
  LDA M
  SEC
- SBC #&30
+ SBC #48
  STA U
+
  LSR A
  LSR A
  STA UU
- CMP #&28
+
+ CMP #40
  BCS dver24
+
  LSR A
  CLC
- ADC #&30
+ ADC #48
  STA Q
+
  STA S
+
  CLC
  ADC #1
  STA NN
+
  LDA U
  AND #7
  TAX
+
  LDY N
+
  LDA SS
+
  CMP TT
  BCC dver26
 
- LDA objectPalette      \ Set A to logical colour 0 from the object palette
+ LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
+                        \ part 3
 
  CMP #&FF
  BEQ dver21
+
  LDA L0033
  AND #3
  CMP #3
  BEQ dver21
- LDA #&60
+
+ LDA #&60               \ Set A to the opcode for the RTS instruction
+
  STA sub_C2FD7
  STA sub_C2FC0
+
  BNE dver23
 
 .dver21
 
  LDA #&E0
+
  STA sub_C2FD7
  STA sub_C2FC0
+
  LDA currentVerge
+
  CMP #2
  ROR A
+
  EOR VV
  BPL dver23
 
@@ -19084,12 +19157,17 @@ ENDIF
 
  STA mod_C2F89          \ sub_C2F87
 
- LDA #&EA
+ LDA #&EA               \ Set A to the opcode for the NOP instruction
+
  STA mod_C2F60
+
  STA mod_C2FA2
+
  LDA WW
  BPL dver22
+
  INY
+
  JMP dver23
 
 .dver22
@@ -19100,6 +19178,7 @@ ENDIF
 
  LDA VV
  BPL dver25
+
  JSR sub_C2D9A
 
 .dver24
@@ -19109,13 +19188,16 @@ ENDIF
 .dver25
 
  JSR sub_C2D17
+
  JMP dver28
 
 .dver26
 
  LDA VV
  BPL dver27
+
  JSR sub_C2E99
+
  JMP dver28
 
 .dver27
@@ -19736,28 +19818,37 @@ ENDIF
 
  LDA L001E
  BMI C2F22
+
  LDA L0034
+
  JMP C2F2A
 
 .C2F22
 
  DEY
+
  LDA backgroundColour,Y
  BNE C2F44
+
  LDA L0033
 
 .C2F2A
 
  CPY #&50
  BCS C2F44
+
  LDX L62F2
  CPX #&28
  BCC C2F41
+
  STA T
  AND #3
  CMP #3
+
  LDA T
+
  BCS C2F41
+
  AND #&FC
 
 .C2F41
@@ -19795,10 +19886,6 @@ ENDIF
 \
 \   C flag              
 \
-\ Other entry points:
-\
-\   C2F7E               
-\
 \ ******************************************************************************
 
 .sub_C2F45
@@ -19812,8 +19899,8 @@ ENDIF
                         \ This instruction is modified by the DrawVergeEdge
                         \ routine, depending on ???
 
- CPY RR                 \ If Y = RR, jump to C2F7E
- BEQ C2F7E
+ CPY RR                 \ If Y = RR, jump to sub_C2F7E
+ BEQ sub_C2F7E
 
  LDA UU                 \ Set A = UU
 
@@ -19869,13 +19956,28 @@ ENDIF
 .C2F72
 
  AND pixelsToLeft,X
- ORA L629C,X
+ ORA vergeEdgeRight,X
 
  BNE C2F58
+
  LDA #&55
+
  BNE C2F58
 
-.C2F7E
+\ ******************************************************************************
+\
+\       Name: sub_C2F7E
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C2F7E
 
  TSX
  INX
@@ -19927,15 +20029,17 @@ ENDIF
                         \ This instruction is modified by the DrawVergeEdge
                         \ routine, depending on ???
 
- CPY RR                 \ If Y = RR, jump to C2F7E
- BEQ C2F7E
+ CPY RR                 \ If Y = RR, jump to sub_C2F7E
+ BEQ sub_C2F7E
 
  LDA UU                 \ Set A = UU
 
 .mod_C2F90
 
  STA &7000,Y
+
  LDA (P),Y
+
  BNE C2FA5
 
  LDA objectPalette,X    \ Set A to logical colour X from the object palette
@@ -19943,6 +20047,7 @@ ENDIF
 .C2F9A
 
  STA (P),Y
+
  LDA JJ
  STA (MM),Y
 
@@ -19976,14 +20081,18 @@ ENDIF
 
  CMP #&55
  BNE C2FB4
+
  LDA #0
 
 .C2FB4
 
  AND pixelsToLeft,X
- ORA L629C,X
+ ORA vergeEdgeRight,X
+
  BNE C2F9A
+
  LDA #&55
+
  BNE C2F9A
 
 \ ******************************************************************************
@@ -20481,8 +20590,8 @@ ENDIF
 \       Name: vergeEdgeInOut
 \       Type: Variable
 \   Category: Drawing the track
-\    Summary: Table for mapping verge tables to outer and inner edges of verge
-\             marks
+\    Summary: Table for mapping the verge tables to the outer and inner edges of
+\             the verge marks
 \
 \ ******************************************************************************
 
@@ -32729,7 +32838,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: L5FD0
+\       Name: vergePixelMask
 \       Type: Variable
 \   Category: Graphics
 \    Summary: 
@@ -32741,54 +32850,54 @@ ORG &5E40
 \
 \ ******************************************************************************
 
-.L5FD0
+.vergePixelMask
 
- EQUB %00000000         \ Colour 3 on 0
- EQUB %10001000
+ EQUB %00000000         \ Colour 3 then 0, L0032 for leftVergeStart
+ EQUB %10001000         \                  KK for leftTrackStart
  EQUB %11001100
  EQUB %11101110
 
- EQUB %00001111         \ Colour 3 on 1
+ EQUB %00001111         \ Colour 3 then 1
  EQUB %10001111
  EQUB %11001111
  EQUB %11101111
 
- EQUB %11110000         \ Colour 3 on 2
+ EQUB %11110000         \ Colour 3 then 2, L0032 for leftTrackStart
  EQUB %11111000
  EQUB %11111100
  EQUB %11111110
 
- EQUB %00000000         \ Colour 1 on 0
+ EQUB %00000000         \ Colour 1 then 0
  EQUB %00001000
  EQUB %00001100
  EQUB %00001110
 
- EQUB %00000000         \ Colour 2 on 0
+ EQUB %00000000         \ Colour 2 then 0, L0032 for rightVergeStart
  EQUB %10000000
  EQUB %11000000
  EQUB %11100000
 
- EQUB %00001111         \ Colour 0 on 1
+ EQUB %00001111         \ Colour 0 then 1
  EQUB %00000111
  EQUB %00000011
  EQUB %00000001
 
- EQUB %11110000         \ Colour 0 on 2
+ EQUB %11110000         \ Colour 0 then 2
  EQUB %01110000
  EQUB %00110000
  EQUB %00010000
 
- EQUB %11111111         \ Colour 0 on 3
- EQUB %01110111
- EQUB %00110011
+ EQUB %11111111         \ Colour 0 then 3, L0032 for rightGrassStart
+ EQUB %01110111         \                  KK for rightVergeStart
+ EQUB %00110011         \                  KK for rightGrassStart
  EQUB %00010001
 
- EQUB %11111111         \ Colour 1 on 3
+ EQUB %11111111         \ Colour 1 then 3
  EQUB %01111111
  EQUB %00111111
  EQUB %00011111
 
- EQUB %11111111         \ Colour 2 on 3
+ EQUB %11111111         \ Colour 2 then 3
  EQUB %11110111
  EQUB %11110011
  EQUB %11110001
@@ -33116,9 +33225,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L629C
+\       Name: vergeEdgeRight
 \       Type: Variable
-\   Category: 
+\   Category: Graphics
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -33127,7 +33236,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L629C
+.vergeEdgeRight
 
  EQUB 0, 0, 0, 0
 
