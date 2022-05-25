@@ -318,9 +318,14 @@ ORG &0000
  SKIP 1                 \ The position of the car that we are analysing in the
                         \ MoveAndDrawCars routine
 
-.L001E
+.vergeOnScreenEdge
 
- SKIP 1                 \ 
+ SKIP 1                 \ Determines whether the verge edge we are drawing for
+                        \ the current segment is partially off-screen
+                        \
+                        \   * 0 = Edge is either wholly on-screen or off-screen
+                        \
+                        \   * &FF = Edge is partially off-screen
 
 .horizonLine
 
@@ -461,9 +466,11 @@ ORG &0000
                         \
                         \ Displayed at the top of the screen after "Position"
 
-.L0032
+.pixelMaskVerge
 
- SKIP 1                 \ 
+ SKIP 1                 \ Offset within the vergePixelMask table for segments
+                        \ that are close enough to show a verge, i.e. those
+                        \ within the verge depth of field
 
 .L0033
 
@@ -711,9 +718,11 @@ ORG &0000
                         \ the previous entry in the verge buffer when drawing
                         \ the verge edges
 
-.L0050
+.vergeDepthOfField
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index into the verge buffer of the furthest verge
+                        \ mark, so for segments further from the player than
+                        \ this point, we do not draw verge marks
 
 .horizonListIndex
 
@@ -731,13 +740,18 @@ ORG &0000
  SKIP 1                 \ The value of horizonListIndex from the previous call
                         \ to the GetTrackAndMarkers routine
 
-.L0053
+.updateBackground
 
- SKIP 1                 \ 
+ SKIP 1                 \ Flag to indicate we have changed the background colour
+                        \ of a track line
+                        \
+                        \ Set to non-zero if we draw a track verge in the first
+                        \ part of the track line on the left edge of the screen
 
-.L0054
+.pixelMaskIndex
 
- SKIP 1                 \ 
+ SKIP 1                 \ The index into the vergePixelMask table for the colour
+                        \ of the verge edge we are drawing in DrawVergeEdge
 
 .objectDistanceHi
 
@@ -1094,7 +1108,7 @@ ORG &0000
 
 .HH
 
- SKIP 1                 \ This byte does not appear to benused
+ SKIP 1                 \ This byte does not appear to be used
 
 .II
 
@@ -1108,9 +1122,11 @@ ORG &0000
 
  SKIP 0                 \ The pixel mask for the previous edge
 
-.KK
+.pixelMaskNoVerge
 
- SKIP 1                 \ Temporary storage, used in a number of places
+ SKIP 1                 \ Offset within the vergePixelMask table for segments
+                        \ that are too far away to show a verge, i.e. those
+                        \ outside the verge depth of field
 
 .nextBlockNumber
 
@@ -8616,7 +8632,11 @@ ENDIF
 \
 \ Returns:
 \
-\   L0050               ???
+\   vergeDepthOfField   Updated to skip any segments that are hidden, so we do
+\                       not waste time drawing their verges
+\
+\   N                   Contains the pitch angle of the last segment to be
+\                       mapped, which is the closest one to the player
 \
 \ ******************************************************************************
 
@@ -8823,28 +8843,31 @@ ENDIF
 
 .maps11
 
-                        \ Now we loop X from L0050 up until we find the first
-                        \ vergeDataRight entry with bit 7 clear, and set L0050
-                        \ to the updated X
+                        \ Now we loop X from vergeDepthOfField up until we find
+                        \ the first vergeDataRight entry with bit 7 clear, and
+                        \ set vergeDepthOfField to the updated X
                         \
                         \ This moves through the verge buffer, towards the
                         \ player, starting at the horizon line, and skipping any
-                        \ entries that have bit 7 set in vergeDataRight
+                        \ entries that have bit 7 set in vergeDataRight, so we
+                        \ set the depth of field to skip these segments
                         \
                         \ We set bit 7 of vergeDataRight for any entries whose
                         \ pitch angles were higher than the current track line
                         \ as we worked down the screen and towards the player in
                         \ the verge buffer
                         \
-                        \ So this skips any hills between the horizon and the
-                        \ player ???
+                        \ So this stops us from displaying verges on any hills
+                        \ between the horizon and the player ???
 
- LDX L0050              \ Set X = L0050
+ LDX vergeDepthOfField  \ Set X = to the current verge depth of field, which is
+                        \ the index within the verge buffer beyond which we do
+                        \ not draw verge marks
 
 .maps12
 
  LDA vergeDataRight,X   \ If bit 7 the X-th vergeDataRight is clear, jump to
- BPL maps13             \ maps13 to store X in L0050
+ BPL maps13             \ maps13 to store X in vergeDepthOfField
 
  INX                    \ Increment the loop counter in X
 
@@ -8853,7 +8876,7 @@ ENDIF
 
 .maps13
 
- STX L0050              \ Set L0050 = X
+ STX vergeDepthOfField  \ Set vergeDepthOfField = X
 
  RTS                    \ Return from the subroutine
 
@@ -8878,8 +8901,9 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   The index in the verge buffer of the start of the track
-\                       verge to draw
+\   A                   The index in the verge buffer where we start drawing the
+\                       track verges (so this is essentially the depth of field
+\                       for this verge)
 \
 \   Y                   Determines the verge that we are drawing:
 \
@@ -8896,7 +8920,8 @@ ENDIF
 \   vergeBufferEnd      The index of the last entry in the track verge buffer
 \                       for the side of the track we are currently drawing
 \
-\   L0032               Offset within the vergePixelMask table for ???
+\   pixelMaskVerge      Offset within the vergePixelMask table for segments that
+\                       are close enough to show a verge
 \
 \                         * 0 for leftVergeStart
 \
@@ -8906,7 +8931,8 @@ ENDIF
 \
 \                         * 28 for rightGrassStart
 \
-\   KK                  Offset within the vergePixelMask table for ???
+\   pixelMaskNoVerge    Offset within the vergePixelMask table for segments that
+\                       are too far away to show a verge
 \
 \                         * n/a for leftVergeStart
 \
@@ -8923,7 +8949,9 @@ ENDIF
  STY currentVerge       \ Set currentVerge to the number of the verge that we
                         \ are going to draw
 
- STA prevPitchIndex     \ Set prevPitchIndex to the verge buffer index in A
+ STA prevPitchIndex     \ Set prevPitchIndex to the verge buffer index in A, to
+                        \ use as the starting index into the buffer for the
+                        \ drawing process
 
  CMP vergeBufferEnd     \ If A >= vergeBufferEnd, then it points to an index
  BCS vedg6              \ after the end of the verge buffer data for this side
@@ -8986,15 +9014,16 @@ ENDIF
                         \ hidden behind a hill, so jump to vedg1 move on to the
                         \ next segment
 
- LDA prevPitchIndex     \ If prevPitchIndex < L0050, then the new segment is
- CMP L0050              \ further away from the player than the segment at
- BCC vedg2              \ index L0050, so jump to vedg2
+ LDA prevPitchIndex     \ If prevPitchIndex < vergeDepthOfField, then the new
+ CMP vergeDepthOfField  \ segment is further away from the player than the depth
+ BCC vedg2              \ of field index in vergeDepthOfField, so jump to vedg2
 
- BNE vedg3              \ If prevPitchIndex <> L0050, i.e. prevPitchIndex >
-                        \ L0050, jump to vedg3
+ BNE vedg3              \ If prevPitchIndex <> vergeDepthOfField, which means
+                        \ prevPitchIndex > vergeDepthOfField, jump to vedg3
 
-                        \ If we get here then prevPitchIndex = L0050, so the
-                        \ current segment is the same segment as L0050
+                        \ If we get here then prevPitchIndex = vergeDepthOfField
+                        \ so the current segment is right at the point where we
+                        \ stop drawing verge marks
 
  LDA vergeDataRight-1,Y \ Set A to the colour of the previous entry in the verge
  AND #3                 \ buffer, which is stored in bits 0-2 of vergeDataRight
@@ -9008,13 +9037,13 @@ ENDIF
                         \   * 2 = white
 
  BNE vedg4              \ If the verge of the previous entry is red or white,
-                        \ jump to vedg4 to set A = L0032 + A * 4 and draw the
+                        \ jump to vedg4 to set A = pixelMaskVerge + A * 4 and draw the
                         \ edge
 
                         \ If we get here then the verge of the previous entry
                         \ is black
 
- STY L0050              \ Set Y = L0050
+ STY vergeDepthOfField  \ Set Y = vergeDepthOfField
 
  SEC                    \ Set the C flag
 
@@ -9025,29 +9054,32 @@ ENDIF
 
 .vedg2
 
-                        \ If we get here then either prevPitchIndex < L0050, or
-                        \ prevPitchIndex = L0050 and the previous verge is red
-                        \ or white and we are not updating leftVergeStart
+                        \ If we get here then one of these is true:
                         \
-                        \ KK always points to a pixel byte that's green and
-                        \ black, so is this part for track lines shown beyond
-                        \ the hill ???
+                        \   * prevPitchIndex < vergeDepthOfField
+                        \
+                        \   * prevPitchIndex = vergeDepthOfField and the
+                        \     previous verge is red or white and we are not
+                        \     drawing leftVergeStart
+                        \
+                        \ pixelMaskNoVerge always points to a pixel byte that's
+                        \ green and black, so is this part for segments beyond
+                        \ the verge depth of field
 
- LDA KK                 \ Set A = KK
+ LDA pixelMaskNoVerge   \ Set A = pixelMaskNoVerge
 
  CLC                    \ Clear the C flag
 
- BCC vedg5              \ Jump to vedg5 with the C flag clear and A = KK to draw
+ BCC vedg5              \ Jump to vedg5 with the C flag clear and A = pixelMaskNoVerge to draw
                         \ the edge (this BCC is effectively a JMP as the C flag
                         \ is always clear)
 
 .vedg3
 
-                        \ If we get here then prevPitchIndex > L0050, so the
-                        \ current segment is closer to the player than the
-                        \ segment at index L0050
-                        \
-                        \ Is this for normal segments, in front of any hills ???
+                        \ If we get here then prevPitchIndex > vergeDepthOfField
+                        \ so the current segment is closer to the player than
+                        \ the depth of field index in vergeDepthOfField, so we
+                        \ draw the verge mark
 
  LDA vergeDataRight-1,Y \ Set A to the colour of the previous entry in the verge
  AND #3                 \ buffer, which is stored in bits 0-2 of vergeDataRight
@@ -9063,9 +9095,9 @@ ENDIF
  BNE vedg4              \ If the verge of the previous entry is red or white,
                         \ jump to vedg4 to set:
                         \
-                        \   * A = L0032 + 4 for red
+                        \   * A = pixelMaskVerge + 4 for red
                         \
-                        \   * A = L0032 + 8 for white
+                        \   * A = pixelMaskVerge + 8 for white
                         \
                         \ And then pass this to DrawVergeEdge
 
@@ -9077,14 +9109,14 @@ ENDIF
  CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
  BEQ vedg5              \ the C flag set and A = 2 to draw the edge
 
- LDA #0                 \ Set A = 0, so we pass A = L0032 to DrawVergeEdge
+ LDA #0                 \ Set A = 0, so we pass A = pixelMaskVerge to DrawVergeEdge
 
 .vedg4
 
- ASL A                  \ Set A = L0032 + A * 4
+ ASL A                  \ Set A = pixelMaskVerge + A * 4
  ASL A                  \
  CLC                    \ This also clears the C flag
- ADC L0032
+ ADC pixelMaskVerge
 
 .vedg5
 
@@ -9135,13 +9167,16 @@ ENDIF
 
 .dtra1
 
- STA L0050              \ Set L0050 = A
-                        \           = max(49, horizonListIndex + 40)
-                        \           = max(9, horizonListIndex) + 40
+ STA vergeDepthOfField  \ Set vergeDepthOfField = A
+                        \                       = max(49, horizonListIndex + 40)
+                        \                       = max(9, horizonListIndex) + 40
                         \
-                        \ So L0050 contains the index of the horizon in the
-                        \ verge buffer, bumped up to at least 9, and with 40
-                        \ added so this refers to the left verge
+                        \ This sets the depth of field for displaying verge
+                        \ marks to at least entry 9 in the verge buffer, which
+                        \ is past all the sections (0 to 5) and past the first
+                        \ three segments (6 to 8)
+                        \
+                        \ Adding 40 then points the index to the left verge
 
  LDA #LO(leftSegment)   \ Set A to the low byte of leftSegment, so the call to
                         \ MapSegmentsToLines populates the leftSegment table
@@ -9160,29 +9195,31 @@ ENDIF
  LDY #0                 \ Set Y = 0, so the call to DrawVergeEdges draws the
                         \ leftVergeStart verge (the left edge of the left verge)
 
- STY L0032              \ Set L0032 = 0
+ STY pixelMaskVerge     \ Set pixelMaskVerge = 0
 
- LDA L0050              \ Set A = L0050
+ LDA vergeDepthOfField  \ Set A = vergeDepthOfField, so we only draw the next
+                        \ verge for segments that are within the verge depth of
+                        \ field
 
  JSR DrawVergeEdges     \ Draw the left edge of the left verge
 
- LDA #8                 \ Set L0032 = 8
- STA L0032
+ LDA #8                 \ Set pixelMaskVerge = 8
+ STA pixelMaskVerge
 
- LDY #0                 \ Set KK = 0
- STY KK
+ LDY #0                 \ Set pixelMaskNoVerge = 0
+ STY pixelMaskNoVerge
 
  INY                    \ Set Y = 1, so the call to DrawVergeEdges draws the
                         \ leftTrackStart verge (the right edge of the left
                         \ verge)
 
- LDA horizonListIndex   \ Set A = horizonListIndex + 40
- CLC
+ LDA horizonListIndex   \ Set A = horizonListIndex + 40, so we draw the next
+ CLC                    \ verge all the way from the horizon to the player
  ADC #40
 
  JSR DrawVergeEdges     \ Draw the right edge of the left verge
 
- LDA L0050              \ Set A = L0050
+ LDA vergeDepthOfField  \ Set A = vergeDepthOfField
 
  LDX #4                 \ Set X = 4
 
@@ -9201,8 +9238,13 @@ ENDIF
 
 .dtra2
 
- STA L0050              \ Set L0050 = A
-                        \           = max(9, horizonListIndex)
+ STA vergeDepthOfField  \ Set vergeDepthOfField = A
+                        \                       = max(9, horizonListIndex) + 40
+                        \
+                        \ This sets the depth of field for displaying verge
+                        \ marks to at least entry 9 in the verge buffer, which
+                        \ is past all the sections (0 to 5) and past the first
+                        \ three segments (6 to 8)
 
  LDX horizonListIndex   \ Set X = horizonListIndex
                         \
@@ -9219,32 +9261,35 @@ ENDIF
                         \ track lines on-screen to the verge buffer for the
                         \ right side of the track
 
- LDA #28                \ Set KK = 28
- STA KK
+ LDA #28                \ Set pixelMaskNoVerge = 28
+ STA pixelMaskNoVerge
 
- LDA #16                \ Set L0032 = 16
- STA L0032
+ LDA #16                \ Set pixelMaskVerge = 16
+ STA pixelMaskVerge
 
  LDY #2                 \ Set Y = 2, so the call to DrawVergeEdges draws the
                         \ rightVergeStart verge (the left edge of the right
                         \ verge)
 
- LDA horizonListIndex   \ Set A = horizonListIndex
+ LDA horizonListIndex   \ Set A = horizonListIndex so we draw the next verge all
+                        \ the way from the horizon to the player
 
  JSR DrawVergeEdges     \ Draw the left edge of the right verge
 
- LDA #28                \ Set L0032 = 28
- STA L0032
+ LDA #28                \ Set pixelMaskVerge = 28
+ STA pixelMaskVerge
 
  LDY #3                 \ Set Y = 3, so the call to DrawVergeEdges draws the
                         \ rightGrassStart verge (the right edge of the right
                         \ verge)
 
- LDA L0050              \ Set A = L0050
+ LDA vergeDepthOfField  \ Set A = vergeDepthOfField, so we only draw the next
+                        \ verge for segments that are within the verge depth of
+                        \ field
 
  JSR DrawVergeEdges     \ Draw the right edge of the right verge
 
- LDA L0050              \ Set A = L0050
+ LDA vergeDepthOfField  \ Set A = vergeDepthOfField
 
  LDX #20                \ Set X = 20
 
@@ -9349,7 +9394,7 @@ ENDIF
 
 .C1B0B
 
- LDX L0050
+ LDX vergeDepthOfField
  LDY yVergeRight,X
  INY
  RTS
@@ -18619,9 +18664,14 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ This part of the routine checks whether the edge is on-screen, off-screen or
+\ partially on-screen, and stores the yaw and pitch angles of the edge in W and
+\ RR respectively.
+\
 \ Arguments:
 \
-\   A                   
+\   A                   Index into the vergePixelMask table for the colour of
+\                       this edge
 \
 \   X                   Index in the verge buffer of the track segment list
 \                       entry for the verge, pointing to either the inner edge
@@ -18642,13 +18692,9 @@ ENDIF
 \                         * Clear = a grassy edge (leftVergeStart,
 \                                   rightGrassStart)
 \
-\   M
+\   M                   Yaw angle from the previous call to DrawVergeEdge
 \
-\   N
-\
-\   W
-\
-\   RR
+\   N                   Pitch angle from the previous call to DrawVergeEdge
 \
 \   prevYawIndex        Same as X for the first call, or the yaw angle index of
 \                       the previous call (i.e. the previous segment) if this is
@@ -18660,6 +18706,12 @@ ENDIF
 \
 \   Y                   Y is unchanged
 \
+\   M                   Set to the edge's yaw angle to carry through to the
+\                       next call to DrawVergeEdge
+\
+\   N                   Set to the edge's pitch angle to carry through to the
+\                       next call to DrawVergeEdge
+\
 \ ******************************************************************************
 
 .DrawVergeEdge
@@ -18667,10 +18719,12 @@ ENDIF
  PHP                    \ Store the C flag on the stack so we can retrieve it
                         \ later
 
- STA L0054              \ Set L0054 = A
+ STA pixelMaskIndex     \ Store the index into the vergePixelMask table in
+                        \ pixelMaskIndex so we can use it later
 
- LDA #0                 \ Set L001E = 0
- STA L001E
+ LDA #0                 \ Set vergeOnScreenEdge = 0 to denote that the edge is
+ STA vergeOnScreenEdge  \ fully on-screen or fully off-screen (we update this
+                        \ below if it turns out not to be the case)
 
  LDA yVergeRight,Y      \ Set A to the pitch angle - 1 of the verge edge we are
  SEC                    \ drawing
@@ -18750,13 +18804,14 @@ ENDIF
  BMI dver8              \ If bit 7 of GG is set, then this segment's verge edge,
                         \ which we are now drawing, is also off-screen, so jump
                         \ to dver28 via dver8 to clean up and return from the
-                        \ subroutine ???
+                        \ subroutine
 
                         \ If we get here then the previous verge edge was
                         \ off-screen but this one is on-screen
 
                         \ We now swap the values of M and W, and the values of
-                        \ N and RR
+                        \ N and RR, which sets W and RR to the yaw and pitch
+                        \ angles of the previous edge
 
  LDX M                  \ Set X = M and Y = N
  LDY N
@@ -18773,14 +18828,27 @@ ENDIF
  STY RR                 \ Set RR = Y
                         \        = N
 
- DEC L001E              \ Set L001E = &FF (as it was set to 0 above)
+ DEC vergeOnScreenEdge  \ Set vergeOnScreenEdge = &FF (as it was set to 0 above)
+                        \ to flag that this edge is partially off-screen and
+                        \ that we have swapped the angles over
+
+                        \ By this point W and RR contain the yaw and pitch
+                        \ angles of the edge we need to to draw, while M and N
+                        \ contain the angles from the previous call to
+                        \ DrawVergeEdge (if there was one)
 
 \ ******************************************************************************
 \
 \       Name: DrawVergeEdge (Part 2 of 6)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Set up the edge's gradient
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part calculates the edge's gradient in terms of the change in yaw and
+\ pitch angles, and stores them in SS and TT, with SS containing the yaw delta,
+\ and TT containing the pitch delta.
 \
 \ ******************************************************************************
 
@@ -18791,6 +18859,9 @@ ENDIF
  SBC N
 
  STA WW                 \ Set WW = A
+                        \
+                        \ So WW contains the previous edge's pitch angle minus
+                        \ this edge's pitch angle
 
  BPL dver4              \ If A is positive, jump to dver4
 
@@ -18803,10 +18874,22 @@ ENDIF
 
  STA TT                 \ Set TT = A
                         \        = |RR - N|
+                        \
+                        \ So TT contains the difference in pitch angle between
+                        \ the previous edge and the current edge, so let's call
+                        \ it dPitch:
+                        \
+                        \   TT = |dPitch|
 
  LDA GG                 \ If bits 6 and 7 of GG are clear, then both this and
  AND #%11000000         \ the previous segment's verge edges were on-screen, so
- BEQ dver9              \ jump to dver9
+ BEQ dver9              \ jump to dver9 to calculate the difference in yaw
+                        \ angles in SS
+
+                        \ If we get here then one of the previous segment's
+                        \ verge edges were off-screen, so we need to interpolate
+                        \ the angles to calculate where the edge meets the
+                        \ screen edge
 
  LDY thisYawIndex       \ Set Y to the index of the yaw angle in the track
                         \ segment list for this verge
@@ -18823,46 +18906,72 @@ ENDIF
  SBC xVergeRightHi,X
  STA VV
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
-                        \             |xVergeRightThis - xVergeRightPrev|
+                        \ This also sets bit 7 of VV as follows, which we will
+                        \ use later:
+                        \
+                        \   * Bit 7 is clear if this yaw angle >= previous yaw
+                        \     angle
+                        \
+                        \   * Bit 7 is set if this yaw angle < previous yaw
+                        \     angle
 
- CMP #64                \ If A >= 64, jump to dver5
+ JSR Absolute16Bit      \ Set (A T) = |A T|
+                        \
+                        \ So (A T) contains the difference in yaw angle between
+                        \ the previous edge and the current edge, so let's call
+                        \ it dYaw:
+                        \
+                        \   (A T) = |dYaw|
+
+                        \ We now scale (A T) and TT, scaling (A T) up while
+                        \ scaling TT down, up to a maximum of two shifts up and
+                        \ down, as follows:
+                        \
+                        \   * If |dYaw| >= 64, |dPitch| / 4
+                        \
+                        \   * If |dYaw| >= 32, |dYaw| * 2, |dPitch| / 2
+                        \
+                        \   * If |dYaw| < 16, |dYaw| * 4
+
+ CMP #64                \ If A >= 64, jump to dver5 to divide TT by 4
  BCS dver5
 
  ASL T                  \ Set (A T) = (A T) * 2
- ROL A                  \           = |xVergeRightThis - xVergeRightPrev| * 2
+ ROL A                  \           = |dYaw| * 2
 
- CMP #64                \ If A >= 64, jump to dver6
+ CMP #64                \ If A >= 64, jump to dver6 to divide TT by 2
  BCS dver6
 
  ASL T                  \ Set (A T) = (A T) * 2
- ROL A                  \           = |xVergeRightThis - xVergeRightPrev| * 4
+ ROL A                  \           = |dYaw| * 4
 
- BPL dver7              \ If bit 7 of A is clear, jump to dver7
+ BPL dver7              \ Jump to dver7 (this BPL is effectively a JMP as bit 7
+                        \ of A will never be set, as the maximum value of A
+                        \ before the last ROR was 63, and 63 << 1 = 126, which
+                        \ has bit 7 clear)
 
 .dver5
 
  LSR TT                 \ Set TT = TT / 2
-                        \        = |RR - N| / 2
+                        \        = |dPitch| / 2
 
 .dver6
 
  LSR TT                 \ Set TT = TT / 2
-                        \        = |RR - N| / 2
-                        \
-                        \ So TT = |RR - N| / 4 if we did the 
+                        \        = |dPitch| / 2
 
 .dver7
 
  STA SS                 \ Set SS = A
+                        \        = scaled |dYaw|
 
- LDA VV                 \ If L001E = &FF, then this sets VV to ~VV
- EOR L001E
+ LDA VV                 \ If vergeOnScreenEdge = &FF, then this sets VV to ~VV,
+ EOR vergeOnScreenEdge  \ which flips bit 7 (which we will use later)
  STA VV
 
  LDA SS                 \ Set A = SS
 
- JMP dver10             \ Jump to dver10 to continue in part 3
+ JMP dver10             \ Jump to dver10 to finish setting up SS and TT
 
 .dver8
 
@@ -18872,27 +18981,29 @@ ENDIF
 
 .dver9
 
+                        \ If we get here then both the previous and current
+                        \ verge edges are on-screen, so we need to set SS to the
+                        \ difference in yaw angle between the previous and
+                        \ current edges
+
  LDA M                  \ Set A = M - W
- SEC
- SBC W
+ SEC                    \
+ SBC W                  \ So A contains the difference in yaw angle between the
+                        \ previous edge and the current edge, so let's call it
+                        \ dYaw
 
  ROR VV                 \ Rotate the C flag into bit 7 of VV, so bit 7 is set if
                         \ M >= W, or clear if M < W
 
- BMI dver10             \ If A is negative, jump to dver10 to continue in part 3
+ BMI dver10             \ If A is negative, jump to dver10 to finish setting up
+                        \ SS and TT
 
  EOR #&FF               \ Negate A using two's complement, so A is negative,
  CLC                    \ i.e. A = -|A|
  ADC #1
 
-\ ******************************************************************************
-\
-\       Name: DrawVergeEdge (Part 3 of 6)
-\       Type: Subroutine
-\   Category: Drawing the track
-\    Summary: 
-\
-\ ******************************************************************************
+                        \ We now fall through into dver10 to set SS to A, which
+                        \ contains -|M - W|, or -|dYaw|
 
 .dver10
 
@@ -18906,32 +19017,107 @@ ENDIF
                         \ jump to dver28 via dver8 to clean up and return from
                         \ the subroutine
 
+                        \ By this point SS and TT are set to the slope of the
+                        \ edge that we need to draw, with SS containing the
+                        \ yaw delta, and TT containing the pitch delta
+
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 3 of 6)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: Modify the drawing routines according to the edge gradient
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part modifies the edge-drawing routines for the verge so they move in the
+\ right directions depending on the signs of the deltas calculated previously,
+\ and set up pixel bytes and masks for the correct colour scheme depending on
+\ which verge edge is being drawn.
+\
+\ ******************************************************************************
+
 .dver11
 
  LDA GG                 \ Set A to bits 6 and 7 of GG
  AND #%11000000
 
- BEQ dver12             \ If bits 6 and 7 of GG are clear, then both this and
-                        \ the previous segment's verge edges were on-screen, so
-                        \ jump to dver12
+ BEQ dver12             \ If bits 6 and 7 of GG are clear, then both this
+                        \ segment's verge edge and the previous segment's verge
+                        \ edge were on-screen, so jump to dver12
 
- LDA VV                 \ Set A to bit 7 of VV, which is the sign bit of the
- AND #%10000000         \ difference in yaw angles between the current segment
-                        \ and the previous segment (though it may have been
-                        \ altered)
+                        \ If we get here then either this segment's verge edge
+                        \ or the previous segment's verge edge was off-screen
+                        \
+                        \ We also set bit 7 of VV above to the following:
+                        \
+                        \   * Bit 7 is clear if this yaw angle >= previous yaw
+                        \     angle
+                        \
+                        \   * Bit 7 is set if this yaw angle < previous yaw
+                        \     angle
+                        \
+                        \ with these flipped if vergeOnScreenEdge is &FF, which
+                        \ means the edge is partially on-screen
+                        \
+                        \ So bit 7 is set if:
+                        \
+                        \   * The edge is not partially on-screen and this yaw
+                        \     angle < previous yaw angle, in which case we have
+                        \     just moved left, falling off the left edge of the
+                        \     screen
+                        \
+                        \   * The edge is partially on-screen and this yaw
+                        \     angle >= previous yaw angle, in which case we have
+                        \     just moved right onto the screen from the left
+                        \     edge
+                        \
+                        \ In either case we are drawing over the left edge of
+                        \ the screen, so we need will need to update the
+                        \ background colour for this track line
+
+ LDA VV                 \ Set A to bit 7 of VV to store in updateBackground, so
+ AND #%10000000         \ A is non-zero if we are drawing on the left edge of
+                        \ the screen
 
 .dver12
 
- STA L0053              \ Store A in L0053
+ STA updateBackground   \ Store A in updateBackground, so we update the
+                        \ background colour table in the StopDrawingEdge routine
+
+                        \ We set WW above to the previous edge's pitch angle
+                        \ minus this edge's pitch angle, so it is positive if
+                        \ the edge is heading down the screen, negative if it is
+                        \ heading up the screen
 
  LDA WW                 \ If WW is non-zero, jump to dver13
  BNE dver13
 
- LDA L001E              \ Set WW = ~L001E
- EOR #&FF
- STA WW
+                        \ If we get here then this edge and the previous edge
+                        \ have the same pitch angle
+
+ LDA vergeOnScreenEdge  \ Set WW = ~vergeOnScreenEdge
+ EOR #&FF               \
+ STA WW                 \ So WW is 0 if the edge is partially on-screen, or &FF
+                        \ otherwise ???
 
 .dver13
+
+                        \ We now modify the sub_C2F45 and sub_C2F87 routines so
+                        \ they either increment or decrement Y on entry, and do
+                        \ nothing on exit, depending on the polarity of WW
+                        \
+                        \ In other words, we modify the routines so:
+                        \
+                        \   * If WW is positive, then do INY on entry then
+                        \     NOP on exit (as the edge is heading down the
+                        \     screen, with increasing memory addresses)
+                        \
+                        \   * If WW is negative, they do DEY on entry then
+                        \     NOP on exit (as the edge is heading up the
+                        \     screen, with decreasing memory addresses)
+                        \
+                        \ This modification is reversed in part 5
 
  BPL dver14             \ If WW is positive, jump to dver14
 
@@ -18956,21 +19142,30 @@ ENDIF
  LDA #&EA               \ Set A to the opcode for the NOP instruction
 
  STA mod_C2F47          \ Modify the instruction at mod_C2F47 to NOP, so the
-                        \ sub_C2F45 routine does something ???
+                        \ sub_C2F45 routine doesn't update Y on exit
 
  STA mod_C2F89          \ Modify the instruction at mod_C2F89 to NOP, so the
-                        \ sub_C2F87 routine does something ???
+                        \ sub_C2F87 routine doesn't update Y on exit
 
- LDY L0054              \ Set Y = L0054
+ LDY pixelMaskIndex     \ Set Y = pixelMaskIndex so we can use it to fetch the
+                        \ correct pixel bytes from vergePixelMask for this edge
 
  LDX #0                 \ We are about to populate four bytes in objectPalette
                         \ and vergeEdgeRight, so set X as a loop counter that
                         \ starts at 0
                         \
-                        \ We now populate objectPalette with the four bytes at
+                        \ We populate objectPalette with the four bytes at
                         \ offset Y in vergePixelMask, and vergeEdgeRight with
                         \ the same bytes, but masked to only include the
-                        \ rightmost 4, 3, 2 and 1 pixels 
+                        \ rightmost 4, 3, 2 and 1 pixels
+                        \
+                        \ This means the objectPalette table actually contains
+                        \ pixel bytes at this point, rather than full colour
+                        \ four-pixel bytes as it does in the rest of the code,
+                        \ but we can still think of it as containing the
+                        \ "palette" for the track verges, it's just a more
+                        \ sophisticated palette - stripy toothpaste is still
+                        \ toothpaste, after all
 
 .dver16
 
@@ -18995,6 +19190,10 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: 
 \
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
 \ ******************************************************************************
 
  LDA currentVerge       \ Set T = currentVerge << 3
@@ -19012,7 +19211,7 @@ ENDIF
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
                         \ part 3
 
- LSR A
+ LSR A                  \ Set
  LSR A
  LSR A
  AND #%00000011
@@ -19081,6 +19280,10 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
 \
 \ ******************************************************************************
 
@@ -19151,17 +19354,29 @@ ENDIF
  EOR VV
  BPL dver23
 
- LDA mod_C2F60
+                        \ We now modify the sub_C2F45 and sub_C2F87 routines to
+                        \ swap their entry and exit instructions (the ones that
+                        \ increment or decrement Y)
+                        \
+                        \ This reverses the modifications we did in part 3
 
- STA mod_C2F47          \ sub_C2F45
+ LDA mod_C2F60          \ Fetch the instruction that the sub_C2F45 and sub_C2F87
+                        \ routines currently execute on exit (which will be NOP,
+                        \ INY or DEY)
 
- STA mod_C2F89          \ sub_C2F87
+ STA mod_C2F47          \ Modify the instruction at mod_C2F47, so the sub_C2F45
+                        \ routine now does this action on entry instead
+
+ STA mod_C2F89          \ Modify the instruction at mod_C2F89, so the sub_C2F87
+                        \ routine now does this action on entry instead
 
  LDA #&EA               \ Set A to the opcode for the NOP instruction
 
- STA mod_C2F60
+ STA mod_C2F60          \ Modify the instruction at mod_C2F60, so the sub_C2F45
+                        \ routine now does nothing on exit
 
- STA mod_C2FA2
+ STA mod_C2FA2          \ Modify the instruction at mod_C2FA2, so the sub_C2F87
+                        \ routine now does nothing on exit
 
  LDA WW
  BPL dver22
@@ -19209,16 +19424,25 @@ ENDIF
 \       Name: DrawVergeEdge (Part 6 of 6)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Save the angles for the next call to DrawVergeEdge and return from
+\             the subroutine
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part gets things ready for the next call to DrawVergeEdge, when we draw
+\ the next segment's verge edge, and returns from the subroutine.
 \
 \ ******************************************************************************
 
 .dver28
 
- LDA L001E              \ If L001E is negative, jump to dver29 to skip the
- BMI dver29             \ following
+ LDA vergeOnScreenEdge  \ If bit 7 of vergeOnScreenEdge is set then the edge we
+ BMI dver29             \ are drawing is partially off-screen, so jump to dver29
+                        \ to skip the following
 
-                        \ If we get here then L001E is positive
+                        \ If we get here then the edge we are drawing is wholly
+                        \ on-screen, so we can store the edge's angles in M and
+                        \ N to be picked up in the next call to DrawVergeEdge
 
  LDA W                  \ Set M = W
  STA M
@@ -19236,10 +19460,11 @@ ENDIF
  
  RTS                    \ Return from the subroutine
 
- LDA L0053              \ Is this code unused?
- BEQ dver28
- JSR C2F12
- JMP dver28
+ EQUB &A5, &53          \ These bytes appear to be unused
+ EQUB &F0, &EB
+ EQUB &20, &12
+ EQUB &2F, &4C
+ EQUB &FC, &2C
 
 \ ******************************************************************************
 \
@@ -19803,7 +20028,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2F19
+\       Name: UpdateBackground
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -19814,9 +20039,9 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2F19
+.UpdateBackground
 
- LDA L001E
+ LDA vergeOnScreenEdge
  BMI C2F22
 
  LDA L0034
@@ -19841,23 +20066,24 @@ ENDIF
  CPX #&28
  BCC C2F41
 
- STA T
- AND #3
- CMP #3
+ STA T                  \ Store A in T so we can retrieve it below
 
- LDA T
+ AND #%00000011         \ If bits 0-1 of A >= 3, i.e. bits 0-1 of A = 3, set the
+ CMP #3                 \ C flag
 
- BCS C2F41
+ LDA T                  \ Retrieve the value of A that we stored in T above
 
- AND #&FC
+ BCS C2F41              \ If bits 0-1 of A = 3, jump to C2F41
+
+ AND #%11111100         \ Clear bits 0 and 1 of A
 
 .C2F41
 
- STA backgroundColour,Y
+ STA backgroundColour,Y \ Store A as the background colour for track line Y
 
 .C2F44
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -19894,13 +20120,11 @@ ENDIF
 
 .mod_C2F47
 
- NOP                    \ 
-                        \
-                        \ This instruction is modified by the DrawVergeEdge
-                        \ routine, depending on ???
+ NOP                    \ This instruction is modified by the DrawVergeEdge
+                        \ routine, to be NOP, INY or DEY
 
- CPY RR                 \ If Y = RR, jump to sub_C2F7E
- BEQ sub_C2F7E
+ CPY RR                 \ If Y = RR, jump to StopDrawingEdge
+ BEQ StopDrawingEdge
 
  LDA UU                 \ Set A = UU
 
@@ -19927,10 +20151,8 @@ ENDIF
 
 .mod_C2F60
 
- INY                    \ 
-                        \
-                        \ This instruction is modified by the DrawVergeEdge
-                        \ routine, depending on ???
+ INY                    \ This instruction is modified by the DrawVergeEdge
+                        \ routine, to be NOP, INY or DEY
 
  CLC                    \ Clear the C flag
 
@@ -19966,28 +20188,39 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2F7E
+\       Name: StopDrawingEdge
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Stop drawing the current segment's verge edge
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine stops drawing the current segment's edge when called from
+\ sub_C2F45 or sub_C2F87.
 \
 \ ******************************************************************************
 
-.sub_C2F7E
+.StopDrawingEdge
 
- TSX
- INX
- INX
- TXS
+ TSX                    \ These instructions remove two bytes from the top of
+ INX                    \ the stack so the RTS below returns an extra level up
+ INX                    \ the call chain
+ TXS                    \
+                        \ We jump to this routine from the sub_C2F45 and
+                        \ sub_C2F87 routines. These are only called from the
+                        \ sub_C2D9A, sub_C2D17, sub_C2E99 or sub_C2E20 routines,
+                        \ which in turn are only called from DrawVergeEdge, so
+                        \ this returns us to DrawVergeEdge to stop drawing the
+                        \ current segment's verge edge and move on to the next
+                        \ segment
 
- LDA L0053
- BNE sub_C2F19
+ LDA updateBackground   \ If updateBackground is non-zero, then we just drew a
+ BNE UpdateBackground   \ verge on the start of the left edge of the screen, so
+                        \ call UpdateBackground to update the background colour
+                        \ for this track line, returning from the subroutine
+                        \ using a tail call
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -20024,13 +20257,11 @@ ENDIF
 
 .mod_C2F89
 
- NOP                    \ 
-                        \
-                        \ This instruction is modified by the DrawVergeEdge
-                        \ routine, depending on ???
+ NOP                    \ This instruction is modified by the DrawVergeEdge
+                        \ routine, to be NOP, INY or DEY
 
- CPY RR                 \ If Y = RR, jump to sub_C2F7E
- BEQ sub_C2F7E
+ CPY RR                 \ If Y = RR, jump to StopDrawingEdge
+ BEQ StopDrawingEdge
 
  LDA UU                 \ Set A = UU
 
@@ -20039,7 +20270,6 @@ ENDIF
  STA &7000,Y
 
  LDA (P),Y
-
  BNE C2FA5
 
  LDA objectPalette,X    \ Set A to logical colour X from the object palette
@@ -20058,10 +20288,8 @@ ENDIF
 
 .mod_C2FA2
 
- INY                    \ 
-                        \
-                        \ This instruction is modified by the DrawVergeEdge
-                        \ routine, depending on ???
+ INY                    \ This instruction is modified by the DrawVergeEdge
+                        \ routine, to be NOP, INY or DEY
 
  CLC                    \ Clear the C flag
 
@@ -32852,8 +33080,8 @@ ORG &5E40
 
 .vergePixelMask
 
- EQUB %00000000         \ Colour 3 then 0, L0032 for leftVergeStart
- EQUB %10001000         \                  KK for leftTrackStart
+ EQUB %00000000         \ Colour 3 then 0, pixelMaskVerge for leftVergeStart
+ EQUB %10001000         \                  pixelMaskNoVerge for leftTrackStart
  EQUB %11001100
  EQUB %11101110
 
@@ -32862,7 +33090,7 @@ ORG &5E40
  EQUB %11001111
  EQUB %11101111
 
- EQUB %11110000         \ Colour 3 then 2, L0032 for leftTrackStart
+ EQUB %11110000         \ Colour 3 then 2, pixelMaskVerge for leftTrackStart
  EQUB %11111000
  EQUB %11111100
  EQUB %11111110
@@ -32872,7 +33100,7 @@ ORG &5E40
  EQUB %00001100
  EQUB %00001110
 
- EQUB %00000000         \ Colour 2 then 0, L0032 for rightVergeStart
+ EQUB %00000000         \ Colour 2 then 0, pixelMaskVerge for rightVergeStart
  EQUB %10000000
  EQUB %11000000
  EQUB %11100000
@@ -32887,9 +33115,9 @@ ORG &5E40
  EQUB %00110000
  EQUB %00010000
 
- EQUB %11111111         \ Colour 0 then 3, L0032 for rightGrassStart
- EQUB %01110111         \                  KK for rightVergeStart
- EQUB %00110011         \                  KK for rightGrassStart
+ EQUB %11111111         \ Colour 0 then 3, pixelMaskVerge for rightGrassStart
+ EQUB %01110111         \                  pixelMaskNoVerge for rightVergeStart
+ EQUB %00110011         \                  pixelMaskNoVerge for rightGrassStart
  EQUB %00010001
 
  EQUB %11111111         \ Colour 1 then 3
@@ -33184,6 +33412,11 @@ ENDIF
 \   Category: 3D objects
 \    Summary: The object colour palette that maps logical colours 0 to 3 to
 \             physical colours
+\
+\ ------------------------------------------------------------------------------
+\
+\ This table is also used for storing pixel bytes when drawing edges of the
+\ track verges.
 \
 \ ******************************************************************************
 
