@@ -2984,19 +2984,19 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called with the smaller viewing angle of the object, where 0
-\ to 255 represents 0 to 45 degrees, so 103 = 18.2 degrees. The smaller viewing
+\ This routine is called with the smaller yaw angle of the object, where 0 to
+\ 255 represents 0 to 45 degrees, so 103 = 18.2 degrees. The smaller viewing
 \ angle is taken from the arctan calculation for the yaw angle calculation in
 \ GetObjYawAngle, so that's the triangle whose hypoteneuse is the line between
 \ the player and the object, and whose other sides are parallel to the x-axis
 \ and z-axis.
 \
-\ If the smaller viewing angle is < 18.2 degrees, the routine does this:
+\ If the smaller yaw angle is < 18.2 degrees, the routine does this:
 \
 \   * Set (L K) = (J I) + (H G) / 8
 \               = max + min / 8
 \
-\ If the smaller viewing angle is >= 18.2 degrees, the routine does this:
+\ If the smaller yaw angle is >= 18.2 degrees, the routine does this:
 \
 \   * Set (L K) = (J I) * 7/8 + (H G) / 2
 \               = max * 7/8 + min / 2
@@ -3005,8 +3005,8 @@ ORG &0B00
 \ the purposes of determining whether contact has been made.
 \
 \ I suspect the calculation is an approximation of Pythagoras that is much
-\ faster to calculate, split into small viewing angles (when the objects are
-\ close to being orthogonal to each other) and larger viewing angles (when their
+\ faster to calculate, split into small yaw angles (when the objects are
+\ close to being orthogonal to each other) and larger yaw angles (when their
 \ relative positions are closer to the diagonal). This is a guess, though.
 \
 \ Arguments:
@@ -3015,7 +3015,7 @@ ORG &0B00
 \
 \   (H G)               min(|x-delta|, |z-delta|)
 \
-\   M                   The smaller viewing angle of the object, where 0 to 255
+\   M                   The smaller yaw angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees, so 103 = 18.2 degrees
 \
 \ Returns:
@@ -8942,6 +8942,12 @@ ENDIF
 \
 \                         * 28 for rightGrassStart
 \
+\   MM                  Set to 0, to act as the low byte of (NN MM)
+\
+\   R                   Set to 0, to act as the low byte of (S R)
+\
+\   P                   Set to &80, to use as the low byte of (Q P)
+\
 \ ******************************************************************************
 
 .DrawVergeEdges
@@ -8976,16 +8982,17 @@ ENDIF
                         \ list, while the outer edge angles are in bytes 22 to
                         \ 37)
 
- LDA vergeTableHi,Y     \ Modify the following instructions at mod_C2F4E and
- STA mod_C2F4E+2        \ mod_C2F90, depending on the value of Y:
- STA mod_C2F90+2        \
+ LDA vergeTableHi,Y     \ Modify the following instructions at verl2 and verb2,
+ STA verl2+2            \ depending on the value of Y:
+ STA verb2+2            \
  LDA vergeTableLo,Y     \   * 0 = STA &7000,Y -> STA leftVergeStart,Y
- STA mod_C2F4E+1        \   * 1 = STA &7000,Y -> STA leftTrackStart,Y
- STA mod_C2F90+1        \   * 2 = STA &7000,Y -> STA rightVergeStart,Y
+ STA verl2+1            \   * 1 = STA &7000,Y -> STA leftTrackStart,Y
+ STA verb2+1            \   * 2 = STA &7000,Y -> STA rightVergeStart,Y
                         \   * 3 = STA &7000,Y -> STA rightGrassStart,Y
                         \
-                        \ So this modifies the sub_C2F45 and sub_C2F87 routines
-                        \ to draw the verge specified in Y
+                        \ So this modifies the DrawVergeByteLeft and
+                        \ DrawVergeByteRight routines to draw the verge
+                        \ specified in Y
 
  LDX prevYawIndex       \ Set X = prevYawIndex, to use as the index to the
                         \ verge's yaw angles
@@ -9017,6 +9024,7 @@ ENDIF
  LDA prevPitchIndex     \ If prevPitchIndex < vergeDepthOfField, then the new
  CMP vergeDepthOfField  \ segment is further away from the player than the depth
  BCC vedg2              \ of field index in vergeDepthOfField, so jump to vedg2
+                        \ to draw the track edges without verge marks
 
  BNE vedg3              \ If prevPitchIndex <> vergeDepthOfField, which means
                         \ prevPitchIndex > vergeDepthOfField, jump to vedg3
@@ -9037,8 +9045,8 @@ ENDIF
                         \   * 2 = white
 
  BNE vedg4              \ If the verge of the previous entry is red or white,
-                        \ jump to vedg4 to set A = pixelMaskVerge + A * 4 and draw the
-                        \ edge
+                        \ jump to vedg4 to set A = pixelMaskVerge + A * 4 and
+                        \ draw the edge
 
                         \ If we get here then the verge of the previous entry
                         \ is black
@@ -9056,23 +9064,29 @@ ENDIF
 
                         \ If we get here then one of these is true:
                         \
-                        \   * prevPitchIndex < vergeDepthOfField
+                        \   * prevPitchIndex < vergeDepthOfField, so the current
+                        \     segment is further away from the player than the
+                        \     depth of field index in vergeDepthOfField, so we
+                        \     draw all verge marks as black
                         \
                         \   * prevPitchIndex = vergeDepthOfField and the
-                        \     previous verge is red or white and we are not
-                        \     drawing leftVergeStart
+                        \     previous segment's verge edge is red or white and
+                        \     we are not drawing leftVergeStart, so we want to
+                        \     draw a black verge mark
                         \
-                        \ pixelMaskNoVerge always points to a pixel byte that's
-                        \ green and black, so is this part for segments beyond
-                        \ the verge depth of field
+                        \ In both cases we want to draw black verge marks
 
  LDA pixelMaskNoVerge   \ Set A = pixelMaskNoVerge
+                        \
+                        \ pixelMaskNoVerge always points to a pixel byte that's
+                        \ green and black, so is this how we show the track in
+                        \ segments beyond the verge depth of field ???
 
  CLC                    \ Clear the C flag
 
- BCC vedg5              \ Jump to vedg5 with the C flag clear and A = pixelMaskNoVerge to draw
-                        \ the edge (this BCC is effectively a JMP as the C flag
-                        \ is always clear)
+ BCC vedg5              \ Jump to vedg5 with the C flag clear and A set to
+                        \ pixelMaskNoVerge to draw the edge (this BCC is
+                        \ effectively a JMP as the C flag is always clear)
 
 .vedg3
 
@@ -9109,7 +9123,8 @@ ENDIF
  CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
  BEQ vedg5              \ the C flag set and A = 2 to draw the edge
 
- LDA #0                 \ Set A = 0, so we pass A = pixelMaskVerge to DrawVergeEdge
+ LDA #0                 \ Set A = 0, so we pass A = pixelMaskVerge to
+                        \ DrawVergeEdge
 
 .vedg4
 
@@ -9146,8 +9161,8 @@ ENDIF
 
 .DrawTrack
 
- LDA #&80               \ Set P = &80
- STA P
+ LDA #&80               \ Set P = &80, to use as the low byte of (Q P) in the
+ STA P                  \ DrawVergeEdges that we call below
 
  LDA horizonListIndex   \ Set A = horizonListIndex + 40
  CLC
@@ -9223,7 +9238,7 @@ ENDIF
 
  LDX #4                 \ Set X = 4
 
- JSR sub_C1A98          \ Fill to right of leftTrackStart edge?
+ JSR sub_C1A98          \ ???
 
  STY L002C              \ Set L002C = Y
 
@@ -9293,7 +9308,7 @@ ENDIF
 
  LDX #20                \ Set X = 20
 
- JSR sub_C1A98          \ Fill to right of rightGrassStart edge?
+ JSR sub_C1A98          \ ???
 
  STY L0029              \ Set L0029 = Y
 
@@ -13524,7 +13539,7 @@ ENDIF
 \
 \   (H G)               min(|x-delta|, |z-delta|)
 \
-\   M                   The smaller viewing angle of the object, where 0 to 255
+\   M                   The smaller yaw angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees
 \
 \   X                   X is preserved
@@ -13779,9 +13794,9 @@ ENDIF
  LDY T                  \ Set A = arctanY(T)
  LDA arctanY,Y          \       = arctanY(|z-delta| / |x-delta|)
                         \
-                        \ So this is the viewing angle of the object
+                        \ So this is the yaw angle of the object
 
- STA M                  \ Store the viewing angle in M, to return from the
+ STA M                  \ Store the yaw angle in M, to return from the
                         \ subroutine
 
  LSR A                  \ Set (JJ II) = (A 0) >> 3
@@ -13850,8 +13865,8 @@ ENDIF
                         \
                         \   * |x-delta| = |z-delta|
 
- LDA #255               \ Set M = 255, to represent a viewing angle of 45
- STA M                  \ degrees
+ LDA #255               \ Set M = 255, to represent a yaw angle of 45 degrees
+ STA M
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
@@ -13998,9 +14013,9 @@ ENDIF
  LDY T                  \ Set A = arctanY(T)
  LDA arctanY,Y          \       = arctanY(|x-delta| / |z-delta|)
                         \
-                        \ So this is the viewing angle of the object
+                        \ So this is the yaw angle of the object
 
- STA M                  \ Store the viewing angle in M, to return from the
+ STA M                  \ Store the yaw angle in M, to return from the
                         \ subroutine
 
  LSR A                  \ Set (JJ II) = (A 0) >> 3
@@ -14786,7 +14801,7 @@ ENDIF
 \
 \   A                   Contains the high byte of (L K)
 \
-\   M                   The smaller viewing angle of the object, where 0 to 255
+\   M                   The smaller yaw angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees
 \
 \ ******************************************************************************
@@ -18375,7 +18390,7 @@ ENDIF
 \
 \   (H G)               min(|x-delta|, |z-delta|)
 \
-\   M                   The smaller viewing angle of the object, where 0 to 255
+\   M                   The smaller yaw angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees
 \
 \   L0042               The number of the object being checked for contact
@@ -18670,8 +18685,8 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   Index into the vergePixelMask table for the colour of
-\                       this edge
+\   A                   Index into the vergePixelMask table for the pixel bytes
+\                       that make up the colours of this edge in this segment
 \
 \   X                   Index in the verge buffer of the track segment list
 \                       entry for the verge, pointing to either the inner edge
@@ -18706,8 +18721,8 @@ ENDIF
 \
 \   Y                   Y is unchanged
 \
-\   M                   Set to the edge's yaw angle to carry through to the
-\                       next call to DrawVergeEdge
+\   M                   Set to 128 + edge's yaw angle * 4, to carry through to
+\                       the next call to DrawVergeEdge
 \
 \   N                   Set to the edge's pitch angle to carry through to the
 \                       next call to DrawVergeEdge
@@ -18772,8 +18787,13 @@ ENDIF
 
  LDA W                  \ Set W = W + 128
  CLC                    \
- ADC #128               \ So W goes from the range -128 to +127, to 0 to 255
- STA W
+ ADC #128               \ So W contains 128 + yaw angle * 4 (if we drop the low
+ STA W                  \ byte, which is the fractional part)
+                        \
+                        \ Adding 128 moves the angle range from -128 to +128, to
+                        \ 0 to 255, so when we calculate the difference between
+                        \ the yaw angles for two segments by subtracting them
+                        \ below, the C flag will be set correctly
 
  LDA yVergeRight,Y      \ Set RR to the pitch angle of the verge edge we are
  STA RR                 \ drawing
@@ -18985,6 +19005,10 @@ ENDIF
                         \ verge edges are on-screen, so we need to set SS to the
                         \ difference in yaw angle between the previous and
                         \ current edges
+                        \
+                        \ Note that we added 128 to each yaw angle to convert
+                        \ them in the range 0 to 255 (rather than -128 to +127)
+                        \ so the subtraction will set the C flag correctly
 
  LDA M                  \ Set A = M - W
  SEC                    \
@@ -19103,9 +19127,10 @@ ENDIF
 
 .dver13
 
-                        \ We now modify the sub_C2F45 and sub_C2F87 routines so
-                        \ they either increment or decrement Y on entry, and do
-                        \ nothing on exit, depending on the polarity of WW
+                        \ We now modify both the DrawVergeByteLeft and
+                        \ DrawVergeByteRight routines so they either increment
+                        \ or decrement Y on entry, and do nothing on exit,
+                        \ depending on the polarity of WW
                         \
                         \ In other words, we modify the routines so:
                         \
@@ -19132,20 +19157,19 @@ ENDIF
 
 .dver15
 
- STA mod_C2F60          \ Modify the instructions at mod_C2F60 and mod_C2FA2 as
- STA mod_C2FA2          \ follows:
-                        \
+ STA verl5              \ Modify the instructions at verl5 and verb5 as follows:
+ STA verb5              \
                         \   * INY when WW is positive
                         \
                         \   * DEY when WW is negative
 
  LDA #&EA               \ Set A to the opcode for the NOP instruction
 
- STA mod_C2F47          \ Modify the instruction at mod_C2F47 to NOP, so the
-                        \ sub_C2F45 routine doesn't update Y on exit
+ STA verl1              \ Modify the instruction at verl1 to NOP, so the
+                        \ DrawVergeByteLeft routine doesn't update Y on exit
 
- STA mod_C2F89          \ Modify the instruction at mod_C2F89 to NOP, so the
-                        \ sub_C2F87 routine doesn't update Y on exit
+ STA verb1              \ Modify the instruction at verb1 to NOP, so the
+                        \ DrawVergeByteRight routine doesn't update Y on exit
 
  LDY pixelMaskIndex     \ Set Y = pixelMaskIndex so we can use it to fetch the
                         \ correct pixel bytes from vergePixelMask for this edge
@@ -19188,11 +19212,12 @@ ENDIF
 \       Name: DrawVergeEdge (Part 4 of 6)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Set variables to use when updating the background colour
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part sets variables for use when updating the background colour table,
+\ and clips the pitch angle in RR to fit into a track line.
 \
 \ ******************************************************************************
 
@@ -19209,77 +19234,114 @@ ENDIF
                         \   * %00011000 if we are drawing rightGrassStart
 
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
-                        \ part 3
+                        \ part 3, which is always a four-pixel, single colour
+                        \ pixel byte of the form %aaaabbbb, where the pixel
+                        \ colour is %ab
 
- LSR A                  \ Set
- LSR A
- LSR A
- AND #%00000011
- ORA T
- ORA #%01000000
- STA L0034
+ LSR A                  \ Set A = A >> 3 AND %11
+ LSR A                  \       = %aaaab AND %11
+ LSR A                  \       = %ab
+ AND #%00000011         \
+                        \ So A contains the colour of the pixels in the first
+                        \ verge pixel mask that we stored in part 3
+
+ ORA T                  \ Set A = A OR T
+                        \       = %ab OR %vv000
+                        \       = %vv0ab
+                        \
+                        \ where %vv is the verge we are currently drawing, from
+                        \ currentVerge
+
+ ORA #%01000000         \ Set L0034 = %010vv0ab
+ STA L0034              \
+                        \ We use L0034 in the UpdateBackground routine when
+                        \ updating the background colour for the track line
 
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
-                        \ part 3
+                        \ part 3, which is always a four-pixel, single colour
+                        \ pixel byte
 
- BNE dver17             \ If A is non-zero, jump to dver17
+ BNE dver17             \ If A is non-zero, then the colour is not black, so
+                        \ jump to dver17
 
- LDA #&55               \ A is zero, so store &55 in objectPalette for colour 0,
- STA objectPalette      \ (as &55 in the screen buffer represents colour 0, or
-                        \ black)
+ LDA #&55               \ A is zero, which is a four-pixel byte in black, so
+ STA objectPalette      \ store &55 in objectPalette, as &55 in the screen
+                        \ buffer represents black
 
 .dver17
 
- STA JJ
+ STA JJ                 \ Store A in JJ, so it can be used as the right pixel
+                        \ byte when drawing the edge in the screen buffer, i.e.
+                        \ the fill byte to the right of the edge
 
  LDA objectPalette+3    \ Set A to the fourth verge pixel mask that we stored in
-                        \ part 3
+                        \ part 3, which is in the form %a......b, where %a is
+                        \ the first bit of the foreground colour, while %b is
+                        \ the second bit of the colour of the background
 
- LSR A
- AND #1
+ LSR A                  \ Set bit 0 of A to bit 1 of the pixel mask
+ AND #%00000001
 
- BIT objectPalette+3
+ BIT objectPalette+3    \ If bit 7 of the pixel mask is clear, jump to dver18 to
+ BPL dver18             \ skip the following instruction
 
- BPL dver18
-
- ORA #%00000010
+ ORA #%00000010         \ Set bit 1 of A, so bit 1 of A is the same as bit 7 of
+                        \ the fourth pixel mask
+                        \
+                        \ In other words, A = %000000ab
 
 .dver18
 
- ORA #%10000000
- ORA T
- STA L0033
+ ORA #%10000000         \ Set A = %100000ab
 
- LDA thisPitchIndex
- CLC
- ADC #1
+ ORA T                  \ Set A = A OR T
+                        \       = %100000ab OR %vv000
+                        \       = %100vv0ab
+                        \
+                        \ where %vv is the verge we are currently drawing, from
+                        \ currentVerge
+
+ STA L0033              \ Set L0033 = %100vv0ab
+                        \
+                        \ We use L0033 in the UpdateBackground routine when
+                        \ updating the background colour for the track line, and
+                        \ in part 5
+
+ LDA thisPitchIndex     \ If thisPitchIndex + 1 = vergeBufferEnd, then this is
+ CLC                    \ the last entry in the verge buffer, so jump to dver19
+ ADC #1                 \ to skip the following
  CMP vergeBufferEnd
  BEQ dver19
 
- LDA RR
-
- CMP #80
+ LDA RR                 \ If RR < 80, then this is a valid track line number, so
+ CMP #80                \ jump to dver20 to leave it alone
  BCC dver20
 
 .dver19
 
- LDA #0
+                        \ If we get here then RR is outside the correct range
+                        \ for track lines of 0 to 79, so we need to clip it to
+                        \ 0 or 79, depending on the polarity of WW
 
- BIT WW
+ LDA #0                 \ Set A = 0 to use as the new value of R if WW is
+                        \ negative
+
+ BIT WW                 \ If WW is negative, jump to dver20 to set RR = 0
  BMI dver20
 
- LDA #79
+ LDA #79                \ WW is positive, so set A = 79 to use as the new value
+                        \ of R
 
 .dver20
 
- STA RR
+ STA RR                 \ Update RR to be within the range 0 to 79
 
 \ ******************************************************************************
 \
 \       Name: DrawVergeEdge (Part 5 of 6)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Calculate the dash data block for the edge
 \
 \ ------------------------------------------------------------------------------
 \
@@ -19287,137 +19349,207 @@ ENDIF
 \
 \ ******************************************************************************
 
- LDA M
- SEC
- SBC #48
- STA U
+                        \ A reminder that M is set to 128 + yaw angle * 4 for
+                        \ the previous edge
 
- LSR A
- LSR A
- STA UU
+ LDA M                  \ Set U = M - 48
+ SEC                    \
+ SBC #48                \ So U and A now contain the pixel x-coordinate of the
+ STA U                  \ previous edge, i.e. of the pixel at yaw angle M,
+                        \ because:
+                        \
+                        \     M - 48
+                        \   = 128 + (yaw angle * 4) - 48
+                        \   = 80 + (yaw angle * 4)
+                        \
+                        \ 80 is the x-coordinate of the middle of the screen, so
+                        \ this calculates the pixel x-coordinate for this yaw
+                        \ angle, in the range 0 to 159
 
- CMP #40
- BCS dver24
+ LSR A                  \ Set UU = A / 4
+ LSR A                  \
+ STA UU                 \ So UU and A now contain the dash data block number for
+                        \ the pixel at yaw angle M, as each dash data block is
+                        \ four pixels wide
 
- LSR A
- CLC
- ADC #48
- STA Q
+ CMP #40                \ If A >= 40, then this is not a valid dash data block
+ BCS dver24             \ number, as they are in the range 0 to 39, so jump to
+                        \ dver28 via dver24 to clean up and return from the
+                        \ subroutine
 
- STA S
+ LSR A                  \ Halve A, as there are two dash data blocks in every
+                        \ page of memory, so A is now the page number of the
+                        \ relevant dash data block
 
- CLC
+ CLC                    \ Set Q = dashData + A
+ ADC #HI(dashData)      \
+ STA Q                  \ So Q is the high byte of the address of the dash data
+                        \ block
+
+ STA S                  \ Set S = Q
+
+ CLC                    \ Set NN = S + 1
  ADC #1
  STA NN
 
- LDA U
- AND #7
- TAX
+                        \ By this point we have the following addresses set up:
+                        \
+                        \   * (S R) = address of the first dash data block in
+                        \             the memory page containing the pixels at
+                        \             yaw angle M (as R = 0)
+                        \
+                        \   * (Q P) = address of the second dash data block in
+                        \             the memory page containing the pixels at
+                        \             yaw angle M (as P = &80)
+                        \
+                        \   * (NN MM) = address of the third dash data block in
+                        \               this sequence, i.e. the first memory
+                        \               page of the next dash data block (as
+                        \               NN = SS + 1)
+                        
+ LDA U                  \ Set X = U mod 7
+ AND #7                 \
+ TAX                    \ So X contains the pixel number within two pixel bytes,
+                        \ i.e. in the range 0 to 7, as each pixel byte contains
+                        \ four pixels
+                        \
+                        \ We pass this to the drawing routines so they start
+                        \ drawing from the correct pixel
 
- LDY N
+ LDY N                  \ Set Y = N, which is the pitch angle of the previous
+                        \ edge
 
- LDA SS
-
+ LDA SS                 \ If SS < TT, jump to dver26
  CMP TT
  BCC dver26
 
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
-                        \ part 3
+                        \ part 3, which is always a four-pixel, single colour
+                        \ pixel byte
 
- CMP #&FF
- BEQ dver21
+ CMP #%11111111         \ If the background colour of the verge pixel mask is
+ BEQ dver21             \ green, jump to dver21 to skip the following
 
- LDA L0033
- AND #3
- CMP #3
- BEQ dver21
+ LDA L0033              \ Extract bits 0-1 from L0033, which contain %ab, where
+ AND #%00000011         \ %a is the first bit of the foreground colour, and %b
+                        \ is the second bit of the colour of the background
+
+ CMP #3                 \ If both %a and %b are set, jump to dver21 to skip the
+ BEQ dver21             \ following ???
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
- STA sub_C2FD7
- STA sub_C2FC0
+ STA DrawGrassLeft      \ Modify the DrawGrassLeft routine to start with an RTS so
+                        \ it returns without doing anything (so it's effectively
+                        \ disabled)
 
- BNE dver23
+ STA DrawGrassRight     \ Modify the DrawGrassRight routine to start with an RTS so
+                        \ it returns without doing anything (so it's effectively
+                        \ disabled)
+
+ BNE dver23             \ Jump to dver23 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .dver21
 
- LDA #&E0
+ LDA #&E0               \ Set A to the opcode for the CPX #128 instruction
 
- STA sub_C2FD7
- STA sub_C2FC0
+ STA DrawGrassLeft      \ Revert the DrawGrassLeft routine to start with the CPX
+                        \ instruction, so it runs as normal
 
- LDA currentVerge
+ STA DrawGrassRight     \ Modify the DrawGrassRight routine to start with the CPX
+                        \ instruction, so it runs as normal
 
- CMP #2
- ROR A
+ LDA currentVerge       \ Set A to the the number of the verge we are drawing
 
- EOR VV
- BPL dver23
+ CMP #2                 \ Set bit 7 of A if currentVerge >= 2, so we get:
+ ROR A                  \
+                        \   * Bit 7 clear when we are drawing leftVergeStart or
+                        \     leftTrackStart
+                        \
+                        \   * Bit 7 set when we are drawing rightVergeStart or
+                        \     rightGrassStart
 
-                        \ We now modify the sub_C2F45 and sub_C2F87 routines to
-                        \ swap their entry and exit instructions (the ones that
-                        \ increment or decrement Y)
+ EOR VV                 \ If bit 7 of VV is the same as bit 7 of A, jump to
+ BPL dver23             \ dver23 ???
+
+                        \ We now modify both the DrawVergeByteLeft and
+                        \ DrawVergeByteRight routines to swap their entry and
+                        \ exit instructions (the ones that increment or
+                        \ decrement Y)
                         \
                         \ This reverses the modifications we did in part 3
 
- LDA mod_C2F60          \ Fetch the instruction that the sub_C2F45 and sub_C2F87
-                        \ routines currently execute on exit (which will be NOP,
-                        \ INY or DEY)
+ LDA verl5              \ Fetch the instruction that the DrawVergeByteLeft and
+                        \ DrawVergeByteRight routines currently execute on exit
+                        \ (which will be NOP, INY or DEY)
 
- STA mod_C2F47          \ Modify the instruction at mod_C2F47, so the sub_C2F45
-                        \ routine now does this action on entry instead
+ STA verl1              \ Modify the instruction at verl1, so the
+                        \ DrawVergeByteLeft routine now does this action on
+                        \ entry instead
 
- STA mod_C2F89          \ Modify the instruction at mod_C2F89, so the sub_C2F87
-                        \ routine now does this action on entry instead
+ STA verb1              \ Modify the instruction at verb1, so the
+                        \ DrawVergeByteRight routine now does this action on
+                        \ entry instead
 
  LDA #&EA               \ Set A to the opcode for the NOP instruction
 
- STA mod_C2F60          \ Modify the instruction at mod_C2F60, so the sub_C2F45
-                        \ routine now does nothing on exit
+ STA verl5              \ Modify the instruction at verl5, so the
+                        \ DrawVergeByteLeft routine now does nothing on exit
 
- STA mod_C2FA2          \ Modify the instruction at mod_C2FA2, so the sub_C2F87
-                        \ routine now does nothing on exit
+ STA verb5              \ Modify the instruction at verb5, so the
+                        \ DrawVergeByteRight routine now does nothing on exit
 
- LDA WW
- BPL dver22
+ LDA WW                 \ If WW is positive, jump to dver22 to decrement Y
+ BPL dver22             \ before drawing the edge
 
- INY
+ INY                    \ WW is negative, so increment Y
 
- JMP dver23
+ JMP dver23             \ Jump to dver23 to draw the edge
 
 .dver22
 
- DEY
+ DEY                    \ WW is positive, so decrement Y and fall through into
+                        \ dver23 to draw the edge
 
 .dver23
 
- LDA VV
- BPL dver25
+                        \ If we get here then SS >= TT, so the edge has a
+                        \ gradient shallow
 
- JSR sub_C2D9A
+ LDA VV                 \ If VV is positive, jump to dver25 to draw the edge
+ BPL dver25             \ from left to right
+
+ JSR DrawShallowToLeft  \ VV is negative, so draw the edge from right to left
 
 .dver24
 
- JMP dver28
+ JMP dver28             \ Jump to dver28 to clean up and return from the
+                        \ subroutine
 
 .dver25
 
- JSR sub_C2D17
+ JSR DrawShallowToRight \ VV is positive, so draw the edge from left to right
 
- JMP dver28
+ JMP dver28             \ Jump to dver28 to clean up and return from the
+                        \ subroutine
 
 .dver26
 
- LDA VV
- BPL dver27
+                        \ If we get here then SS < TT, so the edge has a steep
+                        \ gradient
 
- JSR sub_C2E99
+ LDA VV                 \ If VV is positive, jump to dver27 to draw the edge
+ BPL dver27             \ from left to right
 
- JMP dver28
+ JSR DrawSteepToLeft    \ VV is negative, so draw the edge from right to left
+
+ JMP dver28             \ Jump to dver28 to clean up and return from the
+                        \ subroutine
 
 .dver27
 
- JSR sub_C2E20
+ JSR DrawSteepToRight   \ VV is positive, so draw the edge from left to right
 
 \ ******************************************************************************
 \
@@ -19444,10 +19576,10 @@ ENDIF
                         \ on-screen, so we can store the edge's angles in M and
                         \ N to be picked up in the next call to DrawVergeEdge
 
- LDA W                  \ Set M = W
+ LDA W                  \ Set M = W, so we pass on 128 + yaw angle * 4
  STA M
 
- LDA RR                 \ Set N = RR
+ LDA RR                 \ Set N = RR, so we pass on the pitch angle
  STA N
 
 .dver29
@@ -19468,7 +19600,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2D17
+\       Name: DrawShallowToRight
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -19479,11 +19611,11 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2D17
+.DrawShallowToRight
 
- LDA L3E50,X            \ Modify the BCC instruction at mod_C2D27 below so that
- STA mod_C2D27+1        \ it jumps to the destination given in the X-th entry in
-                        \ the L3E50 lookup table
+ LDA jumpShallowRight,X \ Modify the BCC instruction at shlr1 below so that
+ STA shlr1+1            \ it jumps to the destination given in the X-th entry in
+                        \ the jumpShallowRight lookup table
 
  LDX #&80               \ Set X = &80
 
@@ -19495,141 +19627,142 @@ ENDIF
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
 
-.mod_C2D27
+.shlr1
 
- BCC C2D29              \ This instruction was modified above, so it jumps to
-                        \ the address specified in the L3E50 table, as follows:
+ BCC shlr2              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the jumpShallowRight table,
+                        \ as follows:
                         \
-                        \   * C2D31 when X = 0
-                        \   * C2D3C when X = 1
-                        \   * C2D47 when X = 2
-                        \   * C2D52 when X = 3
-                        \   * C2D62 when X = 4
-                        \   * C2D6D when X = 5
-                        \   * C2D78 when X = 6
-                        \   * C2D83 when X = 7
+                        \   * shlr4 when X = 0
+                        \   * shlr6 when X = 1
+                        \   * shlr8 when X = 2
+                        \   * shlr10 when X = 3
+                        \   * shlr13 when X = 4
+                        \   * shlr15 when X = 5
+                        \   * shlr17 when X = 6
+                        \   * shlr19 when X = 7
                         \
-                        \   * C2D2B when X = 8
-                        \   * C2D36 when X = 9
-                        \   * C2D41 when X = 10
-                        \   * C2D4C when X = 11
-                        \   * C2D5C when X = 12
-                        \   * C2D67 when X = 13
-                        \   * C2D72 when X = 14
-                        \   * C2D7D when X = 15
+                        \   * shlr3 when X = 8
+                        \   * shlr5 when X = 9
+                        \   * shlr7 when X = 10
+                        \   * shlr9 when X = 11
+                        \   * shlr12 when X = 12
+                        \   * shlr14 when X = 13
+                        \   * shlr16 when X = 14
+                        \   * shlr18 when X = 15
 
-.C2D29
+.shlr2
 
  LDX #&80               \ Set X = &80
 
-.C2D2B
+.shlr3
 
  ADC TT
- BCC C2D36
+ BCC shlr5
  SBC SS
 
-.C2D31
+.shlr4
 
  LDX #0
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2D36
+.shlr5
 
  ADC TT
- BCC C2D41
+ BCC shlr7
  SBC SS
 
-.C2D3C
+.shlr6
 
  LDX #1
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2D41
+.shlr7
 
  ADC TT
- BCC C2D4C
+ BCC shlr9
  SBC SS
 
-.C2D47
+.shlr8
 
  LDX #2
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2D4C
+.shlr9
 
  ADC TT
- BCC C2D57
+ BCC shlr11
  SBC SS
 
-.C2D52
+.shlr10
 
  LDX #3
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2D57
+.shlr11
 
- JSR sub_C2FD7
+ JSR DrawGrassLeft
  INC UU
 
-.C2D5C
+.shlr12
 
  ADC TT
- BCC C2D67
+ BCC shlr14
  SBC SS
 
-.C2D62
+.shlr13
 
  LDX #0
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2D67
+.shlr14
 
  ADC TT
- BCC C2D72
+ BCC shlr16
  SBC SS
 
-.C2D6D
+.shlr15
 
  LDX #1
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2D72
+.shlr16
 
  ADC TT
- BCC C2D7D
+ BCC shlr18
  SBC SS
 
-.C2D78
+.shlr17
 
  LDX #2
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2D7D
+.shlr18
 
  ADC TT
- BCC C2D88
+ BCC shlr20
  SBC SS
 
-.C2D83
+.shlr19
 
  LDX #3
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2D88
+.shlr20
 
- JSR sub_C2FC0
+ JSR DrawGrassRight
  INC S
  INC Q
  INC NN
  INC UU
  LDX S
  CPX #&44
- BNE C2D29
+ BNE shlr2
  RTS
 
 \ ******************************************************************************
 \
-\       Name: sub_C2D9A
+\       Name: DrawShallowToLeft
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -19640,11 +19773,11 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2D9A
+.DrawShallowToLeft
 
- LDA L40D0,X            \ Modify the BCC instruction at mod_C2DAA below so that
- STA mod_C2DAA+1        \ it jumps to the destination given in the X-th entry in
-                        \ the L40D0 lookup table
+ LDA jumpShallowLeft,X  \ Modify the BCC instruction at shrl1 below so that
+ STA shrl1+1            \ it jumps to the destination given in the X-th entry in
+                        \ the jumpShallowLeft lookup table
 
  LDX #&80               \ Set X = &80
 
@@ -19656,128 +19789,130 @@ ENDIF
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
 
-.mod_C2DAA
+.shrl1
 
- BCC C2DAC              \ This instruction was modified above, so it jumps to
-                        \ the address specified in the L40D0 table, as follows:
+ BCC shrl2              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the jumpShallowLeft table, as
+                        \ follows:
                         \
-                        \   * C2E06 when X = 0
-                        \   * C2DFB when X = 1
-                        \   * C2DF0 when X = 2
-                        \   * C2DE5 when X = 3
-                        \   * C2DD5 when X = 4
-                        \   * C2DCA when X = 5
-                        \   * C2DBF when X = 6
-                        \   * C2DB4 when X = 7
+                        \   * shrl19 when X = 0
+                        \   * shrl17 when X = 1
+                        \   * shrl15 when X = 2
+                        \   * shrl13 when X = 3
+                        \   * shrl10 when X = 4
+                        \   * shrl8 when X = 5
+                        \   * shrl6 when X = 6
+                        \   * shrl4 when X = 7
                         \
-                        \   * C2E00 when X = 8
-                        \   * C2DF5 when X = 9
-                        \   * C2DEA when X = 10
-                        \   * C2DDF when X = 11
-                        \   * C2DCF when X = 12
-                        \   * C2DC4 when X = 13
-                        \   * C2DB9 when X = 14
-                        \   * C2DAE when X = 15
+                        \   * shrl18 when X = 8
+                        \   * shrl16 when X = 9
+                        \   * shrl14 when X = 10
+                        \   * shrl12 when X = 11
+                        \   * shrl9 when X = 12
+                        \   * shrl7 when X = 13
+                        \   * shrl5 when X = 14
+                        \   * shrl3 when X = 15
 
-.C2DAC
+.shrl2
 
  LDX #&80               \ Set X = &80
 
-.C2DAE
+.shrl3
 
  ADC TT
- BCC C2DB9
+ BCC shrl5
  SBC SS
 
-.C2DB4
+.shrl4
 
  LDX #3
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2DB9
+.shrl5
 
  ADC TT
- BCC C2DC4
+ BCC shrl7
  SBC SS
 
-.C2DBF
+.shrl6
 
  LDX #2
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2DC4
+.shrl7
 
  ADC TT
- BCC C2DCF
+ BCC shrl9
  SBC SS
 
-.C2DCA
+.shrl8
 
  LDX #1
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2DCF
+.shrl9
 
  ADC TT
- BCC C2DDA
+ BCC shrl11
  SBC SS
-.C2DD5
+
+.shrl10
 
  LDX #0
- JSR sub_C2F87
+ JSR DrawVergeByteRight
 
-.C2DDA
+.shrl11
 
- JSR sub_C2FC0
+ JSR DrawGrassRight
  DEC UU
 
-.C2DDF
+.shrl12
 
  ADC TT
- BCC C2DEA
+ BCC shrl14
  SBC SS
 
-.C2DE5
+.shrl13
 
  LDX #3
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2DEA
+.shrl14
 
  ADC TT
- BCC C2DF5
+ BCC shrl16
  SBC SS
 
-.C2DF0
+.shrl15
 
  LDX #2
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2DF5
+.shrl16
 
  ADC TT
- BCC C2E00
+ BCC shrl18
  SBC SS
 
-.C2DFB
+.shrl17
 
  LDX #1
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2E00
+.shrl18
 
  ADC TT
- BCC C2E0B
+ BCC shrl20
  SBC SS
 
-.C2E06
+.shrl19
 
  LDX #0
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
 
-.C2E0B
+.shrl20
 
- JSR sub_C2FD7
+ JSR DrawGrassLeft
  DEC S
  DEC Q
  DEC NN
@@ -19785,12 +19920,12 @@ ENDIF
  LDX S
  CPX #&2F
  CLC
- BNE C2DAC
- JMP C2F12
+ BNE shrl2
+ JMP strl10
 
 \ ******************************************************************************
 \
-\       Name: sub_C2E20
+\       Name: DrawSteepToRight
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -19801,11 +19936,11 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2E20
+.DrawSteepToRight
 
- LDA L3ED0,X            \ Modify the BCC instruction at mod_C2E2E below so that
- STA mod_C2E2E+1        \ it jumps to the destination given in the X-th entry in
-                        \ the L3ED0 lookup table
+ LDA jumpSteepRight,X   \ Modify the BCC instruction at stlr1 below so that
+ STA stlr1+1            \ it jumps to the destination given in the X-th entry in
+                        \ the jumpSteepRight lookup table
 
  LDA TT                 \ Set A = -TT
  EOR #&FF
@@ -19815,83 +19950,84 @@ ENDIF
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
 
-.mod_C2E2E
+.stlr1
 
- BCC C2E30              \ This instruction was modified above, so it jumps to
-                        \ the address specified in the L3ED0 table, as follows:
+ BCC stlr2              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the jumpSteepRight table, as
+                        \ follows:
                         \
-                        \   * C2E30 when X = 0
-                        \   * P2E3B when X = 1
-                        \   * P2E46 when X = 2
-                        \   * P2E51 when X = 3
-                        \   * P2E5E when X = 4
-                        \   * P2E69 when X = 5
-                        \   * P2E74 when X = 6
-                        \   * P2E7F when X = 7
+                        \   * stlr2 when X = 0
+                        \   * stlr3 when X = 1
+                        \   * stlr4 when X = 2
+                        \   * stlr5 when X = 3
+                        \   * stlr6 when X = 4
+                        \   * stlr7 when X = 5
+                        \   * stlr8 when X = 6
+                        \   * stlr9 when X = 7
 
-.C2E30
+.stlr2
 
  LDX #0
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC C2E30
+ BCC stlr2
  SBC TT
 
-.P2E3B
+.stlr3
 
  LDX #1
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2E3B
+ BCC stlr3
  SBC TT
 
-.P2E46
+.stlr4
 
  LDX #2
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2E46
+ BCC stlr4
  SBC TT
 
-.P2E51
+.stlr5
 
  LDX #3
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2E51
+ BCC stlr5
  SBC TT
  INC UU
 
-.P2E5E
+.stlr6
 
  LDX #0
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2E5E
+ BCC stlr6
  SBC TT
 
-.P2E69
+.stlr7
 
  LDX #1
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2E69
+ BCC stlr7
  SBC TT
 
-.P2E74
+.stlr8
 
  LDX #2
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2E74
+ BCC stlr8
  SBC TT
 
-.P2E7F
+.stlr9
 
  LDX #3
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2E7F
+ BCC stlr9
  SBC TT
  INC S
  INC Q
@@ -19899,12 +20035,12 @@ ENDIF
  INC UU
  LDX S
  CPX #&44
- BNE C2E30
+ BNE stlr2
  RTS
 
 \ ******************************************************************************
 \
-\       Name: sub_C2E99
+\       Name: DrawSteepToLeft
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -19915,11 +20051,11 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2E99
+.DrawSteepToLeft
 
- LDA L3ED8,X            \ Modify the BCC instruction at mod_C2EA7 below so that
- STA mod_C2EA7+1        \ it jumps to the destination given in the X-th entry in
-                        \ the L3ED8 lookup table
+ LDA jumpSteepLeft,X    \ Modify the BCC instruction at strl1 below so that
+ STA strl1+1            \ it jumps to the destination given in the X-th entry in
+                        \ the jumpSteepLeft lookup table
 
  LDA TT                 \ Set A = -TT
  EOR #&FF
@@ -19929,83 +20065,84 @@ ENDIF
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
 
-.mod_C2EA7
+.strl1
 
- BCC C2EA9              \ This instruction was modified above, so it jumps to
-                        \ the address specified in the L3ED8 table, as follows:
+ BCC strl2              \ This instruction was modified above, so it jumps to
+                        \ the address specified in the jumpSteepLeft table, as
+                        \ follows:
                         \
-                        \   * P2EF8 when X = 0
-                        \   * P2EED when X = 1
-                        \   * P2EE2 when X = 2
-                        \   * P2ED7 when X = 3
-                        \   * P2ECA when X = 4
-                        \   * P2EBF when X = 5
-                        \   * P2EB4 when X = 6
-                        \   * C2EA9 when X = 7
+                        \   * strl9 when X = 0
+                        \   * strl8 when X = 1
+                        \   * strl7 when X = 2
+                        \   * strl6 when X = 3
+                        \   * strl5 when X = 4
+                        \   * strl4 when X = 5
+                        \   * strl3 when X = 6
+                        \   * strl2 when X = 7
 
-.C2EA9
+.strl2
 
  LDX #3
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC C2EA9
+ BCC strl2
  SBC TT
 
-.P2EB4
+.strl3
 
  LDX #2
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2EB4
+ BCC strl3
  SBC TT
 
-.P2EBF
+.strl4
 
  LDX #1
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2EBF
+ BCC strl4
  SBC TT
 
-.P2ECA
+.strl5
 
  LDX #0
- JSR sub_C2F87
+ JSR DrawVergeByteRight
  ADC SS
- BCC P2ECA
+ BCC strl5
  SBC TT
  DEC UU
 
-.P2ED7
+.strl6
 
  LDX #3
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2ED7
+ BCC strl6
  SBC TT
 
-.P2EE2
+.strl7
 
  LDX #2
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2EE2
+ BCC strl7
  SBC TT
 
-.P2EED
+.strl8
 
  LDX #1
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2EED
+ BCC strl8
  SBC TT
 
-.P2EF8
+.strl9
 
  LDX #0
- JSR sub_C2F45
+ JSR DrawVergeByteLeft
  ADC SS
- BCC P2EF8
+ BCC strl9
  SBC TT
  DEC S
  DEC Q
@@ -20014,15 +20151,15 @@ ENDIF
  LDX S
  CPX #&2F
  CLC
- BNE C2EA9
+ BNE strl2
 
-.C2F12
+.strl10
 
- LDA mod_C2F47          \ sub_C2F45
+ LDA verl1              \ DrawVergeByteLeft
 
- STA mod_C2F18          \ Next instruction
+ STA strl11             \ Next instruction
 
-.mod_C2F18
+.strl11
 
  NOP
 
@@ -20044,7 +20181,13 @@ ENDIF
  LDA vergeOnScreenEdge
  BMI C2F22
 
- LDA L0034
+ LDA L0034              \ Set A = L0034, which is in the format %010vv0ab:
+                        \
+                        \   * %vv is the verge we are currently drawing, from
+                        \     currentVerge
+                        \
+                        \   * %ab is the colour in the first verge pixel mask
+                        \     for the verge
 
  JMP C2F2A
 
@@ -20087,7 +20230,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2F45
+\       Name: DrawVergeByteLeft
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -20104,6 +20247,8 @@ ENDIF
 \
 \   UU                  
 \
+\   JJ                  
+\
 \   (Q P)               
 \
 \   (S R)               
@@ -20114,11 +20259,11 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2F45
+.DrawVergeByteLeft
 
  STA II                 \ Store A in II so we can retrieve it later
 
-.mod_C2F47
+.verl1
 
  NOP                    \ This instruction is modified by the DrawVergeEdge
                         \ routine, to be NOP, INY or DEY
@@ -20128,28 +20273,28 @@ ENDIF
 
  LDA UU                 \ Set A = UU
 
-.mod_C2F4E
+.verl2
 
  STA &7000,Y
 
  LDA (R),Y
- BNE C2F63
+ BNE verl6
 
  LDA objectPalette,X    \ Set A to logical colour X from the object palette
 
-.C2F58
+.verl3
 
  STA (R),Y
 
  LDA JJ
  STA (P),Y
 
-.P2F5E
+.verl4
 
  LDA II                 \ Retrieve the value of A we stored above, so A is
                         \ unchanged by the routine
 
-.mod_C2F60
+.verl5
 
  INY                    \ This instruction is modified by the DrawVergeEdge
                         \ routine, to be NOP, INY or DEY
@@ -20158,33 +20303,33 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.C2F63
+.verl6
 
  CPY #44
- BCS C2F6C
+ BCS verl7
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
- BCC P2F5E              \ If offset Y points to dash data, jump to P2F5E
+ BCC verl4              \ If offset Y does not point to dash data, jump to verl4
 
-.C2F6C
+.verl7
 
  CMP #&55
- BNE C2F72
+ BNE verl8
 
  LDA #0
 
-.C2F72
+.verl8
 
  AND pixelsToLeft,X
  ORA vergeEdgeRight,X
 
- BNE C2F58
+ BNE verl3
 
  LDA #&55
 
- BNE C2F58
+ BNE verl3
 
 \ ******************************************************************************
 \
@@ -20196,7 +20341,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ This routine stops drawing the current segment's edge when called from
-\ sub_C2F45 or sub_C2F87.
+\ DrawVergeByteLeft or DrawVergeByteRight.
 \
 \ ******************************************************************************
 
@@ -20206,11 +20351,12 @@ ENDIF
  INX                    \ the stack so the RTS below returns an extra level up
  INX                    \ the call chain
  TXS                    \
-                        \ We jump to this routine from the sub_C2F45 and
-                        \ sub_C2F87 routines. These are only called from the
-                        \ sub_C2D9A, sub_C2D17, sub_C2E99 or sub_C2E20 routines,
-                        \ which in turn are only called from DrawVergeEdge, so
-                        \ this returns us to DrawVergeEdge to stop drawing the
+                        \ We jump to this routine from the DrawVergeByteLeft and
+                        \ DrawVergeByteRight routines. These are only called
+                        \ from the DrawShallowToLeft, DrawShallowToRight,
+                        \ DrawSteepToLeft or DrawSteepToRight routines, which in
+                        \ turn are only called from DrawVergeEdge, so this
+                        \ returns us to DrawVergeEdge to stop drawing the
                         \ current segment's verge edge and move on to the next
                         \ segment
 
@@ -20224,7 +20370,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2F87
+\       Name: DrawVergeByteRight
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -20241,6 +20387,8 @@ ENDIF
 \
 \   UU                  
 \
+\   JJ                  
+\
 \   (Q P)               
 \
 \   (NN MM)
@@ -20251,11 +20399,11 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2F87
+.DrawVergeByteRight
 
  STA II                 \ Store A in II so we can retrieve it later
 
-.mod_C2F89
+.verb1
 
  NOP                    \ This instruction is modified by the DrawVergeEdge
                         \ routine, to be NOP, INY or DEY
@@ -20265,28 +20413,28 @@ ENDIF
 
  LDA UU                 \ Set A = UU
 
-.mod_C2F90
+.verb2
 
  STA &7000,Y
 
  LDA (P),Y
- BNE C2FA5
+ BNE verb6
 
  LDA objectPalette,X    \ Set A to logical colour X from the object palette
 
-.C2F9A
+.verb3
 
  STA (P),Y
 
  LDA JJ
  STA (MM),Y
 
-.P2FA0
+.verb4
 
  LDA II                 \ Retrieve the value of A we stored above, so A is
                         \ unchanged by the routine
 
-.mod_C2FA2
+.verb5
 
  INY                    \ This instruction is modified by the DrawVergeEdge
                         \ routine, to be NOP, INY or DEY
@@ -20295,37 +20443,37 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.C2FA5
+.verb6
 
  CPY #44
- BCS C2FAE
+ BCS verb7
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
- BCC P2FA0              \ If offset Y points to dash data, jump to P2FA0
+ BCC verb4              \ If offset Y does not point to dash data, jump to verb4
 
-.C2FAE
+.verb7
 
  CMP #&55
- BNE C2FB4
+ BNE verb8
 
  LDA #0
 
-.C2FB4
+.verb8
 
  AND pixelsToLeft,X
  ORA vergeEdgeRight,X
 
- BNE C2F9A
+ BNE verb3
 
  LDA #&55
 
- BNE C2F9A
+ BNE verb3
 
 \ ******************************************************************************
 \
-\       Name: sub_C2FC0
+\       Name: DrawGrassRight
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -20350,28 +20498,28 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2FC0
+.DrawGrassRight
 
- CPX #&80               \ If X <> &80, jump to C2FD3 to return from the
- BNE C2FD3              \ subroutine
+ CPX #&80               \ If X <> &80, jump to grar2 to return from the
+ BNE grar2              \ subroutine
 
- CPY #44                \ If Y >= 44, jump to C2FCD
- BCS C2FCD
+ CPY #44                \ If Y >= 44, jump to grar1
+ BCS grar1
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
- BCC C2FD3              \ If offset Y points to dash data, jump to C2FD3 to
-                        \ return from the subroutine
+ BCC grar2              \ If offset Y does not point to dash data, jump to grar2
+                        \ to return from the subroutine
 
-.C2FCD
+.grar1
 
  TAX                    \ Set the Y-th byte of (Q P) to &FF
  LDA #&FF
  STA (P),Y
  TXA
 
-.C2FD3
+.grar2
 
  LDX #&80               \ Set X = &80
 
@@ -20381,7 +20529,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C2FD7
+\       Name: DrawGrassLeft
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: 
@@ -20406,30 +20554,30 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C2FD7
+.DrawGrassLeft
 
- CPX #&80               \ If X <> &80, jump to C2FEA to return from the
- BNE C2FEA              \ subroutine
+ CPX #128               \ If X <> 128, jump to gral2 to return from the
+ BNE gral2              \ subroutine
 
- CPY #44                \ If Y >= 44, jump to C2FE4
- BCS C2FE4
+ CPY #44                \ If Y >= 44, jump to gral1
+ BCS gral1
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
- BCC C2FEA              \ If offset Y points to dash data, jump to C2FEA to
-                        \ return from the subroutine
+ BCC gral2              \ If offset Y does not point to dash data, jump to gral2
+                        \ to return from the subroutine
 
-.C2FE4
+.gral1
 
  TAX                    \ Set the Y-th byte of (S R) to &FF
  LDA #&FF
  STA (R),Y
  TXA
 
-.C2FEA
+.gral2
 
- LDX #&80               \ Set X = &80
+ LDX #128               \ Set X = 128
 
  CLC                    \ Clear the C flag
 
@@ -20457,9 +20605,9 @@ ENDIF
 \
 \   C flag              The result, as follows:
 \
-\                         * Clear if offset Y points to dash data
+\                         * Clear if offset Y does not point to dash data
 \
-\                         * Set if offset Y does not point to dash data
+\                         * Set if offset Y does point to dash data
 \
 \   A                   A is unchanged
 \
@@ -20476,15 +20624,25 @@ ENDIF
 
  TYA                    \ Set the C flag as follows:
  CMP dashDataOffset,X   \
-                        \   * C flag set if Y >= dashDataOffset,X
-                        \
                         \   * C flag clear if Y < dashDataOffset,X
+                        \
+                        \   * C flag set if Y >= dashDataOffset,X
 
  BNE cdas1              \ If Y <> the dashDataOffset of block X, skip the
                         \ following instruction
 
  CLC                    \ If we get here then Y = the dashDataOffset of block X,
                         \ so clear the C flag
+
+                        \ So by this point we have:
+                        \
+                        \   * C flag clear if Y <= dashDataOffset,X
+                        \
+                        \   * C flag set if Y > dashDataOffset,X
+                        \
+                        \ As the dash data lives at the top of each dash data
+                        \ block, this gives us the result we want (as Y is
+                        \ pointing to data when Y > dashDataOffset,X)
 
 .cdas1
 
@@ -25492,32 +25650,33 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3E50
+\       Name: jumpShallowRight
 \       Type: Variable
 \   Category: Drawing the track
-\    Summary: Branch labels for self-modifying code in the sub_C2D17 routine
+\    Summary: Branch labels for self-modifying code in the DrawShallowToRight
+\             routine
 \
 \ ******************************************************************************
 
-.L3E50
+.jumpShallowRight
 
- EQUB C2D31 - C2D29
- EQUB C2D3C - C2D29
- EQUB C2D47 - C2D29
- EQUB C2D52 - C2D29
- EQUB C2D62 - C2D29
- EQUB C2D6D - C2D29
- EQUB C2D78 - C2D29
- EQUB C2D83 - C2D29
+ EQUB shlr4 - shlr2
+ EQUB shlr6 - shlr2
+ EQUB shlr8 - shlr2
+ EQUB shlr10 - shlr2
+ EQUB shlr13 - shlr2
+ EQUB shlr15 - shlr2
+ EQUB shlr17 - shlr2
+ EQUB shlr19 - shlr2
 
- EQUB C2D2B - C2D29
- EQUB C2D36 - C2D29
- EQUB C2D41 - C2D29
- EQUB C2D4C - C2D29
- EQUB C2D5C - C2D29
- EQUB C2D67 - C2D29
- EQUB C2D72 - C2D29
- EQUB C2D7D - C2D29
+ EQUB shlr3 - shlr2
+ EQUB shlr5 - shlr2
+ EQUB shlr7 - shlr2
+ EQUB shlr9 - shlr2
+ EQUB shlr12 - shlr2
+ EQUB shlr14 - shlr2
+ EQUB shlr16 - shlr2
+ EQUB shlr18 - shlr2
 
 \ ******************************************************************************
 \
@@ -25636,43 +25795,45 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L3ED0
+\       Name: jumpSteepRight
 \       Type: Variable
 \   Category: Drawing the track
-\    Summary: Branch labels for self-modifying code in the sub_C2E20 routine
+\    Summary: Branch labels for self-modifying code in the DrawSteepToRight
+\             routine
 \
 \ ******************************************************************************
 
-.L3ED0
+.jumpSteepRight
 
- EQUB C2E30 - C2E30
- EQUB P2E3B - C2E30
- EQUB P2E46 - C2E30
- EQUB P2E51 - C2E30
- EQUB P2E5E - C2E30
- EQUB P2E69 - C2E30
- EQUB P2E74 - C2E30
- EQUB P2E7F - C2E30
+ EQUB stlr2 - stlr2
+ EQUB stlr3 - stlr2
+ EQUB stlr4 - stlr2
+ EQUB stlr5 - stlr2
+ EQUB stlr6 - stlr2
+ EQUB stlr7 - stlr2
+ EQUB stlr8 - stlr2
+ EQUB stlr9 - stlr2
 
 \ ******************************************************************************
 \
-\       Name: L3ED8
+\       Name: jumpSteepLeft
 \       Type: Variable
 \   Category: Drawing the track
-\    Summary: Branch labels for self-modifying code in the sub_C2E99 routine
+\    Summary: Branch labels for self-modifying code in the DrawSteepToLeft
+\             routine
 \
 \ ******************************************************************************
 
-.L3ED8
+.jumpSteepLeft
 
- EQUB P2EF8 - C2EA9
- EQUB P2EED - C2EA9
- EQUB P2EE2 - C2EA9
- EQUB P2ED7 - C2EA9
- EQUB P2ECA - C2EA9
- EQUB P2EBF - C2EA9
- EQUB P2EB4 - C2EA9
- EQUB C2EA9 - C2EA9
+ EQUB strl9 - strl2
+ EQUB strl8 - strl2
+ EQUB strl7 - strl2
+ EQUB strl6 - strl2
+ EQUB strl5 - strl2
+ EQUB strl4 - strl2
+ EQUB strl3 - strl2
+ EQUB strl2 - strl2
 
 \ ******************************************************************************
 \
@@ -26022,32 +26183,33 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: L40D0
+\       Name: jumpShallowLeft
 \       Type: Variable
 \   Category: Drawing the track
-\    Summary: Branch labels for self-modifying code in the sub_C2D9A routine
+\    Summary: Branch labels for self-modifying code in the DrawShallowToLeft
+\             routine
 \
 \ ******************************************************************************
 
-.L40D0
+.jumpShallowLeft
 
- EQUB C2E06 - C2DAC
- EQUB C2DFB - C2DAC
- EQUB C2DF0 - C2DAC
- EQUB C2DE5 - C2DAC
- EQUB C2DD5 - C2DAC
- EQUB C2DCA - C2DAC
- EQUB C2DBF - C2DAC
- EQUB C2DB4 - C2DAC
+ EQUB shrl19 - shrl2
+ EQUB shrl17 - shrl2
+ EQUB shrl15 - shrl2
+ EQUB shrl13 - shrl2
+ EQUB shrl10 - shrl2
+ EQUB shrl8 - shrl2
+ EQUB shrl6 - shrl2
+ EQUB shrl4 - shrl2
 
- EQUB C2E00 - C2DAC
- EQUB C2DF5 - C2DAC
- EQUB C2DEA - C2DAC
- EQUB C2DDF - C2DAC
- EQUB C2DCF - C2DAC
- EQUB C2DC4 - C2DAC
- EQUB C2DB9 - C2DAC
- EQUB C2DAE - C2DAC
+ EQUB shrl18 - shrl2
+ EQUB shrl16 - shrl2
+ EQUB shrl14 - shrl2
+ EQUB shrl12 - shrl2
+ EQUB shrl9 - shrl2
+ EQUB shrl7 - shrl2
+ EQUB shrl5 - shrl2
+ EQUB shrl3 - shrl2
 
 \ ******************************************************************************
 \
@@ -28123,7 +28285,7 @@ ENDIF
  DEX
  DEX
  BPL C4832
- LDA L62E7Hi
+ LDA L62E7
  STA L62FF
  RTS
 
@@ -33080,52 +33242,53 @@ ORG &5E40
 
 .vergePixelMask
 
- EQUB %00000000         \ Colour 3 then 0, pixelMaskVerge for leftVergeStart
- EQUB %10001000         \                  pixelMaskNoVerge for leftTrackStart
- EQUB %11001100
- EQUB %11101110
+ EQUB %00000000         \ Colour 3 on 0 (green on black)
+ EQUB %10001000         \                
+ EQUB %11001100         \   * pixelMaskVerge for leftVergeStart
+ EQUB %11101110         \   * pixelMaskNoVerge for leftTrackStart
 
- EQUB %00001111         \ Colour 3 then 1
+ EQUB %00001111         \ Colour 3 on 1 (green on red)
  EQUB %10001111
  EQUB %11001111
  EQUB %11101111
 
- EQUB %11110000         \ Colour 3 then 2, pixelMaskVerge for leftTrackStart
- EQUB %11111000
- EQUB %11111100
+ EQUB %11110000         \ Colour 3 on 2 (green on white)
+ EQUB %11111000         \
+ EQUB %11111100         \   * pixelMaskVerge for leftTrackStart ???
  EQUB %11111110
 
- EQUB %00000000         \ Colour 1 then 0
+ EQUB %00000000         \ Colour 1 on 0 (red on black)
  EQUB %00001000
  EQUB %00001100
  EQUB %00001110
 
- EQUB %00000000         \ Colour 2 then 0, pixelMaskVerge for rightVergeStart
- EQUB %10000000
- EQUB %11000000
+ EQUB %00000000         \ Colour 2 on 0 (white on black)
+ EQUB %10000000         \
+ EQUB %11000000         \   * pixelMaskVerge for rightVergeStart ???
  EQUB %11100000
 
- EQUB %00001111         \ Colour 0 then 1
+ EQUB %00001111         \ Colour 0 on 1 (black on red)
  EQUB %00000111
  EQUB %00000011
  EQUB %00000001
 
- EQUB %11110000         \ Colour 0 then 2
+ EQUB %11110000         \ Colour 0 on 2 (black on white)
  EQUB %01110000
  EQUB %00110000
  EQUB %00010000
 
- EQUB %11111111         \ Colour 0 then 3, pixelMaskVerge for rightGrassStart
- EQUB %01110111         \                  pixelMaskNoVerge for rightVergeStart
- EQUB %00110011         \                  pixelMaskNoVerge for rightGrassStart
- EQUB %00010001
+ EQUB %11111111         \ Colour 0 on 3 (black on green)
+ EQUB %01110111         \                  
+ EQUB %00110011         \   * pixelMaskVerge for rightGrassStart
+ EQUB %00010001         \   * pixelMaskNoVerge for rightVergeStart
+                        \   * pixelMaskNoVerge for rightGrassStart
 
- EQUB %11111111         \ Colour 1 then 3
+ EQUB %11111111         \ Colour 1 on 3 (red on green)
  EQUB %01111111
  EQUB %00111111
  EQUB %00011111
 
- EQUB %11111111         \ Colour 2 then 3
+ EQUB %11111111         \ Colour 2 on 3 (white on green)
  EQUB %11110111
  EQUB %11110011
  EQUB %11110001
@@ -34080,7 +34243,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62E7Hi
+\       Name: L62E7
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -34091,7 +34254,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62E7Hi
+.L62E7
 
  EQUB 0
 
