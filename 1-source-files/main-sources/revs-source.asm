@@ -18672,7 +18672,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 1 of 6)
+\       Name: DrawVergeEdge (Part 1 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a single segment's edge as part of a whole track verge edge
@@ -18811,8 +18811,8 @@ ENDIF
 
  BCS dver8              \ If the C flag is set then this is either the first
                         \ call to the routine for this verge edge, or this is a
-                        \ trackside verge, so jump to dver28 via dver8 to clean
-                        \ up and return from the subroutine ???
+                        \ trackside verge ???, so jump to dver28 via dver8 to
+                        \ clean up and return from the subroutine
 
  BIT GG                 \ If bit 6 of GG is clear, then the previous segment's
  BVC dver3              \ verge edge from the last call to DrawVergeEdge was
@@ -18852,14 +18852,23 @@ ENDIF
                         \ to flag that this edge is partially off-screen and
                         \ that we have swapped the angles over
 
-                        \ By this point W and RR contain the yaw and pitch
-                        \ angles of the edge we need to to draw, while M and N
-                        \ contain the angles from the previous call to
-                        \ DrawVergeEdge (if there was one)
+                        \ By this point, we have the following:
+                        \
+                        \   * W = the yaw angle of the edge to draw
+                        \
+                        \   * RR = the pitch angle of the edge to draw
+                        \
+                        \   * M = the yaw angle of the previous edge
+                        \
+                        \   * N = the pitch angle of the previous edge
+                        \
+                        \ We only get to this point if this is not the first
+                        \ call to DrawVergeEdge for this verge edge, so we know
+                        \ that M and N are defined
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 2 of 6)
+\       Name: DrawVergeEdge (Part 2 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Set up the edge's gradient
@@ -18880,8 +18889,18 @@ ENDIF
 
  STA WW                 \ Set WW = A
                         \
-                        \ So WW contains the previous edge's pitch angle minus
-                        \ this edge's pitch angle
+                        \ So WW contains the current edge's pitch angle minus
+                        \ the previous edge's pitch angle, so:
+                        \
+                        \   * WW is positive if the current pitch angle is
+                        \     greater than the previous pitch angle, so the
+                        \     current edge is higher up the screen, so the edge
+                        \     is moving up the screen
+                        \
+                        \   * WW is negative if the current pitch angle is
+                        \     less than the previous pitch angle, so the
+                        \     current edge is lower down the screen, so the edge
+                        \     is moving down the screen
 
  BPL dver4              \ If A is positive, jump to dver4
 
@@ -18926,14 +18945,15 @@ ENDIF
  SBC xVergeRightHi,X
  STA VV
 
-                        \ This also sets bit 7 of VV as follows, which we will
-                        \ use later:
+                        \ This also sets the sign of VV as follows:
                         \
-                        \   * Bit 7 is clear if this yaw angle >= previous yaw
-                        \     angle
+                        \   * VV is positive if the previous yaw angle is less
+                        \     than the current yaw angle, so the edge is moving
+                        \     from left to right
                         \
-                        \   * Bit 7 is set if this yaw angle < previous yaw
-                        \     angle
+                        \   * VV is negative if the previous yaw angle is
+                        \     greater than the current yaw angle, so the edge is
+                        \     moving from right to left
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
                         \
@@ -19041,13 +19061,31 @@ ENDIF
                         \ jump to dver28 via dver8 to clean up and return from
                         \ the subroutine
 
-                        \ By this point SS and TT are set to the slope of the
-                        \ edge that we need to draw, with SS containing the
-                        \ yaw delta, and TT containing the pitch delta
+                        \ By this point, we have the following:
+                        \
+                        \   * SS = the yaw delta along the edge to draw
+                        \
+                        \   * TT = the pitch delta along the edge to draw
+                        \
+                        \   * VV = the left-right direction of the edge
+                        \
+                        \     * Positive = left to right
+                        \
+                        \     * Negative = right to left
+                        \
+                        \   * WW = the up-down direction of the edge
+                        \
+                        \     * Positive = line is heading up the screen
+                        \
+                        \     * Negative = line is heading down the screen
+                        \
+                        \ So SS and TT are set to the gradient of the edge that
+                        \ we are drawing, and WW and VV are set to the direction
+                        \ of the edge
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 3 of 6)
+\       Name: DrawVergeEdge (Part 3 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Modify the drawing routines according to the edge gradient
@@ -19111,8 +19149,8 @@ ENDIF
 
                         \ We set WW above to the previous edge's pitch angle
                         \ minus this edge's pitch angle, so it is positive if
-                        \ the edge is heading down the screen, negative if it is
-                        \ heading up the screen
+                        \ the edge is heading up the screen, negative if it is
+                        \ heading down the screen
 
  LDA WW                 \ If WW is non-zero, jump to dver13
  BNE dver13
@@ -19128,21 +19166,19 @@ ENDIF
 .dver13
 
                         \ We now modify both the DrawVergeByteLeft and
-                        \ DrawVergeByteRight routines so they either increment
-                        \ or decrement Y on entry, and do nothing on exit,
-                        \ depending on the polarity of WW
+                        \ DrawVergeByteRight routines so they do nothing on
+                        \ entry, and either increment or decrement Y on exit,
+                        \ depending on the polarity of WW ???
                         \
                         \ In other words, we modify the routines so:
                         \
-                        \   * If WW is positive, then do INY on entry then
-                        \     NOP on exit (as the edge is heading down the
-                        \     screen, with increasing memory addresses)
+                        \   * If WW is positive, then do NOP on entry and
+                        \     INY on exit
                         \
-                        \   * If WW is negative, they do DEY on entry then
-                        \     NOP on exit (as the edge is heading up the
-                        \     screen, with decreasing memory addresses)
+                        \   * If WW is negative, they do NOP on entry and
+                        \     DEY on exit
                         \
-                        \ This modification is reversed in part 5
+                        \ This modification can be overridden in part 5
 
  BPL dver14             \ If WW is positive, jump to dver14
 
@@ -19166,10 +19202,10 @@ ENDIF
  LDA #&EA               \ Set A to the opcode for the NOP instruction
 
  STA verl1              \ Modify the instruction at verl1 to NOP, so the
-                        \ DrawVergeByteLeft routine doesn't update Y on exit
+                        \ DrawVergeByteLeft routine doesn't update Y on entry
 
  STA verb1              \ Modify the instruction at verb1 to NOP, so the
-                        \ DrawVergeByteRight routine doesn't update Y on exit
+                        \ DrawVergeByteRight routine doesn't update Y on entry
 
  LDY pixelMaskIndex     \ Set Y = pixelMaskIndex so we can use it to fetch the
                         \ correct pixel bytes from vergePixelMask for this edge
@@ -19209,7 +19245,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 4 of 6)
+\       Name: DrawVergeEdge (Part 4 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Set variables to use when updating the background colour
@@ -19313,6 +19349,9 @@ ENDIF
  CMP vergeBufferEnd
  BEQ dver19
 
+                        \ We now clip the pitch angle in RR so it fits into the
+                        \ track line range of 0 to 79
+
  LDA RR                 \ If RR < 80, then this is a valid track line number, so
  CMP #80                \ jump to dver20 to leave it alone
  BCC dver20
@@ -19321,16 +19360,18 @@ ENDIF
 
                         \ If we get here then RR is outside the correct range
                         \ for track lines of 0 to 79, so we need to clip it to
-                        \ 0 or 79, depending on the polarity of WW
+                        \ 0 or 79, depending on which way the line is heading
 
  LDA #0                 \ Set A = 0 to use as the new value of R if WW is
                         \ negative
 
- BIT WW                 \ If WW is negative, jump to dver20 to set RR = 0
- BMI dver20
+ BIT WW                 \ If WW is negative, then the line is heading down the
+ BMI dver20             \ screen, so jump to dver20 to set RR = 0, which clips
+                        \ RR to the bottom of the track view
 
- LDA #79                \ WW is positive, so set A = 79 to use as the new value
-                        \ of R
+ LDA #79                \ WW is positive, so the line is heading up the
+                        \ screen, so set A = 79 to use as the new value of R,
+                        \ which clips RR to the top of the track view
 
 .dver20
 
@@ -19338,18 +19379,19 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 5 of 6)
+\       Name: DrawVergeEdge (Part 5 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: Calculate the dash data block for the edge
+\    Summary: Calculate the dash data block and screen addresses for the edge
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part calculates the dash data block for the edge, and the corresponding
+\ addresses within the screen buffer.
 \
 \ ******************************************************************************
 
-                        \ A reminder that M is set to 128 + yaw angle * 4 for
+                        \ At this point, M is set to 128 + yaw angle * 4 for
                         \ the previous edge
 
  LDA M                  \ Set U = M - 48
@@ -19392,6 +19434,18 @@ ENDIF
  ADC #1
  STA NN
 
+ LDA U                  \ Set X = U mod 7
+ AND #7                 \
+ TAX                    \ So X contains the pixel number within two pixel bytes,
+                        \ i.e. in the range 0 to 7, as each pixel byte contains
+                        \ four pixels
+                        \
+                        \ We pass this to the drawing routines so they start
+                        \ drawing from the correct pixel
+
+ LDY N                  \ Set Y = N, which is the pitch angle of the previous
+                        \ edge
+
                         \ By this point we have the following addresses set up:
                         \
                         \   * (S R) = address of the first dash data block in
@@ -19406,21 +19460,29 @@ ENDIF
                         \               this sequence, i.e. the first memory
                         \               page of the next dash data block (as
                         \               NN = SS + 1)
-                        
- LDA U                  \ Set X = U mod 7
- AND #7                 \
- TAX                    \ So X contains the pixel number within two pixel bytes,
-                        \ i.e. in the range 0 to 7, as each pixel byte contains
-                        \ four pixels
                         \
-                        \ We pass this to the drawing routines so they start
-                        \ drawing from the correct pixel
+                        \ and the following variables:
+                        \
+                        \   * X = pixel number (0 to 7)
+                        \
+                        \   * Y = pitch angle of previous edge
 
- LDY N                  \ Set Y = N, which is the pitch angle of the previous
-                        \ edge
+\ ******************************************************************************
+\
+\       Name: DrawVergeEdge (Part 6 of 7)
+\       Type: Subroutine
+\   Category: Drawing the track
+\    Summary: Calculate the dash data block for the edge
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part draws the edge for this segment by jumping to the correct drawing
+\ routine, depending on the gradient and direction of the edge.
+\
+\ ******************************************************************************
 
- LDA SS                 \ If SS < TT, jump to dver26
- CMP TT
+ LDA SS                 \ If SS < TT, then the edge has a steep gradient, so
+ CMP TT                 \ jump to dver26 to jump to the correct drawing routine
  BCC dver26
 
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
@@ -19457,7 +19519,7 @@ ENDIF
  STA DrawGrassLeft      \ Revert the DrawGrassLeft routine to start with the CPX
                         \ instruction, so it runs as normal
 
- STA DrawGrassRight     \ Modify the DrawGrassRight routine to start with the CPX
+ STA DrawGrassRight     \ Revert the DrawGrassRight routine to start with the CPX
                         \ instruction, so it runs as normal
 
  LDA currentVerge       \ Set A to the the number of the verge we are drawing
@@ -19470,19 +19532,32 @@ ENDIF
                         \   * Bit 7 set when we are drawing rightVergeStart or
                         \     rightGrassStart
 
- EOR VV                 \ If bit 7 of VV is the same as bit 7 of A, jump to
- BPL dver23             \ dver23 ???
-
-                        \ We now modify both the DrawVergeByteLeft and
-                        \ DrawVergeByteRight routines to swap their entry and
-                        \ exit instructions (the ones that increment or
-                        \ decrement Y)
+ EOR VV                 \ If bit 7 of VV is the same as bit 7 of A, then:
+ BPL dver23             \
+                        \   * We are drawing the left track verge and drawing
+                        \     the edge from left to right (both bits are clear)
                         \
-                        \ This reverses the modifications we did in part 3
+                        \   * We are drawing the right track verge and drawing
+                        \     the edge from right to left (both bits are set)
+                        \
+                        \ In either case, jump to dver23 to skip modifying the
+                        \ DrawVergeByteLeft and DrawVergeByteRight routines
+
+                        \ If we get here, then:
+                        \
+                        \   * We are drawing the left track verge and drawing
+                        \     the edge from right to left
+                        \
+                        \   * We are drawing the right track verge and drawing
+                        \     the edge from left to right
+                        \
+                        \ We now modify both the DrawVergeByteLeft and
+                        \ DrawVergeByteRight routines to increment or decrement
+                        \ Y on entry, and to do nothing on exit
 
  LDA verl5              \ Fetch the instruction that the DrawVergeByteLeft and
                         \ DrawVergeByteRight routines currently execute on exit
-                        \ (which will be NOP, INY or DEY)
+                        \ (which will be INY or DEY)
 
  STA verl1              \ Modify the instruction at verl1, so the
                         \ DrawVergeByteLeft routine now does this action on
@@ -19500,10 +19575,17 @@ ENDIF
  STA verb5              \ Modify the instruction at verb5, so the
                         \ DrawVergeByteRight routine now does nothing on exit
 
- LDA WW                 \ If WW is positive, jump to dver22 to decrement Y
- BPL dver22             \ before drawing the edge
+                        \ We also do the first increment or decrement, to get
+                        \ things set up correctly, depending on the sign in WW,
+                        \ which determines whether the edge is going up or down
+                        \ the screen
 
- INY                    \ WW is negative, so increment Y
+ LDA WW                 \ If WW is positive, then the line is heading up the
+ BPL dver22             \ screen, to jump to dver22 to decrement Y before
+                        \ drawing the edge
+
+ INY                    \ WW is negative, so the line is heading down the
+                        \ screen, so increment Y
 
  JMP dver23             \ Jump to dver23 to draw the edge
 
@@ -19553,7 +19635,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 6 of 6)
+\       Name: DrawVergeEdge (Part 7 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Save the angles for the next call to DrawVergeEdge and return from
