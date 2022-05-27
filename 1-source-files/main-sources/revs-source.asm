@@ -9000,7 +9000,10 @@ ENDIF
  LDY prevPitchIndex     \ Set Y = prevPitchIndex, to use as the index to the
                         \ verge's pitch angles
 
- SEC                    \ Set the C flag ???
+ SEC                    \ Set the C flag to pass to DrawVergeEdge so it does not
+                        \ draw the edge (as this is the first call for this edge
+                        \ so we just set up the variables, ready for the next
+                        \ call)
 
  JSR DrawVergeEdge      \ Draw the verge edge for this entry in the verge buffer
 
@@ -9053,7 +9056,8 @@ ENDIF
 
  STY vergeDepthOfField  \ Set Y = vergeDepthOfField
 
- SEC                    \ Set the C flag
+ SEC                    \ Set the C flag to pass to DrawVergeEdge so it does not
+                        \ draw the edge
 
  LDA currentVerge       \ Set A to the the number of the verge we are drawing
 
@@ -9079,10 +9083,11 @@ ENDIF
  LDA pixelMaskNoVerge   \ Set A = pixelMaskNoVerge
                         \
                         \ pixelMaskNoVerge always points to a pixel byte that's
-                        \ green and black, so is this how we show the track in
-                        \ segments beyond the verge depth of field ???
+                        \ green and black, so is this how we draw the track for
+                        \ segments that are beyond the verge depth of field
 
- CLC                    \ Clear the C flag
+ CLC                    \ Set the C flag to pass to DrawVergeEdge so it draws
+                        \ the edge
 
  BCC vedg5              \ Jump to vedg5 with the C flag clear and A set to
                         \ pixelMaskNoVerge to draw the edge (this BCC is
@@ -9118,10 +9123,12 @@ ENDIF
  LDA currentVerge       \ Set A to the the number of the verge we are drawing
 
  CMP #1                 \ If we are updating leftTrackStart, jump to vedg5 with
- BEQ vedg5              \ the C flag set and A = 1 to draw the edge
+ BEQ vedg5              \ the C flag set and A = 1, so it doesn't draw the edge
+                        \ but sets up the variables
 
  CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
- BEQ vedg5              \ the C flag set and A = 2 to draw the edge
+ BEQ vedg5              \ the C flag set and A = 2, so it doesn't draw the edge
+                        \ but sets up the variables
 
  LDA #0                 \ Set A = 0, so we pass A = pixelMaskVerge to
                         \ DrawVergeEdge
@@ -9130,8 +9137,8 @@ ENDIF
 
  ASL A                  \ Set A = pixelMaskVerge + A * 4
  ASL A                  \
- CLC                    \ This also clears the C flag
- ADC pixelMaskVerge
+ CLC                    \ This also clears the C flag, so the call to
+ ADC pixelMaskVerge     \ DrawVergeEdge draws the verge edge
 
 .vedg5
 
@@ -9164,14 +9171,10 @@ ENDIF
  LDA #&80               \ Set P = &80, to use as the low byte of (Q P) in the
  STA P                  \ DrawVergeEdges that we call below
 
- LDA horizonListIndex   \ Set A = horizonListIndex + 40
- CLC
- ADC #40
-
- TAX                    \ Set X = horizonListIndex + 40
-                        \
-                        \ So X is the index within the track verge buffer of the
-                        \ horizon line's left verge (adding 40 moves the index
+ LDA horizonListIndex   \ Set A = X = horizonListIndex + 40
+ CLC                    \
+ ADC #40                \ So X is the index within the track verge buffer of the
+ TAX                    \ horizon line's left verge (adding 40 moves the index
                         \ from xVergeRightHi to xVergeLeftHi, which are 40 bytes
                         \ apart in memory)
 
@@ -9196,9 +9199,14 @@ ENDIF
  LDA #LO(leftSegment)   \ Set A to the low byte of leftSegment, so the call to
                         \ MapSegmentsToLines populates the leftSegment table
 
- STA R                  \ Set R = LO(leftSegment)
+                        \ The following set R and MM to zero, to use as the low
+                        \ bytes in (S R) and (NN MM), though this is only
+                        \ because LO(leftSegment) happens to be zero; moving
+                        \ leftSegment off a page boundary would break this code
+
+ STA R                  \ Set R = 0 to use as the low byte in (S R)
  
- STA MM                 \ Set MM = LO(leftSegment)
+ STA MM                 \ Set MM = 0 to use as the low byte in (NN MM)
 
  LDY segmentListPointer \ Set Y to index of the last entry in the track segment
                         \ list for the left side of the track
@@ -9216,7 +9224,7 @@ ENDIF
                         \ verge for segments that are within the verge depth of
                         \ field
 
- JSR DrawVergeEdges     \ Draw the left edge of the left verge
+ JSR DrawVergeEdges     \ Draw the left edge of the left verge (leftVergeStart)
 
  LDA #8                 \ Set pixelMaskVerge = 8
  STA pixelMaskVerge
@@ -9232,7 +9240,7 @@ ENDIF
  CLC                    \ verge all the way from the horizon to the player
  ADC #40
 
- JSR DrawVergeEdges     \ Draw the right edge of the left verge
+ JSR DrawVergeEdges     \ Draw the right edge of the left verge (leftTrackStart)
 
  LDA vergeDepthOfField  \ Set A = vergeDepthOfField
 
@@ -9290,6 +9298,7 @@ ENDIF
                         \ the way from the horizon to the player
 
  JSR DrawVergeEdges     \ Draw the left edge of the right verge
+                        \ (rightVergeStart)
 
  LDA #28                \ Set pixelMaskVerge = 28
  STA pixelMaskVerge
@@ -9303,6 +9312,7 @@ ENDIF
                         \ field
 
  JSR DrawVergeEdges     \ Draw the right edge of the right verge
+                        \ (rightGrassStart)
 
  LDA vergeDepthOfField  \ Set A = vergeDepthOfField
 
@@ -9323,57 +9333,80 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   A                   vergeDepthOfField
+\
+\   X                   ???
+\
+\                         * 4 (after drawing the left verge)
+\
+\                         * 20 (after drawing the right verge)
 \
 \ ******************************************************************************
 
 .sub_C1A98
 
  STX GG
+
  STA U
+
  DEC vergeBufferEnd
+
  LDA L62F2
- CMP #&28
+ CMP #40
  BCC C1B05
+
  BCS C1B0B
 
 .C1AA7
 
  LDY yVergeRight,X
- CPY #&50
+
+ CPY #80
  BCS C1B03
+
  LDA vergeDataRight,X
  BMI C1B03
+
  LDA GG
- CMP #&14
+ CMP #20
  BEQ C1AC4
+
  LDA xVergeRightHi+16,X
  STA W
+
  LDA xVergeRightHi,X
+
  JMP C1ACC
 
 .C1AC4
 
  LDA xVergeRightHi,X
  STA W
+
  LDA xVergeRightHi+16,X
 
 .C1ACC
 
  CLC
- ADC #&14
+ ADC #20
  BMI C1B03
+
  LDA W
  CLC
- ADC #&14
+ ADC #20
  BPL C1B03
 
 .P1AD8
 
  LDA vergeDataRight+1,X
  BPL C1AE4
+
  INX
+
  INC U
+
  CPX vergeBufferEnd
  BCC P1AD8
 
@@ -9381,20 +9414,30 @@ ENDIF
 
  LDA backgroundColour,Y
  STA T
+
  LDA backgroundColour,Y
+
  BEQ C1AF9
- AND #&1C
+
+ AND #%00011100
+
  CMP GG
  BEQ C1AF9
+
  ROR A
+
  EOR T
+
  BMI C1B03
 
 .C1AF9
 
  LDA vergeDataRight,X
- AND #3
+
+ AND #%00000011
+
  ORA GG
+
  STA backgroundColour,Y
 
 .C1B03
@@ -9404,14 +9447,18 @@ ENDIF
 .C1B05
 
  LDX U
+
  CPX vergeBufferEnd
  BCC C1AA7
 
 .C1B0B
 
  LDX vergeDepthOfField
+
  LDY yVergeRight,X
+
  INY
+
  RTS
 
 \ ******************************************************************************
@@ -11890,7 +11937,7 @@ ENDIF
 
                         \ We now subtract T, though as noted above, I'm unclear
                         \ on the reason for this (but the maths all balances out
-                        \ in the end, so ler's go with it)
+                        \ in the end, so let's go with it)
 
  SEC                    \ Set (Q P) = (Q A) - T
  SBC T                  \
@@ -18012,8 +18059,8 @@ ENDIF
 
  LDA thisPosition       \ If the car we are building is not the car just ahead
  CMP positionAhead      \ of us in the race, then it can't be the four-object
- BNE bcar10             \ car, jump to bcar10 to return from the subroutine with
-                        \ the car built as a standard car
+ BNE bcar10             \ car, so jump to bcar10 to return from the subroutine
+                        \ with the car built as a standard car
 
  LDA objectStatus,X     \ If bit 7 of the car's object status byte is set, then
  BMI bcar9              \ the car is not visible, so jump to bcar9 to skip the
@@ -18699,13 +18746,13 @@ ENDIF
 \                       mark (so we can use this for fetching pitch angles from
 \                       the track segment list for the verge)
 \
-\   C flag              The type of edge to draw:
+\   C flag              Flag to control whether we draw the edge, or just set up
+\                       variables for the next call:
 \
-\                         * Set = either the very first call for this verge, or
-\                                 a track edge (leftTrackStart, rightVergeStart)
+\                         * Clear = draw this edge
 \
-\                         * Clear = a grassy edge (leftVergeStart,
-\                                   rightGrassStart)
+\                         * Set = do not draw this edge, but do set up the
+\                                 variables to pass to the next call
 \
 \   M                   Yaw angle from the previous call to DrawVergeEdge
 \
@@ -18809,10 +18856,9 @@ ENDIF
  PLP                    \ Retrieve the C flag that we passed to the routine and
                         \ stored on the stack earlier
 
- BCS dver8              \ If the C flag is set then this is either the first
-                        \ call to the routine for this verge edge, or this is a
-                        \ trackside verge ???, so jump to dver28 via dver8 to
-                        \ clean up and return from the subroutine
+ BCS dver8              \ If the C flag is set then we don't draw this edge, so
+                        \ jump to dver28 via dver8 to clean up and return from
+                        \ the subroutine
 
  BIT GG                 \ If bit 6 of GG is clear, then the previous segment's
  BVC dver3              \ verge edge from the last call to DrawVergeEdge was
@@ -18972,6 +19018,9 @@ ENDIF
                         \   * If |dYaw| >= 32, |dYaw| * 2, |dPitch| / 2
                         \
                         \   * If |dYaw| < 16, |dYaw| * 4
+                        \
+                        \ This scales |dYaw| to be as large as possible while
+                        \ simultaneously making |dPitch| as small as possible
 
  CMP #64                \ If A >= 64, jump to dver5 to divide TT by 4
  BCS dver5
@@ -19063,9 +19112,11 @@ ENDIF
 
                         \ By this point, we have the following:
                         \
-                        \   * SS = the yaw delta along the edge to draw
+                        \   * SS = the scaled yaw delta along the edge to draw
+                        \          (scaled to be as large as possible)
                         \
-                        \   * TT = the pitch delta along the edge to draw
+                        \   * TT = the scaled pitch delta along the edge to draw
+                        \          (scaled to be as small as possible)
                         \
                         \   * VV = the left-right direction of the edge
                         \
@@ -19170,15 +19221,19 @@ ENDIF
                         \ entry, and either increment or decrement Y on exit,
                         \ depending on the polarity of WW ???
                         \
-                        \ In other words, we modify the routines so:
+                        \ We modify the routines as follows:
                         \
-                        \   * If WW is positive, then do NOP on entry and
-                        \     INY on exit
+                        \   * If WW is positive, so the edge is heading up the
+                        \     screen, then do NOP on entry and INY on exit, so
+                        \     we increase the track line as we draw the edge
                         \
-                        \   * If WW is negative, they do NOP on entry and
-                        \     DEY on exit
+                        \   * If WW is negative, so the edge is heading down the
+                        \     screen, then do NOP on entry and DEY on exit, so
+                        \     we decrease the track line as we draw the edge
                         \
-                        \ This modification can be overridden in part 5
+                        \ This ensures that when we call these routines, they
+                        \ increase or decrease the track line in the appropriate
+                        \ direction for the line we are drawing
 
  BPL dver14             \ If WW is positive, jump to dver14
 
@@ -19198,6 +19253,9 @@ ENDIF
                         \   * INY when WW is positive
                         \
                         \   * DEY when WW is negative
+                        \
+                        \ So the track line in Y increases when WW is positive
+                        \ and the line is heading up the screen
 
  LDA #&EA               \ Set A to the opcode for the NOP instruction
 
@@ -19259,15 +19317,15 @@ ENDIF
 
  LDA currentVerge       \ Set T = currentVerge << 3
  ASL A                  \
- ASL A                  \ So T is:
+ ASL A                  \ So T is as follows:
  ASL A                  \
- STA T                  \   * %00000000 if we are drawing leftVergeStart
+ STA T                  \   * %00000000 if we are drawing leftVergeStart (%00)
                         \
-                        \   * %00001000 if we are drawing leftTrackStart
+                        \   * %00001000 if we are drawing leftTrackStart (%01)
                         \
-                        \   * %00010000 if we are drawing rightVergeStart
+                        \   * %00010000 if we are drawing rightVergeStart (%10)
                         \
-                        \   * %00011000 if we are drawing rightGrassStart
+                        \   * %00011000 if we are drawing rightGrassStart (%11)
 
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
                         \ part 3, which is always a four-pixel, single colour
@@ -19470,7 +19528,8 @@ ENDIF
                         \   * Y = pitch angle of previous edge
                         \
                         \   * UU = the number of the dash data block containing
-                        \          the previous edge
+                        \          the previous edge, i.e. the dash data block
+                        \          where we start drawing the new edge
                         \
                         \   * JJ = The right pixel byte when drawing the edge in
                         \          the screen buffer, i.e. the fill byte to the
@@ -19514,13 +19573,13 @@ ENDIF
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
- STA DrawGrassLeft      \ Modify the DrawGrassLeft routine to start with an RTS so
-                        \ it returns without doing anything (so it's effectively
-                        \ disabled)
+ STA DrawGrassLeft      \ Modify the DrawGrassLeft routine to start with an RTS,
+                        \ so it returns without doing anything (so it's
+                        \ effectively disabled)
 
- STA DrawGrassRight     \ Modify the DrawGrassRight routine to start with an RTS so
-                        \ it returns without doing anything (so it's effectively
-                        \ disabled)
+ STA DrawGrassRight     \ Modify the DrawGrassRight routine to start with an
+                        \ RTS, so it returns without doing anything (so it's
+                        \ effectively disabled)
 
  BNE dver23             \ Jump to dver23 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -19529,10 +19588,10 @@ ENDIF
 
  LDA #&E0               \ Set A to the opcode for the CPX #128 instruction
 
- STA DrawGrassLeft      \ Revert the DrawGrassLeft routine to start with the CPX
+ STA DrawGrassLeft      \ Revert the DrawGrassLeft routine to start with a CPX
                         \ instruction, so it runs as normal
 
- STA DrawGrassRight     \ Revert the DrawGrassRight routine to start with the CPX
+ STA DrawGrassRight     \ Revert the DrawGrassRight routine start with a CPX
                         \ instruction, so it runs as normal
 
  LDA currentVerge       \ Set A to the the number of the verge we are drawing
@@ -19566,7 +19625,9 @@ ENDIF
                         \
                         \ We now modify both the DrawVergeByteLeft and
                         \ DrawVergeByteRight routines to increment or decrement
-                        \ Y on entry, and to do nothing on exit
+                        \ Y on entry, and to do nothing on exit (which flips the
+                        \ modifications we did in part 3, which made them do
+                        \ nothing on entry and the update of Y on exit)
 
  LDA verl5              \ Fetch the instruction that the DrawVergeByteLeft and
                         \ DrawVergeByteRight routines currently execute on exit
@@ -19698,18 +19759,38 @@ ENDIF
 \       Name: DrawShallowToRight
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a verge edge with a shallow gradient from left to right
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   The pixel number to start drawing from (0 to 7, across
-\                       two pixel bytes
+\   X                   The pixel number to start drawing from, in the range
+\                       0 to 7, as it is measured across the two edge bytes that
+\                       we draw in this routine
 \
-\   SS                  The yaw delta along the edge to draw
+\   Y                   The track line to draw on (0 to 79)
 \
-\   TT                  The pitch delta along the edge to draw
+\   SS                  The scaled yaw delta along the edge to draw
+\
+\   TT                  The scaled pitch delta along the edge to draw
+\
+\   RR                  The pitch angle of the current segment (we stop drawing
+\                       the edge when Y reaches this value)
+\
+\   UU                  The number of the dash data block where we start drawing
+\
+\   JJ                  The right pixel byte when drawing the edge in the screen
+\                       buffer, i.e. the fill byte to the right of the edge
+\
+\   (S R)               Address of the first dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (Q P)               Address of the second dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (NN MM)             Address of the third dash data block in this sequence,
+\                       i.e. the first memory page of the next dash data block
 \
 \ ******************************************************************************
 
@@ -19725,8 +19806,8 @@ ENDIF
 
  LDA SS                 \ Set A = -SS
  EOR #&FF               \
- CLC                    \ A contains the slope error, which goes from -SS to 0
- ADC #1                 \ and round again
+ CLC                    \ This is the starting value for the cumulative slope
+ ADC #1                 \ error, which we tally up in A
 
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
@@ -19746,6 +19827,13 @@ ENDIF
                         \   * shlr17 when X = 6
                         \   * shlr19 when X = 7
                         \
+                        \ These jump-points start by drawing a pixel byte before
+                        \ moving on to the slope error calculations
+                        \
+                        \ The following entry points are also supported, though
+                        \ these don't appear to be used, as the routine is only
+                        \ called with X in the range 0 to 7:
+                        \
                         \   * shlr3 when X = 8
                         \   * shlr5 when X = 9
                         \   * shlr7 when X = 10
@@ -19754,6 +19842,11 @@ ENDIF
                         \   * shlr14 when X = 13
                         \   * shlr16 when X = 14
                         \   * shlr18 when X = 15
+                        \
+                        \ These jump-points start with the slope error
+                        \ calculations rather than a call to the draw routine,
+                        \ they would presumably omit the first pixel byte of the
+                        \ line, were they to be used
 
 .shlr2
 
@@ -19763,146 +19856,202 @@ ENDIF
 
 .shlr3
 
+                        \ We start with the slope error calculation for pixel 0
+                        \ of the first dash data block
+
  ADC TT                 \ Set A = A + TT, to add the pitch delta to the slope
                         \ error
 
  BCC shlr5              \ If the addition didn't overflow, skip to the next
                         \ pixel to step along the x-axis, as the cumulative
-                        \ pitch deltas haven't yet added up to a whole pixel line
+                        \ pitch deltas haven't yet added up to a multiple of SS
 
                         \ If we get here then the pitch deltas have added up to
                         \ a whole line and the addition has overflowed, so we
                         \ need to draw a pixel
 
- SBC SS                 \ As the addition overflowed, the C flag is set, so this
-                        \ sets A = A - SS to subtract the yaw delta
+ SBC SS                 \ If we get here then the cumulative pitch deltas in TT
+                        \ have added up to a multiple of the yaw delta in SS, so
+                        \ we subtract SS from the slope error (which we can do
+                        \ we we know the C flag is set)
 
 .shlr4
 
  LDX #0                 \ Draw the edge in pixel 0 of the first dash data block
  JSR DrawVergeByteLeft  \ (the leftmost pixel) and draw a fill byte in the
                         \ second dash data block
+                        \
+                        \ If we have reached the pitch angle of the current
+                        \ segment, then we have reached the end of the edge to
+                        \ draw, in which case DrawVergeByteLeft will jump to
+                        \ StopDrawingEdge to abort this edge and return us two
+                        \ routines up the call stack, to DrawVergeEdge
 
 .shlr5
 
- ADC TT
- BCC shlr7
+ ADC TT                 \ Repeat the slope error calculation for pixel 1
+ BCC shlr7              \ of the first dash data block
  SBC SS
 
 .shlr6
 
  LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
- JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the
-                        \ second dash data block
+ JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shlr7
 
- ADC TT
- BCC shlr9
+ ADC TT                 \ Repeat the slope error calculation for pixel 2
+ BCC shlr9              \ of the first dash data block
  SBC SS
 
 .shlr8
 
  LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
- JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the
-                        \ second dash data block
-
+ JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shlr9
 
- ADC TT
- BCC shlr11
+ ADC TT                 \ Repeat the slope error calculation for pixel 3
+ BCC shlr11             \ of the first dash data block
  SBC SS
 
 .shlr10
 
  LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
  JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
-                        \ second dash data block
-
+                        \ second dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
 
 .shlr11
 
- JSR DrawGrassLeft
+ JSR DrawGrassLeft      \ If nothing has been drawn in the first dash data
+                        \ block (in which case X will still be 128), then fill
+                        \ the byte with green grass
 
- INC UU                 \ Increment UU so we now draw in the next dash data
-                        \ block (i.e. the second dash data block of the three
-                        \ that we set up)
+ INC UU                 \ Increment UU so we now draw in the right pair of dash
+                        \ data blocks (i.e. the second and third dash data
+                        \ blocks of the three that we set up)
 
 .shlr12
 
- ADC TT
- BCC shlr14
+ ADC TT                 \ Repeat the slope error calculation for pixel 0
+ BCC shlr14             \ of the second dash data block
  SBC SS
 
 .shlr13
 
  LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
- JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the
-                        \ third dash data block
+ JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shlr14
 
- ADC TT
- BCC shlr16
+ ADC TT                 \ Repeat the slope error calculation for pixel 1
+ BCC shlr16             \ of the second dash data block
  SBC SS
 
 .shlr15
 
  LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
- JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the
-                        \ third dash data block
+ JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shlr16
 
- ADC TT
- BCC shlr18
+ ADC TT                 \ Repeat the slope error calculation for pixel 2
+ BCC shlr18             \ of the second dash data block
  SBC SS
 
 .shlr17
 
  LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
- JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the
-                        \ third dash data block
+ JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shlr18
 
- ADC TT
- BCC shlr20
+ ADC TT                 \ Repeat the slope error calculation for pixel 3
+ BCC shlr20             \ of the second dash data block
  SBC SS
 
 .shlr19
 
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
-                        \ third dash data block
+                        \ third dash dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
 
 .shlr20
 
- JSR DrawGrassRight
+ JSR DrawGrassRight     \ If nothing has been drawn in the second dash data
+                        \ block (in which case X will still be 128), then fill
+                        \ the byte with green grass
 
- INC S
- INC Q
- INC NN
- INC UU
+ INC S                  \ Increment S to move (S R) on to the next page, to move
+                        \ it right by two dash data blocks
 
- LDX S
+ INC Q                  \ Increment Q to move (Q P) on to the next page, to move
+                        \ it right by two dash data blocks
 
- CPX #68
- BNE shlr2
+ INC NN                 \ Increment NN to move (NN MM) on to the next page, to
+                        \ move it right by two dash data blocks
 
- RTS
+ INC UU                 \ Increment UU to the number of the next dash data block
+                        \ to the right
+
+ LDX S                  \ If (S R) hasn't yet reached the rightmost dash data
+ CPX #HI(dashData39)+1  \ block (i.e. it hasn't gone past block 39, which is at
+ BNE shlr2              \ the right edge of the screen), then jump back to shlr2
+                        \ to keep drawing
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: DrawShallowToLeft
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a verge edge with a shallow gradient from right to left
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The pixel number to start drawing from, in the range
+\                       0 to 7, as it is measured across the two edge bytes that
+\                       we draw in this routine
+\
+\   Y                   The track line to draw on (0 to 79)
+\
+\   SS                  The scaled yaw delta along the edge to draw
+\
+\   TT                  The scaled pitch delta along the edge to draw
+\
+\   RR                  The pitch angle of the current segment (we stop drawing
+\                       the edge when Y reaches this value)
+\
+\   UU                  The number of the dash data block where we start drawing
+\
+\   JJ                  The right pixel byte when drawing the edge in the screen
+\                       buffer, i.e. the fill byte to the right of the edge
+\
+\   (S R)               Address of the first dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (Q P)               Address of the second dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (NN MM)             Address of the third dash data block in this sequence,
+\                       i.e. the first memory page of the next dash data block
 \
 \ ******************************************************************************
 
@@ -19912,12 +20061,14 @@ ENDIF
  STA shrl1+1            \ it jumps to the destination given in the X-th entry in
                         \ the jumpShallowLeft lookup table
 
- LDX #128               \ Set X = 128
+ LDX #128               \ Set X = 128, so we can detect at the end of the
+                        \ routine whether X has been altered (which only happens
+                        \ if we draw something)
 
  LDA SS                 \ Set A = -SS
- EOR #&FF
- CLC
- ADC #1
+ EOR #&FF               \
+ CLC                    \ This is the starting value for the cumulative slope
+ ADC #1                 \ error, which we tally up in A
 
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
@@ -19937,6 +20088,13 @@ ENDIF
                         \   * shrl6 when X = 6
                         \   * shrl4 when X = 7
                         \
+                        \ These jump-points start by drawing a pixel byte before
+                        \ moving on to the slope error calculations
+                        \
+                        \ The following entry points are also supported, though
+                        \ these don't appear to be used, as the routine is only
+                        \ called with X in the range 0 to 7:
+                        \
                         \   * shrl18 when X = 8
                         \   * shrl16 when X = 9
                         \   * shrl14 when X = 10
@@ -19945,127 +20103,220 @@ ENDIF
                         \   * shrl7 when X = 13
                         \   * shrl5 when X = 14
                         \   * shrl3 when X = 15
+                        \
+                        \ These jump-points start with the slope error
+                        \ calculations rather than a call to the draw routine,
+                        \ they would presumably omit the first pixel byte of the
+                        \ line, were they to be used
 
 .shrl2
 
- LDX #128               \ Set X = 128
+ LDX #128               \ Set X = 128, so we can detect at the end of the
+                        \ routine whether X has been altered (which only happens
+                        \ if we draw something)
 
 .shrl3
 
- ADC TT
- BCC shrl5
- SBC SS
+                        \ We start with the slope error calculation for pixel 3
+                        \ of the second dash data block
+
+ ADC TT                 \ Set A = A + TT, to add the pitch delta to the slope
+                        \ error
+
+ BCC shrl5              \ If the addition didn't overflow, skip to the next
+                        \ pixel to step along the x-axis, as the cumulative
+                        \ pitch deltas haven't yet added up to a multiple of SS
+
+                        \ If we get here then the pitch deltas have added up to
+                        \ a whole line and the addition has overflowed, so we
+                        \ need to draw a pixel
+
+ SBC SS                 \ If we get here then the cumulative pitch deltas in TT
+                        \ have added up to a multiple of the yaw delta in SS, so
+                        \ we subtract SS from the slope error (which we can do
+                        \ we we know the C flag is set)
 
 .shrl4
 
- LDX #3
- JSR DrawVergeByteRight
+ LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
+ JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
+                        \ third dash dash data block
+                        \
+                        \ If we have reached the pitch angle of the current
+                        \ segment, then we have reached the end of the edge to
+                        \ draw, in which case DrawVergeByteRight will jump to
+                        \ StopDrawingEdge to abort this edge and return us two
+                        \ routines up the call stack, to DrawVergeEdge
 
 .shrl5
 
- ADC TT
- BCC shrl7
+ ADC TT                 \ Repeat the slope error calculation for pixel 2
+ BCC shrl7              \ of the second dash data block
  SBC SS
 
 .shrl6
 
- LDX #2
- JSR DrawVergeByteRight
+ LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
+ JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shrl7
 
- ADC TT
- BCC shrl9
+ ADC TT                 \ Repeat the slope error calculation for pixel 1
+ BCC shrl9              \ of the second dash data block
  SBC SS
 
 .shrl8
 
- LDX #1
- JSR DrawVergeByteRight
+ LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
+ JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shrl9
 
- ADC TT
- BCC shrl11
+ ADC TT                 \ Repeat the slope error calculation for pixel 0
+ BCC shrl11             \ of the second dash data block
  SBC SS
 
 .shrl10
 
- LDX #0
- JSR DrawVergeByteRight
+ LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
+ JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shrl11
 
- JSR DrawGrassRight
- DEC UU
+ JSR DrawGrassRight     \ If nothing has been drawn in the second dash data
+                        \ block (in which case X will still be 128), then fill
+                        \ the byte with green grass
+
+ DEC UU                 \ Decrement UU so we now draw in the left pair of dash
+                        \ data blocks (i.e. the first and second dash data
+                        \ blocks of the three that we set up)
 
 .shrl12
 
- ADC TT
- BCC shrl14
+ ADC TT                 \ Repeat the slope error calculation for pixel 3
+ BCC shrl14             \ of the first dash data block
  SBC SS
 
 .shrl13
 
- LDX #3
- JSR DrawVergeByteLeft
+ LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
+                        \ second dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
 
 .shrl14
 
- ADC TT
- BCC shrl16
+ ADC TT                 \ Repeat the slope error calculation for pixel 2
+ BCC shrl16             \ of the first dash data block
  SBC SS
 
 .shrl15
 
- LDX #2
- JSR DrawVergeByteLeft
+ LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shrl16
 
- ADC TT
- BCC shrl18
+ ADC TT                 \ Repeat the slope error calculation for pixel 1
+ BCC shrl18             \ of the first dash data block
  SBC SS
 
 .shrl17
 
- LDX #1
- JSR DrawVergeByteLeft
+ LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
 
 .shrl18
 
- ADC TT
- BCC shrl20
+ ADC TT                 \ Repeat the slope error calculation for pixel 0
+ BCC shrl20             \ of the first dash data block
  SBC SS
 
 .shrl19
 
- LDX #0
- JSR DrawVergeByteLeft
+ LDX #0                 \ Draw the edge in pixel 0 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the leftmost pixel) and draw a fill byte in the
+                        \ second dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
 
 .shrl20
 
- JSR DrawGrassLeft
- DEC S
- DEC Q
- DEC NN
- DEC UU
- LDX S
- CPX #&2F
- CLC
- BNE shrl2
- JMP strl10
+ JSR DrawGrassLeft      \ If nothing has been drawn in the first dash data
+                        \ block (in which case X will still be 128), then fill
+                        \ the byte with green grass
+
+ DEC S                  \ Decrement S to move (S R) on to the previous page, to
+                        \ move it left by two dash data blocks
+
+ DEC Q                  \ Decrement Q to move (Q P) on to the previous page, to
+                        \ move it left by two dash data blocks
+
+ DEC NN                 \ Decrement NN to move (NN MM) on to the previous page,
+                        \ to move it left by two dash data blocks
+
+ DEC UU                 \ Decrement UU to the number of the previous dash data
+                        \ block to the left
+
+ LDX S                  \ If (S R) hasn't yet reached the leftmost dash data
+ CPX #HI(dashData0)-1   \ block (i.e. it hasn't gone past block 0, which is at
+ CLC                    \ the left edge of the screen), then jump back to shrl2
+ BNE shrl2              \ to keep drawing (with the C flag cleared, as it gets
+                        \ set by the comparison)
+
+ JMP strl10             \ Jump to strl10 to finish drawing the right-hand pixel
+                        \ byte of the pair, as the first dash data block in
+                        \ (S R) might be off-screen, but the second one in (Q P)
+                        \ isn't
 
 \ ******************************************************************************
 \
 \       Name: DrawSteepToRight
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a verge edge with a steep gradient from left to right
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The pixel number to start drawing from, in the range
+\                       0 to 7, as it is measured across the two edge bytes that
+\                       we draw in this routine
+\
+\   Y                   The track line to draw on (0 to 79)
+\
+\   SS                  The scaled yaw delta along the edge to draw
+\
+\   TT                  The scaled pitch delta along the edge to draw
+\
+\   RR                  The pitch angle of the current segment (we stop drawing
+\                       the edge when Y reaches this value)
+\
+\   UU                  The number of the dash data block where we start drawing
+\
+\   JJ                  The right pixel byte when drawing the edge in the screen
+\                       buffer, i.e. the fill byte to the right of the edge
+\
+\   (S R)               Address of the first dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (Q P)               Address of the second dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (NN MM)             Address of the third dash data block in this sequence,
+\                       i.e. the first memory page of the next dash data block
 \
 \ ******************************************************************************
 
@@ -20076,9 +20327,9 @@ ENDIF
                         \ the jumpSteepRight lookup table
 
  LDA TT                 \ Set A = -TT
- EOR #&FF
- CLC
- ADC #1
+ EOR #&FF               \
+ CLC                    \ This is the starting value for the cumulative slope
+ ADC #1                 \ error, which we tally up in A
 
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
@@ -20100,87 +20351,174 @@ ENDIF
 
 .stlr2
 
- LDX #0
- JSR DrawVergeByteLeft
- ADC SS
- BCC stlr2
- SBC TT
+ LDX #0                 \ Draw the edge in pixel 0 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the leftmost pixel) and draw a fill byte in the
+                        \ second dash data block
+                        \
+                        \ If we have reached the pitch angle of the current
+                        \ segment, then we have reached the end of the edge to
+                        \ draw, in which case DrawVergeByteLeft will jump to
+                        \ StopDrawingEdge to abort this edge and return us two
+                        \ routines up the call stack, to DrawVergeEdge
+
+                        \ We now do the slope error calculation for pixel 0 of
+                        \ the first dash data block
+
+ ADC SS                 \ Set A = A + SS, to add the yaw delta to the slope
+                        \ error
+
+ BCC stlr2              \ If the addition didn't overflow, skip to the next
+                        \ pixel to step along the y-axis, as the cumulative
+                        \ pitch deltas haven't yet added up to a multiple of TT
+
+                        \ If we get here then the pitch deltas have added up to
+                        \ a whole line and the addition has overflowed, so we
+                        \ need to draw a pixel
+
+ SBC TT                 \ If we get here then the cumulative yaw deltas in SS
+                        \ have added up to a multiple of the pitch delta in TT,
+                        \ so we subtract TT from the slope error (which we can
+                        \ do we we know the C flag is set)
 
 .stlr3
 
- LDX #1
- JSR DrawVergeByteLeft
- ADC SS
- BCC stlr3
+ LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 1
+ BCC stlr3              \ of the first dash data block
  SBC TT
 
 .stlr4
 
- LDX #2
- JSR DrawVergeByteLeft
- ADC SS
- BCC stlr4
+ LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 2
+ BCC stlr4              \ of the first dash data block
  SBC TT
 
 .stlr5
 
- LDX #3
- JSR DrawVergeByteLeft
- ADC SS
- BCC stlr5
+ LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
+                        \ second dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 3
+ BCC stlr5              \ of the first dash data block
  SBC TT
- INC UU
+
+ INC UU                 \ Increment UU so we now draw in the right pair of dash
+                        \ data blocks (i.e. the second and third dash data
+                        \ blocks of the three that we set up)
 
 .stlr6
 
- LDX #0
- JSR DrawVergeByteRight
- ADC SS
- BCC stlr6
+ LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
+ JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 0
+ BCC stlr6              \ of the second dash data block
  SBC TT
 
 .stlr7
 
- LDX #1
- JSR DrawVergeByteRight
- ADC SS
- BCC stlr7
+ LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
+ JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 1
+ BCC stlr7              \ of the second dash data block
  SBC TT
 
 .stlr8
 
- LDX #2
- JSR DrawVergeByteRight
- ADC SS
- BCC stlr8
+ LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
+ JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 2
+ BCC stlr8              \ of the second dash data block
  SBC TT
 
 .stlr9
 
- LDX #3
- JSR DrawVergeByteRight
- ADC SS
- BCC stlr9
+ LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
+ JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
+                        \ third dash dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 2
+ BCC stlr9              \ of the second dash data block
  SBC TT
- INC S
- INC Q
- INC NN
- INC UU
- LDX S
- CPX #&44
- BNE stlr2
- RTS
+
+ INC S                  \ Increment S to move (S R) on to the next page, to move
+                        \ it right by two dash data blocks
+
+ INC Q                  \ Increment Q to move (Q P) on to the next page, to move
+                        \ it right by two dash data blocks
+
+ INC NN                 \ Increment NN to move (NN MM) on to the next page, to
+                        \ move it right by two dash data blocks
+
+ INC UU                 \ Increment UU to the number of the next dash data block
+                        \ to the right
+
+ LDX S                  \ If (S R) hasn't yet reached the rightmost dash data
+ CPX #HI(dashData39)+1  \ block (i.e. it hasn't gone past block 39, which is at
+ BNE stlr2              \ the right edge of the screen), then jump back to shlr2
+                        \ to keep drawing
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: DrawSteepToLeft
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a verge edge with a steep gradient from right to left
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   X                   The pixel number to start drawing from, in the range
+\                       0 to 7, as it is measured across the two edge bytes that
+\                       we draw in this routine
+\
+\   Y                   The track line to draw on (0 to 79)
+\
+\   SS                  The scaled yaw delta along the edge to draw
+\
+\   TT                  The scaled pitch delta along the edge to draw
+\
+\   RR                  The pitch angle of the current segment (we stop drawing
+\                       the edge when Y reaches this value)
+\
+\   UU                  The number of the dash data block where we start drawing
+\
+\   JJ                  The right pixel byte when drawing the edge in the screen
+\                       buffer, i.e. the fill byte to the right of the edge
+\
+\   (S R)               Address of the first dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (Q P)               Address of the second dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (NN MM)             Address of the third dash data block in this sequence,
+\                       i.e. the first memory page of the next dash data block
 \
 \ ******************************************************************************
 
@@ -20191,9 +20529,9 @@ ENDIF
                         \ the jumpSteepLeft lookup table
 
  LDA TT                 \ Set A = -TT
- EOR #&FF
- CLC
- ADC #1
+ EOR #&FF               \
+ CLC                    \ This is the starting value for the cumulative slope
+ ADC #1                 \ error, which we tally up in A
 
  CLC                    \ Clear the C flag so the next instruction effectively
                         \ becomes a JMP
@@ -20215,104 +20553,200 @@ ENDIF
 
 .strl2
 
- LDX #3
- JSR DrawVergeByteRight
- ADC SS
- BCC strl2
- SBC TT
+ LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
+ JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
+                        \ third dash dash data block
+                        \
+                        \ If we have reached the pitch angle of the current
+                        \ segment, then we have reached the end of the edge to
+                        \ draw, in which case DrawVergeByteRight will jump to
+                        \ StopDrawingEdge to abort this edge and return us two
+                        \ routines up the call stack, to DrawVergeEdge
+
+                        \ We now do the slope error calculation for pixel 3 of
+                        \ the second dash data block
+
+ ADC SS                 \ Set A = A + SS, to add the yaw delta to the slope
+                        \ error
+
+ BCC strl2              \ If the addition didn't overflow, skip to the next
+                        \ pixel to step along the y-axis, as the cumulative
+                        \ pitch deltas haven't yet added up to a multiple of TT
+
+                        \ If we get here then the pitch deltas have added up to
+                        \ a whole line and the addition has overflowed, so we
+                        \ need to draw a pixel
+
+ SBC TT                 \ If we get here then the cumulative yaw deltas in SS
+                        \ have added up to a multiple of the pitch delta in TT,
+                        \ so we subtract TT from the slope error (which we can
+                        \ do we we know the C flag is set)
 
 .strl3
 
- LDX #2
- JSR DrawVergeByteRight
- ADC SS
- BCC strl3
+ LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
+ JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 2
+ BCC strl3              \ of the second dash data block
  SBC TT
 
 .strl4
 
- LDX #1
- JSR DrawVergeByteRight
- ADC SS
- BCC strl4
+ LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
+ JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 1
+ BCC strl4              \ of the second dash data block
  SBC TT
 
 .strl5
 
- LDX #0
- JSR DrawVergeByteRight
- ADC SS
- BCC strl5
+ LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
+ JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 0
+ BCC strl5              \ of the second dash data block
  SBC TT
- DEC UU
+
+ DEC UU                 \ Decrement UU so we now draw in the left pair of dash
+                        \ data blocks (i.e. the first and second dash data
+                        \ blocks of the three that we set up)
 
 .strl6
 
- LDX #3
- JSR DrawVergeByteLeft
- ADC SS
- BCC strl6
+ LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
+                        \ second dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 3
+ BCC strl6              \ of the first dash data block
  SBC TT
 
 .strl7
 
- LDX #2
- JSR DrawVergeByteLeft
- ADC SS
- BCC strl7
+ LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 2
+ BCC strl7              \ of the first dash data block
  SBC TT
 
 .strl8
 
- LDX #1
- JSR DrawVergeByteLeft
- ADC SS
- BCC strl8
+ LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
+                        \ dash data block, or abort the drawing and return to
+                        \ DrawVergeEdge if we've finished drawing the edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 1
+ BCC strl8              \ of the first dash data block
  SBC TT
 
 .strl9
 
- LDX #0
- JSR DrawVergeByteLeft
- ADC SS
- BCC strl9
+ LDX #0                 \ Draw the edge in pixel 0 of the first dash data block
+ JSR DrawVergeByteLeft  \ (the leftmost pixel) and draw a fill byte in the
+                        \ second dash data block, or abort the drawing and
+                        \ return to DrawVergeEdge if we've finished drawing the
+                        \ edge
+
+ ADC SS                 \ Repeat the slope error calculation for pixel 0
+ BCC strl9              \ of the first dash data block
  SBC TT
- DEC S
- DEC Q
- DEC NN
- DEC UU
- LDX S
- CPX #&2F
- CLC
- BNE strl2
+
+ DEC S                  \ Decrement S to move (S R) on to the previous page, to
+                        \ move it left by two dash data blocks
+
+ DEC Q                  \ Decrement Q to move (Q P) on to the previous page, to
+                        \ move it left by two dash data blocks
+
+ DEC NN                 \ Decrement NN to move (NN MM) on to the previous page,
+                        \ to move it left by two dash data blocks
+
+ DEC UU                 \ Decrement UU to the number of the previous dash data
+                        \ block to the left
+
+ LDX S                  \ If (S R) hasn't yet reached the leftmost dash data
+ CPX #HI(dashData0)-1   \ block (i.e. it hasn't gone past block 0, which is at
+ CLC                    \ the left edge of the screen), then jump back to strl2
+ BNE strl2              \ to keep drawing (with the C flag cleared, as it gets
+                        \ set by the comparison)
 
 .strl10
 
- LDA verl1              \ DrawVergeByteLeft
+                        \ If we get here then we have drawn our steep edge to
+                        \ the left, all the way to the left edge of the screen,
+                        \ so we now need to update the background table for this
+                        \ track line
+                        \
+                        \ First, though, we need to alter the track line in Y so
+                        \ it points to the correct line, which we do by moving
+                        \ the track line up or down by one step, in the same
+                        \ direction as the edge we are drawing
 
- STA strl11             \ Next instruction
+ LDA verl1              \ Fetch the instruction that is run at the start of the
+                        \ DrawVergeByteLeft routine, which will be an INY or DEY
+                        \ instruction (this is the instruction that is run on
+                        \ entry into the DrawVergeByteLeft routine, and which
+                        \ moves the track line on to the next line in the
+                        \ correct up/down direction for the edge we are drawing)
+
+ STA strl11             \ Store the instruction we just fetched into the next
+                        \ address, so we execute the same instruction before
+                        \ falling into UpdateBackground
 
 .strl11
 
- NOP
+ NOP                    \ This instruction is modified by the above code to be
+                        \ the same INY or DEY that is executed at the start of
+                        \ the DrawVergeByteLeft routine, so it moves the track
+                        \ line on by one in the correct direction for the edge
+                        \ we are drawing
+
+                        \ Fall through into UpdateBackground to update the
+                        \ background colour table
 
 \ ******************************************************************************
 \
 \       Name: UpdateBackground
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Update the background colour table for when we draw a verge edge
+\             off the left edge of the screen
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   Y                   The track line we are drawing on (0 to 79)
+\
+\   L0033               ???
+\
+\   L0034               ???
+\
+\   L62F2               ???
 \
 \ ******************************************************************************
 
 .UpdateBackground
 
- LDA vergeOnScreenEdge
- BMI C2F22
+ LDA vergeOnScreenEdge  \ If bit 7 of vergeOnScreenEdge is set then the edge we
+ BMI upba1              \ are drawing is partially off-screen, so jump to upba1
+                        \ to skip the following
+
+                        \ If we get here then the edge we are drawing is fully
+                        \ on-screen
 
  LDA L0034              \ Set A = L0034, which is in the format %010vv0ab:
                         \
@@ -20322,25 +20756,38 @@ ENDIF
                         \   * %ab is the colour in the first verge pixel mask
                         \     for the verge
 
- JMP C2F2A
+ JMP upba2              \ Jump to upba2
 
-.C2F22
+.upba1
 
- DEY
+                        \ If we get here then the edge we are drawing is
+                        \ partially off-screen
 
- LDA backgroundColour,Y
- BNE C2F44
+ DEY                    \ Decrement the track line in Y
 
- LDA L0033
+ LDA backgroundColour,Y \ Set A to the contents of the background colour table
+                        \ for track line Y 
 
-.C2F2A
+ BNE upba4              \ If the background colour currently in the table is
+                        \ non-zero, jump to upba4
 
- CPY #&50
- BCS C2F44
+ LDA L0033              \ The background colour currently in the table is zero,
+                        \ so set A = L0033, which is in the format %100vv0ab:
+                        \
+                        \   * %vv is the verge we are currently drawing, from
+                        \     currentVerge
+                        \
+                        \   * %a......b is the fourth verge pixel mask for the
+                        \     verge in objectPalette+3
 
- LDX L62F2
- CPX #&28
- BCC C2F41
+.upba2
+
+ CPY #80                \ If Y >= 80, then this is not a valid track line
+ BCS upba4              \ number, so jump to upba4 to return from the subroutine
+
+ LDX L62F2              \ If L62F2 < 40, jump to upba3 to store A in the
+ CPX #40                \ background colour table
+ BCC upba3
 
  STA T                  \ Store A in T so we can retrieve it below
 
@@ -20349,15 +20796,15 @@ ENDIF
 
  LDA T                  \ Retrieve the value of A that we stored in T above
 
- BCS C2F41              \ If bits 0-1 of A = 3, jump to C2F41
+ BCS upba3              \ If bits 0-1 of A = 3, jump to upba3
 
  AND #%11111100         \ Clear bits 0 and 1 of A
 
-.C2F41
+.upba3
 
  STA backgroundColour,Y \ Store A as the background colour for track line Y
 
-.C2F44
+.upba4
 
  RTS                    \ Return from the subroutine
 
@@ -20371,9 +20818,11 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine draws a single byte in a verge edge, plus a second byte to the
-\ right to fill to the right of the verge.
-
+\ This routine draws a single byte of a verge edge in the first dash data block
+\ of the three that we set up in DrawVergeEdge. It also draws a second byte to
+\ the right, in the second dash data block, using the fill colour so the screen
+\ gets filled to the right of the verge edge.
+\
 \ Arguments:
 \
 \   X                   The pixel number of the edge within the pixel byte, with
@@ -20385,8 +20834,7 @@ ENDIF
 \   RR                  The pitch angle of the current segment (we stop drawing
 \                       the edge when Y reaches this value)
 \
-\   UU                  The number of the dash data block containing the
-\                       previous edge
+\   UU                  The number of the dash data block where we start drawing
 \
 \   JJ                  The right pixel byte when drawing the edge in the screen
 \                       buffer, i.e. the fill byte to the right of the edge
@@ -20423,7 +20871,8 @@ ENDIF
  BEQ StopDrawingEdge    \ current edge, so jump to StopDrawingEdge to stop
                         \ drawing the edge
 
- LDA UU                 \ Set A = UU, the dash data block of the previous edge
+ LDA UU                 \ Set A = UU, the number of the dash data block where we
+                        \ want to draw
 
 .verl2
 
@@ -20485,7 +20934,8 @@ ENDIF
                         \ is non-empty
 
  CPY #44                \ If Y >= 44, jump to verl7 to skip the following check,
- BCS verl7              \ as offset Y is always within a dash data block
+ BCS verl7              \ as offsets of 44 and above are always within a dash
+                        \ data block
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
@@ -20583,23 +21033,42 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine draws a single byte of a verge edge in the second dash data block
+\ of the three that we set up in DrawVergeEdge. It also draws a second byte to
+\ the right, in the third dash data block, using the fill colour so the screen
+\ gets filled to the right of the verge edge.
+\
 \ Arguments:
 \
-\   X                   3, 2, 1, 0
+\   X                   The pixel number of the edge within the pixel byte, with
+\                       0 being the first pixel (at the left end of the byte) to
+\                       3 as the last pixel (at the right end of the byte)
 \
-\   RR                  
+\   Y                   The track line to draw on (0 to 79)
 \
-\   UU                  
+\   RR                  The pitch angle of the current segment (we stop drawing
+\                       the edge when Y reaches this value)
 \
-\   JJ                  
+\   UU                  The number of the dash data block where we start drawing
 \
-\   (Q P)               
+\   JJ                  The right pixel byte when drawing the edge in the screen
+\                       buffer, i.e. the fill byte to the right of the edge
 \
-\   (NN MM)
+\   (Q P)               Address of the second dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
+\
+\   (NN MM)             Address of the third dash data block in this sequence,
+\                       i.e. the first memory page of the next dash data block
 \
 \ Returns:
 \
-\   C flag              
+\   C flag              The C flag is cleared
+\
+\   Y                   Incremented or decremented, depending on which way the
+\                       verge goes (decremented if the verge goes down,
+\                       incremented is it goes up)
+\
+\   A                   A is unchanged
 \
 \ ******************************************************************************
 
@@ -20610,28 +21079,54 @@ ENDIF
 .verb1
 
  NOP                    \ This instruction is modified by the DrawVergeEdge
-                        \ routine, to be NOP, INY or DEY
+                        \ routine, to be NOP, INY or DEY, to move on to the next
+                        \ track line as appropriate
 
- CPY RR                 \ If Y = RR, jump to StopDrawingEdge
- BEQ StopDrawingEdge
+ CPY RR                 \ If Y = RR, we have reached the pitch angle of the
+ BEQ StopDrawingEdge    \ current edge, so jump to StopDrawingEdge to stop
+                        \ drawing the edge
 
- LDA UU                 \ Set A = UU
+ LDA UU                 \ Set A = UU, the number of the dash data block where we
+                        \ want to draw
 
 .verb2
 
- STA &7000,Y
+ STA &7000,Y            \ This instruction is modified by the DrawVergeEdges
+                        \ routine to point to the relevant table for the edge
+                        \ we are drawing:
+                        \
+                        \  * leftVergeStart
+                        \
+                        \  * leftTrackStart
+                        \
+                        \  * rightVergeStart
+                        \
+                        \  * rightGrassStart
+                        \
+                        \ So this stores the dash data block number for the
+                        \ previous edge in the relevant verge table for track
+                        \ line Y
 
- LDA (P),Y
- BNE verb6
+ LDA (P),Y              \ Set A to the current contents of track line Y in
+                        \ (Q P), which is the dash data block containing the
+                        \ previous edge
 
- LDA objectPalette,X    \ Set A to logical colour X from the object palette
+ BNE verb6              \ If the current contents of the screen buffer is
+                        \ non-zero, then it already contains something, so jump
+                        \ to verb6 to merge our edge with the existing pixels
+
+ LDA objectPalette,X    \ Set A to the X-th entry from the object palette, which
+                        \ contains a background colour bytes with the first X
+                        \ pixels in the foreground colour
 
 .verb3
 
- STA (P),Y
+ STA (P),Y              \ Store the pixel byte in the dash data block
 
- LDA JJ
- STA (MM),Y
+ LDA JJ                 \ Store the pixel byte in JJ in the next dash data block
+ STA (MM),Y             \ to fill the pixel byte to the right of the edge byte
+                        \ with the background colour in JJ (so this fills to the
+                        \ right of the edge as we draw it)
 
 .verb4
 
@@ -20641,7 +21136,8 @@ ENDIF
 .verb5
 
  INY                    \ This instruction is modified by the DrawVergeEdge
-                        \ routine, to be NOP, INY or DEY
+                        \ routine, to be NOP, INY or DEY, to move on to the next
+                        \ track line as appropriate
 
  CLC                    \ Clear the C flag
 
@@ -20649,52 +21145,87 @@ ENDIF
 
 .verb6
 
- CPY #44
- BCS verb7
+                        \ If we get here then the pixel byte we are drawing into
+                        \ is non-empty
+
+ CPY #44                \ If Y >= 44, jump to verb7 to skip the following check,
+ BCS verb7              \ as offsets of 44 and above are always within a dash
+                        \ data block
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
 
  BCC verb4              \ If offset Y does not point to dash data, jump to verb4
+                        \ to return from the subroutine without drawing anything
 
 .verb7
 
- CMP #&55
- BNE verb8
+                        \ If we get here then the pixel byte we are drawing into
+                        \ is non-empty and is a valid part of the screen buffer
 
- LDA #0
+ CMP #&55               \ If the current contents of the screen buffer is not
+ BNE verb8              \ &55, then it does not denote black, so skip the
+                        \ following
 
+ LDA #0                 \ The current contents of the screen buffer is &55,
+                        \ which denotes black, so set A to 0 so we merge with a
+                        \ pixel byte of black
 .verb8
 
- AND pixelsToLeft,X
- ORA vergeEdgeRight,X
+ AND pixelsToLeft,X     \ AND the current contents with the X-th pixel mask from
+                        \ pixelsToLeft, which is a pixel byte with all the
+                        \ pixels set to the left of the X-th pixel, so this
+                        \ clears all pixels in the existing screen buffer byte
+                        \ from the X-th pixel and to the right
+                        \
+                        \ In other words, this clears the track edge and to the
+                        \ right, but keeps content to the left of the edge
 
- BNE verb3
+ ORA vergeEdgeRight,X   \ We set up vergeEdgeRight to contain the pixel bytes
+                        \ from objectPalette, but masked to only include the
+                        \ rightmost 4, 3, 2 and 1 pixels, so this inserts the
+                        \ edge and all the pixels to the right of the edge into
+                        \ the pixels that we just cleared, thus drawing the edge
+                        \ on top of what's already on-screen
 
- LDA #&55
+ BNE verb3              \ If the resulting pixel byte in A is non-zero, then we
+                        \ are ready to poke it into the screen buffer, so jump
+                        \ to verb3
 
- BNE verb3
+ LDA #&55               \ The resulting pixel byte is zero, which is a black
+                        \ pixel byte, and we represent this in the screen buffer
+                        \ with &55, so set A to &55 so we poke this into the
+                        \ screen buffer instead of zero
+
+ BNE verb3              \ Jump to verb3 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 \ ******************************************************************************
 \
 \       Name: DrawGrassRight
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a green byte into the screen buffer in the second dash data
+\             block for the edge
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   
+\   X                   The value of X from the current drawing routine:
 \
-\   Y                   
+\                         * 0 to 3 if a pixel byte has already been drawn
 \
-\   (Q P)               
+\                         * 128 is no pixel byte has been drawn so far
+\
+\   Y                   The track line to draw on (0 to 79)
+\
+\   (Q P)               Address of the second dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
 \
 \ Returns:
 \
-\   X                   &80
+\   X                   128
 \
 \   A                   A is unchanged
 \
@@ -20704,11 +21235,14 @@ ENDIF
 
 .DrawGrassRight
 
- CPX #128               \ If X <> 128, jump to grar2 to return from the
- BNE grar2              \ subroutine
+ CPX #128               \ If X <> 128 then the pixel byte has already been drawn
+ BNE grar2              \ in the calling routine (i.e. DrawShallowToLeft or
+                        \ DrawShallowToRight), so jump to grar2 to return from
+                        \ the subroutine
 
- CPY #44                \ If Y >= 44, jump to grar1
- BCS grar1
+ CPY #44                \ If Y >= 44, jump to grar1 to skip the following check,
+ BCS grar1              \ as offsets of 44 and above are always within a dash
+                        \ data block
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
@@ -20718,14 +21252,15 @@ ENDIF
 
 .grar1
 
- TAX                    \ Set the Y-th byte of (Q P) to &FF
- LDA #&FF
+ TAX                    \ Y points into dash data, so set the Y-th byte of (Q P)
+ LDA #%11111111         \ to four pixels of colour 3 (green)
  STA (P),Y
  TXA
 
 .grar2
 
- LDX #128               \ Set X = 128
+ LDX #128               \ Set X = 128 to reset the draw detection logic for the
+                        \ next byte to draw
 
  CLC                    \ Clear the C flag
 
@@ -20736,21 +21271,27 @@ ENDIF
 \       Name: DrawGrassLeft
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Draw a green byte into the screen buffer in the first dash data
+\             block for the edge
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   X                   
+\   X                   The value of X from the current drawing routine:
 \
-\   Y                   
+\                         * 0 to 3 if a pixel byte has already been drawn
 \
-\   (S R)               
+\                         * 128 is no pixel byte has been drawn so far
+\
+\   Y                   The track line to draw on (0 to 79)
+\
+\   (S R)               Address of the first dash data block in the memory page
+\                       containing the pixels at the start of the previous edge
 \
 \ Returns:
 \
-\   X                   &80
+\   X                   128
 \
 \   A                   A is unchanged
 \
@@ -20760,11 +21301,14 @@ ENDIF
 
 .DrawGrassLeft
 
- CPX #128               \ If X <> 128, jump to gral2 to return from the
- BNE gral2              \ subroutine
+ CPX #128               \ If X <> 128 then the pixel byte has already been drawn
+ BNE gral2              \ in the calling routine (i.e. DrawShallowToLeft or
+                        \ DrawShallowToRight), so jump to gral2 to return from
+                        \ the subroutine
 
- CPY #44                \ If Y >= 44, jump to gral1
- BCS gral1
+ CPY #44                \ If Y >= 44, jump to gral1 to skip the following check,
+ BCS gral1              \ as offsets of 44 and above are always within a dash
+                        \ data block
 
  JSR CheckDashData      \ Check whether offset Y points to dash data within
                         \ block UU, clearing the C flag if it does
@@ -20774,14 +21318,15 @@ ENDIF
 
 .gral1
 
- TAX                    \ Set the Y-th byte of (S R) to &FF
- LDA #&FF
+ TAX                    \ Y points into dash data, so set the Y-th byte of (S R)
+ LDA #%11111111         \ to four pixels of colour 3 (green)
  STA (R),Y
  TXA
 
 .gral2
 
- LDX #128               \ Set X = 128
+ LDX #128               \ Set X = 128 to reset the draw detection logic for the
+                        \ next byte to draw
 
  CLC                    \ Clear the C flag
 
@@ -25873,7 +26418,7 @@ ENDIF
  EQUB shlr17 - shlr2
  EQUB shlr19 - shlr2
 
- EQUB shlr3 - shlr2
+ EQUB shlr3 - shlr2     \ These are not used
  EQUB shlr5 - shlr2
  EQUB shlr7 - shlr2
  EQUB shlr9 - shlr2
@@ -26406,7 +26951,7 @@ NEXT
  EQUB shrl6 - shrl2
  EQUB shrl4 - shrl2
 
- EQUB shrl18 - shrl2
+ EQUB shrl18 - shrl2    \ These are not used
  EQUB shrl16 - shrl2
  EQUB shrl14 - shrl2
  EQUB shrl12 - shrl2
@@ -33435,67 +33980,82 @@ ORG &5E40
 \       Name: vergePixelMask
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
+\    Summary: Pixel bytes for drawing track verge edges
 \
 \ ------------------------------------------------------------------------------
 \
-\ Four bytes for each colour scheme, starting with four pixels of the background
-\ colour, and filling pixels 0, 1 and 2 with the foreground colour.
+\ This table contains four bytes for each of the different colour schemes for
+\ the track verges.
+\
+\ The first byte contains four pixels of the fill colour, which gets poked into
+\ the byte to the right of the edge byte we are drawing.
+\
+\ The other three bytes contain 1, 2 and 3 pixels of the foreground colour, with
+\ the pixels coming in from the left. So each batch looks like this if all four
+\ pixels are drawn:
+\
+\   .... ....
+\   x... ....
+\   xx.. ....
+\   xxx. ....
+\
+\ In the comments, this would be denoted as "Colour x then ." as colour x is on
+\ the left, then colour . is on the right.
 \
 \ ******************************************************************************
 
 .vergePixelMask
 
- EQUB %00000000         \ Colour 3 on 0 (green on black)
- EQUB %10001000         \                
- EQUB %11001100         \   * pixelMaskVerge for leftVergeStart
- EQUB %11101110         \   * pixelMaskNoVerge for leftTrackStart
+ EQUB %00000000         \ Colour 3 then 0 (green then black)           bbbb bbbb
+ EQUB %10001000         \                                              gbbb bbbb
+ EQUB %11001100         \   * pixelMaskVerge for leftVergeStart        ggbb bbbb
+ EQUB %11101110         \   * pixelMaskNoVerge for leftTrackStart      gggb bbbb
 
- EQUB %00001111         \ Colour 3 on 1 (green on red)
- EQUB %10001111
- EQUB %11001111
- EQUB %11101111
+ EQUB %00001111         \ Colour 3 then 1 (green then red)             rrrr rrrr
+ EQUB %10001111         \                                              grrr rrrr
+ EQUB %11001111         \                                              ggrr rrrr
+ EQUB %11101111         \                                              gggr rrrr
 
- EQUB %11110000         \ Colour 3 on 2 (green on white)
- EQUB %11111000         \
- EQUB %11111100         \   * pixelMaskVerge for leftTrackStart ???
- EQUB %11111110
+ EQUB %11110000         \ Colour 3 then 2 (green then white)           wwww wwww
+ EQUB %11111000         \                                              gwww wwww
+ EQUB %11111100         \   * pixelMaskVerge for leftTrackStart ???    ggww wwww
+ EQUB %11111110         \                                              gggw wwww
 
- EQUB %00000000         \ Colour 1 on 0 (red on black)
- EQUB %00001000
- EQUB %00001100
- EQUB %00001110
+ EQUB %00000000         \ Colour 1 then 0 (red then black)             bbbb bbbb
+ EQUB %00001000         \                                              rbbb bbbb
+ EQUB %00001100         \                                              rrbb bbbb
+ EQUB %00001110         \                                              rrrb bbbb
 
- EQUB %00000000         \ Colour 2 on 0 (white on black)
- EQUB %10000000         \
- EQUB %11000000         \   * pixelMaskVerge for rightVergeStart ???
- EQUB %11100000
+ EQUB %00000000         \ Colour 2 then 0 (white then black)           bbbb bbbb
+ EQUB %10000000         \                                              wbbb bbbb
+ EQUB %11000000         \   * pixelMaskVerge for rightVergeStart ???   wwbb bbbb
+ EQUB %11100000         \                                              wwwb bbbb
 
- EQUB %00001111         \ Colour 0 on 1 (black on red)
- EQUB %00000111
- EQUB %00000011
- EQUB %00000001
+ EQUB %00001111         \ Colour 0 then 1 (black then red)             rrrr rrrr
+ EQUB %00000111         \                                              brrr rrrr
+ EQUB %00000011         \                                              bbrr rrrr
+ EQUB %00000001         \                                              bbbr rrrr
 
- EQUB %11110000         \ Colour 0 on 2 (black on white)
- EQUB %01110000
- EQUB %00110000
- EQUB %00010000
+ EQUB %11110000         \ Colour 0 then 2 (black then white)           wwww wwww
+ EQUB %01110000         \                                              bwww wwww
+ EQUB %00110000         \                                              bbww wwww
+ EQUB %00010000         \                                              bbbw wwww
 
- EQUB %11111111         \ Colour 0 on 3 (black on green)
- EQUB %01110111         \                  
- EQUB %00110011         \   * pixelMaskVerge for rightGrassStart
- EQUB %00010001         \   * pixelMaskNoVerge for rightVergeStart
+ EQUB %11111111         \ Colour 0 then 3 (black then green)           gggg gggg
+ EQUB %01110111         \                                              bggg gggg
+ EQUB %00110011         \   * pixelMaskVerge for rightGrassStart       bbgg gggg
+ EQUB %00010001         \   * pixelMaskNoVerge for rightVergeStart     bbbg gggg
                         \   * pixelMaskNoVerge for rightGrassStart
 
- EQUB %11111111         \ Colour 1 on 3 (red on green)
- EQUB %01111111
- EQUB %00111111
- EQUB %00011111
+ EQUB %11111111         \ Colour 1 then 3 (red then green)             gggg gggg
+ EQUB %01111111         \                                              rggg gggg
+ EQUB %00111111         \                                              rrgg gggg
+ EQUB %00011111         \                                              rrrg gggg
 
- EQUB %11111111         \ Colour 2 on 3 (white on green)
- EQUB %11110111
- EQUB %11110011
- EQUB %11110001
+ EQUB %11111111         \ Colour 2 then 3 (white then green)           gggg gggg
+ EQUB %11110111         \                                              wggg gggg
+ EQUB %11110011         \                                              wwgg gggg
+ EQUB %11110001         \                                              wwwg gggg
 
  EQUB &03, &60          \ These bytes appear to be unused
 
@@ -33789,7 +34349,10 @@ ENDIF
 
 .objectPalette
 
- EQUB 0, 0, 0, 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -33821,24 +34384,26 @@ ENDIF
 
 .markerData
 
- EQUB 0, 0, 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: vergeEdgeRight
 \       Type: Variable
 \   Category: Graphics
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Contain the four pixel bytes for the verge edge we are drawing,
+\             masked to only include the rightmost 4, 3, 2 and 1 pixels
 \
 \ ******************************************************************************
 
 .vergeEdgeRight
 
- EQUB 0, 0, 0, 0
+ EQUB 0                 \ Includes all four pixels          xxxx
+ EQUB 0                 \ Includes pixels 1, 2, 3           .xxx
+ EQUB 0                 \ Includes pixels 2, 3              ..xx
+ EQUB 0                 \ Includes pixel 3                  ...x
 
 \ ******************************************************************************
 \
@@ -34062,7 +34627,9 @@ ENDIF
 
 .markerListIndex
 
- EQUB 0, 0, 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -34076,7 +34643,9 @@ ENDIF
 
 .xMarkerLo
 
- EQUB 0, 0, 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -34090,7 +34659,9 @@ ENDIF
 
 .xMarkerHi
 
- EQUB 0, 0, 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -34103,7 +34674,12 @@ ENDIF
 
 .soundBuffer
 
- EQUB 0, 0, 0, 0, 0, 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -35299,7 +35875,7 @@ ENDIF
 \
 \       Name: GetSteeringAssist
 \       Type: Subroutine
-\   Category: Dashboard
+\   Category: Driving model
 \    Summary: Fetch the current Computer Assisted Steering (CAS) status and show
 \             or hide the CAS indicator
 \
