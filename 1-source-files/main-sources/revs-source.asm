@@ -4438,7 +4438,7 @@ ORG &0B00
 \
 \       Name: PlaceCarsOnTrack
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Position the cars on the track, ready for a race or qualifying lap
 \
 \ ------------------------------------------------------------------------------
@@ -4730,7 +4730,7 @@ ORG &0B00
 \
 \       Name: CheckForCrash
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Check to see if we have crashed into the fence, and if so, display
 \             the fence and make the crash sound
 \
@@ -4958,7 +4958,7 @@ ORG &0B00
 \
 \       Name: PushCarOffTrack
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Push a car off the track and out of the race
 \
 \ ------------------------------------------------------------------------------
@@ -5676,7 +5676,7 @@ ORG &0B00
 \
 \       Name: MovePlayerForward
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the player's car forwards by one track segment and add the
 \             segment to the track segment buffer
 \
@@ -6234,7 +6234,7 @@ ORG &0B00
 \
 \       Name: ChangeDirection
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Update the track segment buffer when the player's car spins so it
 \             changes the direction in which it is facing along the track
 \
@@ -6272,7 +6272,7 @@ ORG &0B00
 \
 \       Name: MovePlayerBack
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the player's car backwards by one track segment and update
 \             the track segment buffer
 \
@@ -6317,7 +6317,7 @@ ORG &0B00
 \
 \       Name: TurnPlayerAround
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Turn the player around and initialise the specified number of
 \             track segments in the new direction
 \
@@ -6363,7 +6363,7 @@ ORG &0B00
 \
 \       Name: MovePlayer
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the player's car forwards or backwards by one segment
 \
 \ ------------------------------------------------------------------------------
@@ -8359,7 +8359,7 @@ ENDIF
 \
 \       Name: CopyDashData
 \       Type: Subroutine
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Copy the dash data from the main game code to screen memory, and
 \             vice versa
 \  Deep dive: The jigsaw puzzle binary
@@ -8508,7 +8508,7 @@ ENDIF
 \
 \       Name: dashDataAddress
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Addresses for copying the first block of dash data between the
 \             main game code and screen memory
 \  Deep dive: The jigsaw puzzle binary
@@ -9683,7 +9683,7 @@ ENDIF
 \
 \       Name: ProcessContact
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Process collosions between the player and the other cars
 \
 \ ------------------------------------------------------------------------------
@@ -9853,7 +9853,7 @@ ENDIF
 \
 \       Name: SquealTyres
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Make the tyres squeal
 \
 \ ------------------------------------------------------------------------------
@@ -12791,7 +12791,7 @@ ENDIF
 \
 \       Name: sub_C1FA8
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -15360,7 +15360,7 @@ ENDIF
 \
 \       Name: MovePlayerSegment
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the player's car in the correct direction
 \  Deep dive: Placing cars on the track
 \
@@ -16211,7 +16211,7 @@ ENDIF
 \
 \       Name: HideAllCars
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Set all the cars to hidden
 \
 \ ******************************************************************************
@@ -16269,7 +16269,7 @@ ENDIF
 \
 \       Name: MoveAndDrawCars
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the cars around the track and draw any that are visible, up
 \             to a maximum of five
 \
@@ -16401,7 +16401,7 @@ ENDIF
 \
 \       Name: ApplyDriverTactics (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Process all cars, checking first to see if the car we are
 \             processing has just overtaken the car in front of it
 \
@@ -16577,7 +16577,7 @@ ENDIF
 \
 \       Name: ApplyDriverTactics (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: The car we are processing has not overtaken the car in front of
 \             it, so apply driving tactics
 \
@@ -16837,7 +16837,7 @@ ENDIF
 \
 \       Name: ApplyDriverTactics (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Update the car status and loop back for the next car
 \
 \ ******************************************************************************
@@ -16880,7 +16880,7 @@ ENDIF
 \
 \       Name: CompareCarSegments
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Calculate the distance between two cars, in terms of segments and
 \             progress with the current segment
 \  Deep dive: Placing cars on the track
@@ -17102,7 +17102,7 @@ ENDIF
 \
 \       Name: MoveCars (Part 1 of 2)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the cars around the track
 \  Deep dive: Placing cars on the track
 \
@@ -17350,7 +17350,7 @@ ENDIF
 \
 \       Name: MoveCars (Part 2 of 2)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Move the cars forward around the track, and apply steering
 \  Deep dive: Placing cars on the track
 \
@@ -21456,7 +21456,7 @@ ENDIF
 \
 \       Name: dashData0
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -21644,7 +21644,7 @@ ENDIF
 \
 \       Name: dashData1
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -21800,7 +21800,7 @@ ENDIF
 \
 \       Name: dashData2
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -21885,7 +21885,7 @@ ENDIF
 \
 \       Name: dashData3
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22004,7 +22004,7 @@ ENDIF
 \
 \       Name: dashData4
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22130,7 +22130,7 @@ ENDIF
 \
 \       Name: dashData5
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22227,7 +22227,7 @@ ENDIF
 \
 \       Name: startDialLo
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: The low byte of the screen address of the start of the dial hand
 \             on the rev counter
 \
@@ -22260,7 +22260,7 @@ ENDIF
 \
 \       Name: dashData6
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22365,7 +22365,7 @@ ENDIF
 \
 \       Name: dashData7
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22486,7 +22486,7 @@ ENDIF
 \
 \       Name: dashData8
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22667,7 +22667,7 @@ ENDIF
 \
 \       Name: dashData9
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -22823,7 +22823,7 @@ ENDIF
 \
 \       Name: dashData10
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -23066,7 +23066,7 @@ ENDIF
 \
 \       Name: dashData11
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -23286,7 +23286,7 @@ ENDIF
 \
 \       Name: dashData12
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -23529,7 +23529,7 @@ ENDIF
 \
 \       Name: dashData13
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -23786,7 +23786,7 @@ ENDIF
 \
 \       Name: dashData14
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24029,7 +24029,7 @@ ENDIF
 \
 \       Name: dashData15
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24202,7 +24202,7 @@ ENDIF
 \
 \       Name: dashData16
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24216,7 +24216,7 @@ ENDIF
 \
 \       Name: carSpeedLo
 \       Type: Variable
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Low byte of each car's forward speed
 \
 \ ------------------------------------------------------------------------------
@@ -24380,7 +24380,7 @@ ENDIF
 \
 \       Name: dashData17
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24480,7 +24480,7 @@ ENDIF
 \
 \       Name: dashDataOffset
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Offset of the dash data within each dash data block
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24537,7 +24537,7 @@ ENDIF
 \
 \       Name: dashData18
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24551,7 +24551,7 @@ ENDIF
 \
 \       Name: rightDashMask
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Pixel mask for the right edge of the dashboard
 \  Deep dive: Drawing around the dashboard
 \
@@ -24620,7 +24620,7 @@ ENDIF
 \
 \       Name: startDialHi
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: The high byte of the screen address of the start of the dial hand
 \             on the rev counter
 \
@@ -24732,7 +24732,7 @@ ENDIF
 \
 \       Name: dashData19
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -24915,7 +24915,7 @@ ENDIF
 \
 \       Name: dashData20
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -25090,7 +25090,7 @@ ENDIF
 \
 \       Name: dashData21
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -25245,7 +25245,7 @@ NEXT
 \
 \       Name: dashData22
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -25427,7 +25427,7 @@ NEXT
 \
 \       Name: dashData23
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -25618,7 +25618,7 @@ NEXT
 \
 \       Name: dashData24
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code that gets moved into screen memory
 \  Deep dive: The jigsaw puzzle binary
 \
@@ -25781,7 +25781,7 @@ NEXT
 \
 \       Name: dashData25
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains code and part of the dashboard image that gets moved into
 \             screen memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26002,7 +26002,7 @@ NEXT
 \
 \       Name: dashData26
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26172,7 +26172,7 @@ NEXT
 \
 \       Name: dashData27
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26386,7 +26386,7 @@ ENDIF
 \
 \       Name: dashData28
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26531,7 +26531,7 @@ ENDIF
 \
 \       Name: dashData29
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26691,7 +26691,7 @@ ENDIF
 \
 \       Name: dashData30
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26812,7 +26812,7 @@ ENDIF
 \
 \       Name: dashData31
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26885,7 +26885,7 @@ NEXT
 \
 \       Name: dashData32
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -26919,7 +26919,7 @@ NEXT
 \
 \       Name: dashData33
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27048,7 +27048,7 @@ NEXT
 \
 \       Name: dashData34
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27082,7 +27082,7 @@ NEXT
 \
 \       Name: dashData35
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27224,7 +27224,7 @@ NEXT
 \
 \       Name: dashData36
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27285,7 +27285,7 @@ NEXT
 \
 \       Name: dashData37
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27447,7 +27447,7 @@ NEXT
 \
 \       Name: dashData38
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27532,7 +27532,7 @@ NEXT
 \
 \       Name: dashData39
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27688,7 +27688,7 @@ NEXT
 \
 \       Name: dashData40
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -27962,7 +27962,7 @@ NEXT
 \
 \       Name: SetBestRacingLine
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -28368,7 +28368,7 @@ NEXT
 \
 \       Name: MovePlayerOnTrack
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Update the position of the player's car within the current track
 \             segment
 \  Deep dive: Placing cars on the track
@@ -33376,7 +33376,7 @@ ENDIF
 \
 \       Name: dashData41
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \  Deep dive: The jigsaw puzzle binary
@@ -34443,7 +34443,7 @@ ENDIF
 \
 \       Name: steeringLo
 \       Type: Variable
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: The low byte of the steering wheel position
 \
 \ ------------------------------------------------------------------------------
@@ -34481,7 +34481,7 @@ ENDIF
 \
 \       Name: steeringHi
 \       Type: Variable
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: The high byte of the steering wheel position
 \
 \ ------------------------------------------------------------------------------
@@ -34758,7 +34758,7 @@ ENDIF
 \
 \       Name: spinYawAngleLo
 \       Type: Variable
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Low byte of the amount of yaw angle spin that is being applied to
 \             the player's car
 \
@@ -34960,7 +34960,7 @@ ENDIF
 \
 \       Name: spinYawAngleHi
 \       Type: Variable
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: High byte of the amount of yaw angle spin that is being applied
 \             to the player's car
 \
@@ -35266,7 +35266,7 @@ ENDIF
 \
 \       Name: crashedIntoFence
 \       Type: Variable
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Flag that records whether we have crashed into the fence
 \
 \ ******************************************************************************
@@ -35875,7 +35875,7 @@ ENDIF
 \
 \       Name: GetSteeringAssist
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: Fetch the current Computer Assisted Steering (CAS) status and show
 \             or hide the CAS indicator
 \
@@ -37403,7 +37403,7 @@ ENDIF
 \
 \       Name: dashData42
 \       Type: Variable
-\   Category: Dashboard
+\   Category: Screen buffer
 \    Summary: Contains part of the dashboard image that gets moved into screen
 \             memory
 \
