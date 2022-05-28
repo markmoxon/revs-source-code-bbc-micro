@@ -9242,11 +9242,13 @@ ENDIF
 
  JSR DrawVergeEdges     \ Draw the right edge of the left verge (leftTrackStart)
 
- LDA vergeDepthOfField  \ Set A = vergeDepthOfField
+ LDA vergeDepthOfField  \ Set A = vergeDepthOfField to pass to the
+                        \ SetVergeBackground routine
 
- LDX #4                 \ Set X = 4
+ LDX #%00000100         \ Set X = %00000100 to pass to SetVergeBackground
 
- JSR sub_C1A98          \ ???
+ JSR SetVergeBackground \ Update the background colour table for any verges that
+                        \ overlap the left edge of the screen
 
  STY L002C              \ Set L002C = Y
 
@@ -9314,11 +9316,13 @@ ENDIF
  JSR DrawVergeEdges     \ Draw the right edge of the right verge
                         \ (rightGrassStart)
 
- LDA vergeDepthOfField  \ Set A = vergeDepthOfField
+ LDA vergeDepthOfField  \ Set A = vergeDepthOfField to pass to the
+                        \ SetVergeBackground routine
 
- LDX #20                \ Set X = 20
+ LDX #%00010100         \ Set X = %00010100 to pass to SetVergeBackground
 
- JSR sub_C1A98          \ ???
+ JSR SetVergeBackground \ Update the background colour table for any verges that
+                        \ overlap the left edge of the screen
 
  STY L0029              \ Set L0029 = Y
 
@@ -9326,140 +9330,217 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1A98
+\       Name: SetVergeBackground
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: 
+\    Summary: Update the background colour table for any verges that overlap the
+\             left edge of the screen
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   A                   vergeDepthOfField
+\   A                   Index into the verge buffer, set to vergeDepthOfField
 \
 \   X                   ???
 \
-\                         * 4 (after drawing the left verge)
+\                         * %00000100 (after drawing the left verge)
 \
-\                         * 20 (after drawing the right verge)
+\                         * %00010100 (after drawing the right verge)
+\
+\ Returns:
+\
+\   Y                   ??? To store in L002C (left verge), L0029 (right verge)
 \
 \ ******************************************************************************
 
-.sub_C1A98
+.SetVergeBackground
 
- STX GG
+ STX GG                 \ Set GG to the value passed in X
 
- STA U
+ STA U                  \ Set U to the index into the verge buffer
 
- DEC vergeBufferEnd
+ DEC vergeBufferEnd     \ Decrement the index of the last entry in the track
+                        \ verge buffer for the edge we are drawing
 
- LDA L62F2
- CMP #40
- BCC C1B05
+ LDA playerSideways     \ If playerSideways < 40, then the player's car is
+ CMP #40                \ facing along the track rather than sideways, so jump
+ BCC sver8              \ to sver8 to join the loop below
 
- BCS C1B0B
+ BCS sver9              \ If we get here then the player's car is facing
+                        \ sideways relative to the track direction, so jump to
+                        \ sver9 to skip the loop (this BCS is effectively a JMP
+                        \ as we just passed through a BCC)
 
-.C1AA7
+                        \ The following loop uses X as a loop counter to work
+                        \ through through the verge buffer from entry U to the
+                        \ end, setting the background colour if the verge goes
+                        \ off the left of the screen
 
- LDY yVergeRight,X
+.sver1
 
- CPY #80
- BCS C1B03
+ LDY yVergeRight,X      \ If the pitch angle (i.e. the track line) of the X-th
+ CPY #80                \ entry in the verge buffer is 80 or more, then it is
+ BCS sver7              \ not on-screen, so jump to sver7 to move on to the next
+                        \ entry in the verge buffer
 
- LDA vergeDataRight,X
- BMI C1B03
+ LDA vergeDataRight,X   \ If bit 7 of the X-th entry's vergeDataRight is set,
+ BMI sver7              \ then this segment is hidden behind a hill, so jump to
+                        \ sver7 to move on to the next entry in the verge buffer
 
- LDA GG
- CMP #20
- BEQ C1AC4
+ LDA GG                 \ If GG = %00010100, which is the value we passed after
+ CMP #%00010100         \ drawing the right verge, then jump to sver2
+ BEQ sver2
 
- LDA xVergeRightHi+16,X
- STA W
+ LDA xVergeRightHi+16,X \ Set W to the high byte of the yaw angle of the verge's
+ STA W                  \ outer edge
 
- LDA xVergeRightHi,X
+ LDA xVergeRightHi,X    \ Set A to the high byte of the yaw angle of the verge's
+                        \ inner edge
 
- JMP C1ACC
+ JMP sver3              \ Jump to sver3 to keep going
 
-.C1AC4
+.sver2
 
- LDA xVergeRightHi,X
- STA W
+ LDA xVergeRightHi,X    \ Set W to the high byte of the yaw angle of the verge's
+ STA W                  \ inner edge
 
- LDA xVergeRightHi+16,X
+ LDA xVergeRightHi+16,X \ Set A to the high byte of the yaw angle of the verge's
+                        \ outer edge
 
-.C1ACC
+.sver3
 
+                        \ At this point, W is the yaw angle of the leftmost
+                        \ verge edge, and A is the yaw angle of the rightmost
+                        \ verge edge, for the verge that we are drawing
+
+ CLC                    \ Set A = A + 20
+ ADC #20
+
+ BMI sver7              \ If A is negative, jump to sver7 to move on to the next
+                        \ entry in the verge buffer
+
+ LDA W                  \ Set A = W + 20
  CLC
  ADC #20
- BMI C1B03
 
- LDA W
- CLC
- ADC #20
- BPL C1B03
+ BPL sver7              \ If A is positive, jump to sver7 to move on to the next
+                        \ entry in the verge buffer
 
-.P1AD8
+                        \ If we get to this point, then:
+                        \
+                        \   * A + 20 is positive
+                        \
+                        \   * W + 20 is negative
+                        \
+                        \ Adding 20 degrees to the yaw angles will move them to
+                        \ the right by half the screen width, so this is the
+                        \ same as moving the angles from the left edge of the
+                        \ screen to the middle
+                        \
+                        \ We then check whether moving the angles to the centre
+                        \ pushes the rightmost verge edge in A past the centre
+                        \ (i.e. positive), while still leaving the leftmost edge
+                        \ in the left half (i.e. negative)
+                        \
+                        \ If so, then this means the verge is straddling the
+                        \ left edge of the screen, so we need to consider
+                        \ setting the background colour for this track line to
+                        \ the verge colour
 
- LDA vergeDataRight+1,X
- BPL C1AE4
+                        \ First, though, we need to skip forward through the
+                        \ verge buffer until we get to the next entry that is
+                        \ followed by a non-hidden entry (so this skips over
+                        \ any entries that are hidden behind hills)
+                        \
+                        \ This ensures that we get to an entry in the verge
+                        \ buffer that has a verge colour, as hidden entries do
+                        \ not have a colour associated with them
 
- INX
+.sver4
 
- INC U
+ LDA vergeDataRight+1,X \ If the next entry in the verge buffer is not hidden
+ BPL sver5              \ behind a hill, jump to sver5
 
- CPX vergeBufferEnd
- BCC P1AD8
+ INX                    \ Increment X to point to the next entry in the verge
+                        \ buffer
 
-.C1AE4
+ INC U                  \ Increment U to point to the next entry in the verge
+                        \ buffer
 
- LDA backgroundColour,Y
- STA T
+ CPX vergeBufferEnd     \ If X < vergeBufferEnd then we haven't reached the end
+ BCC sver4              \ of the verge buffer, so loop back to check the next
+                        \ entry
 
- LDA backgroundColour,Y
+.sver5
 
- BEQ C1AF9
+ LDA backgroundColour,Y \ Set T to the current entry in the background colour
+ STA T                  \ table for track line Y
 
- AND #%00011100
+ LDA backgroundColour,Y \ Set A to the current entry in the background colour
+                        \ table for track line Y
 
- CMP GG
- BEQ C1AF9
+ BEQ sver6              \ If A = 0, jump to sver6 to set the background colour
+                        \ to the verge colour
 
- ROR A
+ AND #%00011100         \ Clear bits 0-1 and 5-7 of A
 
- EOR T
+ CMP GG                 \ If A = GG, jump to sver6 to set the background colour
+ BEQ sver6              \ to the verge colour
 
- BMI C1B03
+ ROR A                  \ Rotate the C flag into bit 7 of A, where:
+                        \
+                        \   * C flag is clear if A < GG
+                        \
+                        \   * C flag is set if A > GG
 
-.C1AF9
+ EOR T                  \ If T and A have different values of bit 7, jump to
+ BMI sver7              \ sver7 to move on to the next entry in the verge buffer
 
- LDA vergeDataRight,X
+                        \ Otherwise we fall througn into sver6 to set the
+                        \ background colour to the verge colour
 
- AND #%00000011
+.sver6
 
- ORA GG
+ LDA vergeDataRight,X   \ Set A to the verge data for this entry in the verge
+                        \ buffer
 
- STA backgroundColour,Y
+ AND #%00000011         \ Extract the colour of the verge, which is in bits 0-1
 
-.C1B03
+ ORA GG                 \ OR the mask that we passed to the routine, to give:
+                        \
+                        \   * %000001xx (after drawing the left verge)
+                        \
+                        \   * %000101xx (after drawing the right verge)
+                        \
+                        \ where %xx is the colour of the verge
 
- INC U
+ STA backgroundColour,Y \ Store the result as the background colour for track
+                        \ line Y
 
-.C1B05
+.sver7
 
- LDX U
+ INC U                  \ Increment the verge buffer index in U to move on to
+                        \ the next entry in the verge buffer
 
- CPX vergeBufferEnd
- BCC C1AA7
+.sver8
 
-.C1B0B
+                        \ This is where we join the loop
 
- LDX vergeDepthOfField
+ LDX U                  \ Set X to the loop counter in U, which contains the
+                        \ index of the entry to process in the verge buffer
 
- LDY yVergeRight,X
+ CPX vergeBufferEnd     \ If X < vergeBufferEnd, jump back to sver1 to process
+ BCC sver1              \ this entry
 
- INY
+.sver9
 
- RTS
+ LDX vergeDepthOfField  \ Set Y to the pitch angle (i.e. the track line) of the
+ LDY yVergeRight,X      \ entry in the verge buffer at the depth of field
+
+ INY                    \ Increment the track line in Y
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -9853,7 +9934,7 @@ ENDIF
 \
 \       Name: SquealTyres
 \       Type: Subroutine
-\   Category: Car geometry
+\   Category: Driving model
 \    Summary: Make the tyres squeal
 \
 \ ------------------------------------------------------------------------------
@@ -9881,7 +9962,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 1 of 5)
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Draw the specified edge of an object part
 \  Deep dive: Creating objects from edges
 \
@@ -10208,7 +10289,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 2 of 5)
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Calculate the screen address for the edge we want to draw
 \  Deep dive: Creating objects from edges
 \
@@ -10314,7 +10395,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 3 of 5)
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Construct a pixel byte for the edge we want to draw
 \  Deep dive: Creating objects from edges
 \
@@ -10642,7 +10723,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 4 of 5)
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Draw the edge into the screen buffer, merging with any content
 \             already in the buffer
 \  Deep dive: Creating objects from edges
@@ -10982,7 +11063,7 @@ ENDIF
 \
 \       Name: DrawObjectEdge (Part 5 of 5)
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Fill the object if required and loop back for the next edge
 \  Deep dive: Creating objects from edges
 \
@@ -11140,7 +11221,7 @@ ENDIF
 \
 \       Name: FillAfterObject
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Fill the block to the right of an object
 \  Deep dive: Creating objects from edges
 \
@@ -11434,7 +11515,7 @@ ENDIF
 \
 \       Name: FillAfterObjectS
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Fill the block to the right of an object
 \  Deep dive: Creating objects from edges
 \
@@ -11618,7 +11699,7 @@ ENDIF
 \
 \       Name: DrawEdge
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Draw an edge, overwriting whatever is already on-screen
 \
 \ ------------------------------------------------------------------------------
@@ -11829,7 +11910,7 @@ ENDIF
 \
 \       Name: FillInsideObject
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Fill the object part from the previous edge to the current edge
 \  Deep dive: Creating objects from edges
 \
@@ -12149,13 +12230,17 @@ IF _ACORNSOFT
  BNE gcol7
 
  LDA backgroundColour,Y
- AND #&EC
- CMP #&40
+ AND #%11101100
+
+ CMP #%01000000
  BEQ gcol2
- CMP #&88
+
+ CMP #%10001000
  BEQ gcol2
- CMP #&04
+
+ CMP #%00000100
  BEQ gcol2
+
  LDA rightGrassStart,Y
  BPL gcol3
  BMI gcol4
@@ -12163,9 +12248,11 @@ IF _ACORNSOFT
 .gcol2
 
  LDA backgroundColour,Y
- AND #&10
+ AND #%00010000
  BNE gcol3
+
  JSR gcol8
+
  JMP gcol4
 
 .gcol3
@@ -12175,7 +12262,7 @@ IF _ACORNSOFT
 .gcol4
 
  LDA backgroundColour,Y
- AND #3
+ AND #%00000011
  TAX
 
  LDA colourPalette,X    \ Set A to logical colour X from the colour palette
@@ -12829,7 +12916,7 @@ ENDIF
 \
 \       Name: DrawObject
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Draw an object of a specific type
 \
 \ ------------------------------------------------------------------------------
@@ -13061,7 +13148,7 @@ ENDIF
 \
 \       Name: ScaleObject
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Scale an object's scaffold by the scale factors in scaleUp and
 \             scaleDown
 \  Deep dive: Scaling objects with scaffolds
@@ -13295,7 +13382,7 @@ ENDIF
 \
 \       Name: DrawObjectEdges
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Drawing objects
 \    Summary: Draw all the parts of an object by drawing edges into the screen
 \             buffer
 \  Deep dive: Creating objects from edges
@@ -13576,7 +13663,7 @@ ENDIF
 \
 \                         * 0 = xPlayerCoord
 \
-\                         * 6 = xVector6
+\                         * 6 = xRoadSignCoord
 \
 \ Returns:
 \
@@ -14136,7 +14223,7 @@ ENDIF
 \
 \                         * 0 = yPlayerCoord
 \
-\                         * 6 = yVector6
+\                         * 6 = yRoadSignCoord
 \
 \   (L K)               The result from GetObjectDistance, which is called
 \                       between GetObjYawAngle and GetObjPitchAngle
@@ -15385,7 +15472,7 @@ ENDIF
                         \ once the current spin is added (i.e. it's the new
                         \ heading of the car)
 
-                        \ A is an angle thet represents the new direction in
+                        \ A is an angle that represents the new direction in
                         \ which our car will be facing, after applying spin,
                         \ with respect to the track, like this:
                         \
@@ -18423,7 +18510,7 @@ ENDIF
 \
 \       Name: CheckForContact
 \       Type: Subroutine
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: Check to see if the object is close enough to the player car to
 \             make contact
 \
@@ -20735,8 +20822,6 @@ ENDIF
 \
 \   L0034               ???
 \
-\   L62F2               ???
-\
 \ ******************************************************************************
 
 .UpdateBackground
@@ -20785,9 +20870,12 @@ ENDIF
  CPY #80                \ If Y >= 80, then this is not a valid track line
  BCS upba4              \ number, so jump to upba4 to return from the subroutine
 
- LDX L62F2              \ If L62F2 < 40, jump to upba3 to store A in the
- CPX #40                \ background colour table
- BCC upba3
+ LDX playerSideways     \ If playerSideways < 40, then the player's car is
+ CPX #40                \ facing along the track rather than sideways, so jump
+ BCC upba3              \ to upba3 to store A in the background colour table
+
+                        \ If we get here then the player's car is facing
+                        \ sideways, relative to the track direction
 
  STA T                  \ Store A in T so we can retrieve it below
 
@@ -21336,7 +21424,7 @@ ENDIF
 \
 \       Name: CheckDashData
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Check whether a dash data block index is pointing to dash data
 \
 \ ------------------------------------------------------------------------------
@@ -28192,18 +28280,75 @@ NEXT
 
  STA playerHeading      \ Set playerHeading = A
 
- BPL C456E
- EOR #&FF
+                        \ A is an angle that represents the player's heading,
+                        \ relative to the current segment, like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ An angle of 0 means our car is facing forwards along
+                        \ the track, while and angle of +32 means we are facing
+                        \ 45 degrees to the right of straight on, and an angle
+                        \ of 128 means we are facing backwards along the track
+
+ BPL C456E              \ If A is positive, jump to C456E to skip the following
+
+ EOR #&FF               \ Invert A, so this effectively reflects the angle into
+                        \ the right half of the above diagram:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   96
+                        \           127
 
 .C456E
 
- CMP #&40
- BCC C4574
- EOR #&7F
+ CMP #64                \ If A < 64, then the player's heading is forwards, so
+ BCC C4574              \ jump to C4574
+
+ EOR #%01111111         \ A >= 64, so the player's heading is backwards and in
+                        \ the bottom-right quadrant, so flip bits 0-6 of A,
+                        \ changing the range of the bottom-right quadrant from
+                        \ 64 to 127 to 63 to 0, to give this:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   32
+                        \            0
+                        \
+                        \ If the value in A is greater than 40, then we are
+                        \ looking sideways compared to the track direction, and
+                        \ conversely, if A is less than 40, we are looking
+                        \ forwards or backwards
 
 .C4574
 
- STA L62F2
+ STA playerSideways     \ Store the value of A in playerSideways, so we can test
+                        \ whether the player is facing sideways on the track
+
  EOR #&3F
  STA T
  LSR A
@@ -28502,7 +28647,7 @@ ENDIF
 \
 \       Name: sub_C4676
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -28557,7 +28702,7 @@ ENDIF
 \
 \       Name: sub_C4687
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Car geometry
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -30172,35 +30317,39 @@ ENDIF
 
  STY W                  \ Set W = 2, which gets decremented through each call
                         \ to AddScaledVector as we work through each axis, so it
-                        \ stores the results in each axis of xVector6 in turn
+                        \ stores the results in each axis of xRoadSignCoord in
+                        \ turn
 
  LDA zTrackSignVector,X \ Set A to the 3D z-coordinate of the track sign vector
 
- JSR AddScaledVector    \ Set zVector6 = zPlayerCoord - zTrackSignVector * 2 ^ 6
+ JSR AddScaledVector    \ Set zRoadSignCoord
+                        \              = zPlayerCoord - zTrackSignVector * 2 ^ 6
 
  LDY #4                 \ Set Y = 4, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 4
 
  LDA yTrackSignVector,X \ Set A to the 3D y-coordinate of the track sign vector
 
- JSR AddScaledVector    \ Set yVector6 = yPlayerCoord - yTrackSignVector * 2 ^ 4
+ JSR AddScaledVector    \ Set yRoadSignCoord
+                        \              = yPlayerCoord - yTrackSignVector * 2 ^ 4
 
  LDY #2                 \ Set Y = 2, so the call to AddScaledVector scales by
                         \ 2 ^ (8 - Y) = 2 ^ 6
 
  LDA xTrackSignVector,X \ Set A to the 3D x-coordinate of the track sign vector
 
- JSR AddScaledVector    \ Set xVector6 = xPlayerCoord - xTrackSignVector * 2 ^ 6
+ JSR AddScaledVector    \ Set xRoadSignCoord
+                        \              = xPlayerCoord - xTrackSignVector * 2 ^ 6
 
                         \ We now have:
                         \
-                        \   [ xVector6 ]   [ xPlayerCoord ]
-                        \   [ yVector6 ] = [ yPlayerCoord ]
-                        \   [ zVector6 ]   [ zPlayerCoord ]
+                        \   [ xRoadSignCoord ]   [ xPlayerCoord ]
+                        \   [ yRoadSignCoord ] = [ yPlayerCoord ]
+                        \   [ zRoadSignCoord ]   [ zPlayerCoord ]
                         \
-                        \                  [ xTrackSignVector * 2 ^ 6 ]
-                        \                - [ yTrackSignVector * 2 ^ 4 ]
-                        \                  [ zTrackSignVector * 2 ^ 6 ]
+                        \                        [ xTrackSignVector * 2 ^ 6 ]
+                        \                      - [ yTrackSignVector * 2 ^ 4 ]
+                        \                        [ zTrackSignVector * 2 ^ 6 ]
 
  LDA trackSignData,X    \ Set objectType to the object type for road sign X,
  AND #%00000111         \ which comes from bits 0-2 of trackSignData, and
@@ -30225,13 +30374,13 @@ ENDIF
                         \   [ yVector4 ] = [ yTrackSectionI ]
                         \   [ zVector4 ]   [ zTrackSectionI ]
 
- LDY #6                 \ Set Y = 6 so the call to GetObjYawAngle uses xVector6
-                        \ for the second variable, so we calculate the yaw and
-                        \ pitch angles for an object at the following 3D
-                        \ coordinates (if we just consider the the x-axis, for
-                        \ clarity):
+ LDY #6                 \ Set Y = 6 so the call to GetObjYawAngle uses
+                        \ xRoadSignCoord for the second variable, so we
+                        \ calculate the yaw and pitch angles for an object at
+                        \ the following 3D coordinates (if we just consider the
+                        \ the x-axis, for clarity):
                         \
-                        \    xVector4 - xVector6
+                        \    xVector4 - xRoadSignCoord
                         \  = xTrackSectionI - (xPlayerCoord - xTrackSignVector)
                         \  = xTrackSectionI - xPlayerCoord + xTrackSignVector
                         \  = xTrackSectionI + xTrackSignVector - xPlayerCoord
@@ -30296,7 +30445,7 @@ ENDIF
                         \ angle, and then we are done building the sign object
 
  LDY #6                 \ Set Y = 6 so the call to GetObjPitchAngle uses
-                        \ xVector6
+                        \ xRoadSignCoord
 
  JSR GetObjPitchAngle   \ Calculate the object's pitch angle, returning it
                         \ in A and LL
@@ -30321,9 +30470,9 @@ ENDIF
 \ This routine does the following calculation, one axis at a time (starting with
 \ the z-axis, then the y-axis and x-axis):
 \
-\   [ xVector6 ]   [ xPlayerCoord ]   [ xTrackSignVector * 2 ^ (8 - Y) ]
-\   [ yVector6 ] = [ yPlayerCoord ] - [ yTrackSignVector * 2 ^ (8 - Y) ]
-\   [ zVector6 ]   [ zPlayerCoord ]   [ zTrackSignVector * 2 ^ (8 - Y) ]
+\   [ xRoadSignCoord ]   [ xPlayerCoord ]   [ xTrackSignVector * 2 ^ (8 - Y) ]
+\   [ yRoadSignCoord ] = [ yPlayerCoord ] - [ yTrackSignVector * 2 ^ (8 - Y) ]
+\   [ zRoadSignCoord ]   [ zPlayerCoord ]   [ zTrackSignVector * 2 ^ (8 - Y) ]
 \
 \ The value of Y can be varied between calls to change the scale factor on a
 \ per-axis basis.
@@ -30380,14 +30529,14 @@ ENDIF
  DEC W                  \ Decrement the axis index in W, ready for the next call
                         \ to AddScaledVector
 
- LDA xPlayerCoordLo,Y   \ Set xVector6 = xPlayerCoord - (U T)
+ LDA xPlayerCoordLo,Y   \ Set xRoadSignCoord = xPlayerCoord - (U T)
  SEC                    \
  SBC T                  \ starting with the low bytes
- STA xVector6Lo,Y
+ STA xRoadSignCoordLo,Y
 
  LDA xPlayerCoordHi,Y   \ And then the high bytes
  SBC U
- STA xVector6Hi,Y
+ STA xRoadSignCoordHi,Y
 
  RTS                    \ Return from the subroutine
 
@@ -34154,7 +34303,7 @@ ENDIF
 \
 \       Name: xPlayerCoordLo
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The low byte of the x-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
@@ -34167,7 +34316,7 @@ ENDIF
 \
 \       Name: yPlayerCoordLo
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The low byte of the y-coordinate of the player's 3D coordinates
 \
 \ ******************************************************************************
@@ -34230,103 +34379,82 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xVector6Lo
+\       Name: xRoadSignCoordLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The low byte of the x-coordinate of the road sign's 3D coordinates
 \
 \ ******************************************************************************
 
-.xVector6Lo
+.xRoadSignCoordLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: yVector6Lo
+\       Name: yRoadSignCoordLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The low byte of the y-coordinate of the road sign's 3D coordinates
 \
 \ ******************************************************************************
 
-.yVector6Lo
+.yRoadSignCoordLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zVector6Lo
+\       Name: zRoadSignCoordLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The low byte of the z-coordinate of the road sign's 3D coordinates
 \
 \ ******************************************************************************
 
-.zVector6Lo
+.zRoadSignCoordLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: xVector6Hi
+\       Name: xRoadSignCoordHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The high byte of the x-coordinate of the road sign's 3D
+\             coordinates
 \
 \ ******************************************************************************
 
-.xVector6Hi
+.xRoadSignCoordHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: yVector6Hi
+\       Name: yRoadSignCoordHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The high byte of the y-coordinate of the road sign's 3D
+\             coordinates
 \
 \ ******************************************************************************
 
-.yVector6Hi
+.yRoadSignCoordHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zVector6Hi
+\       Name: zRoadSignCoordHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: 3D objects
+\    Summary: The high byte of the z-coordinate of the road sign's 3D
+\             coordinates
 \
 \ ******************************************************************************
 
-.zVector6Hi
+.zRoadSignCoordHi
 
  EQUB 0
 
@@ -35203,18 +35331,23 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F2
+\       Name: playerSideways
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Car geometry
+\    Summary: Contains the player's heading, for testing whether the car is
+\             pointing sideways
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If playerSideways < 40, then the player's car is facing forwards or backwards
+\ along the track.
+\
+\ If playerSideways >= 40, then the player's car is facing sideways, relative to
+\ the direction of the track.
 \
 \ ******************************************************************************
 
-.L62F2
+.playerSideways
 
  EQUB 0
 
