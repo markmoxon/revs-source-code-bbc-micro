@@ -7682,8 +7682,8 @@ ENDIF
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR DrawBackground     \ Set the background colour for all the track lines in
-                        \ the track view
+ JSR SetBackground      \ Initialise the background colour for all the track
+                        \ lines in the track view
 
  JSR BuildRoadSign      \ Build the road sign (if one is visible)
 
@@ -8275,16 +8275,16 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawBackground
+\       Name: SetBackground
 \       Type: Subroutine
-\   Category: Graphics
-\    Summary: Set the background colour for all the track lines in the track
-\             view
+\   Category: Screen buffer
+\    Summary: Initialise the background colour for all the track lines in the
+\             track view
 \  Deep dive: Drawing the track view
 \
 \ ******************************************************************************
 
-.DrawBackground
+.SetBackground
 
  LDX horizonListIndex   \ Set X = horizonListIndex
 
@@ -9250,7 +9250,10 @@ ENDIF
  JSR SetVergeBackground \ Update the background colour table for any verges that
                         \ overlap the left edge of the screen
 
- STY L002C              \ Set L002C = Y
+ STY L002C              \ SetVergeBackground sets Y to the track line just above
+                        \ the segment at vergeDepthOfField (i.e. the furthest
+                        \ segment that might contain a verge), so store this in
+                        \ L002C
 
  LDA horizonListIndex   \ Set A = horizonListIndex
 
@@ -9324,7 +9327,10 @@ ENDIF
  JSR SetVergeBackground \ Update the background colour table for any verges that
                         \ overlap the left edge of the screen
 
- STY L0029              \ Set L0029 = Y
+ STY L0029              \ SetVergeBackground sets Y to the track line just above
+                        \ the segment at vergeDepthOfField (i.e. the furthest
+                        \ segment that might contain a verge), so store this in
+                        \ L0029
 
  RTS                    \ Return from the subroutine
 
@@ -9338,19 +9344,29 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine works through any track lines that might contain a verge, and
+\ checks whether the verge crosses the left edge of the screen, updating the
+\ relevant entry in the background colour table if it does.
+\
 \ Arguments:
 \
-\   A                   Index into the verge buffer, set to vergeDepthOfField
+\   A                   Index of the first entry to check in the verge buffer,
+\                       typically set to vergeDepthOfField so only entries that
+\                       might contain a verge are checked
 \
-\   X                   ???
+\   X                   Set to a bit mask as follows
 \
-\                         * %00000100 (after drawing the left verge)
+\                         * %000 00 1 00 (after drawing the left verge)
 \
-\                         * %00010100 (after drawing the right verge)
+\                         * %000 10 1 00 (after drawing the right verge)
+\
+\                       Only bits 2-4 of this are used
 \
 \ Returns:
 \
-\   Y                   ??? To store in L002C (left verge), L0029 (right verge)
+\   Y                   The track line just above the pitch angle of the segment
+\                       at vergeDepthOfField (i.e. the furthest segment that
+\                       might contain a verge)
 \
 \ ******************************************************************************
 
@@ -9361,7 +9377,7 @@ ENDIF
  STA U                  \ Set U to the index into the verge buffer
 
  DEC vergeBufferEnd     \ Decrement the index of the last entry in the track
-                        \ verge buffer for the edge we are drawing
+                        \ verge buffer for the verge we are drawing
 
  LDA playerSideways     \ If playerSideways < 40, then the player's car is
  CMP #40                \ facing along the track rather than sideways, so jump
@@ -9480,13 +9496,18 @@ ENDIF
  LDA backgroundColour,Y \ Set A to the current entry in the background colour
                         \ table for track line Y
 
- BEQ sver6              \ If A = 0, jump to sver6 to set the background colour
-                        \ to the verge colour
+ BEQ sver6              \ If A = 0, then the background colour is currently
+                        \ set to black, so jump to sver6 to set the background
+                        \ colour to the verge colour
 
- AND #%00011100         \ Clear bits 0-1 and 5-7 of A
+ AND #%00011100         \ Extract bits 2-4 of A
 
- CMP GG                 \ If A = GG, jump to sver6 to set the background colour
- BEQ sver6              \ to the verge colour
+ CMP GG                 \ If A = GG, then bits 2-4 match the mask we passed to
+ BEQ sver6              \ the routine, so jump to sver6 to set the background
+                        \ colour to the verge colour
+
+                        \ Bits 2-4 of the current background colour do not match
+                        \ the mask in GG
 
  ROR A                  \ Rotate the C flag into bit 7 of A, where:
                         \
@@ -9502,12 +9523,16 @@ ENDIF
 
 .sver6
 
- LDA vergeDataRight,X   \ Set A to the verge data for this entry in the verge
-                        \ buffer
+ LDA vergeDataRight,X   \ Set A to the verge data for the entry in the verge
+                        \ buffer that is crossing the left edge of the screen
 
- AND #%00000011         \ Extract the colour of the verge, which is in bits 0-1
+ AND #%00000011         \ Extract the colour of the verge, which is in bits 0-1,
+                        \ so this is the colour that we want to store in the
+                        \ background colour table (as this is the colour of the
+                        \ verge mark that's at the left edge of the screen)
 
- ORA GG                 \ OR the mask that we passed to the routine, to give:
+ ORA GG                 \ OR the verge colour with the mask that we passed to
+                        \ the routine, to give:
                         \
                         \   * %000001xx (after drawing the left verge)
                         \
@@ -9546,7 +9571,7 @@ ENDIF
 \
 \       Name: DrawCornerMarkers
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing objects
 \    Summary: Draw any visible corner markers
 \  Deep dive: Corner markers
 \
@@ -11172,7 +11197,7 @@ ENDIF
 \
 \       Name: GetTyreDashEdge
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Copy the pixel bytes along the tyre and dashboard edges so they
 \             can be feathered
 \
@@ -11466,7 +11491,7 @@ ENDIF
 \
 \       Name: GetTyreDashEdgeS
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Copy the pixel bytes along the tyre and dashboard edges so they
 \             can be feathered
 \
@@ -11740,7 +11765,7 @@ ENDIF
 \
 \       Name: GetTyreDashEdges
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Fetch the pixel bytes from along the edge of the dashboard or tyre
 \             and fill the block to the right of the edge appropriately
 \
@@ -12178,7 +12203,7 @@ ENDIF
 \
 \       Name: GetColour
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Calculate the colour of a specific pixel byte in the screen buffer
 \
 \ ------------------------------------------------------------------------------
@@ -12391,7 +12416,7 @@ ENDIF
 \
 \       Name: GetColourS
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Calculate the colour of a specific pixel byte in the screen buffer
 \
 \ ------------------------------------------------------------------------------
@@ -18575,7 +18600,7 @@ ENDIF
 \
 \       Name: DrawCarInPosition
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing objects
 \    Summary: Draw the car in a specified race position
 \
 \ ------------------------------------------------------------------------------
@@ -18606,7 +18631,7 @@ ENDIF
 \
 \       Name: DrawCarOrSign
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing objects
 \    Summary: Draw a car or sign
 \  Deep dive: Object definitions
 \             Drawing a 3D car from 2D parts
@@ -20875,7 +20900,9 @@ ENDIF
  BCC upba3              \ to upba3 to store A in the background colour table
 
                         \ If we get here then the player's car is facing
-                        \ sideways, relative to the track direction
+                        \ sideways, relative to the track direction, so we set
+                        \ the background colour to either black or green,
+                        \ ignoring the verge marks
 
  STA T                  \ Store A in T so we can retrieve it below
 
@@ -20884,9 +20911,11 @@ ENDIF
 
  LDA T                  \ Retrieve the value of A that we stored in T above
 
- BCS upba3              \ If bits 0-1 of A = 3, jump to upba3
+ BCS upba3              \ If bits 0-1 of A = 3, jump to upba3 to store green as
+                        \ the background colour
 
- AND #%11111100         \ Clear bits 0 and 1 of A
+ AND #%11111100         \ Otherwise clear bits 0 and 1 of A, to set black as the
+                        \ background colour
 
 .upba3
 
@@ -21558,7 +21587,7 @@ ENDIF
 \
 \       Name: tyreEdgeIndex
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Index of the mask and pixel bytes for the tyre edges on a specific
 \             track line
 \  Deep dive: Drawing around the dashboard
@@ -21682,7 +21711,7 @@ ENDIF
 \
 \       Name: staDrawByteTyre
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Low address bytes of the STA instructions in the DRAW_BYTE macros,
 \             for use when drawing track lines around the tyres
 \
@@ -21746,7 +21775,7 @@ ENDIF
 \
 \       Name: ldaDrawByte
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Low address bytes of the LDA #0 instructions in the DRAW_BYTE
 \             macros, for use when drawing track lines around the dashboard
 \
@@ -21829,7 +21858,7 @@ ENDIF
 \
 \       Name: handPixels
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: The number of pixels in the longest axis for the rev counter hand
 \             at various points in a half-quadrant
 \
@@ -21902,7 +21931,7 @@ ENDIF
 \
 \       Name: staDrawByte
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Low address bytes of the STA instructions in the DRAW_BYTE macros,
 \             for use when drawing track lines around the dashboard
 \
@@ -21987,7 +22016,7 @@ ENDIF
 \
 \       Name: DrawFence (Part 2 of 2)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the fence that we crash into when running off the track
 \
 \ ******************************************************************************
@@ -22362,7 +22391,7 @@ ENDIF
 \
 \       Name: leftDashPixels
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixels along the left edge of the dashboard
 \  Deep dive: Drawing around the dashboard
 \
@@ -22467,7 +22496,7 @@ ENDIF
 \
 \       Name: rightDashPixels
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixels along the right edge of the dashboard
 \  Deep dive: Drawing around the dashboard
 \
@@ -23079,7 +23108,7 @@ ENDIF
 \
 \       Name: leftTyrePixels
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixels along the edge of the left tyre
 \  Deep dive: Drawing around the dashboard
 \
@@ -23322,7 +23351,7 @@ ENDIF
 \
 \       Name: rightTyrePixels
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixels along the edge of the right tyre
 \  Deep dive: Drawing around the dashboard
 \
@@ -23542,7 +23571,7 @@ ENDIF
 \
 \       Name: leftTyreMask
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixel mask for the edge of the left tyre
 \  Deep dive: Drawing around the dashboard
 \
@@ -23785,7 +23814,7 @@ ENDIF
 \
 \       Name: rightTyreMask
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixel mask for the edge of the right tyre
 \  Deep dive: Drawing around the dashboard
 \
@@ -24482,7 +24511,7 @@ ENDIF
 \
 \       Name: leftDashMask
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Pixel mask for the left edge of the dashboard
 \  Deep dive: Drawing around the dashboard
 \
@@ -24639,7 +24668,7 @@ ENDIF
 \
 \       Name: rightDashMask
 \       Type: Variable
-\   Category: Screen buffer
+\   Category: Dashboard
 \    Summary: Pixel mask for the right edge of the dashboard
 \  Deep dive: Drawing around the dashboard
 \
@@ -24725,7 +24754,7 @@ ENDIF
 \
 \       Name: wheelPixels
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: The number of pixels in the longest axis for the steering wheel
 \             line at various points in a quadrant
 \
@@ -25418,7 +25447,7 @@ NEXT
 \
 \       Name: shortAxis
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Code modifications for the DrawDashboardLine line-drawing routine
 \
 \ ------------------------------------------------------------------------------
@@ -25444,7 +25473,7 @@ NEXT
 \
 \       Name: stepAxis
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Code modifications for the DrawDashboardLine line-drawing routine
 \
 \ ------------------------------------------------------------------------------
@@ -26142,7 +26171,7 @@ NEXT
 \
 \       Name: DrawFence (Part 1 of 2)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the fence that we crash into when running off the track
 \
 \ ------------------------------------------------------------------------------
@@ -26187,7 +26216,7 @@ NEXT
 \
 \       Name: fencePixelsGrass
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Pixel bytes for the fence with green grass behind it
 \
 \ ******************************************************************************
@@ -26203,7 +26232,7 @@ NEXT
 \
 \       Name: fencePixelsSky
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Pixel bytes for the fence with blue sky behind it
 \
 \ ******************************************************************************
@@ -26794,7 +26823,7 @@ ENDIF
 \
 \       Name: fillDataOffset
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Dash data offsets, tweaked to give bottom line values that are
 \             compatible with the process of filling blocks to the left
 \  Deep dive: Creating objects from edges
@@ -27737,7 +27766,7 @@ NEXT
 \
 \       Name: dashRightEdge
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Storage for the first track pixel byte along the right edge of the
 \             dashboard
 \
@@ -33239,7 +33268,7 @@ ENDIF
 \
 \       Name: AnimateTyres
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Update screen memory to animate the tyres
 \
 \ ******************************************************************************
@@ -33312,7 +33341,7 @@ ENDIF
 \
 \       Name: tyreTread1
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Tyre tread pattern
 \
 \ ******************************************************************************
@@ -33325,7 +33354,7 @@ ENDIF
 \
 \       Name: tyreTread2
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Tyre tread pattern
 \
 \ ******************************************************************************
@@ -34093,15 +34122,47 @@ ORG &5E40
 \
 \       Name: backgroundColour
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: The background colour for each track line
 \  Deep dive: Drawing the track view
 \
 \ ------------------------------------------------------------------------------
 \
-\ Bits 0 and 1 give the starting colour (i.e. the background colour) of each
-\ track line. This value is a logical colour and the physical colour is looked
-\ up from the colourPalette table.
+\ This table contains colour information for each of the 80 track lines, as
+\ follows:
+\
+\   * Bits 0-1: background colour of track line (this value is a logical colour
+\     and the physical colour is looked up from the colourPalette table)
+\
+\     %00 = logical colour 0
+\     %01 = logical colour 1
+\     %10 = logical colour 2
+\     %11 = logical colour 3
+\
+\   * Bit 2: records which routine set this colour
+\
+\     %0 = not set by SetVergeBackground
+\     %1 = set by SetVergeBackground
+\
+\   * Bits 3-4: verge type (taken from currentVerge)
+\
+\     %00 = leftVergeStart
+\     %01 = leftTrackStart
+\     %10 = rightVergeStart
+\     %11 = rightGrassStart
+\
+\   * Bits 5-7: records which routine set this colour
+\
+\     %000 = set by UpdateBackground, player's car is pointing sideways
+\     %001 = set by SetBackground
+\     %010 = set by UpdateBackground to value in L0034 (edge is fully
+\            on-screen, player's car is pointing along the track)
+\     %100 = set by UpdateBackground to value in L0033 (edge is partially
+\            on-screen, player's car is pointing along the track)
+\
+\ Bits 2-7 are only used by the GetColour routine in the Acornsoft version. In
+\ the Superior Software release, GetColour was recoded to be smaller, and the
+\ recoded version only uses bits 0-1, so bits 2-7 are unused.
 \
 \ ******************************************************************************
 
@@ -34128,7 +34189,7 @@ ORG &5E40
 \
 \       Name: vergePixelMask
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing the track
 \    Summary: Pixel bytes for drawing track verge edges
 \
 \ ------------------------------------------------------------------------------
@@ -34237,7 +34298,7 @@ ENDIF
 \
 \       Name: zeroIfYIs55
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: A lookup table for zeroing Y if and only if it is &55
 \
 \ ******************************************************************************
@@ -34520,7 +34581,7 @@ ENDIF
 \
 \       Name: vergeEdgeRight
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing the track
 \    Summary: Contain the four pixel bytes for the verge edge we are drawing,
 \             masked to only include the rightmost 4, 3, 2 and 1 pixels
 \
@@ -35368,7 +35429,7 @@ ENDIF
 \
 \       Name: temp3
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing objects
 \    Summary: Temporary storage, used when drawing cars
 \
 \ ******************************************************************************
@@ -35462,7 +35523,7 @@ ENDIF
 \
 \       Name: tyreTravel
 \       Type: Variable
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Keeps track of how far we have travelled so we know when to
 \             animate the tyres
 \
@@ -35507,7 +35568,7 @@ ENDIF
 \
 \       Name: lowestTrackLine
 \       Type: Variable
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Used to prevent objects from being drawn below the horizon line
 \
 \ ******************************************************************************
@@ -37391,7 +37452,7 @@ ENDIF
 \
 \       Name: ResetTrackLines
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Reset the track lines below the horizon in the track view
 \
 \ ------------------------------------------------------------------------------
@@ -37472,7 +37533,7 @@ ENDIF
 \
 \       Name: DrawCars
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing objects
 \    Summary: Draw all the car objects, with four objects for the closest car in
 \             front of us
 \
@@ -37685,7 +37746,7 @@ ORG &7B00
 \
 \       Name: ShowStartLights
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Show the lights at the start of the race
 \
 \ ------------------------------------------------------------------------------
@@ -38065,7 +38126,7 @@ ORG &7B00
 \
 \       Name: DrawTrackView (Part 1 of 4)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the top part of the track view using the data in the dash
 \             data blocks
 \  Deep dive: Drawing around the dashboard
@@ -38102,7 +38163,7 @@ ORG &7B00
 \
 \       Name: DrawTrackLine (Part 2 of 2)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw a pixel line across the screen in the track view
 \  Deep dive: Drawing around the dashboard
 \             Drawing the track view
@@ -38137,7 +38198,7 @@ ORG &7B00
 \
 \       Name: DRAW_BYTE
 \       Type: Macro
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw a pixel byte as part of a horizontal line when drawing the
 \             track view
 \
@@ -38246,7 +38307,7 @@ ENDMACRO
 \
 \       Name: DrawTrackBytes (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the pixel bytes that make up the track view (0 to 15)
 \  Deep dive: Drawing around the dashboard
 \             Drawing the track view
@@ -38290,7 +38351,7 @@ ENDMACRO
 \
 \       Name: DrawTrackView (Part 2 of 4)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the part of the track view that fits around the dashboard
 \  Deep dive: Drawing around the dashboard
 \             Drawing the track view
@@ -38431,7 +38492,7 @@ ENDMACRO
 \
 \       Name: DrawTrackBytes (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the pixel bytes that make up the track view (16 to 39)
 \  Deep dive: Drawing around the dashboard
 \             Drawing the track view
@@ -38494,7 +38555,7 @@ ENDMACRO
 \
 \       Name: DrawTrackLine (Part 1 of 2)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw a pixel line across the screen in the track view, broken up
 \             into bytes
 \  Deep dive: Drawing around the dashboard
@@ -38560,7 +38621,7 @@ ENDMACRO
 \
 \       Name: DrawTrackBytes (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Return from the subroutine
 \  Deep dive: Drawing around the dashboard
 \             Drawing the track view
@@ -38575,7 +38636,7 @@ ENDMACRO
 \
 \       Name: DrawTrackView (Part 3 of 4)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Draw the part of the track view that fits around the dashboard and
 \             tyres
 \  Deep dive: Drawing around the dashboard
