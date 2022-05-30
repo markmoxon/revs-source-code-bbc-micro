@@ -13179,22 +13179,34 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C1FA8
+\       Name: SetPlayerDriftS
 \       Type: Subroutine
 \   Category: Car geometry
-\    Summary: 
+\    Summary: Record player drift, but only if the player is not in the first
+\             three segments of a track section
 \
 \ ------------------------------------------------------------------------------
 \
 \ This routine is only present in the Superior Software release.
 \
+\ In the Acornsoft release, this routine consists of a single ROR playerDrift
+\ instruction, so the Superior Software version differs as follows:
+\
+\   * Acornsoft sets the playerDrift flag if A >= 22
+\
+\   * Superior sets the playerDrift flag if A >= 22 and objSectionSegmt for the
+\     player is >= 3
+\
+\ So the Superior version does not record drift in the first three segments of
+\ a new track section.
+\
 \ ******************************************************************************
 
 IF _SUPERIOR
 
-.sub_C1FA8
+.SetPlayerDriftS
 
- BCC C1FAF              \ If the C flag is clear, jump to C1FAF to skip the
+ BCC drif1              \ If the C flag is clear, jump to drif1 to skip the
                         \ following
 
  LDA objSectionSegmt,X  \ Set A = objSectionSegmt, which keeps track of the
@@ -13203,10 +13215,11 @@ IF _SUPERIOR
  CMP #3                 \ If A < 3, clear the C flag, if A >= 3, set the C
                         \ flag
 
-.C1FAF
+.drif1
 
- ROR L62FB              \ Store the C flag in bit 7 of L62FB, so this will be
-                        \ set if the original A >= 22 and if the second A >= 3
+ ROR playerDrift        \ Store the C flag in bit 7 of playerDrift, so this will
+                        \ be set if the original A >= 22 and if the second
+                        \ A >= 3
 
  RTS                    \ Return from the subroutine
 
@@ -28870,12 +28883,31 @@ NEXT
 
 .MovePlayerOnTrack
 
+                        \ We start by calculating the player's heading within
+                        \ the current segment, so we know which direction the
+                        \ car is heading in, and therefore how to alter the
+                        \ car's position with the track segment
+
  LDA edgeYawAngle       \ Set A = edgeYawAngle - playerHeading
  SEC                    \
  SBC playerHeading      \ So A contains the yaw angle of the closest segment,
                         \ from the point of view of the player's car
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \
+                        \ So the angle is now like this:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   96
+                        \           127
 
  CMP #64                \ If A < 64, clear the C flag, if A >= 64, set the C
                         \ flag
@@ -28885,9 +28917,9 @@ NEXT
                         \ 90 degrees
                         \
                         \ So bit 7 will be set if the closest segment is at a
-                        \ yaw angle of than 90 degrees from the point of view
-                        \ of the player - in other words, when the player has
-                        \ driven past the segment
+                        \ yaw angle of more than 90 degrees from the point of
+                        \ view of the player - in other words, when the player
+                        \ has driven past the segment
 
  BPL mseg1              \ If bit 7 of playerPastSegment is clear, i.e. the C
                         \ flag is clear, then A < 64 and the player has not gone
@@ -28904,23 +28936,45 @@ NEXT
                         \ carProgress
 
  EOR #%01111111         \ Negate A using two's complement, leaving bit 7 alone
- CLC                    \ to leave the result in the range 63 to 0
- ADC #1
+ CLC                    \ to leave the result in the range 63 to 0, so the angle
+ ADC #1                 \ is now like this:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   32
+                        \            0
+                        \
+                        \ So the value of A is zero if the player's car is
+                        \ pointing straight along the track segment, or 64 if
+                        \ the car is pointing sideways, towards the verge
 
 .mseg1
 
- PHA                    \ Store A on the stack, which we retrieve below to use
-                        \ when calculating carProgress for the player's car
+ PHA                    \ Store the player's direction in A on the stack, which
+                        \ we retrieve below to use when calculating carProgress
+                        \ for the player's car
+
+                        \ We now calculate the carRacingLine value for the
+                        \ player's car, which is the left-right position within
+                        \ the track
 
  LDY #186               \ Set A = edgeDistanceLo * (A' / 256) * (186 / 256)
- JSR sub_C4676          \
-                        \ where A' is A, scaled by the sub_C4687 routine
+ JSR GetCarInSegment    \
+                        \ where A' is A, scaled by the ScaleCarInSegment routine
 
- LDX edgeSegmentPointer \ Set X to the index of the segment within track verge
-                        \ buffer that is closest to the player's car
+ LDX edgeSegmentPointer \ Set X to the index of the segment within the track
+                        \ verge buffer that is closest to the player's car
 
- CPX #40                \ If X < 40, jump to mseg2 to skip the following
- BCC mseg2              \ instruction
+ CPX #40                \ If X < 40, then the segment is along the inner edge of
+ BCC mseg2              \ the track, so jump to mseg2 to skip the following
+                        \ instruction
 
  EOR #&FF               \ Set A = ~A
 
@@ -28931,18 +28985,31 @@ NEXT
  BIT directionFacing    \ Set the sign of A to that of directionFacing, so A
  JSR Absolute8Bit       \ gets negated when we are facing backwards
 
- PHA                    \ Store A on the stack, which we retrieve below to store
-                        \ as carRacingLine for the player's car
+                        \ The value in A is the updated value of carRacingLine
+                        \ for the player, but before we store it, we need to use
+                        \ it to calculate the player's drift
+
+ PHA                    \ Store A on the stack, so we can retrieve bit below
+                        \ when storing it as the updated carRacingLine for the
+                        \ player's car
+
+                        \ Next, we set bit 7 of playerDrift according to the
+                        \ amount of sideways movement of the player's car, with
+                        \ a set bit 7 meaning the player's car is drifting
+                        \ sideways by more than 22 in this iteration around the
+                        \ main driving loop (where the full track width is 256)
  
  SBC carRacingLine,X    \ Set A = A - the racing line for the player
+                        \
+                        \ So A contains the distance that the car has moved in
+                        \ terms of racing line, i.e. left to right
 
  BCS mseg3              \ If the subtraction didn't underflow, jump to mseg3 to
                         \ skip the following instruction
 
-                        \ If we get here, then A < then player's racing line and
-                        \ the subtraction underflowed
-
- EOR #&FF               \ Set A = ~A
+ EOR #&FF               \ If we get here, then A < then player's racing line and
+                        \ the subtraction underflowed, so set A = ~A to make
+                        \ A positive, so A = |A|
 
 .mseg3
 
@@ -28951,20 +29018,29 @@ NEXT
 
 IF _ACORNSOFT
 
- ROR L62FB              \ Store the C flag in bit 7 of L62FB, so this will be
-                        \ set if A >= 22
+ ROR playerDrift        \ Store the C flag in bit 7 of playerDrift, so this will
+                        \ be set if A >= 22
 
 ELIF _SUPERIOR
 
- JSR sub_C1FA8          \ Set bit 7 of L62FB if A >= 22 and if objSectionSegmt
-                        \ for the player is >= 3
+ JSR SetPlayerDriftS    \ Set bit 7 of playerDrift if both A >= 22 and the
+                        \ objSectionSegmt for the player is >= 3, so the
+                        \ Superior version does not record drift in the first
+                        \ three segments of a new track section
 
 ENDIF
 
  PLA                    \ Set carRacingLine,X to the second value we stored on
  STA carRacingLine,X    \ the stack above
 
- PLA                    \ Set A to the first value we stored on the stack above
+                        \ Finally, we calculate the carProgress value for the
+                        \ player's car, which is the progress within the segment
+
+ PLA                    \ Set A to the first value we stored on the stack above,
+                        \ which is the player's direction, where A is zero if
+                        \ the player's car is pointing straight along the track
+                        \ segment, or 64 if the car is pointing sideways,
+                        \ towards the verge
 
  EOR #&FF               \ Set A = 64 - A
  CLC                    \
@@ -28973,10 +29049,14 @@ ENDIF
                         \   A = ~A + 65
                         \     = -A - 1 + 65
                         \     = 64 - A
+                        \
+                        \ So A is now in the range 0 to 64, where 64 means the
+                        \ car is pointing forwards along the segment, and 0
+                        \ means it's pointing sideways
 
  LDY #136               \ Set A = edgeDistanceLo * (A' / 256) * (136 / 256)
- JSR sub_C4676          \
-                        \ where A' is A, scaled by the sub_C4687 routine
+ JSR GetCarInSegment    \
+                        \ where A' is A, scaled by the ScaleCarInSegment routine
 
  ASL A                  \ Set A = A * 2
  ASL A
@@ -28994,10 +29074,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4676
+\       Name: GetCarInSegment
 \       Type: Subroutine
 \   Category: Car geometry
-\    Summary: 
+\    Summary: Calculate the player car's position within the current segment
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29005,7 +29085,7 @@ ENDIF
 \
 \   edgeDistanceLo * (A' / 256) * (Y / 256)
 \
-\ where A' is A, scaled by the sub_C4687 routine as follows:
+\ where A' is A, scaled by the ScaleCarInSegment routine as follows:
 \
 \   When            Calculate               Range of result
 \
@@ -29026,10 +29106,10 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C4676
+.GetCarInSegment
 
- JSR sub_C4687          \ Set U = A, scaled up by sub_C4687 (let's call it A')
- STA U
+ JSR ScaleCarInSegment  \ Set U = A, scaled up by ScaleCarInSegment (let's call
+ STA U                  \ it A')
 
  TYA                    \ Set (A T) = A * U
  JSR Multiply8x8        \           = Y * A'
@@ -29049,12 +29129,24 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4687
+\       Name: ScaleCarInSegment
 \       Type: Subroutine
 \   Category: Car geometry
-\    Summary: 
+\    Summary: Work out how far a car is within a segment by scaling the angle
+\             in which the car is pointing
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine takes a car's heading within a segment, as follows:
+\
+\            0
+\            |   26
+\            |  /
+\            | /  _- 46
+\            |/_-´
+\            +--------- 64
+\
+\ and scales it like this:
 \
 \   When            Calculate               Range of result
 \
@@ -29072,13 +29164,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C4687
+.ScaleCarInSegment
 
- CMP #26                \ If A < 26, jump to C4699
- BCC C4699
+ CMP #26                \ If A < 26, jump to scar2
+ BCC scar2
 
- CMP #46                \ If A < 46, jump to C4693
- BCC C4693
+ CMP #46                \ If A < 46, jump to scar1
+ BCC scar1
 
                         \ If we get here then A >= 46
 
@@ -29087,7 +29179,7 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.C4693
+.scar1
 
                         \ If we get here then 26 <= A < 46
 
@@ -29098,7 +29190,7 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.C4699
+.scar2
 
                         \ If we get here then A < 26
 
@@ -29570,15 +29662,18 @@ ENDIF
 
 .C4876
 
- LDA var02Lo,Y
+ LDA var02Lo,Y          \ Set (QQ PP) = var02
  STA PP
  LDA var02Hi,Y
  STA QQ
- LDA var26Lo,X
+
+ LDA var26Lo,X          \ Set (SS RR) = var26
  STA RR
  LDA var26Hi,X
  STA SS
- JSR sub_C0DD7
+
+ JSR Multiply16x16
+
  STA U
  LDY K
  BIT H
@@ -30455,7 +30550,7 @@ ENDIF
  LDA L005D
  ORA L002D
  BNE C4C24
- BIT L62FB
+ BIT playerDrift
  BPL C4C24
  JSR sub_C4DC9
 
@@ -35857,20 +35952,19 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62FB
+\       Name: playerDrift
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Records whether the player's car is moving sideways by a
+\             significant amount
 \
 \ ******************************************************************************
 
-.L62FB
+.playerDrift
 
- EQUB 0
+ EQUB 0                 \ If bit 7 is set, then the player's car is moving
+                        \ sideways by more than 22 in this iteration around the
+                        \ main driving loop (where the track width is 256)
 
 \ ******************************************************************************
 \
