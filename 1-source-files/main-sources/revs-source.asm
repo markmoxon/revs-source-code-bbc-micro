@@ -522,13 +522,21 @@ ORG &0000
                         \   * 11 = Right turn road sign
                         \   * 12 = Left turn road sign
 
-.var15
+.var15Lo
 
- SKIP 2                 \ 
+ SKIP 1                 \ 
 
-.var16
+.var15Hi
 
- SKIP 2                 \ 
+ SKIP 1                 \ 
+
+.var16Lo
+
+ SKIP 1                 \ 
+
+.var16Hi
+
+ SKIP 1                 \ 
 
 .revCount
 
@@ -3112,23 +3120,24 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   (A X)               
+\   (A X)               Player yaw angle in (playerYawAngleHi playerYawAngleLo)
 \
 \ ******************************************************************************
 
 .sub_C0D01
 
  STA J                  \ Set (J T) = (A X)
- STX T
+ STX T                  \           = playerYawAngle
 
- JSR MultiplyBy804      \ Set (U A) = 804 * (A T) / 256
-                        \           = 804 * (A X) / 256
+ JSR MultiplyBy804      \ Set (U A) = 804 * (A T)
+                        \           = 804 * (A X)
+                        \           = 804 * playerYawAngle
 
  STA G                  \ Set (U G) = (U A)
-                        \           = 804 * (A X) / 256
+                        \           = 804 * playerYawAngle
 
  LDA U                  \ Set (H G) = (U G)
- STA H                  \           = 804 * (A X) / 256
+ STA H                  \           = 804 * playerYawAngle
 
  LDX #1                 \ Set L0042 = 1
  STX L0042
@@ -3144,64 +3153,87 @@ ORG &0B00
 
 .C0D1B
 
- CMP #&7A
+ CMP #122               \ If A < 122, i.e. U < 122, jump to C0D27
  BCC C0D27
- BCS C0D4F
- LDA G
- CMP #&F0
+
+ BCS C0D4F              \ Jump to C0D4F (this BCS is effectively a JMP as we
+                        \ just passed through a BCS)
+
+ LDA G                  \ It doesn't look like this code is ever reached, so
+ CMP #240               \ perhaps it's left over from development?
  BCS C0D4F
 
 .C0D27
 
- LDA #&AB
+                        \ If we get here then (U G) = 804 * playerYawAngle and
+                        \ U < 122
 
- JSR Multiply8x8        \ Set (A T) = A * U
+ LDA #171               \ Set A = 171
 
- JSR Multiply8x8        \ Set (A T) = A * U
+ JSR Multiply8x8        \ Set (A T) = (A * U) * U
+ JSR Multiply8x8        \           = A * U^2
+                        \           = 171 * (804 * playerYawAngle)^2
 
- STA V
+ STA V                  \ Set (V T) = (A T)
+                        \           = 171 * (804 * playerYawAngle)^2
 
- JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+ JSR Multiply8x16       \ Set (U T) = U * (V T)
+                        \           = 171 * (804 * playerYawAngle)^3
 
- LDA G
- SEC
- SBC T
- STA T
- LDA H
+ LDA G                  \ Set (A T) = (H G) - (U T)
+ SEC                    \           = 804 * playerYawAngle
+ SBC T                  \             - 171 * (804 * playerYawAngle)^3
+ STA T                  \
+                        \ starting with the low bytes
+
+ LDA H                  \ And then the high bytes
  SBC U
- ASL T
+
+ ASL T                  \ Set (A T) = (A T) * 2
  ROL A
- STA var26Hi,X
- LDA T
- AND #&FE
+
+ STA var26Hi,X          \ Set (var26Hi var26Lo) = (A T)
+ LDA T                  \
+ AND #%11111110         \ with the sign bit cleared in bit 0 of var26Lo
  STA var26Lo,X
- JMP C0D7F
+
+ JMP C0D7F              \ Jump to C0D7F
 
 .C0D4F
+
+                        \ If we get here then (U G) = 804 * playerYawAngle and
+                        \ U >= 122
 
  LDA #0
  SEC
  SBC G
  STA T
- LDA #&C9
+
+ LDA #201
  SBC H
  STA U
+
  STA V
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
 
  ASL T
  ROL U
+
  LDA #0
  SEC
  SBC T
- AND #&FE
+
+ AND #%11111110
  STA var26Lo,X
+ 
  LDA #0
  SBC U
  BCC C0D7C
- LDA #&FE
+
+ LDA #%11111110
  STA var26Lo,X
+
  LDA #&FF
 
 .C0D7C
@@ -3212,21 +3244,27 @@ ORG &0B00
 
  CPX L0042
  BEQ C0D97
+
  LDX L0042
+
  LDA #0
  SEC
  SBC G
  STA G
- LDA #&C9
+
+ LDA #201
  SBC H
  STA H
+
  STA U
+
  JMP C0D1B
 
 .C0D97
 
  LDA J
  BPL C0DA3
+
  LDA #1
  ORA var26Lo
  STA var26Lo
@@ -3237,9 +3275,10 @@ ORG &0B00
  ASL A
  EOR J
  BPL C0DB2
+
  LDA #1
- ORA L62A1
- STA L62A1
+ ORA var26Lo+1
+ STA var26Lo+1
 
 .C0DB2
 
@@ -3339,7 +3378,11 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ The routine uses the following algorithm:
+\ This routine calculates:
+\
+\   (A T) = (QQ PP) * (SS RR) / 256^2
+\
+\ It uses the following algorithm:
 \
 \  (QQ PP) * (SS RR) = (QQ << 8 + PP) * (SS << 8 + RR)
 \                    = (QQ << 8 * SS << 8) + (QQ << 8 * RR)
@@ -3349,13 +3392,13 @@ ORG &0B00
 \                                      + (PP * SS) << 8
 \                                      + (PP * RR)
 \
-\ Finally, it replaces the low byte multiplication in (PP * RR) / 256 with 128,
-\ as an estimate, as it's a pain to multiply the low bytes of a signed integer
-\ with a sign-magnitude number. So the final result that is returned in (A T)
-\ is as follows:
+\ Finally, it replaces the low byte multiplication in (PP * RR) with 128, as an
+\ estimate, as it's a pain to multiply the low bytes of a signed integer with a
+\ sign-magnitude number. So the final result that is returned in (A T) is as
+\ follows:
 \
-\   (A T) = (QQ PP) * (SS RR) / 256
-\         = (QQ * SS) << 8 + (QQ * RR) + (PP * SS) + 128
+\   (A T) = (QQ PP) * (SS RR) / 256^2
+\         = ((QQ * SS) << 16 + (QQ * RR) << 8 + (PP * SS) << 8 + 128) / 256^2
 \
 \ which is the algorithm that is implemented in this routine.
 \
@@ -3478,10 +3521,12 @@ ORG &0B00
                         \           = (SS * QQ << 8) + RR * QQ + 128 + SS * PP
                         \           = (QQ * SS) << 8 + (QQ * RR) + (PP * SS)
                         \              + 128
+                        \           = (QQ PP) * (SS RR) / 256
                         \
                         \ So:
                         \
                         \   (G T) = (G T ?) / 256
+                        \         = (QQ PP) * (SS RR) / 256^2
                         \
                         \ which is the result that we want
 
@@ -3749,7 +3794,8 @@ ORG &0B00
                         \ squealing
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  CMP #63                \ If A < 63 (25% chance), jump to soun1 to skip the
  BCS soun1              \ following
@@ -5176,7 +5222,8 @@ ORG &0B00
 
  STX L0045              \ Set L0045 to the driver number of the current player
 
- STX L0042              \ Set L0042 to the driver number of the current player
+ STX objectNumber       \ Set objectNumber to the driver number of the current
+                        \ player
 
  LDY playerSegmentIndex \ Build the car object for the current player using
  JSR BuildCarObjects    \ the player's track segment from the track segment
@@ -7760,7 +7807,7 @@ ENDIF
  JSR ProcessTime        \ Increment the timers and the main loop counter, and
                         \ set the speed for the next non-player driver
 
- JSR ShowStartLights    \ If this is a race, show the starting lights on the
+ JSR ShowStartingLights \ If this is a race, show the starting lights on the
                         \ right of the screen
 
  JSR ProcessDrivingKeys \ Check for and process the main driving keys
@@ -17255,7 +17302,8 @@ ENDIF
                         \ If we get here then driver X is not visible
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  AND #31                \ Reduce the random number to the range 0 to 31
 
@@ -18941,7 +18989,7 @@ ENDIF
 \   M                   The smaller yaw angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees
 \
-\   L0042               The number of the object being checked for contact
+\   objectNumber        The number of the object being checked for contact
 \
 \ Other entry points:
 \
@@ -18978,7 +19026,7 @@ ENDIF
  LDA K                  \ Set (objectDistanceHi objectDistanceLo) = (L K)
  STA objectDistanceLo
 
- LDA L0042              \ Store the number of the other object in
+ LDA objectNumber       \ Store the number of the other object in
  STA collisionDriver    \ collisionDriver, so we know who's crashing
 
 .ccon1
@@ -29316,28 +29364,31 @@ ENDIF
 
 .ApplyDrivingModel
 
- LDA playerYawAngleHi
+ LDA playerYawAngleHi   \ Set (A X) = (playerYawAngleHi playerYawAngleLo)
  LDX playerYawAngleLo
+
  JSR sub_C0D01
+
  JSR sub_C48B9
 
- LDA var07Lo
- STA var15
+ LDA var07Lo            \ Set (var15Hi var15Lo) = (var07Hi var07Lo)
+ STA var15Lo
  LDA var07Hi
- STA var15+1
+ STA var15Hi
 
- LDA var08Lo
+ LDA var08Lo            \ Set (A T) = (var08Hi var08Lo)
  STA T
  LDA var08Hi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
+                        \           = |var08|
 
- STA speedHi
-
- LDA T
+ STA speedHi            \ Set (speedHi speedLo) = (A T)
+ LDA T                  \                       = |var08|
  STA speedLo
 
  LDY speedHi
+
  BNE C46CD
  AND #&F0
  TAY
@@ -29345,30 +29396,43 @@ ENDIF
 .C46CD
 
  STY playerMoving
+
  JSR sub_C4729
+
  JSR sub_C4BCF
+
  JSR sub_C49CE
+
  LDX #1
  JSR sub_C4779
- LDA var15
+
+ LDA var15Lo            \ Set (var07Hi var07Lo) = (var15Hi var15Lo)
  STA var07Lo
- LDA var15+1
+ LDA var15Hi
  STA var07Hi
- LDA var07Lo
- CLC
- ADC var16
+
+ LDA var07Lo            \ Set (var07Hi var07Lo) += (var16Hi var16Lo)
+ CLC                    \
+ ADC var16Lo            \ starting with the high bytes
  STA var07Lo
- LDA var07Hi
- ADC var16+1
+
+ LDA var07Hi            \ And then the low bytes
+ ADC var16Hi
  STA var07Hi
+
  JSR sub_C47A5
+
  LDX #0
  JSR sub_C4779
+
  JSR sub_C47C5
+
  JSR sub_C47F9
+
  LDA L002D
  CMP #2
  BCC C4719
+
  LDX #2
  LDA #0
 
@@ -29376,16 +29440,23 @@ ENDIF
 
  STA var05Lo,X
  STA var05Hi,X
+
  DEX
+
  BPL P4710
 
 .C4719
 
  JSR sub_C4C65
+
  JSR sub_C48C1
+
  JSR sub_C4937
+
  JSR sub_C48EF
+
  JSR sub_C44EA
+
  RTS
 
 \ ******************************************************************************
@@ -29417,9 +29488,9 @@ ENDIF
  SBC U
  STA var07Hi
  JSR sub_C4765
- STA var16+1
+ STA var16Hi
  LDA T
- STA var16
+ STA var16Lo
  RTS
 
 \ ******************************************************************************
@@ -29770,16 +29841,21 @@ ENDIF
  LDA var26Hi,X
  STA SS
 
- JSR Multiply16x16
+ JSR Multiply16x16      \ Set (A T) = (QQ PP) * (SS RR) / 512
 
- STA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = (QQ PP) * (SS RR) / 512
+
  LDY K
+
  BIT H
  BVS C48A7
+
  LDA T
  STA var02Lo,Y
  LDA U
  STA var02Hi,Y
+
  RTS
 
 \ ******************************************************************************
@@ -30022,7 +30098,8 @@ ENDIF
 .C498C
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  AND L0009
  BNE C49BB
@@ -30070,7 +30147,8 @@ ENDIF
  STA T
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  AND #7
  CLC
@@ -30632,7 +30710,8 @@ ENDIF
 .C4C06
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -30748,7 +30827,7 @@ ENDIF
 
 .sub_C4C65
 
- LDA var15+1
+ LDA var15Hi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -30771,7 +30850,7 @@ ENDIF
 
  STA U
  LDY #6
- LDA var15+1
+ LDA var15Hi
  JSR sub_C48A0
  LDA speedHi
  STA U
@@ -30938,9 +31017,9 @@ ENDIF
  JSR GetObjYawAngle     \ Calculate the object's yaw angle, returning it in
                         \ (JJ II)
 
- LDA II                 \ Set the yaw angle in (objYawAngleHi+23
- STA objYawAngleLo+23   \ objYawAngleLo+23) to (JJ II), using the entries for
- LDA JJ                 \ object 23 to store the sign's object
+ LDA II                 \ Store the yaw angle from (JJ II) in (objYawAngleHi+23
+ STA objYawAngleLo+23   \ objYawAngleLo+23), so we use object 23 to store the
+ LDA JJ                 \ sign object
  STA objYawAngleHi+23
 
                         \ Now that the sign object has been built and the angles
@@ -30976,8 +31055,9 @@ ENDIF
 
 .sign3
 
- LDA #23                \ Set L0042 = 23, so if we are colliding with the sign,
- STA L0042              \ CheckForContact sets collisionDriver to object 23
+ LDA #23                \ Set objectNumber = 23, so if we are colliding with the
+ STA objectNumber       \ sign, CheckForContact sets collisionDriver to object
+                        \ 23 (which is now the sign object)
 
  JSR CheckForContact    \ Check to see if the object and the player's car are
                         \ close enough for contact, specifically if they are
@@ -31498,7 +31578,7 @@ ENDIF
                         \ interrupt from the System VIA)
 
  LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter to
- STA VIA+&64            \ (SHEILA &44) to &D4 (so this sets the low-order
+ STA VIA+&64            \ (SHEILA &64) to &D4 (so this sets the low-order
                         \ counter but does not start counting until the
                         \ high-order counter is set)
 
@@ -35124,24 +35204,7 @@ ENDIF
 
 .var26Lo
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L62A1
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L62A1
-
- EQUB 0
+ EQUB 0, 0
 
 \ ******************************************************************************
 \
@@ -36324,7 +36387,8 @@ ENDIF
                         \ figure in A giving the car a higher speed in the race
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  PHP                    \ Store the processor flags from the random timer value
                         \ on the stack
@@ -38258,14 +38322,14 @@ ORG &7B00
 
 \ ******************************************************************************
 \
-\       Name: ShowStartLights
+\       Name: ShowStartingLights
 \       Type: Subroutine
 \   Category: Dashboard
 \    Summary: Show the lights at the start of the race
 \
 \ ------------------------------------------------------------------------------
 \
-\ The lights at the start of the race follow this patern:
+\ The lights at the start of the race follow this pattern:
 \
 \   * The lights are initially off, so they show as three lights with a white
 \     border and black interior.
@@ -38304,7 +38368,7 @@ ORG &7B00
 \
 \ ******************************************************************************
 
-.ShowStartLights
+.ShowStartingLights
 
  LDA raceStarted        \ If bit 7 of raceStarted is clear then this is either
  BPL star9              \ a practice or qualifying lap, so jump to star9 to
@@ -39577,7 +39641,8 @@ ENDMACRO
                         \ shuddering when the engine is on)
 
  LDX VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
-                        \ (SHEILA &68), which will be a pretty random figure
+                        \ (SHEILA &68), which decrements one million times a
+                        \ second and will therefore be pretty random
 
  AND &2000,X            \ There is game code at location &2000, so this randomly
                         \ switches some of the white pixels (colour 2) to black
