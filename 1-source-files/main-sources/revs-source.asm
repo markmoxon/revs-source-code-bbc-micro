@@ -386,19 +386,22 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.currentVerge
+.vergeType
 
- SKIP 1                 \ Determines the verge that is currently being drawn in
-                        \ the DrawTrack routine, in terms of the table that is
-                        \ being populated:
+ SKIP 1                 \ The type of verge that is currently being drawn in
+                        \ the DrawTrack routine:
                         \
-                        \   * 0 = leftVergeStart
+                        \   * 0 = leftVergeStart, the left edge of the left
+                        \         verge
                         \
-                        \   * 1 = leftTrackStart
+                        \   * 1 = leftTrackStart, the right edge of the left
+                        \         verge
                         \
-                        \   * 2 = rightVergeStart
+                        \   * 2 = rightVergeStart, the left edge of the right
+                        \         verge
                         \
-                        \   * 3 = rightGrassStart
+                        \   * 3 = rightGrassStart, the right edge of the right
+                        \         verge
 
 .L0028
 
@@ -472,13 +475,17 @@ ORG &0000
                         \ that are close enough to show a verge, i.e. those
                         \ within the verge depth of field
 
-.L0033
+.backgroundLeft
 
- SKIP 1                 \ 
+ SKIP 1                 \ Details of the verge colour for the left side of the
+                        \ verge edge we are drawing, to use as the track line's
+                        \ background colour
 
-.L0034
+.backgroundRight
 
- SKIP 1                 \ 
+ SKIP 1                 \ Details of the verge colour for the right side of the
+                        \ verge edge we are drawing, to use as the track line's
+                        \ background colour
 
 .xCoord
 
@@ -7682,8 +7689,8 @@ ENDIF
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR SetBackground      \ Initialise the background colour for all the track
-                        \ lines in the track view
+ JSR SetBackground      \ Set the background colour for any track lines in the
+                        \ track view that do not currently have a background set
 
  JSR BuildRoadSign      \ Build the road sign (if one is visible)
 
@@ -8278,15 +8285,21 @@ ENDIF
 \       Name: SetBackground
 \       Type: Subroutine
 \   Category: Screen buffer
-\    Summary: Initialise the background colour for all the track lines in the
-\             track view
+\    Summary: Set the background colour for any track lines that have not yet
+\             had a background colour set
 \  Deep dive: Drawing the track view
 \
 \ ******************************************************************************
 
 .SetBackground
 
+                        \ We start by setting the colour of the track line that
+                        \ contains the horizon
+
  LDX horizonListIndex   \ Set X = horizonListIndex
+                        \
+                        \ So X is the index in the track verge buffer for the
+                        \ horizon line's right verge
 
  LDY horizonLine        \ Set Y to the track line number of the horizon
 
@@ -8294,19 +8307,48 @@ ENDIF
  CLC
  ADC #20
 
- BPL bgnd1              \ If A is positive, jump to bgnd1 to set the lines below
+ BPL bgnd1              \ If A is positive, then the left edge of the verge is
+                        \ on-screen, so jump to bgnd1 to set the lines below
                         \ the horizon to the colour of grass
 
  LDA xVergeRightHi,X    \ Set A = X-th entry in xVergeRightHi + 20
  CLC
  ADC #20
 
- BMI bgnd1              \ If A is negative, jump to bgnd1 to set the lines below
+ BMI bgnd1              \ If A is negative, then the right edge of the verge is
+                        \ on-screen, jump to bgnd1 to set the lines below
                         \ the horizon to the colour of grass
 
+                        \ If we get to this point, then:
+                        \
+                        \   * xVergeRightHi + 20 is positive
+                        \
+                        \   * xVergeLeftHi + 20 is negative
+                        \
+                        \ Adding 20 degrees to the yaw angles will move them to
+                        \ the right by half the screen width, so this is the
+                        \ same as moving the angles from the left edge of the
+                        \ screen to the middle
+                        \
+                        \ We then check whether moving the angles to the centre
+                        \ pushes the rightmost verge edge in A past the centre
+                        \ (i.e. positive), while still leaving the leftmost edge
+                        \ in the left half (i.e. negative)
+                        \
+                        \ If so, then this means the verge at the horizon is
+                        \ straddling the left edge of the screen, so we need to
+                        \ set the background colour for the horizon track line
+                        \ to black
+
  LDA #%00100000         \ Set A = %00100000 (colour 0, black) for the horizon
-                        \ line and all lines below it, so the view below the
-                        \ horizon is all track
+                        \ track line, where:
+                        \
+                        \   * %00 in bits 0-1 is logical colour 0
+                        \
+                        \   * %001xx0xx denotes that this value was stored in
+                        \     the backgroundColour table by the SetBackground
+                        \     routine
+
 
  BNE bgnd2              \ Jump to bgnd2 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -8314,34 +8356,50 @@ ENDIF
 .bgnd1
 
  LDA #%00100011         \ Set A = %00100011 (colour 3, green) for the horizon
-                        \ line and all lines below it, so the view below the
-                        \ horizon is all grass
+                        \ track line, where:
+                        \
+                        \   * %11 in bits 0-1 is logical colour 3
+                        \
+                        \   * %001xx0xx denotes that this value was stored in
+                        \     the backgroundColour table by the SetBackground
+                        \     routine
 
 .bgnd2
 
- STA backgroundColour,Y \ Set the colour of the horizon line to A, which also
-                        \ sets the horizon line to the only non-zero line colour
-                        \ (as backgroundColour is all zeroes at this point)
+ STA backgroundColour,Y \ Set the colour of the horizon line to A
 
- LDA #%00100001         \ Set A = %00100011 (colour 1, blue) to use as the line
-                        \ colour for lines above the horizon, i.e. the sky
+                        \ We now work our way through the whole backgroundColour
+                        \ table, filling in any entries that are zero (and which
+                        \ have therefore not been set yet) with blue
+
+ LDA #%00100001         \ Set A = %00100001 (colour 1, blue) to use as the line
+                        \ colour for lines above the horizon, i.e. the sky,
+                        \ where:
+                        \
+                        \   * %01 in bits 0-1 is logical colour 1
+                        \
+                        \   * %001xx0xx denotes that this value was stored in
+                        \     the backgroundColour table by the SetBackground
+                        \     routine
 
  LDY #79                \ We now loop through all the track lines, starting from
                         \ line 79 at the top of the track view down to 0 at the
                         \ bottom, so set a counter in Y
+                        \
+                        \ If any values are zero, then we set them to blue
 
 .bgnd3
 
  LDX backgroundColour,Y \ Set X to the background colour for track line Y
 
- BEQ bgnd4              \ If it is zero, then this can't be the horizon line (as
-                        \ we set that to a non-zero value above), so jump to
-                        \ bgnd4 as we have not already set the colour
+ BEQ bgnd4              \ If X is zero, then this track line doesn't currently
+                        \ have a background colour set, so jump to bgnd4 to set
+                        \ the track line to blue
 
- TXA                    \ If we get here then X is non-zero, so we must have
-                        \ reached the horizon line, so set A to the value we
-                        \ stored for the horizon line above, so that all the
-                        \ rest of the lines get set to this colour
+ TXA                    \ If we get here then X is non-zero, so there is already
+                        \ a backgroundColour value for this track line, so copy
+                        \ this value to A so the following STA instruction
+                        \ doesn't change anything
 
 .bgnd4
 
@@ -8803,8 +8861,8 @@ ENDIF
 
                         \ If we get here then we are nearly done, and just need
                         \ to pad out the rest of the leftSegment or rightSegment
-                        \ table with a dummy value that has bit 7 set, working
-                        \ back to position 1 in the table
+                        \ table with the current entry's index with bit 7 set,
+                        \ working back to position 1 in the table
 
                         \ First we cap the pitch angle of the current entry in
                         \ the verge buffer to a maximum of N ???
@@ -8905,7 +8963,7 @@ ENDIF
 \                       track verges (so this is essentially the depth of field
 \                       for this verge)
 \
-\   Y                   Determines the verge that we are drawing:
+\   Y                   Determines the type of verge that we are drawing:
 \
 \                         * 0 = leftVergeStart, the left edge of the left verge
 \
@@ -8952,8 +9010,8 @@ ENDIF
 
 .DrawVergeEdges
 
- STY currentVerge       \ Set currentVerge to the number of the verge that we
-                        \ are going to draw
+ STY vergeType          \ Set vergeType to the type of verge that we are
+                        \ going to draw
 
  STA prevPitchIndex     \ Set prevPitchIndex to the verge buffer index in A, to
                         \ use as the starting index into the buffer for the
@@ -8964,9 +9022,13 @@ ENDIF
                         \ of the track, so jump to vedg6 to return from the
                         \ subroutine
 
- CLC                    \ Set prevYawIndex = A + vergeEdgeInOut for verge Y
+ CLC                    \ Set:
  ADC vergeEdgeInOut,Y   \
- STA prevYawIndex       \ This does the following:
+ STA prevYawIndex       \   prevYawIndex = A + vergeEdgeInOut
+                        \
+                        \ for the type of verge we are drawing
+                        \
+                        \ This sets prevYawIndex to the following:
                         \
                         \   * A for the inner edges of the verge mark in
                         \     leftTrackStart and rightVergeStart
@@ -8983,7 +9045,7 @@ ENDIF
                         \ 37)
 
  LDA vergeTableHi,Y     \ Modify the following instructions at verl2 and verb2,
- STA verl2+2            \ depending on the value of Y:
+ STA verl2+2            \ depending on the type of verge in Y:
  STA verb2+2            \
  LDA vergeTableLo,Y     \   * 0 = STA &7000,Y -> STA leftVergeStart,Y
  STA verl2+1            \   * 1 = STA &7000,Y -> STA leftTrackStart,Y
@@ -9059,9 +9121,9 @@ ENDIF
  SEC                    \ Set the C flag to pass to DrawVergeEdge so it does not
                         \ draw the edge
 
- LDA currentVerge       \ Set A to the the number of the verge we are drawing
+ LDA vergeType          \ Set A to the type of verge we are drawing
 
- BEQ vedg5              \ If we are updating leftVergeStart, jump to vedg5 with
+ BEQ vedg5              \ If we are drawing leftVergeStart, jump to vedg5 with
                         \ the C flag set and A = 0 to draw the edge
 
 .vedg2
@@ -9120,15 +9182,15 @@ ENDIF
                         \
                         \ And then pass this to DrawVergeEdge
 
- LDA currentVerge       \ Set A to the the number of the verge we are drawing
+ LDA vergeType          \ Set A to the type of verge we are drawing
 
- CMP #1                 \ If we are updating leftTrackStart, jump to vedg5 with
+ CMP #1                 \ If we are drawing leftTrackStart, jump to vedg5 with
  BEQ vedg5              \ the C flag set and A = 1, so it doesn't draw the edge
-                        \ but sets up the variables
+                        \ but just sets up the variables
 
- CMP #2                 \ If we are updating rightVergeStart, jump to vedg5 with
+ CMP #2                 \ If we are drawing rightVergeStart, jump to vedg5 with
  BEQ vedg5              \ the C flag set and A = 2, so it doesn't draw the edge
-                        \ but sets up the variables
+                        \ but just sets up the variables
 
  LDA #0                 \ Set A = 0, so we pass A = pixelMaskVerge to
                         \ DrawVergeEdge
@@ -9245,7 +9307,9 @@ ENDIF
  LDA vergeDepthOfField  \ Set A = vergeDepthOfField to pass to the
                         \ SetVergeBackground routine
 
- LDX #%00000100         \ Set X = %00000100 to pass to SetVergeBackground
+ LDX #%00000100         \ Set X = %00000100 to pass to SetVergeBackground as a
+                        \ bit mask to use when calculating the background
+                        \ colours
 
  JSR SetVergeBackground \ Update the background colour table for any verges that
                         \ overlap the left edge of the screen
@@ -9322,7 +9386,9 @@ ENDIF
  LDA vergeDepthOfField  \ Set A = vergeDepthOfField to pass to the
                         \ SetVergeBackground routine
 
- LDX #%00010100         \ Set X = %00010100 to pass to SetVergeBackground
+ LDX #%00010100         \ Set X = %00010100 to pass to SetVergeBackground as a
+                        \ bit mask to use when calculating the background
+                        \ colours
 
  JSR SetVergeBackground \ Update the background colour table for any verges that
                         \ overlap the left edge of the screen
@@ -9354,7 +9420,7 @@ ENDIF
 \                       typically set to vergeDepthOfField so only entries that
 \                       might contain a verge are checked
 \
-\   X                   Set to a bit mask as follows
+\   X                   Set to a bit mask as follows:
 \
 \                         * %000 00 1 00 (after drawing the left verge)
 \
@@ -9500,14 +9566,29 @@ ENDIF
                         \ set to black, so jump to sver6 to set the background
                         \ colour to the verge colour
 
- AND #%00011100         \ Extract bits 2-4 of A
+ AND #%00011100         \ Extract bits 2-4 of A, which contain the verge type in
+                        \ bits 3-4, and details in bit 2 of whether the colour
+                        \ was set by the SetVergeBackground routine
 
  CMP GG                 \ If A = GG, then bits 2-4 match the mask we passed to
  BEQ sver6              \ the routine, so jump to sver6 to set the background
                         \ colour to the verge colour
+                        \
+                        \ The possible values of GG are:
+                        \
+                        \   * %000 00 1 00 (after drawing the left verge)
+                        \
+                        \   * %000 10 1 00 (after drawing the right verge)
+                        \
+                        \ So this jumps if we already set the background colour
+                        \ entry in this routine, and the verge type was
+                        \ leftVergeStart after drawing the left verge, or
+                        \ rightVergeStart after drawing the right verge
 
-                        \ Bits 2-4 of the current background colour do not match
-                        \ the mask in GG
+                        \ If we get here then bits 2-4 of the current background
+                        \ colour do not match the mask in GG, so we have not
+                        \ already set this colour on this routine for the
+                        \ leftVergeStart or rightVergeStart verges
 
  ROR A                  \ Rotate the C flag into bit 7 of A, where:
                         \
@@ -9518,7 +9599,7 @@ ENDIF
  EOR T                  \ If T and A have different values of bit 7, jump to
  BMI sver7              \ sver7 to move on to the next entry in the verge buffer
 
-                        \ Otherwise we fall througn into sver6 to set the
+                        \ Otherwise we fall through into sver6 to set the
                         \ background colour to the verge colour
 
 .sver6
@@ -11463,11 +11544,8 @@ IF _ACORNSOFT
                         \   * BNE edge3 when GetTyreDashEdge is called with
                         \               Y = &E7
 
- LDA #0                 \ Overwrite the &AA value with 0, though this appears to
- STA (P),Y              \ have no effect, as if we loop back to edge5 in the
-                        \ following conditional, this value will be overwritten,
-                        \ and if we fall through to the LDA W below, it will
-                        \ be overwritten there
+ LDA #0                 \ Overwrite the &AA value with 0 to remove the marker
+ STA (P),Y
 
  CPY blockOffset        \ If Y <> blockOffset then this can't be our marker, as
  BNE edge5              \ the marker is on line blockOffset, so jump back to
@@ -12201,7 +12279,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetColour
+\       Name: GetColour (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Screen buffer
 \    Summary: Calculate the colour of a specific pixel byte in the screen buffer
@@ -12213,6 +12291,9 @@ ENDIF
 \   Y                   The track line number of the pixel byte to check
 \
 \   blockNumber         The dash data block number of the pixel byte to check
+\
+\   (Q P)               The address of the dash data block containing the pixel
+\                       byte we want to check
 \
 \ Returns:
 \
@@ -12230,7 +12311,7 @@ IF _ACORNSOFT
 
  LDA horizonLine        \ Set A to the track line number of the horizon
 
- JSR gcol17             \ Call the gcol17 subroutine below
+ JSR SetMarker+3        \ Call SetMarker+3 ???
 
  LDA colourPalette+1    \ Otherwise the byte is in the sky, so set A to logical
                         \ colour 1 (blue) from the colour palette
@@ -12239,55 +12320,122 @@ IF _ACORNSOFT
 
 .gcol1
 
- LDA #0                 \ Set T = 0
- STA T
+ LDA #0                 \ Set T = 0, to use for storing the results of the
+ STA T                  \ following comparisons
 
- LDA blockNumber
- CMP leftVergeStart,Y
- ROL T
- CMP leftTrackStart,Y
- ROL T
- CMP rightVergeStart,Y
- ROL T
- CMP rightGrassStart,Y
- LDA T
- ROL A
- BNE gcol7
+ LDA blockNumber        \ Set A to the block number containing the pixel byte
+                        \ that we want to check
 
- LDA backgroundColour,Y
- AND #%11101100
+ CMP leftVergeStart,Y   \ If A >= leftVergeStart for this track line, rotate a
+ ROL T                  \ 1 into T, otherwise rotate a 0 into T
 
- CMP #%01000000
- BEQ gcol2
+ CMP leftTrackStart,Y   \ If A >= leftTrackStart for this track line, rotate a
+ ROL T                  \ 1 into T, otherwise rotate a 0 into T
 
- CMP #%10001000
- BEQ gcol2
+ CMP rightVergeStart,Y  \ If A >= rightVergeStart for this track line, rotate a
+ ROL T                  \ 1 into T, otherwise rotate a 0 into T
 
- CMP #%00000100
- BEQ gcol2
+ CMP rightGrassStart,Y  \ If A >= rightGrassStart for this track line, rotate a
+ LDA T                  \ 1 into the result, otherwise rotate a 0, and copy the
+ ROL A                  \ results from all four comparisons into A, so we have:
+                        \
+                        \   * Bit 0: 1 if blockNumber >= rightGrassStart
+                        \            0 if blockNumber < rightGrassStart
+                        \
+                        \   * Bit 1: 1 if blockNumber >= rightVergeStart
+                        \            0 if blockNumber < rightVergeStart
+                        \
+                        \   * Bit 2: 1 if blockNumber >= leftTrackStart
+                        \            0 if blockNumber < leftTrackStart
+                        \
+                        \   * Bit 3: 1 if blockNumber >= leftVergeStart
+                        \            0 if blockNumber < leftVergeStart
 
- LDA rightGrassStart,Y
- BPL gcol3
- BMI gcol4
+ BNE gcol7              \ If A is non-zero, then the block number containing the
+                        \ pixel we want to check is greater than at least one
+                        \ of the verge edges, so jump to gcol7
+
+                        \ If we get here then blockNumber is less than all the
+                        \ track verge block numbers
+
+ LDA backgroundColour,Y \ Set A to the background colour for the track line
+                        \ containing the pixel we want to check
+
+ AND #%11101100         \ Extract the following bits:
+                        \
+                        \   * Bits 5-7 and 2: records which routine set this
+                        \     colour
+                        \
+                        \   * Bit 3: contains the verge type that was being
+                        \     drawn when this colour was set
+                        \
+                        \       * 0 = leftVergeStart, rightVergeStart
+                        \
+                        \       * 1 = leftTrackStart, rightGrassStart
+
+ CMP #%01000000         \ If this colour matches these bits:
+ BEQ gcol2              \
+                        \   * Bits 5-7 and 2 = %010 0
+                        \
+                        \   * Bit 3 = 0
+                        \
+                        \ then the colour was set by UpdateBackground to the
+                        \ value in backgroundRight when drawing leftVergeStart
+                        \ or rightVergeStart, so jump to gcol2
+
+ CMP #%10001000         \ If this colour matches these bits:
+ BEQ gcol2              \
+                        \   * Bits 5-7 and 2 = %100 0
+                        \
+                        \   * Bit 3 = 1
+                        \
+                        \ then the colour was set by UpdateBackground to the
+                        \ value in backgroundLeft when drawing leftTrackStart
+                        \ or rightGrassStart, so jump to gcol2
+
+ CMP #%00000100         \ If this colour matches these bits:
+ BEQ gcol2              \
+                        \   * Bits 5-7 and 2 = %000 1
+                        \
+                        \   * Bit 3 = 0
+                        \
+                        \ then the colour was set by SetVergeBackground when
+                        \ drawing leftVergeStartor rightVergeStart, so jump to
+                        \ gcol2
+
+ LDA rightGrassStart,Y  \ Set A to the block number containing the right edge of
+                        \ the right verge
+
+ BPL gcol3              \ If A is positive then jump to gcol3
+
+ BMI gcol4              \ Jump to gcol4 to return the background colour for this
+                        \ track line as the pixel's colour (this BMI is
+                        \ effectively a JMP, as we just passed through a BPL)
 
 .gcol2
 
- LDA backgroundColour,Y
- AND #%00010000
- BNE gcol3
+ LDA backgroundColour,Y \ Set A to the background colour for the track line
+                        \ containing the pixel we want to check
 
- JSR gcol8
+ AND #%00010000         \ If bit 4 of the background colour is set, then the
+ BNE gcol3              \ verge being drawn when the colour was set was
+                        \ rightVergeStart or rightGrassStart, so jump to gcol3
 
- JMP gcol4
+ JSR gcol8              \ Call gcol8 to process the left verge
+
+ JMP gcol4              \ Jump to gcol4 to return the background colour for this
+                        \ track line as the pixel's colour
 
 .gcol3
 
- JSR gcol12
+ JSR gcol12             \ Call gcol12 to process the right verge
 
 .gcol4
 
- LDA backgroundColour,Y
- AND #%00000011
+ LDA backgroundColour,Y \ Set A to the background colour for the track line
+                        \ containing the pixel we want to check
+
+ AND #%00000011         \ Extract the colour number from bits 0-1 of A into X
  TAX
 
  LDA colourPalette,X    \ Set A to logical colour X from the colour palette
@@ -12296,117 +12444,243 @@ IF _ACORNSOFT
 
 .gcol5
 
- LDA colourPalette      \ Set A to logical colour 0 from the colour palette
+ LDA colourPalette      \ Set A to logical colour 0 (black) from the colour
+                        \ palette
 
  RTS                    \ Return from the subroutine
 
 .gcol6
 
- LDA colourPalette+3    \ Set A to logical colour 3 from the colour palette
+ LDA colourPalette+3    \ Set A to logical colour 3 (green) from the colour
+                        \ palette
 
  RTS                    \ Return from the subroutine
 
 .gcol7
 
- LSR A
- BCS gcol6
- LSR A
+                        \ If we get here then the block number containing the
+                        \ pixel we want to check is greater than at least one
+                        \ of the verge edges, and we have the following:
+                        \
+                        \   * Bit 0: 1 if blockNumber >= rightGrassStart
+                        \            0 if blockNumber < rightGrassStart
+                        \
+                        \   * Bit 1: 1 if blockNumber >= rightVergeStart
+                        \            0 if blockNumber < rightVergeStart
+                        \
+                        \   * Bit 2: 1 if blockNumber >= leftTrackStart
+                        \            0 if blockNumber < leftTrackStart
+                        \
+                        \   * Bit 3: 1 if blockNumber >= leftVergeStart
+                        \            0 if blockNumber < leftVergeStart
+
+ LSR A                  \ If blockNumber >= rightGrassStart, jump to gcol6 to
+ BCS gcol6              \ return from the subroutine with the colour green
+
+ LSR A                  \ If blockNumber >= rightVergeStart, jump to gcol12
  BCS gcol12
- LSR A
- BCS gcol5
+
+ LSR A                  \ If blockNumber >= leftTrackStart, jump to gcol5 to
+ BCS gcol5              \ return from the subroutine with the colour black
+
+                        \ If we get here then blockNumber >= leftVergeStart, as
+                        \ we only jump to gcol7 if at least one of the four bits
+                        \ is set, so by a process of elimination, it must be
+                        \ bit 3
+
+\ ******************************************************************************
+\
+\       Name: GetColour (Part 2 of 3)
+\       Type: Subroutine
+\   Category: Screen buffer
+\    Summary: Process the left verge
+\
+\ ******************************************************************************
 
 .gcol8
 
- CPY L002C
- BCS gcol6
- LDX leftSegment,Y
- BMI gcol15
- JSR gcol16
+ CPY L002C              \ If Y >= L002C, jump to gcol6 to return from the
+ BCS gcol6              \ subroutine with the colour green
+
+ LDX leftSegment,Y      \ Set X to the index within the track segment list of
+                        \ the segment for the left verge on this track line
+
+ BMI gcol14             \ If bit 7 of X is set, then this entry in the
+                        \ rightSegment table was filled in by MapSegmentsToLines
+                        \ for a segment that doesn't have an entry in the track
+                        \ segment list, in which case the index of the last
+                        \ valid entry is captured in bits 0-6, so jump to gcol14
+                        \ to clear bit 7 of X and return the colour of the verge
+                        \ mark for the segment beyond segment X
+
+ JSR SetMarker          \ Call SetMarker to insert a &AA marker into the screen
+                        \ buffer at the left verge ???
 
 .gcol9
 
- LDA (P),Y
- BNE gcol11
- LDA leftTrackStart,Y
- BMI gcol10
- CMP blockNumber
- DEY
- BCS gcol9
- INY
+ LDA (P),Y              \ If the current byte in the screen buffer is non-zero,
+ BNE gcol11             \ then it is not empty, so jump to gcol11
+
+ LDA leftTrackStart,Y   \ Set A to the block number containing the right edge of
+                        \ the left verge
+
+ BMI gcol10             \ If bit 7 of A is set then the block number is still in
+                        \ its initialised form, so jump to gcol10
+
+ CMP blockNumber        \ Set the C flag if A >= blockNumber, which contains the
+                        \ dash data block number for the current edge
+
+ DEY                    \ Decrease the track line in Y
+
+ BCS gcol9              \ If A >= blockNumber, loop back to gcol9
+
+ INY                    \ Increment the track line in Y
 
 .gcol10
 
- JSR gcol18
+ JSR SetMarker+6        \ Call SetMarker+6 to insert a marker byte into the Y-th
+                        \ byte of the dash data block, but only if the Y-th
+                        \ entry is zero and blockOffset <= Y < V
 
 .gcol11
 
- LDY V
- JMP gcol13
+ LDY V                  \ Set Y = V
+
+ JMP gcol13             \ Jump to gcol13 to return the colour of the verge mark
+                        \ for the segment beyond segment X
+
+\ ******************************************************************************
+\
+\       Name: GetColour (Part 3 of 3)
+\       Type: Subroutine
+\   Category: Screen buffer
+\    Summary: Process the right verge
+\
+\ ******************************************************************************
 
 .gcol12
 
- CPY L0029
- BCS gcol6
- LDX rightSegment,Y
- BMI gcol15
- JSR gcol16
+ CPY L0029              \ If Y >= L0029, jump to gcol6 to return from the
+ BCS gcol6              \ subroutine with the colour green
+
+ LDX rightSegment,Y     \ Set X to the index within the track segment list of
+                        \ the segment for the right verge on this track line
+
+ BMI gcol14             \ If bit 7 of X is set, then this entry in the
+                        \ rightSegment table was filled in by MapSegmentsToLines
+                        \ for a segment that doesn't have an entry in the track
+                        \ segment list, in which case the index of the last
+                        \ valid entry is captured in bits 0-6, so jump to gcol14
+                        \ to clear bit 7 of X and return the colour of the verge
+                        \ mark for the segment beyond segment X
+
+ JSR SetMarker          \ Call SetMarker to insert a &AA marker into the screen
+                        \ buffer at the right verge ???
 
 .gcol13
 
- LDA vergeDataRight-1,X
+ LDA vergeDataRight-1,X \ Set A to entry X - 1 from vergeDataRight, which
+                        \ contains the colour of the verge for the segment
+                        \ beyond segment X
 
-.gcol14
-
- AND #3
+ AND #%00000011         \ Extract the colour number from bits 0-1 of A into X
  TAX
 
  LDA colourPalette,X    \ Set A to logical colour X from the colour palette
 
  RTS                    \ Return from the subroutine
 
-.gcol15
+.gcol14
 
- TXA
- AND #&7F
+ TXA                    \ Clear bit 7 of X
+ AND #%01111111
  TAX
- BPL gcol13
 
-.gcol16
+ BPL gcol13             \ Jump to gcol13 (this BPL is effectively a JMP as we
+                        \ just cleared bit 7 of A)
 
- LDA yVergeRight,X
+ENDIF
 
-.gcol17
+\ ******************************************************************************
+\
+\       Name: SetMarker
+\       Type: Subroutine
+\   Category: Screen buffer
+\    Summary: Insert a marker value into a dash data block
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine inserts a marker value (&AA) into the current dash data block at
+\ a specified track line, but only if the current value in the dash data block
+\ is zero, and only if the track line is in the specified range.
+\
+\ If the routine is called via SetMarker, then it works like this:
+\
+\   * A is set to the pitch angle (track line) of the X-th entry in the verge
+\     buffer
+\
+\   * The A-th byte in the dash data block at (Q P) is set to the marker &AA if
+\     blockOffset <= A < Y and it is currently zero
+\
+\ If the routine is called via SetMarker+3, then it works like this:
+\
+\   * The A-th byte in the dash data block at (Q P) is set to the marker &AA if
+\     blockOffset <= A < Y and it is currently zero
+\
+\ If the routine is called via SetMarker+6, then it works like this:
+\
+\   * The Y-th byte in the dash data block at (Q P) is set to the marker &AA if
+\     blockOffset <= Y < V and it is currently zero
+\
+\ Arguments:
+\
+\   Y                   A track line number
+\
+\   X                   Index of an entry in the verge buffer (SetMarker only)
+\
+\ Other entry points:
+\
+\   SetMarker+3         Use the value of A passed to the routine
+\
+\   SetMarker+6         Use Y and V in place of A and Y
+\
+\ ******************************************************************************
 
-                        \ This part gets called as a subroutine by the above
-                        \ with:
-                        \
-                        \   * A = the track line number of the horizon
-                        \
-                        \   * Y = the track line number of the pixel byte to
-                        \         check
+IF _ACORNSOFT
+
+.SetMarker
+
+ LDA yVergeRight,X      \ Set A to the pitch angle of the X-th entry in the
+                        \ verge buffer (i.e. the track line number of the
+                        \ X-th entry)
+
+                        \ We join the subroutine here if we call SetMarker+3
 
  STY V                  \ Set V to the track line number in Y
 
  TAY                    \ Set Y to the track line number in A
 
-.gcol18
+                        \ We join the subroutine here if we call SetMarker+6
 
- CPY V                  \ If Y >= V, jump to gcol19 to return from the
- BCS gcol19             \ subroutine
+ CPY V                  \ If Y >= V, jump to setm1 to return from the
+ BCS setm1              \ subroutine with Y = V
 
- CPY blockOffset        \ If Y < blockOffset, jump to gcol19 to return from the
- BCC gcol19             \ subroutine
+ CPY blockOffset        \ If Y < blockOffset, jump to setm1 to return from the
+ BCC setm1              \ subroutine with Y = V
 
- LDA (P),Y              \ If the current byte in the screen buffer is non-zero,
- BNE gcol19             \ then it is not empty, so jump to gcol19
+ LDA (P),Y              \ If the Y-th byte in the dash data block is non-zero,
+ BNE setm1              \ then it is not empty, so jump to setm1 to return from
+                        \ the subroutine with Y = V
 
- LDA #&AA               \ Set the current byte to &AA ???
- STA (P),Y
+ LDA #&AA               \ Set the Y-th byte in the dash data block to &AA, to
+ STA (P),Y              \ act as a marker that gets picked up in the drawing
+                        \ routine
 
-.gcol19
+.setm1
 
- LDY V                  \ Set Y to the track line number of the pixel byte to
-                        \ check
+ LDY V                  \ Restore Y to the track line number of the pixel byte
+                        \ to check, so it's unchanged by the call for calls to
+                        \ SetMarker and SetMarker+3
 
  RTS                    \ Return from the subroutine
 
@@ -12469,7 +12743,8 @@ IF _SUPERIOR
 
  LDA backgroundColour,Y \ If we get here then the byte is to the left of the
                         \ left track verge, so set A to the background colour of
-                        \ this track line
+                        \ this track line so we can extract the colour from bits
+                        \ 0-1 below
 
  BCC scol7              \ Jump to scol7 to return the pixel byte for the colour
                         \ in A (this BCC is effectively a JMP as we just passed
@@ -12515,14 +12790,17 @@ IF _SUPERIOR
 
 .scol6
 
- AND #%01111111         \ Set X to bits 0-6 of A
- TAX
+ AND #%01111111         \ Clear bit 7 of A
 
- LDA vergeDataRight-1,X \ Set A to entry X - 1 from vergeDataRight
+ TAX                    \ Set X to A
+
+ LDA vergeDataRight-1,X \ Set A to entry X - 1 from vergeDataRight, which
+                        \ contains the colour of the verge mark for the segment
+                        \ beyond segment X
 
 .scol7
 
- AND #%00000011         \ Set X to bits 0-1 of A
+ AND #%00000011         \ Extract the colour number from bits 0-1 of A into X
  TAX
 
  LDA colourPalette,X    \ Set A to logical colour X from the colour palette
@@ -19427,7 +19705,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- LDA currentVerge       \ Set T = currentVerge << 3
+ LDA vergeType          \ Set T = vergeType << 3
  ASL A                  \
  ASL A                  \ So T is as follows:
  ASL A                  \
@@ -19456,12 +19734,24 @@ ENDIF
                         \       = %vv0ab
                         \
                         \ where %vv is the verge we are currently drawing, from
-                        \ currentVerge
+                        \ vergeType
 
- ORA #%01000000         \ Set L0034 = %010vv0ab
- STA L0034              \
-                        \ We use L0034 in the UpdateBackground routine when
-                        \ updating the background colour for the track line
+ ORA #%01000000         \ Set backgroundRight = %010vv0ab
+ STA backgroundRight    \
+                        \ So backgroundRight contains the following data:
+                        \
+                        \   * %vv is the verge we are currently drawing, from
+                        \     vergeType
+                        \
+                        \   * %ab is the colour in the first verge pixel mask
+                        \     for the verge
+                        \
+                        \   * %010xx0xx denotes that this value (if used) gets
+                        \     stored in the backgroundColour table by the
+                        \     UpdateBackground routine
+                        \
+                        \ We use backgroundRight in the UpdateBackground routine
+                        \ when updating the background colour for the track line
 
  LDA objectPalette      \ Set A to the first verge pixel mask that we stored in
                         \ part 3, which is always a four-pixel, single colour
@@ -19481,9 +19771,15 @@ ENDIF
                         \ the fill byte to the right of the edge
 
  LDA objectPalette+3    \ Set A to the fourth verge pixel mask that we stored in
-                        \ part 3, which is in the form %a......b, where %a is
-                        \ the first bit of the foreground colour, while %b is
-                        \ the second bit of the colour of the background
+                        \ part 3, which is in the form %aaaxbbbx, where %a is
+                        \ the first bit of the left colour in the mask, and %b
+                        \ is the second bit
+                        \
+                        \ This works because the fourth entry in each block in
+                        \ vergePixelMask has pixels 0 to 2 set to the left
+                        \ colour within the four-pixel block, and only pixel 3
+                        \ set to the other colour, and the following batch of
+                        \ bit-shuffling extracts the colour of pixel 2
 
  LSR A                  \ Set bit 0 of A to bit 1 of the pixel mask
  AND #%00000001
@@ -19505,13 +19801,26 @@ ENDIF
                         \       = %100vv0ab
                         \
                         \ where %vv is the verge we are currently drawing, from
-                        \ currentVerge
+                        \ vergeType
 
- STA L0033              \ Set L0033 = %100vv0ab
+ STA backgroundLeft     \ Set backgroundLeft = %100vv0ab
                         \
-                        \ We use L0033 in the UpdateBackground routine when
-                        \ updating the background colour for the track line, and
-                        \ in part 5
+                        \ So backgroundLeft contains the following data:
+                        \
+                        \   * %vv is the verge we are currently drawing, from
+                        \     vergeType
+                        \
+                        \   * %ab is the colour of the first three pixels in the
+                        \     verge pixel mask for the verge in objectPalette+3
+                        \
+                        \   * %010xx0xx denotes that this value (if used) gets
+                        \     stored in the backgroundColour table by the
+                        \     UpdateBackground routine
+                        \
+                        \ We use backgroundLeft in the UpdateBackground routine
+                        \ when updating the background colour for the track
+                        \ line, and in part 6 where we extract the colour bits
+                        \ in %ab
 
  LDA thisPitchIndex     \ If thisPitchIndex + 1 = vergeBufferEnd, then this is
  CLC                    \ the last entry in the verge buffer, so jump to dver19
@@ -19676,12 +19985,14 @@ ENDIF
  CMP #%11111111         \ If the background colour of the verge pixel mask is
  BEQ dver21             \ green, jump to dver21 to skip the following
 
- LDA L0033              \ Extract bits 0-1 from L0033, which contain %ab, where
- AND #%00000011         \ %a is the first bit of the foreground colour, and %b
-                        \ is the second bit of the colour of the background
+ LDA backgroundLeft     \ Extract bits 0-1 from backgroundLeft, which contain
+ AND #%00000011         \ the colour from the left side of the verge pixel mask,
+                        \ i.e. the pixels on the left side of this verge edge
 
- CMP #3                 \ If both %a and %b are set, jump to dver21 to skip the
- BEQ dver21             \ following ???
+ CMP #3                 \ If %ab = 3, so the colour to the left of the verge
+ BEQ dver21             \ edge is green, jump to dver21 to skip the following
+
+                        \ Otherwise, disable the DrawGreass routines ???
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
@@ -19706,9 +20017,9 @@ ENDIF
  STA DrawGrassRight     \ Revert the DrawGrassRight routine start with a CPX
                         \ instruction, so it runs as normal
 
- LDA currentVerge       \ Set A to the the number of the verge we are drawing
+ LDA vergeType          \ Set A to the type of verge we are drawing
 
- CMP #2                 \ Set bit 7 of A if currentVerge >= 2, so we get:
+ CMP #2                 \ Set bit 7 of A if vergeType >= 2, so we get:
  ROR A                  \
                         \   * Bit 7 clear when we are drawing leftVergeStart or
                         \     leftTrackStart
@@ -20843,10 +21154,6 @@ ENDIF
 \
 \   Y                   The track line we are drawing on (0 to 79)
 \
-\   L0033               ???
-\
-\   L0034               ???
-\
 \ ******************************************************************************
 
 .UpdateBackground
@@ -20858,13 +21165,17 @@ ENDIF
                         \ If we get here then the edge we are drawing is fully
                         \ on-screen
 
- LDA L0034              \ Set A = L0034, which is in the format %010vv0ab:
+ LDA backgroundRight    \ Set A = backgroundRight, which is in the format
+                        \ %010vv0ab:
                         \
                         \   * %vv is the verge we are currently drawing, from
-                        \     currentVerge
+                        \     vergeType
                         \
                         \   * %ab is the colour in the first verge pixel mask
                         \     for the verge
+                        \
+                        \   * %010xx0xx denotes that this value is being set to
+                        \     backgroundRight by the UpdateBackground routine
 
  JMP upba2              \ Jump to upba2
 
@@ -20879,17 +21190,21 @@ ENDIF
                         \ for track line Y 
 
  BNE upba4              \ If the background colour currently in the table is
-                        \ non-zero, jump to upba4
+                        \ non-zero, jump to upba4 to return from the subroutine
 
- LDA L0033              \ The background colour currently in the table is zero,
-                        \ so set A = L0033, which is in the format %100vv0ab:
+ LDA backgroundLeft     \ The background colour currently in the table is zero,
+                        \ so set A = backgroundLeft, which is in the format
+                        \ %100vv0ab:
                         \
                         \   * %vv is the verge we are currently drawing, from
-                        \     currentVerge
+                        \     vergeType
                         \
-                        \   * %a......b is the fourth verge pixel mask for the
-                        \     verge in objectPalette+3
-
+                        \   * %ab is the colour of the first three pixels in the
+                        \     verge pixel mask for the verge in objectPalette+3
+                        \
+                        \   * %100xx0xx denotes that this value is being set to
+                        \     backgroundLeft by the UpdateBackground routine
+                        
 .upba2
 
  CPY #80                \ If Y >= 80, then this is not a valid track line
@@ -20902,7 +21217,7 @@ ENDIF
                         \ If we get here then the player's car is facing
                         \ sideways, relative to the track direction, so we set
                         \ the background colour to either black or green,
-                        \ ignoring the verge marks
+                        \ ignoring the colour of the verge marks
 
  STA T                  \ Store A in T so we can retrieve it below
 
@@ -20914,8 +21229,8 @@ ENDIF
  BCS upba3              \ If bits 0-1 of A = 3, jump to upba3 to store green as
                         \ the background colour
 
- AND #%11111100         \ Otherwise clear bits 0 and 1 of A, to set black as the
-                        \ background colour
+ AND #%11111100         \ Otherwise clear bits 0 and 1 of A, to store black as
+                        \ the background colour
 
 .upba3
 
@@ -28601,12 +28916,13 @@ NEXT
  JSR sub_C4676          \
                         \ where A' is A, scaled by the sub_C4687 routine
 
- LDX edgeSegmentPointer
+ LDX edgeSegmentPointer \ Set X to the index of the segment within track verge
+                        \ buffer that is closest to the player's car
 
- CPX #40
- BCC mseg2
+ CPX #40                \ If X < 40, jump to mseg2 to skip the following
+ BCC mseg2              \ instruction
 
- EOR #&FF
+ EOR #&FF               \ Set A = ~A
 
 .mseg2
 
@@ -28620,7 +28936,11 @@ NEXT
  
  SBC carRacingLine,X    \ Set A = A - the racing line for the player
 
- BCS mseg3
+ BCS mseg3              \ If the subtraction didn't underflow, jump to mseg3 to
+                        \ skip the following instruction
+
+                        \ If we get here, then A < then player's racing line and
+                        \ the subtraction underflowed
 
  EOR #&FF               \ Set A = ~A
 
@@ -34128,8 +34448,9 @@ ORG &5E40
 \
 \ ------------------------------------------------------------------------------
 \
-\ This table contains colour information for each of the 80 track lines, as
-\ follows:
+\ This table contains colour information for each of the 80 track lines. It
+\ stores the colour, the verge type and details of the routine in which the
+\ colour data was written, as follows:
 \
 \   * Bits 0-1: background colour of track line (this value is a logical colour
 \     and the physical colour is looked up from the colourPalette table)
@@ -34139,30 +34460,31 @@ ORG &5E40
 \     %10 = logical colour 2
 \     %11 = logical colour 3
 \
-\   * Bit 2: records which routine set this colour
+\   * Bit 2: records which routine set this colour, along with bits 5-7
 \
 \     %0 = not set by SetVergeBackground
 \     %1 = set by SetVergeBackground
 \
-\   * Bits 3-4: verge type (taken from currentVerge)
+\   * Bits 3-4: the verge type that was being drawn when this colour was set
+\     (taken from vergeType)
 \
 \     %00 = leftVergeStart
 \     %01 = leftTrackStart
 \     %10 = rightVergeStart
 \     %11 = rightGrassStart
 \
-\   * Bits 5-7: records which routine set this colour
+\   * Bits 5-7: records which routine set this colour, along with bit 2
 \
-\     %000 = set by UpdateBackground, player's car is pointing sideways
+\     %000 = colour not set yet
 \     %001 = set by SetBackground
-\     %010 = set by UpdateBackground to value in L0034 (edge is fully
-\            on-screen, player's car is pointing along the track)
-\     %100 = set by UpdateBackground to value in L0033 (edge is partially
-\            on-screen, player's car is pointing along the track)
+\     %010 = set by UpdateBackground to the value in backgroundRight
+\     %100 = set by UpdateBackground to the value in backgroundLeft
 \
-\ Bits 2-7 are only used by the GetColour routine in the Acornsoft version. In
-\ the Superior Software release, GetColour was recoded to be smaller, and the
-\ recoded version only uses bits 0-1, so bits 2-7 are unused.
+\ The contents of bits 2-7 are only used by the GetColour routine in the
+\ Acornsoft version (though their being non-zero is used to differentiate black
+\ from an unset colour by SetBackground). In the Superior Software release,
+\ GetColour was recoded to be smaller, and the recoded version only uses bits
+\ 0-1, with bits 2-7 being unused.
 \
 \ ******************************************************************************
 
