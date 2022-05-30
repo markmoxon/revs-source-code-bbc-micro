@@ -3110,25 +3110,37 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Arguments:
+\
+\   (A X)               
 \
 \ ******************************************************************************
 
 .sub_C0D01
 
- STA J
+ STA J                  \ Set (J T) = (A X)
  STX T
- JSR sub_C0DB3
- STA G
- LDA U
- STA H
- LDX #1
+
+ JSR MultiplyBy804      \ Set (U A) = 804 * (A T) / 256
+                        \           = 804 * (A X) / 256
+
+ STA G                  \ Set (U G) = (U A)
+                        \           = 804 * (A X) / 256
+
+ LDA U                  \ Set (H G) = (U G)
+ STA H                  \           = 804 * (A X) / 256
+
+ LDX #1                 \ Set L0042 = 1
  STX L0042
- LDX #0
- BIT J
+
+ LDX #0                 \ Set X = 0
+
+ BIT J                  \ If bit 6 of J is clear, jump to C0D1B
  BVC C0D1B
- INX
- DEC L0042
+
+ INX                    \ Set X = 1
+
+ DEC L0042              \ Set L0042 = 0
 
 .C0D1B
 
@@ -3235,26 +3247,35 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0DB3
+\       Name: MultiplyBy804
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: 
+\    Summary: Multiply a 16-bit number by 804
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Do the following multiplication of unsigned numbers:
+\
+\   (U A) = 804 * (A T) / 256
 \
 \ ******************************************************************************
 
-.sub_C0DB3
+.MultiplyBy804
 
- ASL T
+ ASL T                  \ Set (V T) = (A T) * 4
  ROL A
  ASL T
  ROL A
  STA V
- LDA #&C9
+
+ LDA #201               \ Set U = 201
  STA U
+
+                        \ Fall through into Multiply8x16 to calculate:
+                        \
+                        \   (U A) = U * (V T) / 256
+                        \         = 201 * (A T) * 4 / 256
+                        \         = 804 * (A T) / 256
 
 \ ******************************************************************************
 \
@@ -3268,6 +3289,8 @@ ORG &0B00
 \ Do the following multiplication of two unsigned numbers:
 \
 \   (U T) = U * (V T) / 256
+\
+\ The result is also available in (U A).
 \
 \ ******************************************************************************
 
@@ -3309,93 +3332,168 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0DD7
+\       Name: Multiply16x16
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: 
+\    Summary: Multiply a sign-magnitude 16-bit number and a signed 16-bit number
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The routine uses the following algorithm:
+\
+\  (QQ PP) * (SS RR) = (QQ << 8 + PP) * (SS << 8 + RR)
+\                    = (QQ << 8 * SS << 8) + (QQ << 8 * RR)
+\                                          + (PP * SS << 8)
+\                                          + (PP * RR)
+\                    = (QQ * SS) << 16 + (QQ * RR) << 8
+\                                      + (PP * SS) << 8
+\                                      + (PP * RR)
+\
+\ Finally, it replaces the low byte multiplication in (PP * RR) / 256 with 128,
+\ as an estimate, as it's a pain to multiply the low bytes of a signed integer
+\ with a sign-magnitude number. So the final result that is returned in (A T)
+\ is as follows:
+\
+\   (A T) = (QQ PP) * (SS RR) / 256
+\         = (QQ * SS) << 8 + (QQ * RR) + (PP * SS) + 128
+\
+\ which is the algorithm that is implemented in this routine.
+\
+\ Arguments:
+\
+\   (QQ PP)             16-bit signed integer
+\
+\   (SS RR)             16-bit sign-magnitude integer with the sign bit in bit 0
+\                       of RR
+\
+\   H                   The sign to apply to the result (in bit 7)
+\
+\ Returns:
+\
+\   (A T)               (QQ PP) * (SS RR) * abs(H)
 \
 \ ******************************************************************************
 
-.sub_C0DD7
+.Multiply16x16
 
- LDA QQ
- BPL C0DEE
- LDA #0
- SEC
+ LDA QQ                 \ If (QQ PP) is positive, jump to muls1 to skip the
+ BPL muls1              \ following
+
+ LDA #0                 \ (QQ PP) is negative, so we now negate (QQ PP) so it's
+ SEC                    \ positive, starting with the low bytes
  SBC PP
  STA PP
- LDA #0
- SBC QQ
- STA QQ
- LDA H
- EOR #&80
- STA H
 
-.C0DEE
+ LDA #0                 \ And then the high bytes
+ SBC QQ                 \
+ STA QQ                 \ So we now have (QQ PP) = |QQ PP|
 
- LDA RR
- AND #1
- BEQ C0DFA
- LDA H
- EOR #&80
- STA H
+ LDA H                  \ Flip bit 7 of H, so when we set the result to the sign
+ EOR #%10000000         \ of H below, this ensures the result is the correct
+ STA H                  \ sign
 
-.C0DFA
+.muls1
 
- LDA QQ
+ LDA RR                 \ If bit 0 of RR is clear, then (SS RR) is positive, so
+ AND #1                 \ jump to muls2
+ BEQ muls2
+
+ LDA H                  \ Flip bit 7 of H, so when we set the result to the sign
+ EOR #%10000000         \ of H below, this ensures the result is the correct
+ STA H                  \ sign
+
+.muls2
+
+ LDA QQ                 \ Set U = QQ
  STA U
- LDA RR
+
+ LDA RR                 \ Set A = RR
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = RR * QQ
 
- STA W
- LDA T
- CLC
- ADC #&80
- STA V
- BCC C0E10
+ STA W                  \ Set (W T) = (A T)
+                        \           = RR * QQ
+
+ LDA T                  \ Set (W V) = (A T) + 128
+ CLC                    \           = RR * QQ + 128
+ ADC #128               \
+ STA V                  \ starting with the low bytes
+
+ BCC muls3              \ And then the high byte
  INC W
 
-.C0E10
+                        \ So we now have (W V) = RR * QQ + 128
 
- LDA SS
+.muls3
+
+ LDA SS                 \ Set A = SS
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = SS * QQ
 
- STA G
- LDA T
- CLC
- ADC W
- STA W
- BCC C0E22
+ STA G                  \ Set (G T) = (A T)
+                        \           = SS * QQ
+
+ LDA T                  \ Set (G W V) = (G T 0) + (W V)
+ CLC                    \
+ ADC W                  \ starting with the middle bytes (as the low bytes are
+ STA W                  \ simply V = 0 + V with no carry)
+
+ BCC muls4              \ And then the high byte
  INC G
 
-.C0E22
+                        \ So now we have:
+                        \
+                        \   (G W V) = (G T 0) + (W V)
+                        \           = (SS * QQ << 8) + RR * QQ + 128
 
- LDA PP
+.muls4
+
+ LDA PP                 \ Set U = PP
  STA U
- LDA SS
+
+ LDA SS                 \ Set A = SS
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = SS * PP
 
- STA U
- LDA T
- CLC
- ADC V
- LDA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = SS * PP
+
+ LDA T                  \ Set (G T ?) = (G W V) + (U T)
+ CLC                    \
+ ADC V                  \ starting with the low bytes (which we throw away)
+
+ LDA U                  \ And then the high bytes
  ADC W
  STA T
- BCC C0E3C
+
+ BCC muls5              \ And then the high byte
  INC G
 
-.C0E3C
+                        \ So now we have:
+                        \
+                        \   (G T ?) = (G W V) + (U T)
+                        \           = (SS * QQ << 8) + RR * QQ + 128 + SS * PP
+                        \           = (QQ * SS) << 8 + (QQ * RR) + (PP * SS)
+                        \              + 128
+                        \
+                        \ So:
+                        \
+                        \   (G T) = (G T ?) / 256
+                        \
+                        \ which is the result that we want
 
- LDA G
- BIT H
+.muls5
+
+ LDA G                  \ Set (A T) = (G T)
+
+ BIT H                  \ We are about to fall through into Absolute16Bit, so
+                        \ this ensures we set the sign of (A T) to the sign in
+                        \ H, so we get:
+                        \
+                        \   (A T) = (A T) * abs(H)
 
 \ ******************************************************************************
 \
