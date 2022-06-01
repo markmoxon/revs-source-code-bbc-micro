@@ -4957,17 +4957,17 @@ ORG &0B00
  LDA #0                 \ Set A = 0, so we can use it to reset variables to zero
                         \ in the following loop
 
- LDX #&1E               \ We now zero all variables from var02Lo to var12Hi, so
-                        \ so set up a loop counter in X
+ LDX #30                \ We now zero all 30 variable bytes from xPlayerDeltaLo
+                        \ to var12Hi, so so set up a loop counter in X
 
 .cras2
 
- STA var02Lo,X          \ Zero the X-th byte from var02Lo
+ STA xPlayerDeltaLo,X   \ Zero the X-th byte from xPlayerDeltaLo
 
  DEX                    \ Decrement the loop counter
 
  BPL cras2              \ Loop back until we have zeroed all variables from
-                        \ var02Lo to var12Hi
+                        \ xPlayerDeltaLo to var12Hi
 
  STA engineStatus       \ Set engineStatus = 0 to turn off the engine
 
@@ -29630,19 +29630,28 @@ ENDIF
 .sub_C47A5
 
  LDX #2
- LDY #9
- LDA #&80
- STA H
- LDA #&0E
- JSR sub_C4874
- LDX #2
- LDY #8
- LDA #&40
- STA H
- LDA #9
- JSR sub_C4874
 
- LDX #8                 \ Add (var12Hi var12Lo) to (var07Hi var07Lo)
+ LDY #9
+
+ LDA #%10000000
+ STA H
+
+ LDA #14
+
+ JSR MultiplyCoords+7
+
+ LDX #2
+
+ LDY #8
+
+ LDA #%01000000
+ STA H
+
+ LDA #9
+
+ JSR MultiplyCoords+7
+
+ LDX #8                 \ Set var07 = var07 + var12
  JSR sub_C47E5
 
  RTS                    \ Return from the subroutine
@@ -29663,19 +29672,28 @@ ENDIF
 .sub_C47C5
 
  LDX #2
- LDY #&0C
- LDA #0
- STA H
- LDA #&0E
- JSR sub_C4874
- LDX #2
- LDY #&0A
- LDA #&C0
- STA H
- LDA #&0C
- JSR sub_C4874
 
- LDX #10                \ Add (var12Hi var12Lo) to (var09Hi var09Lo)
+ LDY #12
+
+ LDA #%00000000
+ STA H
+
+ LDA #14
+
+ JSR MultiplyCoords+7
+
+ LDX #2
+
+ LDY #10
+
+ LDA #%11000000
+ STA H
+
+ LDA #12
+
+ JSR MultiplyCoords+7
+
+ LDX #10                \ Set var09 = var09 + var12
  JSR sub_C47E5
 
  RTS                    \ Return from the subroutine
@@ -29684,8 +29702,8 @@ ENDIF
 \
 \       Name: sub_C47E5
 \       Type: Subroutine
-\   Category: 
-\    Summary: Add (var12Hi var12Lo) to (var02Hi+X var02Lo+X)
+\   Category: Driving model
+\    Summary: Add var12 to a vector coordinate
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29701,14 +29719,14 @@ ENDIF
 
 .sub_C47E5
 
- LDA var02Lo,X          \ Add (var12Hi var12Lo) to (var02Hi+X var02Lo+X),
- CLC                    \ starting with the low bytes
- ADC var12Lo
- STA var02Lo,X
+ LDA xPlayerDeltaLo,X   \ Add (var12Hi var12Lo) to the variable at offset X from
+ CLC                    \ (xPlayerDeltaHi xPlayerDeltaLo), starting with the low
+ ADC var12Lo            \ bytes
+ STA xPlayerDeltaLo,X
 
- LDA var02Hi,X          \ And then the high bytes
+ LDA xPlayerDeltaHi,X   \ And then the high bytes
  ADC var12Hi
- STA var02Hi,X
+ STA xPlayerDeltaHi,X
 
  RTS                    \ Return from the subroutine
 
@@ -29716,7 +29734,7 @@ ENDIF
 \
 \       Name: sub_C47F9
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -29782,119 +29800,267 @@ ENDIF
  ASL T
  ROL A
  LDY G
- STA var06Hi,Y
+ STA var05Hi+1,Y
  LDA T
- STA var06Lo,Y
+ STA var05Lo+1,Y
  DEC G
  DEX
  DEX
  BPL C4832
- LDA L62E7
+ LDA var05Hi+2
  STA L62FF
  RTS
 
 \ ******************************************************************************
 \
-\       Name: sub_C486D
+\       Name: MultiplyCoords
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Multiply a 16-bit coordinate value and a 16-bit factor, optionally
+\             tallying or changing the sign of the result
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine multiplies two 16-bit values and stores the result, optionally
+\ negating the result, or adding it to the existing contents of the destination.
+\
+\ The first number (specified by parameter N, so let's call it variableN) is a
+\ 16-bit signed integer, while the second number (specified by parameter X, so
+\ let's call it variableX) is a 16-bit sign-magnitude number with the sign in
+\ bit 0 of the low byte.
+\
+\ The effect of bits and 7 on the result are as follows.
+\
+\   * If H = %00000000, then we calculate the following:
+\
+\     variableK = variableN * variableX
+\
+\   * If H = %01000000, then we calculate the following:
+\
+\     variableK = variableK + variableN * variableX
+\
+\   * If H = %10000000, then we calculate the following:
+\
+\     variableK = - variableN * variableX
+\
+\   * If H = %11000000, then we calculate the following:
+\
+\     variableK = variableK - variableN * variableX
+\
+\ Arguments:
+\
+\   N                   Offset of the 16-bit signed number to multiply:
+\
+\                         * 0 = xPlayerDelta
+\
+\                         * 1 = zPlayerDelta
+\
+\                         * 6 = var05 (x-axis)
+\
+\                         * 7 = var05+1 (y-axis)
+\
+\                         * 8 = var07
+\
+\                         * 9 = var08
+\
+\                         * 10 = var09
+\
+\                         * 12 = var11
+\
+\   X                   Offset of the 16-bit sign-magnitude value to multiply:
+\
+\                         * 0 = var26 (x-axis)
+\
+\                         * 1 = var26+1 (z-axis)
+\
+\                         * 2 = (steeringHi steeringLo)
+\
+\   K                   Offset of the variable to store the result in:
+\
+\                         * 3 = var04 (x-axis)
+\
+\                         * 4 = var04+1 (z-axis)
+\
+\                         * 8 = var07
+\
+\                         * 9 = var08
+\
+\                         * 12 = var11
+\
+\                         * 14 = var12
+\
+\   A                   Details of the operation to perform:
+\
+\                         * Bit 6 defines whether we add or store:
+\
+\                           * 0 = store the result in the variable defined by K,
+\                               overwriting the existing contents
+\
+\                           * 1 = add the result to the variable defined by K
+\
+\                         * Bit 7 defines the sign to apply to the result:
+\
+\                           * 0 = do not negate the multiplication
+\
+\                           * 1 = negate the multiplication
+\
+\ Other entry points:
+\
+\   MultiplyCoords+7    Use the following variables instead of the above:
+\
+\                         * Y = Offset of the 16-bit signed number to multiply
+\                               (instead of N)
+\
+\                         * A = Offset of the variable to store the result in
+\                               (instead of K)
+\
+\                         * H = Details of the operation to perform
+\                               (instead of A)
 \
 \ ******************************************************************************
 
-.sub_C486D
+.MultiplyCoords
 
- LDY N
- STA H
- JMP C4876
+ LDY N                  \ Set Y to the offset of the 16-bit signed number
 
-\ ******************************************************************************
-\
-\       Name: sub_C4874
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ STA H                  \ Store the details of the operation to perform in H
 
-.sub_C4874
+ JMP mcoo1              \ Jump to mcoo1 to skip the MultiplyCoords+7 entry
+                        \ point
 
- STA K
+                        \ This is where we join the subroutine when called via
+                        \ MultiplyCoords+7
 
-.C4876
+ STA K                  \ Set K to the offset of the variable to store the
+                        \ result in
 
- LDA var02Lo,Y          \ Set (QQ PP) = var02
- STA PP
- LDA var02Hi,Y
+.mcoo1
+
+ LDA xPlayerDeltaLo,Y   \ Set (QQ PP) to the 16-bit signed number pointed to by
+ STA PP                 \ Y (variableY)
+ LDA xPlayerDeltaHi,Y
  STA QQ
 
- LDA var26Lo,X          \ Set (SS RR) = var26
- STA RR
+ LDA var26Lo,X          \ Set (SS RR) to the 16-bit sign-magnitude number
+ STA RR                 \ pointed to by X (variableX)
  LDA var26Hi,X
  STA SS
 
- JSR Multiply16x16      \ Set (A T) = (QQ PP) * (SS RR) / 512
+ JSR Multiply16x16      \ Set (A T) = (QQ PP) * (SS RR)
+                        \
+                        \ And apply the sign from bit 7 of H
 
  STA U                  \ Set (U T) = (A T)
-                        \           = (QQ PP) * (SS RR) / 512
+                        \           = (QQ PP) * (SS RR)
 
- LDY K
+ LDY K                  \ Set Y to K, so we can store the result in the variable
+                        \ pointed to by K
 
- BIT H
- BVS C48A7
+ BIT H                  \ If bit 6 of H is set, then jump to AddCoords to add
+ BVS AddCoords          \ the result to the variable pointed to by K 
 
- LDA T
- STA var02Lo,Y
+ LDA T                  \ Store the result in the variable pointed to by K
+ STA xPlayerDeltaLo,Y
  LDA U
- STA var02Hi,Y
+ STA xPlayerDeltaHi,Y
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C48A0
+\       Name: SubtractCoords
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Subtract from a specified coordinate variable
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine subtracts (U T) from the specified 16-bit variable.
+\
+\ Specifically, it calculates:
+\
+\   variableY = variableY - (U T) * abs(N)
+\
+\ where N is the sign of the last variable to be loaded before the subroutine
+\ call. So if the call follows an LDA instruction, for example, the following
+\ is calculated if A is positive:
+\
+\   variableY = variableY - (U T)
+\
+\ and the following is calculated if A is negative:
+\
+\   variableY = variableY + (U T)
+\
+\ Arguments:
+\
+\   N flag              Determines the action:
+\
+\                         * If positive, subtract (U T)
+\
+\                         * If negative, add (U T)
 \
 \ ******************************************************************************
 
-.sub_C48A0
+.SubtractCoords
 
- BMI C48A7
+ BMI AddCoords          \ If A is negative, jump to AddCoords to calculate:
+                        \
+                        \   variableY = variableY + (U T)
 
  JSR Negate16Bit+2      \ Set (A T) = -(U T)
 
- STA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = -(U T)
 
-.C48A7
+                        \ Fall through into AddCoords to calculate:
+                        \
+                        \   variableY = variableY - (U T)
 
- LDA var02Lo,Y
- CLC
- ADC T
- STA var02Lo,Y
- LDA var02Hi,Y
+\ ******************************************************************************
+\
+\       Name: AddCoords
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Add to a specified coordinate variable
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine adds (U T) to the specified 16-bit variable.
+\
+\ Arguments:
+\
+\   Y                   Offset of the variable to update:
+\
+\                         * 3 = var04 (x-axis)
+\
+\                         * 4 = var04+1 (z-axis)
+\
+\                         * 9 = var08
+\
+\                         * 12 = var11
+\
+\                         * 14 = var12
+\
+\ ******************************************************************************
+
+.AddCoords
+
+ LDA xPlayerDeltaLo,Y   \ Add (U T) to (xPlayerDeltaHi xPlayerDeltaLo)
+ CLC                    \
+ ADC T                  \ starting with the low bytes
+ STA xPlayerDeltaLo,Y
+
+ LDA xPlayerDeltaHi,Y   \ And then the high bytes
  ADC U
- STA var02Hi,Y
- RTS
+ STA xPlayerDeltaHi,Y
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: sub_C48B9
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -29906,15 +30072,18 @@ ENDIF
 .sub_C48B9
 
  LDY #0
+
  LDA #8
- LDX #&C0
- BNE C48C7
+
+ LDX #%11000000
+
+ BNE sub_C48C7
 
 \ ******************************************************************************
 \
 \       Name: sub_C48C1
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -29926,31 +30095,83 @@ ENDIF
 .sub_C48C1
 
  LDY #6
- LDA #3
- LDX #&40
 
-.C48C7
+ LDA #3
+
+ LDX #%01000000
+
+\ ******************************************************************************
+\
+\       Name: sub_C48C7
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ Arguments:
+\
+\   Y                   Offset of ???:
+\
+\                         * 0 = xPlayerDelta and zPlayerDelta
+\
+\                         * 6 = var05 (x-axis) and var05+1 (y-axis)
+\
+\   A                   Offset of ???:
+\
+\                         * 3 = var04 (x-axis) and var04+1 (z-axis)
+\
+\                         * 8 = var07 and var08
+\
+\   X                   Bit 6 defines ???:
+\
+\                         * 0 = store the result in the variable defined by K,
+\                               overwriting the existing contents
+\
+\                         * 1 = add the result to the variable defined by K
+\
+\ ******************************************************************************
+
+.sub_C48C7
 
  STY N
+
  STA K
+
  STX GG
- LDX #1
- LDA #0
- JSR sub_C486D
- DEX
+
+ LDX #1                 \ Set X = 1
+
+ LDA #00000000          \ Set A = 0
+
+ JSR MultiplyCoords
+
+ DEX                    \ Set X = 0
+
  INC N
+
  LDA GG
- JSR sub_C486D
- INX
+
+ JSR MultiplyCoords
+
+ INX                    \ Set X = 1
+
  INC K
- LDA #0
- JSR sub_C486D
- DEX
+
+ LDA #00000000          \ Set A = 0
+
+ JSR MultiplyCoords
+
+ DEX                    \ Set X = 0
+
  DEC N
+
  LDA GG
- EOR #&80
- JSR sub_C486D
- RTS
+ EOR #%10000000
+
+ JSR MultiplyCoords
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -29974,9 +30195,9 @@ ENDIF
 
  LDA #0
  STA V
- LDA var02Lo,X
+ LDA xPlayerDeltaLo,X
  STA T
- LDA var02Hi,X
+ LDA xPlayerDeltaHi,X
  BPL C4903
  DEC V
 
@@ -30054,12 +30275,12 @@ ENDIF
  CLC
  ADC T
  STA L62AE,X
- LDA var02Lo,X
+ LDA xPlayerDeltaLo,X
  ADC U
- STA var02Lo,X
- LDA var02Hi,X
+ STA xPlayerDeltaLo,X
+ LDA xPlayerDeltaHi,X
  ADC V
- STA var02Hi,X
+ STA xPlayerDeltaHi,X
  DEX
  BPL C4939
  RTS
@@ -30558,16 +30779,16 @@ ENDIF
 
 .sub_C4B61
 
- LDA var02Lo,Y
+ LDA xPlayerDeltaLo,Y
  STA MM
- LDA var02Hi,Y
+ LDA xPlayerDeltaHi,Y
  BPL C4B77
  LDA #0
  SEC
  SBC MM
  STA MM
  LDA #0
- SBC var02Hi,Y
+ SBC xPlayerDeltaHi,Y
 
 .C4B77
 
@@ -30851,7 +31072,7 @@ ENDIF
  STA U
  LDY #6
  LDA var15Hi
- JSR sub_C48A0
+ JSR SubtractCoords
  LDA speedHi
  STA U
  LDA wingBalance
@@ -30868,7 +31089,7 @@ ENDIF
 
  LDY #7
  LDA var08Hi
- JSR sub_C48A0
+ JSR SubtractCoords
  RTS
 
 \ ******************************************************************************
@@ -35506,20 +35727,31 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var02Lo
+\       Name: xPlayerDeltaLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: Low byte of the x-coordinate of the vector containing the change
+\             in coordinate of the player's car during this main loop iteration
 \
 \ ******************************************************************************
 
-.var02Lo
+.xPlayerDeltaLo
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: zPlayerDeltaLo
+\       Type: Variable
+\   Category: Driving model
+\    Summary: Low byte of the z-coordinate of the vector containing the change
+\             in coordinate of the player's car during this main loop iteration
+\
+\ ******************************************************************************
+
+.zPlayerDeltaLo
+
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -35567,24 +35799,7 @@ ENDIF
 
 .var05Lo
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: var06Lo
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.var06Lo
-
- EQUB 0, 0
+ EQUB 0, 0, 0
 
 \ ******************************************************************************
 \
@@ -35708,20 +35923,31 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var02Hi
+\       Name: xPlayerDeltaHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Driving model
+\    Summary: High byte of the x-coordinate of the vector containing the change
+\             in coordinate of the player's car during this main loop iteration
 \
 \ ******************************************************************************
 
-.var02Hi
+.xPlayerDeltaHi
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: zPlayerDeltaHi
+\       Type: Variable
+\   Category: Driving model
+\    Summary: High byte of the x-coordinate of the vector containing the change
+\             in coordinate of the player's car during this main loop iteration
+\
+\ ******************************************************************************
+
+.zPlayerDeltaHi
+
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -35769,41 +35995,7 @@ ENDIF
 
 .var05Hi
 
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: var06Hi
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.var06Hi
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L62E7
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L62E7
-
- EQUB 0
+ EQUB 0, 0, 0
 
 \ ******************************************************************************
 \
