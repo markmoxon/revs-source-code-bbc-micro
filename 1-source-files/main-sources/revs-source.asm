@@ -29618,41 +29618,70 @@ ENDIF
 \
 \       Name: sub_C47A5
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following in parallel:
+\
+\   var08 = var08 + var07 * steering
+\
+\   var07 = var07 - var08 * steering
 \
 \ ******************************************************************************
 
 .sub_C47A5
 
- LDX #2
+ LDX #2                 \ Set X = 2, so in the call to MultiplyCoords+7 we use
+                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
+                        \ value to multiply
 
- LDY #9
+ LDY #9                 \ Set Y = 9, so in the call to MultiplyCoords+7 we use
+                        \ var08 as the 16-bit signed number
 
- LDA #%10000000
- STA H
+ LDA #%10000000         \ Clear bit 6 and set bit 7 of H, to store the result
+ STA H                  \ rather than adding, and negate the result in the call
+                        \ to MultiplyCoords+7
 
- LDA #14
+ LDA #14                \ Set A = 14, so in the call to MultiplyCoords+7, we
+                        \ store the result in var12
 
- JSR MultiplyCoords+7
+ JSR MultiplyCoords+7   \ Set:
+                        \
+                        \   variableA = -variableY * variableX
+                        \
+                        \ so:
+                        \
+                        \   var12 = -var08 * steering
 
- LDX #2
+ LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
+                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
+                        \ value to multiply
 
- LDY #8
+ LDY #8                 \ Set Y = 8, so in the call to MultiplyCoords we use
+                        \ var07 as the 16-bit signed number
 
- LDA #%01000000
- STA H
+ LDA #%01000000         \ Set bit 6 and clear bit 7 of H, to add the result
+ STA H                  \ rather than replacing, and leave the sign of the
+                        \ result alone in the call to MultiplyCoords+7
 
- LDA #9
+ LDA #9                 \ Set A = 9, so in the call to MultiplyCoords+7, we
+                        \ store the result in var08
 
- JSR MultiplyCoords+7
+ JSR MultiplyCoords+7   \ Set:
+                        \
+                        \   variableA = variableA + variableY * variableX
+                        \
+                        \ so:
+                        \
+                        \   var08 = var08 + var07 * steering
 
- LDX #8                 \ Set var07 = var07 + var12
- JSR sub_C47E5
+ LDX #8                 \ Set X = 8, so the call to sub_C47E5 adds var12 to
+                        \ var07
+
+ JSR sub_C47E5          \ Set var07 = var07 + var12
+                        \           = var07 - var08 * steering
 
  RTS                    \ Return from the subroutine
 
@@ -29660,41 +29689,70 @@ ENDIF
 \
 \       Name: sub_C47C5
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following in parallel:
+\
+\   var09 = var09 + var11 * steering
+\
+\   var11 = var11 - var09 * steering
 \
 \ ******************************************************************************
 
 .sub_C47C5
 
- LDX #2
+ LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
+                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
+                        \ value to multiply
 
- LDY #12
+ LDY #12                \ Set Y = 12, so in the call to MultiplyCoords we use
+                        \ var11 as the 16-bit signed number
 
- LDA #%00000000
- STA H
+ LDA #%00000000         \ Clear bits 6 and 7 of H, to store the result rather
+ STA H                  \ than adding, and leave the sign of the result alone in
+                        \ the call to MultiplyCoords+7
 
- LDA #14
+ LDA #14                \ Set A = 14, so in the call to MultiplyCoords+7, we
+                        \ store the result in var12
 
- JSR MultiplyCoords+7
+ JSR MultiplyCoords+7   \ Set:
+                        \
+                        \   variableA = variableY * variableX
+                        \
+                        \ so:
+                        \
+                        \   var12 = var11 * steering
 
- LDX #2
+ LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
+                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
+                        \ value to multiply
 
- LDY #10
+ LDY #10                \ Set Y = 10, so in the call to MultiplyCoords we use
+                        \ var09 as the 16-bit signed number
 
- LDA #%11000000
- STA H
+ LDA #%11000000         \ Set bits 6 and 7 of H, to add the result rather than
+ STA H                  \ replacing, and negate the result in the call to
+                        \ MultiplyCoords+7
 
- LDA #12
+ LDA #12                \ Set A = 12, so in the call to MultiplyCoords+7, we
+                        \ store the result in var11
 
- JSR MultiplyCoords+7
+ JSR MultiplyCoords+7   \ Set:
+                        \
+                        \   variableA = variableA - variableY * variableX
+                        \
+                        \ so:
+                        \
+                        \   var11 = var11 - var09 * steering
 
- LDX #10                \ Set var09 = var09 + var12
- JSR sub_C47E5
+ LDX #10                \ Set X = 8, so the call to sub_C47E5 adds var12 to
+                        \ var09
+ 
+ JSR sub_C47E5          \ Set var09 = var09 + var12
+                        \           = var09 + var11 * steering
 
  RTS                    \ Return from the subroutine
 
@@ -29711,9 +29769,9 @@ ENDIF
 \
 \   X                   Called with either 8 or 10:
 \
-\                         *  8 = add (var12Hi var12Lo) to (var07Hi var07Lo)
+\                         * 8: set var07 = var07 + var12
 \
-\                         * 10 = add (var12Hi var12Lo) to (var09Hi var09Lo)
+\                         * 10: set var09 = var09 + var12
 \
 \ ******************************************************************************
 
@@ -29827,23 +29885,24 @@ ENDIF
 \ The first number (specified by parameter N, so let's call it variableN) is a
 \ 16-bit signed integer, while the second number (specified by parameter X, so
 \ let's call it variableX) is a 16-bit sign-magnitude number with the sign in
-\ bit 0 of the low byte.
+\ bit 0 of the low byte. The result is stored in the variable specified by
+\ parameter K, so let's call it variableK.
 \
-\ The effect of bits and 7 on the result are as follows.
+\ The values of bits 6 and 7 of A affect the result as follows:
 \
-\   * If H = %00000000, then we calculate the following:
+\   * If A = %00000000, then we calculate the following:
 \
 \     variableK = variableN * variableX
 \
-\   * If H = %01000000, then we calculate the following:
+\   * If A = %01000000, then we calculate the following:
 \
 \     variableK = variableK + variableN * variableX
 \
-\   * If H = %10000000, then we calculate the following:
+\   * If A = %10000000, then we calculate the following:
 \
 \     variableK = - variableN * variableX
 \
-\   * If H = %11000000, then we calculate the following:
+\   * If A = %11000000, then we calculate the following:
 \
 \     variableK = variableK - variableN * variableX
 \
@@ -30065,19 +30124,34 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate:
+\
+\   var07 = xPlayerDelta * var26+1 - zPlayerDelta * var26
+\
+\   var08 = zPlayerDelta * var26+1 + xPlayerDelta * var26
 \
 \ ******************************************************************************
 
 .sub_C48B9
 
- LDY #0
+ LDY #0                 \ Set Y = 0, so in the call to sub_C48C7, variableY is
+                        \ xPlayerDelta and variableY+1 is zPlayerDelta
 
- LDA #8
+ LDA #8                 \ Set A = 8, so in the call to sub_C48C7, we store the
+                        \ result in var07 and var08
 
- LDX #%11000000
+ LDX #%11000000         \ Set bits 6 and 7 of X, to set the polarity in the call
+                        \ to sub_C48C7
 
- BNE sub_C48C7
+ BNE sub_C48C7          \ Jump to sub_C48C7 to calculate the following:
+                        \
+                        \   var07 = xPlayerDelta * var26+1
+                        \           - zPlayerDelta * var26
+                        \
+                        \   var08 = zPlayerDelta * var26+1
+                        \           + xPlayerDelta * var26
+                        \
+                        \ This BNE is effectively a JMP as X is never zero
 
 \ ******************************************************************************
 \
@@ -30088,17 +30162,31 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   var04 = var05 * var26+1 + var05+1 * var26
+\
+\   var04+1 = var05+1 * var26+1 - var05 * var26
 \
 \ ******************************************************************************
 
 .sub_C48C1
 
- LDY #6
+ LDY #6                 \ Set Y = 6, so in the call to sub_C48C7, variableY is
+                        \ var05 and variableY+1 is var05+1
 
- LDA #3
+ LDA #3                 \ Set A = 3, so in the call to sub_C48C7, we store the
+                        \ result in var04 and var04+1
 
- LDX #%01000000
+ LDX #%01000000         \ Set bit 6 and clear bit 7 of X, to set the polarity in
+                        \ the call to sub_C48C7
+
+                        \ Fall through into sub_C48C7 to calculate the
+                        \ following:
+                        \
+                        \   var04 = var05 * var26+1 + var05+1 * var26
+                        \
+                        \   var04+1 = var05+1 * var26+1 - var05 * var26
 
 \ ******************************************************************************
 \
@@ -30109,67 +30197,132 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
+\ If bit 7 of X is clear, this routine calculates:
+\
+\   variableA = variableY * var26+1 + variableY+1 * var26
+\
+\   variableA+1 = variableY+1 * var26+1 - variableY * var26
+\
+\ If bit 7 of X is set, this routine calculates:
+\
+\   variableA = variableY * var26+1 - variableY+1 * var26
+\
+\   variableA+1 = variableY+1 * var26+1 + variableY * var26
+\
+\ For it to work, the routine must be called with bit 6 of X set.
+\
 \ Arguments:
 \
-\   Y                   Offset of ???:
+\   Y                   Offset of the 16-bit signed number to multiply:
 \
 \                         * 0 = xPlayerDelta and zPlayerDelta
 \
 \                         * 6 = var05 (x-axis) and var05+1 (y-axis)
 \
-\   A                   Offset of ???:
+\   A                   Offset of the variable to store the result in:
 \
 \                         * 3 = var04 (x-axis) and var04+1 (z-axis)
 \
 \                         * 8 = var07 and var08
 \
-\   X                   Bit 6 defines ???:
+\   X                   Details of the operation to perform on the second and
+\                       fourth multiplications:
 \
-\                         * 0 = store the result in the variable defined by K,
-\                               overwriting the existing contents
+\                         * Bit 6 needs to be set
 \
-\                         * 1 = add the result to the variable defined by K
+\                         * Bit 7 defines the sign to apply to the result:
+\
+\                           * 0 = do not negate the result
+\
+\                           * 1 = negate the result
 \
 \ ******************************************************************************
 
 .sub_C48C7
 
- STY N
+ STY N                  \ Set N to the offset of the 16-bit signed number, and
+                        \ let's call this number variableY (as it is specified
+                        \ by parameter Y)
 
- STA K
+ STA K                  \ Set K to the offset of the variable to store the
+                        \ result in, and let's call this number variableA (as it
+                        \ is specified by parameter A)
 
- STX GG
+ STX GG                 \ Store the details of the operation to perform in GG
 
- LDX #1                 \ Set X = 1
+ LDX #1                 \ Set X = 1, so in the call to MultiplyCoords we use
+                        \ var26+1 as the 16-bit sign-magnitude value to multiply
 
- LDA #00000000          \ Set A = 0
+ LDA #%00000000         \ Set A = %00000000, so in the call to MultiplyCoords we
+                        \ overwrite the result rather than adding, and do not
+                        \ negate the multiplication
 
- JSR MultiplyCoords
+ JSR MultiplyCoords     \ Set variableA = variableY * variableX
+                        \               = variableY * var26+1
 
- DEX                    \ Set X = 0
+ DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
+                        \ var26 as the 16-bit sign-magnitude value to multiply
 
- INC N
+ INC N                  \ Point to the next variable after the 16-bit signed
+                        \ number we just used, so in the call to MultiplyCoords
+                        \ we use variableY+1 as the 16-bit signed number
 
- LDA GG
+ LDA GG                 \ Set A to the details of the operation to perform in
+                        \ GG, as specified by parameter X
+                        \
+                        \ Bit 6 of parameter X is always set in calls to this
+                        \ routine, so we add the result to variableA
 
- JSR MultiplyCoords
+ JSR MultiplyCoords     \ Set:
+                        \
+                        \   variableA = variableA + variableY+1 * variableX
+                        \             = variableA + variableY+1 * var26
+                        \
+                        \ if bit 7 of parameter X is clear, or:
+                        \
+                        \   variableA = variableA - variableY+1 * var26
+                        \
+                        \ if bit 7 of parameter X is set
 
- INX                    \ Set X = 1
+ INX                    \ Set X = 1, so in the call to MultiplyCoords we use
+                        \ var26+1 as the 16-bit sign-magnitude value to multiply
 
- INC K
+ INC K                  \ Point to the next variable after the one we just
+                        \ stored the result in, so in the call to MultiplyCoords
+                        \ we use variableA+1 to store the result
 
- LDA #00000000          \ Set A = 0
+ LDA #%00000000         \ Set A = %00000000, so in the call to MultiplyCoords we
+                        \ overwrite the result rather than adding, and do not
+                        \ negate the multiplication
 
- JSR MultiplyCoords
+ JSR MultiplyCoords     \ Set variableA+1 = variableY+1 * variableX
+                        \                 = variableY+1 * var26+1
 
- DEX                    \ Set X = 0
+ DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
+                        \ var26 as the 16-bit sign-magnitude value to multiply
 
- DEC N
+ DEC N                  \ Point back to the original variable for the 16-bit
+                        \ signed number we just used, so in the call to
+                        \ MultiplyCoords we use variableY again as the 16-bit
+                        \ signed number
 
- LDA GG
- EOR #%10000000
+ LDA GG                 \ Set A to the details of the operation to perform in
+ EOR #%10000000         \ GG with bit 7 flipped, which is as specified by
+                        \ parameter X, but with a flipped sign
+                        \
+                        \ Bit 6 of parameter X is always set in calls to this
+                        \ routine, so we add the result to variableA+1
 
- JSR MultiplyCoords
+ JSR MultiplyCoords     \ Set:
+                        \
+                        \   variableA+1 = variableA+1 - variableY * variableX
+                        \               = variableA+1 - variableY * var26
+                        \
+                        \ if bit 7 of parameter X is clear, or:
+                        \
+                        \   variableA+1 = variableA+1 + variableY * var26
+                        \
+                        \ if bit 7 of parameter X is set
 
  RTS                    \ Return from the subroutine
 
