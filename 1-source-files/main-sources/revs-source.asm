@@ -29499,7 +29499,7 @@ ENDIF
  STA T
  LDY #&58
  LDA spinYawAngleHi
- JSR sub_C4753
+ JSR Multiply8x16xN
  STA U
  LDA var07Lo
  SEC
@@ -29516,34 +29516,68 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4753
+\       Name: Multiply8x16xN
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Multiply an 8-bit and a 16-bit number and apply a sign to the
+\             result
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine calculates:
+\
+\   (A T) = (A T) * Y * abs(N)
+\
+\ where N is the sign of the last variable to be loaded before the subroutine
+\ call. So if the call follows an LDA instruction, for example, the following
+\ is calculated if A is positive:
+\
+\   (A T) = (A T) * Y
+\
+\ and the following is calculated if A is negative:
+\
+\   (A T) = -(A T) * Y
+\
+\ Arguments:
+\
+\   (A T)
+\
+\   Y
+\
+\   N flag              Controls the sign to be applied:
+\
+\                         * N flag clear to calculate (A T) * Y
+\
+\                         * N flag set to calculate -(A T) * Y
+
+\
+\ Returns:
+\
+\   (A T)               
 \
 \ ******************************************************************************
 
-.sub_C4753
+.Multiply8x16xN
 
- PHP
+ PHP                    \ Store the N flag on the stack
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
+ JSR Absolute16Bit      \ Set the sign of (A T) to that of the N flag argument
 
- STA V
- STY U
+ STA V                  \ Set (V T) = (A T)
+
+ STY U                  \ Set U = Y
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+                        \           = Y * (A T)
 
- LDA U
- PLP
+ LDA U                  \ Set (A T) = (U T)
+                        \           = Y * (A T)
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
+ PLP                    \ Retrieve the N flag from the stack
 
- RTS
+ JSR Absolute16Bit      \ Set the sign of (A T) to that of the N flag argument
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -29831,7 +29865,7 @@ ENDIF
  STA T
  LDA var09Hi
  SBC var10Hi
- JSR sub_C4753
+ JSR Multiply8x16xN
  STA var05Hi
  LDA T
  STA var05Lo
@@ -29875,7 +29909,7 @@ ENDIF
  LDY #&CD
  LDA U
  ADC var09Hi,X
- JSR sub_C4753
+ JSR Multiply8x16xN
  ASL T
  ROL A
  LDY G
