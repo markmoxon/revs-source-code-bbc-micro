@@ -29369,7 +29369,13 @@ ENDIF
 
  JSR sub_C0D01
 
- JSR sub_C48B9
+ JSR GetProducts1       \ Calculate:
+                        \
+                        \   var07 = xPlayerDelta * var26+1
+                        \           - zPlayerDelta * var26
+                        \
+                        \   var08 = zPlayerDelta * var26+1
+                        \           + xPlayerDelta * var26
 
  LDA var07Lo            \ Set (var15Hi var15Lo) = (var07Hi var07Lo)
  STA var15Lo
@@ -29420,12 +29426,20 @@ ENDIF
  ADC var16Hi
  STA var07Hi
 
- JSR sub_C47A5
+ JSR ApplySteering1     \ Calculate the following in parallel:
+                        \
+                        \   var08 = var08 + var07 * steering
+                        \
+                        \   var07 = var07 - var08 * steering
 
  LDX #0
  JSR sub_C4779
 
- JSR sub_C47C5
+ JSR ApplySteering2     \ Calculate the following in parallel:
+                        \
+                        \   var09 = var09 + var11 * steering
+                        \
+                        \   var11 = var11 - var09 * steering
 
  JSR sub_C47F9
 
@@ -29433,23 +29447,30 @@ ENDIF
  CMP #2
  BCC C4719
 
- LDX #2
- LDA #0
+ LDX #2                 \ We now zero the three 16-bit bytes at var05, so set a
+                        \ counter in X for the three variables
+
+ LDA #0                 \ Set A = 0 to use as the zero value
 
 .P4710
 
- STA var05Lo,X
+ STA var05Lo,X          \ Zero the X-th byte of (var05Hi var05Lo)
  STA var05Hi,X
 
- DEX
+ DEX                    \ Decrement the variable counter
 
- BPL P4710
+ BPL P4710              \ Loop back until we have zeroed all three 16-bit
+                        \ variables
 
 .C4719
 
  JSR sub_C4C65
 
- JSR sub_C48C1
+ JSR GetProducts2       \ Calculate the following:
+                        \
+                        \   var04 = var05 * var26+1 + var05+1 * var26
+                        \
+                        \   var04+1 = var05+1 * var26+1 - var05 * var26
 
  JSR sub_C4937
 
@@ -29457,7 +29478,7 @@ ENDIF
 
  JSR sub_C44EA
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -29616,10 +29637,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C47A5
+\       Name: ApplySteering1
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Apply steering to var07 and var08
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29631,7 +29652,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C47A5
+.ApplySteering1
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords+7 we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
@@ -29677,20 +29698,20 @@ ENDIF
                         \
                         \   var08 = var08 + var07 * steering
 
- LDX #8                 \ Set X = 8, so the call to sub_C47E5 adds var12 to
+ LDX #8                 \ Set X = 8, so the call to ApplyVar12 adds var12 to
                         \ var07
 
- JSR sub_C47E5          \ Set var07 = var07 + var12
+ JSR ApplyVar12         \ Set var07 = var07 + var12
                         \           = var07 - var08 * steering
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C47C5
+\       Name: ApplySteering2
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Apply steering to var09 and var11
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29702,7 +29723,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C47C5
+.ApplySteering2
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
@@ -29748,20 +29769,20 @@ ENDIF
                         \
                         \   var11 = var11 - var09 * steering
 
- LDX #10                \ Set X = 8, so the call to sub_C47E5 adds var12 to
+ LDX #10                \ Set X = 8, so the call to ApplyVar12 adds var12 to
                         \ var09
  
- JSR sub_C47E5          \ Set var09 = var09 + var12
+ JSR ApplyVar12         \ Set var09 = var09 + var12
                         \           = var09 + var11 * steering
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C47E5
+\       Name: ApplyVar12
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Add var12 to a vector coordinate
+\    Summary: Add var12 to var07 or var09
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29775,7 +29796,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C47E5
+.ApplyVar12
 
  LDA xPlayerDeltaLo,X   \ Add (var12Hi var12Lo) to the variable at offset X from
  CLC                    \ (xPlayerDeltaHi xPlayerDeltaLo), starting with the low
@@ -30117,14 +30138,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C48B9
+\       Name: GetProducts1
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate various products
 \
 \ ------------------------------------------------------------------------------
 \
-\ Calculate:
+\ Calculate the following:
 \
 \   var07 = xPlayerDelta * var26+1 - zPlayerDelta * var26
 \
@@ -30132,18 +30153,18 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C48B9
+.GetProducts1
 
- LDY #0                 \ Set Y = 0, so in the call to sub_C48C7, variableY is
+ LDY #0                 \ Set Y = 0, so in the call to GetProducts, variableY is
                         \ xPlayerDelta and variableY+1 is zPlayerDelta
 
- LDA #8                 \ Set A = 8, so in the call to sub_C48C7, we store the
+ LDA #8                 \ Set A = 8, so in the call to GetProducts, we store the
                         \ result in var07 and var08
 
  LDX #%11000000         \ Set bits 6 and 7 of X, to set the polarity in the call
-                        \ to sub_C48C7
+                        \ to GetProducts
 
- BNE sub_C48C7          \ Jump to sub_C48C7 to calculate the following:
+ BNE GetProducts        \ Jump to GetProducts to calculate the following:
                         \
                         \   var07 = xPlayerDelta * var26+1
                         \           - zPlayerDelta * var26
@@ -30155,10 +30176,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C48C1
+\       Name: GetProducts2
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate various products
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30170,18 +30191,18 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C48C1
+.GetProducts2
 
- LDY #6                 \ Set Y = 6, so in the call to sub_C48C7, variableY is
+ LDY #6                 \ Set Y = 6, so in the call to GetProducts, variableY is
                         \ var05 and variableY+1 is var05+1
 
- LDA #3                 \ Set A = 3, so in the call to sub_C48C7, we store the
+ LDA #3                 \ Set A = 3, so in the call to GetProducts, we store the
                         \ result in var04 and var04+1
 
  LDX #%01000000         \ Set bit 6 and clear bit 7 of X, to set the polarity in
-                        \ the call to sub_C48C7
+                        \ the call to GetProducts
 
-                        \ Fall through into sub_C48C7 to calculate the
+                        \ Fall through into GetProducts to calculate the
                         \ following:
                         \
                         \   var04 = var05 * var26+1 + var05+1 * var26
@@ -30190,10 +30211,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C48C7
+\       Name: GetProducts
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate various products
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30238,7 +30259,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C48C7
+.GetProducts
 
  STY N                  \ Set N to the offset of the 16-bit signed number, and
                         \ let's call this number variableY (as it is specified
