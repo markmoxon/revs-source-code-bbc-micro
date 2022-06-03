@@ -2681,11 +2681,11 @@ ORG &0B00
 
  LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeRight - spinYawAngle
  SEC                    \
- SBC spinYawAngleLo     \ starting with the high bytes
+ SBC spinYawAngleHi     \ starting with the low bytes
  STA xVergeRightLo,Y
 
- LDA xVergeRightHi,Y    \ And then the low bytes
- SBC spinYawAngleHi
+ LDA xVergeRightHi,Y    \ And then the high bytes
+ SBC spinYawAngleTop
  STA xVergeRightHi,Y
 
  LDA yVergeRight,Y      \ Set A = Y-th entry in yVergeRight - spinPitchAngle
@@ -4928,10 +4928,11 @@ ORG &0B00
  LDA #20                \ Set A = 20 so we apply a yaw angle spin of magnitude
                         \ 20 to the car
 
- BIT spinYawAngleHi     \ Set the flags according to the sign of spinYawAngleHi,
-                        \ so the call to Absolute8Bit sets the sign of A to the
-                        \ same sign as the spin yaw angle (so the car spins out
-                        \ in the same direction as it is currently spinning)
+ BIT spinYawAngleTop    \ Set the N flag according to the sign in bit 7 of
+                        \ spinYawAngleTop, so the call to Absolute8Bit sets the
+                        \ sign of A to the same sign as the spin yaw angle (so
+                        \ the car spins out in the same direction as it is
+                        \ currently spinning)
 
  JSR Absolute8Bit       \ Set A = 20 * abs(spinYawAngle)
 
@@ -4957,17 +4958,17 @@ ORG &0B00
  LDA #0                 \ Set A = 0, so we can use it to reset variables to zero
                         \ in the following loop
 
- LDX #30                \ We now zero all 30 variable bytes from xPlayerDeltaLo
+ LDX #30                \ We now zero all 30 variable bytes from xPlayerDeltaHi
                         \ to var12Hi, so so set up a loop counter in X
 
 .cras2
 
- STA xPlayerDeltaLo,X   \ Zero the X-th byte from xPlayerDeltaLo
+ STA xPlayerDeltaHi,X   \ Zero the X-th byte from xPlayerDeltaHi
 
  DEX                    \ Decrement the loop counter
 
  BPL cras2              \ Loop back until we have zeroed all variables from
-                        \ xPlayerDeltaLo to var12Hi
+                        \ xPlayerDeltaHi to var12Hi
 
  STA engineStatus       \ Set engineStatus = 0 to turn off the engine
 
@@ -5235,9 +5236,9 @@ ORG &0B00
 .bpla1
 
  LDA xVector4Lo,X       \ Copy the car's 3D coordinates from xVector4 into
- STA xPlayerCoordLo,X   \ xPlayerCoord
+ STA xPlayerCoordHi,X   \ xPlayerCoord
  LDA xVector4Hi,X
- STA xPlayerCoordHi,X
+ STA xPlayerCoordTop,X
 
  DEX                    \ Decrement the axis counter
 
@@ -8231,17 +8232,17 @@ ENDIF
  BPL rese1              \ Loop back until we have zeroed all variables from
                         \ playerMoving to processContact
 
- LDX #&7F               \ We now zero all variables from xPlayerCoordLo to
+ LDX #&7F               \ We now zero all variables from xPlayerCoordHi to
                         \ L62FF, so set up a loop counter in X
 
 .rese2
 
- STA xPlayerCoordLo,X   \ Zero the X-th byte from xPlayerCoordLo
+ STA xPlayerCoordHi,X   \ Zero the X-th byte from xPlayerCoordHi
 
  DEX                    \ Decrement the loop counter
 
  BPL rese2              \ Loop back until we have zeroed all variables from
-                        \ xPlayerCoordLo to L62FF
+                        \ xPlayerCoordHi to L62FF
 
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
@@ -10178,7 +10179,7 @@ ENDIF
                         \
                         \   * 0 to +16 if the other car is to the right
 
-                        \ Fall through into SquealTyres to set spinYawAngleHi
+                        \ Fall through into SquealTyres to set spinYawAngleTop
                         \ and make the sound of squealing tyres
 
 \ ******************************************************************************
@@ -10192,13 +10193,13 @@ ENDIF
 \
 \ Arguments:
 \
-\   A                   The new value for spinYawAngleHi
+\   A                   The new value for spinYawAngleTop
 \
 \ ******************************************************************************
 
 .SquealTyres
 
- STA spinYawAngleHi     \ Set spinYawAngleHi = A
+ STA spinYawAngleTop    \ Set spinYawAngleTop = A
 
  LDA #%10000000         \ Set bit 7 in L62A6 and L62A7, so the tyres squeal
  STA L62A6
@@ -14160,11 +14161,11 @@ ENDIF
 
  LDA xSegmentCoordILo,X \ Set (VV PP) = xVector4 - xPlayerCoord
  SEC                    \
- SBC xPlayerCoordLo,Y   \ starting with the low bytes
+ SBC xPlayerCoordHi,Y   \ starting with the low bytes
  STA PP
 
  LDA xSegmentCoordIHi,X \ And then the high bytes
- SBC xPlayerCoordHi,Y
+ SBC xPlayerCoordTop,Y
  STA VV
 
                         \ Let's call this difference in x-coordinates x-delta,
@@ -14194,11 +14195,11 @@ ENDIF
 
  LDA zSegmentCoordILo,X \ Set (GG RR) = zVector4 - zPlayerCoord
  SEC                    \
- SBC zPlayerCoordLo,Y   \ starting with the low bytes
+ SBC zPlayerCoordHi,Y   \ starting with the low bytes
  STA RR
 
  LDA zSegmentCoordIHi,X \ And then the high bytes
- SBC zPlayerCoordHi,Y
+ SBC zPlayerCoordTop,Y
  STA GG
 
                         \ Let's call this difference in z-coordinates z-delta,
@@ -14729,11 +14730,11 @@ ENDIF
 
  LDA ySegmentCoordILo,X \ Set (WW QQ) = yVector4 - yPlayerCoord
  SEC                    \
- SBC yPlayerCoordLo,Y   \ starting with the low bytes
+ SBC yPlayerCoordHi,Y   \ starting with the low bytes
  STA QQ
 
  LDA ySegmentCoordIHi,X \ And then the high bytes
- SBC yPlayerCoordHi,Y
+ SBC yPlayerCoordTop,Y
  STA WW
 
                         \ Let's call this difference in y-coordinates y-delta,
@@ -15927,9 +15928,9 @@ ENDIF
 
 .MovePlayerSegment
 
- LDA playerHeading      \ Set A = playerHeading - spinYawAngleHi
+ LDA playerHeading      \ Set A = playerHeading - spinYawAngleTop
  SEC                    \
- SBC spinYawAngleHi     \ So A contains the new heading of the player's car,
+ SBC spinYawAngleTop    \ So A contains the new heading of the player's car,
                         \ once the current spin is added (i.e. it's the new
                         \ heading of the car)
 
@@ -28940,14 +28941,14 @@ NEXT
  PHP
  CLC
  ADC V
- STA yPlayerCoordLo
+ STA yPlayerCoordHi
  LDA ySegmentCoordIHi,Y
  ADC W
  PLP
  ADC #0
  PLP
  ADC #0
- STA yPlayerCoordHi
+ STA yPlayerCoordTop
  LDA speedHi
  STA U
  LDA #&21
@@ -29367,9 +29368,9 @@ ENDIF
  LDA playerYawAngleHi   \ Set (A X) = (playerYawAngleHi playerYawAngleLo)
  LDX playerYawAngleLo
 
- JSR sub_C0D01
+ JSR sub_C0D01          \ ??? Sets var26
 
- JSR GetProducts1       \ Calculate:
+ JSR GetProducts1       \ Calculate the following::
                         \
                         \   var07 = xPlayerDelta * var26+1
                         \           - zPlayerDelta * var26
@@ -29393,17 +29394,26 @@ ENDIF
  LDA T                  \                       = |var08|
  STA speedLo
 
- LDY speedHi
+ LDY speedHi            \ Set Y to the high byte of (speedHi speedLo)
 
- BNE C46CD
- AND #&F0
- TAY
+ BNE C46CD              \ If the high byte is non-zero, jump to C46CD to skip
+                        \ the following
+
+ AND #%11110000         \ A contains speedLo, so this sets Y to the high nibble
+ TAY                    \ of the low byte of (speedHi speedLo)
 
 .C46CD
 
- STY playerMoving
+ STY playerMoving       \ Store Y in playerMoving, which is zero if the player
+                        \ is not moving, non-zero if they are, so this denotes
+                        \ the player as moving if (speedHi speedLo) is non-zero,
+                        \ ignoring the bottom nibble of the low byte
 
- JSR sub_C4729
+ JSR ApplySpinYaw       \ Calculate the following:
+                        \
+                        \   var07 = var07 - (spinYawAngle * 88)
+                        \
+                        \   var16 = spinYawAngle * 132
 
  JSR sub_C4BCF
 
@@ -29464,7 +29474,13 @@ ENDIF
 
 .C4719
 
- JSR sub_C4C65
+ JSR ApplyWingBalance   \ Calculate the following:
+                        \
+                        \   var05+1 = var05+1 - scaledSpeed * var15Hi
+                        \
+                        \   var05+2 = var05+2 - scaledSpeed
+                        \                       * (wingBalance * speedHi + 2048)
+                        \                       * abs(var08)
 
  JSR GetProducts2       \ Calculate the following:
                         \
@@ -29482,43 +29498,61 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4729
+\       Name: ApplySpinYaw
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Calculate variables based on the spin yaw angle
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   var07 = var07 - (spinYawAngle * 88)
+\
+\   var16 = spinYawAngle * 132
 \
 \ ******************************************************************************
 
-.sub_C4729
+.ApplySpinYaw
 
- LDA spinYawAngleLo
+ LDA spinYawAngleHi     \ Set T = spinYawAngleHi to use as the low byte in (A T)
  STA T
- LDY #&58
- LDA spinYawAngleHi
- JSR Multiply8x16xN
- STA U
- LDA var07Lo
- SEC
+
+ LDY #88                \ Set Y = 88
+
+ LDA spinYawAngleTop    \ Set (A T) = (spinYawAngleTop spinYawAngleHi)
+
+ JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
+                        \           = spinYawAngle * 88 * abs(spinYawAngle)
+                        \           = spinYawAngle * 88
+
+ STA U                  \ Set (U T) = (A T)
+                        \           = spinYawAngle * 88
+
+ LDA var07Lo            \ Set (var07Hi var07Lo) = (var07Hi var07Lo) - (U T)
+ SEC                    \                       = var07 - (spinYawAngle * 88)
  SBC T
+
  STA var07Lo
  LDA var07Hi
  SBC U
  STA var07Hi
- JSR sub_C4765
- STA var16Hi
- LDA T
+
+ JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
+                        \           = spinYawAngle * 88 * 1.5
+                        \           = spinYawAngle * 132
+
+ STA var16Hi            \ Set (var16Hi var16Lo) = (A T)
+ LDA T                  \                       = spinYawAngle * 132
  STA var16Lo
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: Multiply8x16xN
+\       Name: Multiply8x16Signed
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths
 \    Summary: Multiply an 8-bit and a 16-bit number and apply a sign to the
 \             result
 \
@@ -29526,11 +29560,11 @@ ENDIF
 \
 \ This routine calculates:
 \
-\   (A T) = (A T) * Y * abs(N)
+\   (A T) = (A T) * Y * abs(A)
 \
-\ where N is the sign of the last variable to be loaded before the subroutine
-\ call. So if the call follows an LDA instruction, for example, the following
-\ is calculated if A is positive:
+\ where A is the last variable to be loaded before the subroutine call. So if
+\ the call follows an LDA instruction, for example, the following is calculated
+\ if A is positive:
 \
 \   (A T) = (A T) * Y
 \
@@ -29540,24 +29574,19 @@ ENDIF
 \
 \ Arguments:
 \
-\   (A T)
+\   (A T)               A 16-bit signed number
 \
-\   Y
+\   Y                   An unsigned number
 \
 \   N flag              Controls the sign to be applied:
 \
 \                         * N flag clear to calculate (A T) * Y
 \
 \                         * N flag set to calculate -(A T) * Y
-
-\
-\ Returns:
-\
-\   (A T)               
 \
 \ ******************************************************************************
 
-.Multiply8x16xN
+.Multiply8x16Signed
 
  PHP                    \ Store the N flag on the stack
 
@@ -29581,36 +29610,63 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4765
+\       Name: MultiplyBy1Point5
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Multiply a 16-bit signed number by 1.5
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   (A T) = (U T) * 1.5
+\
+\ Arguments:
+\
+\   (U T)               A 16-bit signed number
 \
 \ ******************************************************************************
 
-.sub_C4765
+.MultiplyBy1Point5
 
- LDA U
- CLC
- BPL C476B
- SEC
+ LDA U                  \ Set A = U, the high byte of (U T)
+
+ CLC                    \ Clear the C flag, to use when A is positive
+
+ BPL C476B              \ If A is positive, jump to C476B to skip the following
+                        \ instruction
+
+ SEC                    \ Set the C flag, to use when A is negative
 
 .C476B
 
- ROR A
- PHA
- LDA T
- ROR A
- CLC
- ADC T
- STA T
- PLA
+                        \ By this point, the C flag contains the sign bit of A
+                        \ (set if negative, clear if positive)
+
+ ROR A                  \ Shift A to the right, inserting the C flag into bit 7
+                        \ to retain the correct sign
+
+ PHA                    \ Store the regult on the stack, so the stack contains
+                        \ the top byte of (U T), shifted right by one place
+
+ LDA T                  \ Set A = T, the low byte of (U T)
+
+ ROR A                  \ Shift A to the right, so the stack and A contain the
+                        \ high and low bytes of (U T) >> 1, so if S is the value
+                        \ on top of the stack, we have:
+                        \
+                        \   (S A) = (U T) >> 1
+
+ CLC                    \ Set (A T) = (S A) + (U T)
+ ADC T                  \           = (U T) >> 1 + (U T)
+ STA T                  \           = (U T) * 1.5
+                        \
+                        \ starting with the low bytes
+
+ PLA                    \ And then the high bytes
  ADC U
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -29832,14 +29888,14 @@ ENDIF
 
 .ApplyVar12
 
- LDA xPlayerDeltaLo,X   \ Add (var12Hi var12Lo) to the variable at offset X from
- CLC                    \ (xPlayerDeltaHi xPlayerDeltaLo), starting with the low
- ADC var12Lo            \ bytes
- STA xPlayerDeltaLo,X
-
- LDA xPlayerDeltaHi,X   \ And then the high bytes
- ADC var12Hi
+ LDA xPlayerDeltaHi,X   \ Add (var12Hi var12Lo) to the variable at offset X from
+ CLC                    \ (xPlayerDeltaTop xPlayerDeltaHi), starting with the
+ ADC var12Lo            \ low bytes
  STA xPlayerDeltaHi,X
+
+ LDA xPlayerDeltaTop,X  \ And then the high bytes
+ ADC var12Hi
+ STA xPlayerDeltaTop,X
 
  RTS                    \ Return from the subroutine
 
@@ -29865,7 +29921,9 @@ ENDIF
  STA T
  LDA var09Hi
  SBC var10Hi
- JSR Multiply8x16xN
+
+ JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
+
  STA var05Hi
  LDA T
  STA var05Lo
@@ -29900,7 +29958,9 @@ ENDIF
  STA T
  LDA var10Hi,X
  STA U
- JSR sub_C4765
+
+ JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
+
  STA U
  LDA T
  CLC
@@ -29909,7 +29969,9 @@ ENDIF
  LDY #&CD
  LDA U
  ADC var09Hi,X
- JSR Multiply8x16xN
+
+ JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
+
  ASL T
  ROL A
  LDY G
@@ -30050,9 +30112,9 @@ ENDIF
 
 .mcoo1
 
- LDA xPlayerDeltaLo,Y   \ Set (QQ PP) to the 16-bit signed number pointed to by
+ LDA xPlayerDeltaHi,Y   \ Set (QQ PP) to the 16-bit signed number pointed to by
  STA PP                 \ Y (variableY)
- LDA xPlayerDeltaHi,Y
+ LDA xPlayerDeltaTop,Y
  STA QQ
 
  LDA var26Lo,X          \ Set (SS RR) to the 16-bit sign-magnitude number
@@ -30074,9 +30136,9 @@ ENDIF
  BVS AddCoords          \ the result to the variable pointed to by K 
 
  LDA T                  \ Store the result in the variable pointed to by K
- STA xPlayerDeltaLo,Y
- LDA U
  STA xPlayerDeltaHi,Y
+ LDA U
+ STA xPlayerDeltaTop,Y
 
  RTS                    \ Return from the subroutine
 
@@ -30093,11 +30155,11 @@ ENDIF
 \
 \ Specifically, it calculates:
 \
-\   variableY = variableY - (U T) * abs(N)
+\   variableY = variableY - (U T) * abs(A)
 \
-\ where N is the sign of the last variable to be loaded before the subroutine
-\ call. So if the call follows an LDA instruction, for example, the following
-\ is calculated if A is positive:
+\ where A is the last variable to be loaded before the subroutine call. So if
+\ the call follows an LDA instruction, for example, the following is calculated
+\ if A is positive:
 \
 \   variableY = variableY - (U T)
 \
@@ -30149,6 +30211,8 @@ ENDIF
 \
 \                         * 4 = var04+1 (z-axis)
 \
+\                         * 6 = 
+\
 \                         * 9 = var08
 \
 \                         * 12 = var11
@@ -30159,14 +30223,14 @@ ENDIF
 
 .AddCoords
 
- LDA xPlayerDeltaLo,Y   \ Add (U T) to (xPlayerDeltaHi xPlayerDeltaLo)
+ LDA xPlayerDeltaHi,Y   \ Add (U T) to (xPlayerDeltaTop xPlayerDeltaHi)
  CLC                    \
  ADC T                  \ starting with the low bytes
- STA xPlayerDeltaLo,Y
-
- LDA xPlayerDeltaHi,Y   \ And then the high bytes
- ADC U
  STA xPlayerDeltaHi,Y
+
+ LDA xPlayerDeltaTop,Y  \ And then the high bytes
+ ADC U
+ STA xPlayerDeltaTop,Y
 
  RTS                    \ Return from the subroutine
 
@@ -30397,16 +30461,21 @@ ENDIF
 .sub_C48EF
 
  LDX #1
+
  LDY #2
 
 .C48F3
 
  LDA #0
  STA V
- LDA xPlayerDeltaLo,X
- STA T
+
  LDA xPlayerDeltaHi,X
+ STA T
+
+ LDA xPlayerDeltaTop,X
+
  BPL C4903
+
  DEC V
 
 .C4903
@@ -30415,26 +30484,35 @@ ENDIF
  ROL A
  ROL V
  STA U
- LDA L62B1,Y
- ADC T
- STA L62B1,Y
+
  LDA xPlayerCoordLo,Y
- ADC U
+ ADC T
  STA xPlayerCoordLo,Y
+
  LDA xPlayerCoordHi,Y
- ADC V
+ ADC U
  STA xPlayerCoordHi,Y
+
+ LDA xPlayerCoordTop,Y
+ ADC V
+ STA xPlayerCoordTop,Y
+
  DEY
  DEY
+
  DEX
+
  BPL C48F3
+
  LDA playerYawAngleLo
  CLC
- ADC spinYawAngleLo
- STA playerYawAngleLo
- LDA playerYawAngleHi
  ADC spinYawAngleHi
+ STA playerYawAngleLo
+
+ LDA playerYawAngleHi
+ ADC spinYawAngleTop
  STA playerYawAngleHi
+
  RTS
 
 \ ******************************************************************************
@@ -30479,16 +30557,20 @@ ENDIF
  DEY
  BNE C4951
  STA U
- LDA L62AE,X
+
+ LDA xPlayerDeltaLo,X
  CLC
  ADC T
- STA L62AE,X
- LDA xPlayerDeltaLo,X
- ADC U
  STA xPlayerDeltaLo,X
+
  LDA xPlayerDeltaHi,X
- ADC V
+ ADC U
  STA xPlayerDeltaHi,X
+
+ LDA xPlayerDeltaTop,X
+ ADC V
+ STA xPlayerDeltaTop,X
+
  DEX
  BPL C4939
  RTS
@@ -30829,7 +30911,14 @@ ENDIF
 
 .C4ACF
 
- JSR sub_C4B42
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then Set
+                        \
+                        \   variableG = (A T) * abs(H)
+                        \
+                        \ otherwise set:
+                        \
+                        \   variableG = max((A T), (NN MM)) * abs(H)
+
  LDA var11Hi,X
 
  JSR Absolute8Bit       \ Set A = |A|
@@ -30884,24 +30973,43 @@ ENDIF
  LDA #0
  STA var11Hi,X
  STA var11Lo,X
- LDY #8
- JSR sub_C4B61
+
+ LDY #8                 \ Set Y = 8 so the call to Scale16Bit scales var07
+
+ JSR Scale16Bit         \ Scale up var07 by 2^5, capping the result at the
+                        \ maximum possible positive value of (&7F xx), and
+                        \ ensuring that the result is positive
+
  LDA var07Hi
  EOR #&80
  STA H
  LDA #0
  STA T
+
  LDA L62AC,X
+
  STX G
- JSR sub_C4B47
+
+ JSR ApplyLimitAndSign  \ Set variableG = max((A T), (NN MM)) * abs(H)
+
  JSR sub_C4B88
  BCS C4B41
  CMP L62AC,X
  BCC C4B3E
+
  LDA #0
  STA T
+
  LDA L62AC,X
- JSR sub_C4B42
+
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then Set
+                        \
+                        \   variableG = (A T) * abs(H)
+                        \
+                        \ otherwise set:
+                        \
+                        \   variableG = max((A T), (NN MM)) * abs(H)
+
  LDY throttleBrakeState
  DEY
  BNE C4B41
@@ -30914,7 +31022,13 @@ ENDIF
 
 .C4B3E
 
- JSR sub_C4B42
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then Set
+                        \
+                        \   variableG = (A T) * abs(H)
+                        \
+                        \ otherwise set:
+                        \
+                        \   variableG = max((A T), (NN MM)) * abs(H)
 
 .C4B41
 
@@ -30922,103 +31036,156 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4B42
+\       Name: ApplyLimitThrottle
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Apply a maximum limit to a 16-bit number, but not if the throttle
+\             is being applied
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If the throttle is being applied, then Set
+\
+\   variableG = (A T) * abs(H)
+\
+\ otherwise set:
+\
+\   variableG = max((A T), (NN MM)) * abs(H)
+\
+\ Arguments:
+\
+\   G                   Offset from var09 of the variable to set
 \
 \ ******************************************************************************
 
-.sub_C4B42
+.ApplyLimitThrottle
 
- LDY throttleBrakeState
+ LDY throttleBrakeState \ Set Y = throttleBrakeState - 1
  DEY
- BEQ C4B51
+
+ BEQ lims1              \ If Y = 0, then throttleBrakeState must be 1, so the
+                        \ throttle is being applied, so jump to lims1 to skip
+                        \ applying the maximum value to variableG, so:
+                        \
+                        \   variableG = (A T) * abs(H)
+
+                        \ Otherwise fall through into ApplyLimitAndSign to set:
+                        \
+                        \   variableG = max((A T), (NN MM)) * abs(H)
 
 \ ******************************************************************************
 \
-\       Name: sub_C4B47
+\       Name: ApplyLimitAndSign
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Apply a maximum and a sign to a 16-bit number
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Set the variable specified in G (let's call it variableG) as follows:
+\
+\   variableG = max((A T), (NN MM)) * abs(H)
+\
+\ Arguments:
+\
+\   G                   Offset from var09 of the variable to set
 \
 \ ******************************************************************************
 
-.sub_C4B47
+.ApplyLimitAndSign
 
- CMP NN
- BCC C4B51
- LDA MM
+ CMP NN                 \ If A < NN, jump to lims1 to skip the following
+ BCC lims1
+
+ LDA MM                 \ Set (A T) = (NN MM)
  STA T
  LDA NN
 
-.C4B51
+.lims1
 
- BIT H
+ BIT H                  \ Set the N flag to the sign of H, so the call to
+                        \ Absolute16Bit sets the sign of (A T) to abs(H)
 
- JSR Absolute16Bit      \ Set (A T) = |A T|
+ JSR Absolute16Bit      \ Set the sign of (A T) to match the sign bit in H
 
- LDY G
- STA var09Hi,Y
+ LDY G                  \ Set Y to the offset in G
+
+ STA var09Hi,Y          \ Store (A T) 
  LDA T
  STA var09Lo,Y
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C4B61
+\       Name: Scale16Bit
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Maths
+\    Summary: Scale up a 16-bit value by 2^5
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Scale up a 16-bit value by 2^5, capping the result at the maximum possible
+\ positive value of (&7F xx), and ensuring that the result is positive.
+\
+\ Arguments:
+\
+\   Y                   The offset of the variable to scale
+\
+\                         * 8 = var07
+\
+\                         * 9 = var08
 \
 \ ******************************************************************************
 
-.sub_C4B61
+.Scale16Bit
 
- LDA xPlayerDeltaLo,Y
- STA MM
- LDA xPlayerDeltaHi,Y
- BPL C4B77
- LDA #0
+ LDA xPlayerDeltaHi,Y   \ Set (A MM) to the variable pointed to by Y, which we
+ STA MM                 \ call variableY
+ LDA xPlayerDeltaTop,Y
+
+ BPL C4B77              \ If the top byte in A is positive, jump to C4B77 to
+                        \ skip the following
+
+ LDA #0                 \ Negate (A MM), starting with the low bytes
  SEC
  SBC MM
  STA MM
- LDA #0
- SBC xPlayerDeltaHi,Y
+
+ LDA #0                 \ And then the high bytes, so we now have:
+ SBC xPlayerDeltaTop,Y  \
+                        \   (A MM) = |variableY|
 
 .C4B77
 
- LDY #5
+ LDY #5                 \ Set Y = 5, to act as a shift counter in the following
+                        \ loop
 
 .P4B79
 
- ASL MM
+ ASL MM                 \ Set (A MM) = (A MM) << 1
  ROL A
- BMI C4B84
- DEY
- BNE P4B79
+
+ BMI C4B84              \ If bit 7 of the top byte in A is set, jump to C4B84
+                        \ to stop shifting and set the top byte to the largest
+                        \ possible positive top byte
+
+ DEY                    \ Decrement the shift counter
+
+ BNE P4B79              \ Loop back until we have left-shifted five times
 
 .P4B81
 
- STA NN
- RTS
+ STA NN                 \ Set (NN MM) = (A MM)
+
+ RTS                    \ Return from the subroutine
 
 .C4B84
 
- LDA #&7F
- BNE P4B81
+ LDA #%01111111         \ Set A = %01111111 to act as the largest possible
+                        \ positive top byte 
+
+ BNE P4B81              \ Jump to 
 
 \ ******************************************************************************
 \
@@ -31042,8 +31209,12 @@ ENDIF
  LDY throttleBrakeState
  DEY
  BEQ C4BAF
- LDY #9
- JSR sub_C4B61
+ LDY #9                 \ Set Y = 8 so the call to Scale16Bit scales var08
+
+ JSR Scale16Bit         \ Scale up var08 by 2^5, capping the result at the
+                        \ maximum possible positive value of (&7F xx), and
+                        \ ensuring that the result is positive
+
  LDA var08Hi
  EOR #&80
  STA H
@@ -31203,8 +31374,11 @@ ENDIF
  JSR Multiply8x8        \ Set (A T) = A * U
 
  STA L62AC,X
+
  DEX
+
  BPL C4C28
+
  RTS
 
 \ ******************************************************************************
@@ -31243,62 +31417,119 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4C65
+\       Name: ApplyWingBalance
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Apply the effect of the wing settings
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine calcvulates the following:
+\
+\   var05+1 = var05+1 - scaledSpeed * var15Hi
+\
+\   var05+2 = var05+2 - scaledSpeed * (wingBalance * speedHi + 2048)
+\                       * abs(var08)
+\
+\ where scaledSpeed = speedHi       if L005D = 0
+\                     speedHi * 2   otherwise
+\
+\ and wingBalance = 60 + (rearWingSetting * 3 + frontWingSetting) / 2
 \
 \ ******************************************************************************
 
-.sub_C4C65
+.ApplyWingBalance
 
- LDA var15Hi
+ LDA var15Hi            \ Set A = var15Hi
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |var15Hi|
 
- STA U
- CMP speedHi
+ STA U                  \ Set U = A
+                        \       = |var15Hi|
+
+ CMP speedHi            \ If A >= speedHi, jump to C4C72
  BCS C4C72
- LDA speedHi
+
+ LDA speedHi            \ Set A = speedHi, so A has a minimum value of speedHi
 
 .C4C72
 
- LDY L005D
+ LDY L005D              \ If L005D = 0, jump to C4C77 to skip the following
  BEQ C4C77
- ASL A
+
+ ASL A                  \ Set A = A * 2
+                        \         speedHi * 2
 
 .C4C77
 
- STA W
+ STA W                  \ Set W = A
+                        \       = speedHi       if L005D = 0
+                        \         speedHi * 2   otherwise
+                        \
+                        \ Let's call this value scaledSpeed
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = scaledSpeed * |var15Hi|
 
+ STA U                  \ Set (U T) = (A T)
+                        \           = scaledSpeed * |var15Hi|
+
+ LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses var05+1
+
+ LDA var15Hi            \ Set A = var15Hi so the call to SubtractCoords sets the
+                        \ sign to abs(var15)
+
+ JSR SubtractCoords     \ Set:
+                        \
+                        \   variableY = variableY - (U T) * abs(A)
+                        \
+                        \ so that's:
+                        \
+                        \   var05+1 = var05+1 - scaledSpeed * |var15Hi|
+                        \                                   * abs(var15)
+                        \
+                        \           = var05+1 - scaledSpeed * var15Hi
+
+ LDA speedHi            \ Set U = speedHi
  STA U
- LDY #6
- LDA var15Hi
- JSR SubtractCoords
- LDA speedHi
- STA U
- LDA wingBalance
+
+ LDA wingBalance        \ Set A = wingBalance, which is calculated as:
+                        \
+                        \   60 + (rearWingSetting * 3 + frontWingSetting) / 2
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = wingBalance * speedHi
 
- CLC
- ADC #8
- STA V
- LDA W
- STA U
+ CLC                    \ Set V = A + 8
+ ADC #8                 \
+ STA V                  \ so (V T) = (A T) + (8 0)
+                        \          = wingBalance * speedHi + 2048
 
- JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+ LDA W                  \ Set U = W
+ STA U                  \       = scaledSpeed
 
- LDY #7
- LDA var08Hi
- JSR SubtractCoords
- RTS
+ JSR Multiply8x16       \ Set:
+                        \
+                        \   (U T) = U * (V T)
+                        \         = scaledSpeed * (wingBalance * speedHi + 2048)
+
+ LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var05+2
+
+ LDA var08Hi            \ Set A = var08Hi so the call to SubtractCoords sets the
+                        \ sign to abs(var08)
+
+ JSR SubtractCoords     \ Set:
+                        \
+                        \   variableY = variableY - (U T) * abs(A)
+                        \
+                        \ so that's:
+                        \
+                        \   var05+2 = var05+2 - scaledSpeed
+                        \                       * (wingBalance * speedHi + 2048)
+                        \                       * abs(var08)
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -31580,12 +31811,12 @@ ENDIF
  DEC W                  \ Decrement the axis index in W, ready for the next call
                         \ to AddScaledVector
 
- LDA xPlayerCoordLo,Y   \ Set xRoadSignCoord = xPlayerCoord - (U T)
+ LDA xPlayerCoordHi,Y   \ Set xRoadSignCoord = xPlayerCoord - (U T)
  SEC                    \
  SBC T                  \ starting with the low bytes
  STA xRoadSignCoordLo,Y
 
- LDA xPlayerCoordHi,Y   \ And then the high bytes
+ LDA xPlayerCoordTop,Y  \ And then the high bytes
  SBC U
  STA xRoadSignCoordHi,Y
 
@@ -31870,7 +32101,7 @@ ENDIF
  STA L0028
  INC L002D
  SEC
- ROR spinYawAngleLo
+ ROR spinYawAngleHi
 
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
@@ -35386,49 +35617,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerCoordLo
-\       Type: Variable
-\   Category: Car geometry
-\    Summary: The low byte of the x-coordinate of the player's 3D coordinates
-\
-\ ******************************************************************************
-
-.xPlayerCoordLo
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: yPlayerCoordLo
-\       Type: Variable
-\   Category: Car geometry
-\    Summary: The low byte of the y-coordinate of the player's 3D coordinates
-\
-\ ******************************************************************************
-
-.yPlayerCoordLo
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: zPlayerCoordLo
-\       Type: Variable
-\   Category: 3D objects
-\    Summary: The low byte of the z-coordinate of the player's 3D coordinates
-\
-\ ******************************************************************************
-
-.zPlayerCoordLo
-
- EQUB 0
-
-\ ******************************************************************************
-\
 \       Name: xPlayerCoordHi
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The high byte of the x-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (xPlayerCoordTop xPlayerCoordHi
+\ xPlayerCoordLo).
 \
 \ ******************************************************************************
 
@@ -35440,8 +35637,13 @@ ENDIF
 \
 \       Name: yPlayerCoordHi
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The high byte of the y-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (yPlayerCoordTop yPlayerCoordHi
+\ yPlayerCoordLo).
 \
 \ ******************************************************************************
 
@@ -35456,9 +35658,68 @@ ENDIF
 \   Category: 3D objects
 \    Summary: The high byte of the z-coordinate of the player's 3D coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (zPlayerCoordTop zPlayerCoordHi
+\ zPlayerCoordLo).
+\
 \ ******************************************************************************
 
 .zPlayerCoordHi
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: xPlayerCoordTop
+\       Type: Variable
+\   Category: 3D objects
+\    Summary: The top byte of the x-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (xPlayerCoordTop xPlayerCoordHi
+\ xPlayerCoordLo).
+\
+\ ******************************************************************************
+
+.xPlayerCoordTop
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: yPlayerCoordTop
+\       Type: Variable
+\   Category: 3D objects
+\    Summary: The top byte of the y-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (yPlayerCoordTop yPlayerCoordHi
+\ yPlayerCoordLo).
+\
+\ ******************************************************************************
+
+.yPlayerCoordTop
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: zPlayerCoordTop
+\       Type: Variable
+\   Category: 3D objects
+\    Summary: The top byte of the z-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (zPlayerCoordTop zPlayerCoordHi
+\ zPlayerCoordLo).
+\
+\ ******************************************************************************
+
+.zPlayerCoordTop
 
  EQUB 0
 
@@ -35779,37 +36040,114 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62AE
+\       Name: xPlayerDeltaLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Low byte of the x-coordinate of the vector containing the change
+\             in coordinate of the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The delta is stored as a 24-bit number in (xPlayerDeltaTop xPlayerDeltaHi
+\ xPlayerDeltaLo).
 \
 \ ******************************************************************************
 
-.L62AE
+.xPlayerDeltaLo
 
- EQUB 0, 0, 0
+ EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: L62B1
+\       Name: zPlayerDeltaLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Low byte of the z-coordinate of the vector containing the change
+\             in coordinate of the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The delta is stored as a 24-bit number in (zPlayerDeltaTop zPlayerDeltaHi
+\ zPlayerDeltaLo).
 \
 \ ******************************************************************************
 
-.L62B1
+.zPlayerDeltaLo
 
- EQUB 0, 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: spinYawAngleLo
+\       Type: Variable
+\   Category: Car geometry
+\    Summary: Low byte of the amount of yaw angle spin that is being applied to
+\             the player's car
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
+\ spinYawAngleHi).
+\
+\ ******************************************************************************
+
+.spinYawAngleLo
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: xPlayerCoordLo
+\       Type: Variable
+\   Category: Car geometry
+\    Summary: The low byte of the x-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (xPlayerCoordTop xPlayerCoordHi
+\ xPlayerCoordLo).
+\
+\ ******************************************************************************
+
+.xPlayerCoordLo
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: yPlayerCoordLo
+\       Type: Variable
+\   Category: Car geometry
+\    Summary: The low byte of the y-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (yPlayerCoordTop yPlayerCoordHi
+\ yPlayerCoordLo).
+\
+\ ******************************************************************************
+
+.yPlayerCoordLo
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: zPlayerCoordLo
+\       Type: Variable
+\   Category: 3D objects
+\    Summary: The low byte of the z-coordinate of the player's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ The coordinate is stored as a 24-bit number in (zPlayerCoordTop zPlayerCoordHi
+\ zPlayerCoordLo).
+\
+\ ******************************************************************************
+
+.zPlayerCoordLo
+
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -35935,43 +36273,58 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaLo
+\       Name: xPlayerDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the x-coordinate of the vector containing the change
+\    Summary: High byte of the x-coordinate of the vector containing the change
 \             in coordinate of the player's car during this main loop iteration
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (xPlayerDeltaTop xPlayerDeltaHi
+\ xPlayerDeltaLo).
 \
 \ ******************************************************************************
 
-.xPlayerDeltaLo
+.xPlayerDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaLo
+\       Name: zPlayerDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the z-coordinate of the vector containing the change
+\    Summary: High byte of the z-coordinate of the vector containing the change
 \             in coordinate of the player's car during this main loop iteration
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (zPlayerDeltaTop zPlayerDeltaHi
+\ zPlayerDeltaLo).
 \
 \ ******************************************************************************
 
-.zPlayerDeltaLo
+.zPlayerDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: spinYawAngleLo
+\       Name: spinYawAngleHi
 \       Type: Variable
 \   Category: Car geometry
-\    Summary: Low byte of the amount of yaw angle spin that is being applied to
+\    Summary: High byte of the amount of yaw angle spin that is being applied to
 \             the player's car
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
+\ spinYawAngleHi).
 \
 \ ******************************************************************************
 
-.spinYawAngleLo
+.spinYawAngleHi
 
  EQUB 0
 
@@ -36131,43 +36484,58 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaHi
+\       Name: xPlayerDeltaTop
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the x-coordinate of the vector containing the change
+\    Summary: Top byte of the x-coordinate of the vector containing the change
 \             in coordinate of the player's car during this main loop iteration
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (xPlayerDeltaTop xPlayerDeltaHi
+\ xPlayerDeltaLo).
 \
 \ ******************************************************************************
 
-.xPlayerDeltaHi
+.xPlayerDeltaTop
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaHi
+\       Name: zPlayerDeltaTop
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the x-coordinate of the vector containing the change
+\    Summary: Top byte of the x-coordinate of the vector containing the change
 \             in coordinate of the player's car during this main loop iteration
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (zPlayerDeltaTop zPlayerDeltaHi
+\ zPlayerDeltaLo).
 \
 \ ******************************************************************************
 
-.zPlayerDeltaHi
+.zPlayerDeltaTop
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: spinYawAngleHi
+\       Name: spinYawAngleTop
 \       Type: Variable
 \   Category: Car geometry
-\    Summary: High byte of the amount of yaw angle spin that is being applied
+\    Summary: Top byte of the amount of yaw angle spin that is being applied
 \             to the player's car
+\
+\ ------------------------------------------------------------------------------
+\
+\ The delta is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
+\ spinYawAngleHi).
 \
 \ ******************************************************************************
 
-.spinYawAngleHi
+.spinYawAngleTop
 
  EQUB 0
 
@@ -36360,7 +36728,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The wing balance is calculated as:
+\
+\   60 + (rearWingSetting * 3 + frontWingSetting) / 2
 \
 \ ******************************************************************************
 
