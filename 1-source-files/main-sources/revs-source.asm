@@ -2638,7 +2638,7 @@ ORG &0B00
 \
 \       Name: SpinTrackSection
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Apply spin to a section in the track section list
 \
 \ ------------------------------------------------------------------------------
@@ -2762,28 +2762,28 @@ ORG &0B00
 
  LDA xSegmentCoordILo,Y \ Set xVectorX = xVectorY + (SS T)
  CLC                    \
- ADC T                  \ starting with the high bytes
+ ADC T                  \ starting with the low bytes
  STA xSegmentCoordILo,X
 
- LDA xSegmentCoordIHi,Y \ And then the low bytes
+ LDA xSegmentCoordIHi,Y \ And then the high bytes
  ADC SS
  STA xSegmentCoordIHi,X
 
  LDA ySegmentCoordILo,Y \ Set yVectorX = yVectorY + (TT U)
  CLC                    \
- ADC U                  \ starting with the high bytes
+ ADC U                  \ starting with the low bytes
  STA ySegmentCoordILo,X
 
- LDA ySegmentCoordIHi,Y \ And then the low bytes
+ LDA ySegmentCoordIHi,Y \ And then the high bytes
  ADC TT
  STA ySegmentCoordIHi,X
 
  LDA zSegmentCoordILo,Y \ Set zVectorX = zVectorY + (UU V)
  CLC                    \
- ADC V                  \ starting with the high bytes
+ ADC V                  \ starting with the low bytes
  STA zSegmentCoordILo,X
 
- LDA zSegmentCoordIHi,Y \ And then the low bytes
+ LDA zSegmentCoordIHi,Y \ And then the high bytes
  ADC UU
  STA zSegmentCoordIHi,X
 
@@ -3113,7 +3113,7 @@ ORG &0B00
 \
 \       Name: sub_C0D01
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -5278,7 +5278,7 @@ ORG &0B00
 \
 \       Name: GetSectionCoord
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Copy a three-part 16-bit coordinate from the track section data
 \  Deep dive: Building a 3D track from sections and segments
 \
@@ -5353,7 +5353,7 @@ ORG &0B00
 \
 \       Name: GetSectionCoords
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Copy two three-part 16-bit coordinates from the track section data
 \  Deep dive: Building a 3D track from sections and segments
 \
@@ -5451,7 +5451,7 @@ ORG &0B00
 \
 \       Name: CopySectionData
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Copy a 16-bit y-coordinate from the track section data
 \  Deep dive: Building a 3D track from sections and segments
 \
@@ -5481,7 +5481,7 @@ ORG &0B00
 \
 \       Name: GetPlayerIndex
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Set the index for the player's segment in the track section buffer
 \             to be 32 segments behind the front segment
 \  Deep dive: Data structures for the track calculations
@@ -5510,7 +5510,7 @@ ORG &0B00
 \
 \       Name: GetFirstSegment
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Get the track section coordinates and flags from the track data
 \             and populate the first track segment
 \  Deep dive: Data structures for the track calculations
@@ -5625,7 +5625,7 @@ ORG &0B00
 \
 \       Name: ShuffleSectionList
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Shuffle the track section list along by one position
 \  Deep dive: Data structures for the track calculations
 \
@@ -5714,7 +5714,7 @@ ORG &0B00
 \
 \       Name: IncSectionPointers
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Increment the track section list pointers following a shuffle
 \  Deep dive: Data structures for the track calculations
 \
@@ -5770,7 +5770,7 @@ ORG &0B00
 \
 \       Name: SetSectionPointers
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Set the track section list pointer to a specific value and update
 \             the validity pointer accordingly
 \
@@ -5849,7 +5849,7 @@ ORG &0B00
 \
 \       Name: GetTrackSegment (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Set up the next track segment in the track segment buffer
 \  Deep dive: Building a 3D track from sections and segments
 \             Data structures for the track calculations
@@ -5992,7 +5992,7 @@ ORG &0B00
 \
 \       Name: GetTrackSegment (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Set the flags for the new front segment in the track segment
 \             buffer
 \  Deep dive: Building a 3D track from sections and segments
@@ -6154,7 +6154,7 @@ ORG &0B00
 \
 \       Name: GetTrackSegment (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Set the inner and outer track coordinates for the new track
 \             segment
 \  Deep dive: Building a 3D track from sections and segments
@@ -6300,7 +6300,7 @@ ORG &0B00
 \
 \       Name: UpdateCurveVector
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Move to the next segment vector along in the direction we are
 \             facing, but only for curved track sections
 \  Deep dive: Building a 3D track from sections and segments
@@ -6322,7 +6322,7 @@ ORG &0B00
 \
 \       Name: UpdateVectorNumber
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Move to the next segment vector along the track in the direction
 \             we are facing
 \  Deep dive: Building a 3D track from sections and segments
@@ -6564,7 +6564,7 @@ ORG &0B00
 \
 \       Name: GetSegmentVector
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Fetch a segment vector from the track data file
 \  Deep dive: Building a 3D track from sections and segments
 \
@@ -6926,7 +6926,7 @@ ORG &0B00
 \
 \       Name: GetBestRacingLine
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the best racing line to take for the current track
 \             segment
 \
@@ -7409,9 +7409,9 @@ ENDIF
 
  SEC                    \ Set (A T) = (steeringHi steeringLo) - (U T)
  SBC T                  \
- STA T                  \ starting with the high bytes
+ STA T                  \ starting with the low bytes
 
- LDA steeringHi         \ And then the low bytes
+ LDA steeringHi         \ And then the high bytes
  SBC U
 
  CMP #200               \ If the high byte in A < 200, skip the following
@@ -14918,7 +14918,7 @@ ENDIF
 \
 \       Name: GetSectionAngles (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Get the yaw and pitch angles for the inner and outer track
 \             sections
 \  Deep dive: Data structures for the track calculations
@@ -15053,7 +15053,7 @@ ENDIF
 \
 \       Name: GetSectionAngles (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the track section number for this track section entry
 \  Deep dive: Data structures for the track calculations
 \             The track verges
@@ -15146,7 +15146,7 @@ ENDIF
 \
 \       Name: GetSectionAngles (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the yaw and pitch angles for the track section entry
 \             that we want to update
 \  Deep dive: Data structures for the track calculations
@@ -15330,7 +15330,7 @@ ENDIF
 \
 \       Name: GetSegmentYawAngle
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the difference in yaw angle between a track segment and
 \             the player
 \
@@ -15372,7 +15372,7 @@ ENDIF
 \
 \       Name: GetSectionYawAngle
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the difference in yaw angle between an object and the
 \             player
 \
@@ -15422,7 +15422,7 @@ ENDIF
 \
 \       Name: GetSegmentAngles (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Get the yaw and pitch angles for the inner or outer track segments
 \  Deep dive: Data structures for the track calculations
 \             The track verges
@@ -15585,7 +15585,7 @@ ENDIF
 \
 \       Name: GetSegmentAngles (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Process a segment that is not visible by trying to process a
 \             segment that's one-quarter of the size
 \  Deep dive: Data structures for the track calculations
@@ -15768,7 +15768,7 @@ ENDIF
 \
 \       Name: GetSegmentAngles (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Process a visible segment
 \  Deep dive: Data structures for the track calculations
 \             The track verges
@@ -16152,7 +16152,7 @@ ENDIF
 \
 \       Name: GetTrackAndMarkers
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the 3D coordinates of the track and corner markers
 \  Deep dive: The track verges
 \             Corner markers
@@ -16250,7 +16250,7 @@ ENDIF
 \
 \       Name: GetSegmentDetails
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Get the details for the segment in front or behind
 \  Deep dive: Data structures for the track calculations
 \             The track verges
@@ -16334,7 +16334,7 @@ ENDIF
 \
 \       Name: GetVergeAndMarkers (Part 1 of 4)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Get the details for a segment's corner markers and verge marks
 \  Deep dive: The track verges
 \             Corner markers
@@ -16482,7 +16482,7 @@ ENDIF
 \
 \       Name: GetVergeAndMarkers (Part 2 of 4)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Calculate the segment's verge width and outside verge coordinates
 \
 \ ******************************************************************************
@@ -16641,7 +16641,7 @@ ENDIF
 \
 \       Name: GetVergeAndMarkers (Part 3 of 4)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Process the segment's corner markers
 \
 \ ******************************************************************************
@@ -16696,7 +16696,7 @@ ENDIF
 \
 \       Name: GetVergeAndMarkers (Part 4 of 4)
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Store details of the segment's verge marks
 \
 \ ******************************************************************************
@@ -17588,9 +17588,9 @@ ENDIF
  LDA trackLength        \ Set (A T) = trackLength - (U T)
  SEC                    \           = trackLength - |dSegments|
  SBC T                  \
- STA T                  \ starting with the high bytes
+ STA T                  \ starting with the low bytes
 
- LDA trackLength+1      \ And then the low bytes
+ LDA trackLength+1      \ And then the high bytes
  SBC U
 
  BNE dist3              \ If the high byte is non-zero, then that means the
@@ -22114,7 +22114,7 @@ ENDIF
 \
 \       Name: segmentFlagMask
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: A mask for extracting bits from the segment flag byte when
 \             processing the track verge and corner markers
 \
@@ -22142,7 +22142,7 @@ ENDIF
 \
 \       Name: vergeColour
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Lookup table for converting bits 0-2 of the segment flag byte into
 \             the verge colour scheme
 \
@@ -22163,7 +22163,7 @@ ENDIF
 \
 \       Name: vergeScale
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Scale factors for the track verge width for different types of
 \             verge (larger value = smaller verge width)
 \
@@ -26779,7 +26779,7 @@ NEXT
 \
 \       Name: segmentStep
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: The number of segments we step over when working backwards through
 \             the track segment buffer in GetSegmentAngles
 \
@@ -28648,7 +28648,7 @@ NEXT
 \
 \       Name: sub_C44EA
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -28897,15 +28897,30 @@ NEXT
 
 .C45B3
 
- LDA L0026
+ LDA L0026              \ Set A = L0026
 
  JSR Absolute8Bit       \ Set A = |A|
+                        \       = |L0026|
 
- CMP #5
+ CMP #5                 \ If A < 5, jump to C45C3 to skip the following
  BCC C45C3
- JSR sub_C4DCB
- LDA #1
- BNE C45C9
+
+ JSR CalculateVars2     \ Calculate the following:
+                        \
+                        \   L0026 = |L0026| / 2
+                        \
+                        \   L0028 = |L0026| / 4
+                        \
+                        \   L002D = L002D + 1
+                        \
+                        \   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
+                        \
+                        \ and make the crash/contact sound
+
+ LDA #1                 \ Set A = 1
+
+ BNE C45C9              \ Jump to C45C9 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .C45C3
 
@@ -28965,7 +28980,7 @@ NEXT
 \
 \       Name: MultiplyHeight
 \       Type: Subroutine
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Multiply track height by A
 \
 \ ------------------------------------------------------------------------------
@@ -29372,10 +29387,10 @@ ENDIF
 
  JSR GetProducts1       \ Calculate the following::
                         \
-                        \   var07 = xPlayerDelta * var26+1
+                        \   var07 = xPlayerDelta * var27
                         \           - zPlayerDelta * var26
                         \
-                        \   var08 = zPlayerDelta * var26+1
+                        \   var08 = zPlayerDelta * var27
                         \           + xPlayerDelta * var26
 
  LDA var07Lo            \ Set (var15Hi var15Lo) = (var07Hi var07Lo)
@@ -29429,10 +29444,10 @@ ENDIF
 
  LDA var07Lo            \ Set (var07Hi var07Lo) += (var16Hi var16Lo)
  CLC                    \
- ADC var16Lo            \ starting with the high bytes
+ ADC var16Lo            \ starting with the low bytes
  STA var07Lo
 
- LDA var07Hi            \ And then the low bytes
+ LDA var07Hi            \ And then the high bytes
  ADC var16Hi
  STA var07Hi
 
@@ -29451,7 +29466,23 @@ ENDIF
                         \
                         \   var11 = var11 - var09 * steering
 
- JSR sub_C47F9
+ JSR CalculateVars3     \ Calculate the following:
+                        \
+                        \   var05 = (var09 - var10) * 78
+                        \
+                        \   var09 = var09 >> 2
+                        \
+                        \   var10 = var10 >> 2
+                        \
+                        \   var11 = var11 >> 2
+                        \
+                        \   var111 = var111 >> 2
+                        \
+                        \   var051 = (var10 * 1.5 + var09) * 410
+                        \
+                        \   var052 = (var111 * 1.5 + var11) * 410
+                        \
+                        \   L62FF = var052Hi
 
  LDA L002D
  CMP #2
@@ -29476,21 +29507,33 @@ ENDIF
 
  JSR ApplyWingBalance   \ Calculate the following:
                         \
-                        \   var05+1 = var05+1 - scaledSpeed * var15Hi
+                        \   var051 = var051 - scaledSpeed * var15Hi
                         \
-                        \   var05+2 = var05+2 - scaledSpeed
-                        \                       * (wingBalance * speedHi + 2048)
-                        \                       * abs(var08)
+                        \   var052 = var052 - scaledSpeed
+                        \                     * (wingBalance * speedHi + 2048)
+                        \                     * abs(var08)
 
  JSR GetProducts2       \ Calculate the following:
                         \
-                        \   var04 = var05 * var26+1 + var05+1 * var26
+                        \   var04x = var05 * var27 + var051 * var26
                         \
-                        \   var04+1 = var05+1 * var26+1 - var05 * var26
+                        \   var04z = var051 * var27 - var05 * var26
 
- JSR sub_C4937
+ JSR CalculateVars4     \ Calculate the following:
+                        \
+                        \   xPlayerDelta = xPlayerDelta + var04x << 5
+                        \
+                        \   zPlayerDelta = zPlayerDelta + var04z << 3
+                        \
+                        \   spinYawAngle = spinYawAngle + var05 << 3
 
- JSR sub_C48EF
+ JSR ApplyDeltas        \ Calculate the following:
+                        \
+                        \   xPlayerCoord = xPlayerCoord + xPlayerDelta * 2
+                        \
+                        \   zPlayerCoord = zPlayerCoord + zPlayerDelta * 2
+                        \
+                        \   playerYawAngle = playerYawAngle + spinYawAngle
 
  JSR sub_C44EA
 
@@ -29672,7 +29715,7 @@ ENDIF
 \
 \       Name: sub_C4779
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -29901,90 +29944,164 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C47F9
+\       Name: CalculateVars3
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate lots of variables
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   var05 = (var09 - var10) * 78
+\
+\   var09 = var09 >> 2
+\
+\   var10 = var10 >> 2
+\
+\   var11 = var11 >> 2
+\
+\   var111 = var111 >> 2
+\
+\   var051 = (var10 * 1.5 + var09) * 410
+\
+\   var052 = (var111 * 1.5 + var11) * 410
+\
+\   L62FF = var052Hi
 \
 \ ******************************************************************************
 
-.sub_C47F9
+.CalculateVars3
 
- LDY #&4E
- LDA var09Lo
- SEC
- SBC var10Lo
+ LDY #78                \ Set Y = 78
+
+ LDA var09Lo            \ Set (A T) = var09 - var10
+ SEC                    \
+ SBC var10Lo            \ starting with the low bytes
  STA T
- LDA var09Hi
+
+ LDA var09Hi            \ And then the high bytes
  SBC var10Hi
 
  JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
+                        \           = (var09 - var10) * 78
 
- STA var05Hi
- LDA T
+ STA var05Hi            \ Set var05 = (A T)
+ LDA T                  \           = (var09 - var10) * 78
  STA var05Lo
- LDY #1
+
+                        \ We now perform the following shifts, making sure to
+                        \ keep the signs intact:
+                        \
+                        \   var09 = var09 >> 2
+                        \
+                        \   var10 = var10 >> 2
+                        \
+                        \   var11 = var11 >> 2
+                        \
+                        \   var111 = var111 >> 2
+
+ LDY #1                 \ Set Y = 1, to act as a shift counter in the outer loop
+                        \ below, so we right-shift Y + 1 times (i.e. twice)
 
 .P4817
 
- LDX #3
+ LDX #3                 \ Set X = 3, to act as a variable counter in the inner
+                        \ loop to work through var111, var11, var10 and var09
+                        \ (let's call this variableX)
 
 .P4819
 
- LDA var09Hi,X
- CLC
- BPL C4820
- SEC
+ LDA var09Hi,X          \ Set A to the high byte of variableX
+
+ CLC                    \ Clear the C flag, to use if variableX is positive
+
+ BPL C4820              \ If A is positive, jump to C4820 to keep the C flag
+                        \ clear
+
+ SEC                    \ Otherwise set the C flag, to use if variableX is
+                        \ negative
+
+                        \ The C flag now contains the sign bit of A
 
 .C4820
 
- ROR var09Hi,X
- ROR var09Lo,X
- DEX
- BPL P4819
- DEY
- BPL P4817
- LDX #2
- LDA #1
- STA G
+ ROR var09Hi,X          \ Set variableX = variableX >> 1
+ ROR var09Lo,X          \
+                        \ Keeping the sign intact
+
+ DEX                    \ Decrement the inner loop counter in X
+
+ BPL P4819              \ Loop back to P4819 until we have shifted all four
+                        \ variables to the right by one place
+
+ DEY                    \ Decrement the shift counter in Y
+
+ BPL P4817              \ Loop back until we have right-shifted Y + 1 times
+
+ LDX #2                 \ Set X = 2, to act as a variable counter in the
+                        \ following loop, iterating through values 0 and 2, as
+                        \ X is decremented twice at the end of the loop
+                        \
+                        \ The loop references var10,X and var09,X so the loop
+                        \ iterates through:
+                        \
+                        \   * var111 and var11 when X = 2
+                        \
+                        \   * var10 and var09 when X = 0
+                        \
+                        \ The comments below are for when X = 2
+
+ LDA #1                 \ Set G = 1, to use as the index for storing the
+ STA G                  \ following calculation
 
 .C4832
 
- LDA var10Lo,X
+ LDA var10Lo,X          \ Set (U T) = var111
  STA T
  LDA var10Hi,X
  STA U
 
  JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
+                        \           = var111 * 1.5
 
- STA U
- LDA T
- CLC
- ADC var09Lo,X
- STA T
- LDY #&CD
- LDA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = var111 * 1.5
+
+ LDA T                  \ Set (A T) = (U T) + var11
+ CLC                    \           = var111 * 1.5 + var11
+ ADC var09Lo,X          \
+ STA T                  \ starting with the low bytes
+
+ LDY #205               \ Set Y = 205
+
+ LDA U                  \ And then the high bytes
  ADC var09Hi,X
 
  JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
+                        \           = (var111 * 1.5 + var11) * 205
 
- ASL T
- ROL A
- LDY G
- STA var05Hi+1,Y
+ ASL T                  \ Set (A T) = (A T) * 2
+ ROL A                  \           = (var111 * 1.5 + var11) * 410
+
+ LDY G                  \ Set var052 = (A T)
+ STA var051Hi,Y         \            = (var111 * 1.5 + var11) * 410
  LDA T
- STA var05Lo+1,Y
- DEC G
- DEX
- DEX
- BPL C4832
- LDA var05Hi+2
+ STA var051Lo,Y
+
+ DEC G                  \ Decrement G so the next iteration stores the result in
+                        \ var051
+
+ DEX                    \ Decrement X twice so the next iteration calculates
+ DEX                    \ (var10 * 1.5 + var09) * 410
+
+ BPL C4832              \ Loop back until we have calculated both var052 and
+                        \ var051
+
+ LDA var052Hi           \ Set L62FF = var052Hi
  STA L62FF
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -30031,9 +30148,9 @@ ENDIF
 \
 \                         * 1 = zPlayerDelta
 \
-\                         * 6 = var05 (x-axis)
+\                         * 6 = var05
 \
-\                         * 7 = var05+1 (y-axis)
+\                         * 7 = var051
 \
 \                         * 8 = var07
 \
@@ -30045,17 +30162,17 @@ ENDIF
 \
 \   X                   Offset of the 16-bit sign-magnitude value to multiply:
 \
-\                         * 0 = var26 (x-axis)
+\                         * 0 = var26
 \
-\                         * 1 = var26+1 (z-axis)
+\                         * 1 = var27
 \
 \                         * 2 = (steeringHi steeringLo)
 \
 \   K                   Offset of the variable to store the result in:
 \
-\                         * 3 = var04 (x-axis)
+\                         * 3 = var04x
 \
-\                         * 4 = var04+1 (z-axis)
+\                         * 4 = var04z
 \
 \                         * 8 = var07
 \
@@ -30207,9 +30324,9 @@ ENDIF
 \
 \   Y                   Offset of the variable to update:
 \
-\                         * 3 = var04 (x-axis)
+\                         * 3 = var04x
 \
-\                         * 4 = var04+1 (z-axis)
+\                         * 4 = var04z
 \
 \                         * 6 = 
 \
@@ -30245,9 +30362,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var07 = xPlayerDelta * var26+1 - zPlayerDelta * var26
+\   var07 = xPlayerDelta * var27 - zPlayerDelta * var26
 \
-\   var08 = zPlayerDelta * var26+1 + xPlayerDelta * var26
+\   var08 = zPlayerDelta * var27 + xPlayerDelta * var26
 \
 \ ******************************************************************************
 
@@ -30264,10 +30381,10 @@ ENDIF
 
  BNE GetProducts        \ Jump to GetProducts to calculate the following:
                         \
-                        \   var07 = xPlayerDelta * var26+1
+                        \   var07 = xPlayerDelta * var27
                         \           - zPlayerDelta * var26
                         \
-                        \   var08 = zPlayerDelta * var26+1
+                        \   var08 = zPlayerDelta * var27
                         \           + xPlayerDelta * var26
                         \
                         \ This BNE is effectively a JMP as X is never zero
@@ -30283,19 +30400,19 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var04 = var05 * var26+1 + var05+1 * var26
+\   var04x = var05 * var27 + var051 * var26
 \
-\   var04+1 = var05+1 * var26+1 - var05 * var26
+\   var04z = var051 * var27 - var05 * var26
 \
 \ ******************************************************************************
 
 .GetProducts2
 
  LDY #6                 \ Set Y = 6, so in the call to GetProducts, variableY is
-                        \ var05 and variableY+1 is var05+1
+                        \ var05 and variableY+1 is var051
 
  LDA #3                 \ Set A = 3, so in the call to GetProducts, we store the
-                        \ result in var04 and var04+1
+                        \ result in var04x and var04z
 
  LDX #%01000000         \ Set bit 6 and clear bit 7 of X, to set the polarity in
                         \ the call to GetProducts
@@ -30303,9 +30420,9 @@ ENDIF
                         \ Fall through into GetProducts to calculate the
                         \ following:
                         \
-                        \   var04 = var05 * var26+1 + var05+1 * var26
+                        \   var04x = var05 * var27 + var051 * var26
                         \
-                        \   var04+1 = var05+1 * var26+1 - var05 * var26
+                        \   var04z = var051 * var27 - var05 * var26
 
 \ ******************************************************************************
 \
@@ -30318,15 +30435,15 @@ ENDIF
 \
 \ If bit 7 of X is clear, this routine calculates:
 \
-\   variableA = variableY * var26+1 + variableY+1 * var26
+\   variableA = variableY * var27 + variableY+1 * var26
 \
-\   variableA+1 = variableY+1 * var26+1 - variableY * var26
+\   variableA+1 = variableY+1 * var27 - variableY * var26
 \
 \ If bit 7 of X is set, this routine calculates:
 \
-\   variableA = variableY * var26+1 - variableY+1 * var26
+\   variableA = variableY * var27 - variableY+1 * var26
 \
-\   variableA+1 = variableY+1 * var26+1 + variableY * var26
+\   variableA+1 = variableY+1 * var27 + variableY * var26
 \
 \ For it to work, the routine must be called with bit 6 of X set.
 \
@@ -30336,11 +30453,11 @@ ENDIF
 \
 \                         * 0 = xPlayerDelta and zPlayerDelta
 \
-\                         * 6 = var05 (x-axis) and var05+1 (y-axis)
+\                         * 6 = var05 and var051
 \
 \   A                   Offset of the variable to store the result in:
 \
-\                         * 3 = var04 (x-axis) and var04+1 (z-axis)
+\                         * 3 = var04x and var04z
 \
 \                         * 8 = var07 and var08
 \
@@ -30370,14 +30487,14 @@ ENDIF
  STX GG                 \ Store the details of the operation to perform in GG
 
  LDX #1                 \ Set X = 1, so in the call to MultiplyCoords we use
-                        \ var26+1 as the 16-bit sign-magnitude value to multiply
+                        \ var27 as the 16-bit sign-magnitude value to multiply
 
  LDA #%00000000         \ Set A = %00000000, so in the call to MultiplyCoords we
                         \ overwrite the result rather than adding, and do not
                         \ negate the multiplication
 
  JSR MultiplyCoords     \ Set variableA = variableY * variableX
-                        \               = variableY * var26+1
+                        \               = variableY * var27
 
  DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
                         \ var26 as the 16-bit sign-magnitude value to multiply
@@ -30404,7 +30521,7 @@ ENDIF
                         \ if bit 7 of parameter X is set
 
  INX                    \ Set X = 1, so in the call to MultiplyCoords we use
-                        \ var26+1 as the 16-bit sign-magnitude value to multiply
+                        \ var27 as the 16-bit sign-magnitude value to multiply
 
  INC K                  \ Point to the next variable after the one we just
                         \ stored the result in, so in the call to MultiplyCoords
@@ -30415,7 +30532,7 @@ ENDIF
                         \ negate the multiplication
 
  JSR MultiplyCoords     \ Set variableA+1 = variableY+1 * variableX
-                        \                 = variableY+1 * var26+1
+                        \                 = variableY+1 * var27
 
  DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
                         \ var26 as the 16-bit sign-magnitude value to multiply
@@ -30447,139 +30564,191 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C48EF
+\       Name: ApplyDeltas
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Apply the deltas in the x-axis and z-axis to the player's
+\             coordinates
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   xPlayerCoord = xPlayerCoord + xPlayerDelta * 2
+\
+\   zPlayerCoord = zPlayerCoord + zPlayerDelta * 2
+\
+\   playerYawAngle = playerYawAngle + spinYawAngle
 \
 \ ******************************************************************************
 
-.sub_C48EF
+.ApplyDeltas
 
- LDX #1
+ LDX #1                 \ Set X = 1, to act as an axis counter for xPlayerDelta
+                        \ and zPlayerDelta
+                        \
+                        \ The comments below are for when X = 1
 
- LDY #2
+ LDY #2                 \ Set Y = 2, to act as a variable counter in the
+                        \ following loop, iterating through values 0 and 2, as
+                        \ Y is decremented twice at the end of the loop
+                        \
+                        \ The comments below are for when Y = 2
 
-.C48F3
+.delt1
 
- LDA #0
+ LDA #0                 \ Set V = 0, to use as the sign bit for (V A T)
  STA V
 
- LDA xPlayerDeltaHi,X
+ LDA xPlayerDeltaHi,X   \ Set (V A T) = zPlayerDelta
  STA T
-
  LDA xPlayerDeltaTop,X
 
- BPL C4903
+ BPL delt2              \ If A is positive, jump to delt2 to skip the following
+                        \ instruction
 
- DEC V
+ DEC V                  \ Set V = &FF, so it contains the correct sign bit for
+                        \ (V A T)
 
-.C4903
+.delt2
 
- ASL T
+ ASL T                  \ Set (U A T) = (V A T) << 1
  ROL A
  ROL V
  STA U
 
- LDA xPlayerCoordLo,Y
- ADC T
- STA xPlayerCoordLo,Y
+ LDA xPlayerCoordLo,Y   \ Set zPlayerCoord = zPlayerCoord + (U A T)
+ ADC T                  \                  = zPlayerCoord + zPlayerDelta * 2
+ STA xPlayerCoordLo,Y   \
+                        \ starting with the low bytes
 
- LDA xPlayerCoordHi,Y
+ LDA xPlayerCoordHi,Y   \ Then the high bytes
  ADC U
  STA xPlayerCoordHi,Y
 
- LDA xPlayerCoordTop,Y
+ LDA xPlayerCoordTop,Y  \ And then the top bytes
  ADC V
  STA xPlayerCoordTop,Y
 
- DEY
- DEY
+ DEY                    \ Decrement Y twice so the next iteration adds to the
+ DEY                    \ xPlayerCoord variable
 
- DEX
+ DEX                    \ Decrement X so the next iteration sets (V A T) to
+                        \ xPlayerDelta
 
- BPL C48F3
+ BPL delt1              \ Loop back until we have updated both xPlayerCoord and
+                        \ zPlayerCoord
 
- LDA playerYawAngleLo
- CLC
- ADC spinYawAngleHi
+ LDA playerYawAngleLo   \ Set playerYawAngle = playerYawAngle + spinYawAngle
+ CLC                    \
+ ADC spinYawAngleHi     \ starting with the low bytes
  STA playerYawAngleLo
 
- LDA playerYawAngleHi
+ LDA playerYawAngleHi   \ And then the high bytes
  ADC spinYawAngleTop
  STA playerYawAngleHi
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C4937
+\       Name: CalculateVars4
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Update the axis deltas and spin angle delta
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   xPlayerDelta = xPlayerDelta + var04x << 5
+\
+\   zPlayerDelta = zPlayerDelta + var04z << 3
+\
+\   spinYawAngle = spinYawAngle + var05 << 3
 \
 \ ******************************************************************************
 
-.sub_C4937
+.CalculateVars4
 
- LDX #2
+ LDX #2                 \ Set X = 2, to act as an axis counter in the following
+                        \ loop, working through three axes from 2 to 0
 
 .C4939
 
- LDA #0
+ LDA #0                 \ Set V = 0, to use as the sign bit for (V A T)
  STA V
- LDA var04Lo,X
+
+ LDA var04xLo,X         \ Set (A T) = var04x for axis X
  STA T
- LDA var04Hi,X
- BPL C4949
- DEC V
+ LDA var04xHi,X
+
+ BPL C4949              \ If A is positive, jump to C4949 to skip the following
+                        \ instruction
+
+ DEC V                  \ Set V = &FF, so it contains the correct sign bit for
+                        \ (V A T)
 
 .C4949
 
- LDY #3
- CPX #2
- BNE C4951
- LDY #5
+ LDY #3                 \ Set Y = 3, to act as a shift counter in the loop
+                        \ below, so we left-shift by three places
+
+ CPX #2                 \ If X <> 2, jump to C4951 to skip the following
+ BNE C4951              \ instruction
+
+                        \ If we get here then X = 2, so (A T) contains var05
+
+ LDY #5                 \ Set Y = 5, so for the third axis, we left-shift by
+                        \ five places
 
 .C4951
 
- ASL T
+ ASL T                  \ Set (V A T) = (V A T) << 1
  ROL A
  ROL V
- DEY
- BNE C4951
- STA U
 
- LDA xPlayerDeltaLo,X
- CLC
- ADC T
+ DEY                    \ Decrement the shift counter in Y
+
+ BNE C4951              \ Loop back until we have left-shifted Y times
+
+ STA U                  \ Set (V U T) = (V A T)
+
+                        \ In the following, we update:
+                        \
+                        \   * xPlayerDelta when X = 0
+                        \
+                        \   * zPlayerDelta when X = 1
+                        \
+                        \   * spinYawAngle when X = 2
+                        \
+                        \ The following comments are for when X = 0
+
+ LDA xPlayerDeltaLo,X   \ Set xPlayerDelta = xPlayerDelta + (V U T)
+ CLC                    \
+ ADC T                  \ starting with the low bytes
  STA xPlayerDeltaLo,X
 
- LDA xPlayerDeltaHi,X
+ LDA xPlayerDeltaHi,X   \ Then the high bytes
  ADC U
  STA xPlayerDeltaHi,X
 
- LDA xPlayerDeltaTop,X
+ LDA xPlayerDeltaTop,X  \ And then the top bytes
  ADC V
  STA xPlayerDeltaTop,X
 
- DEX
- BPL C4939
- RTS
+ DEX                    \ Decrement the axis counter in X to point to the next
+                        \ axis
+
+ BPL C4939              \ Loop back until we have processed all three axes
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: sub_C4978
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -30679,7 +30848,7 @@ ENDIF
 \
 \       Name: sub_C49CE
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -30856,7 +31025,7 @@ ENDIF
 \
 \       Name: sub_C4A91
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -30957,7 +31126,7 @@ ENDIF
 \
 \       Name: sub_C4AF7
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -31191,7 +31360,7 @@ ENDIF
 \
 \       Name: sub_C4B88
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -31264,7 +31433,7 @@ ENDIF
 \
 \       Name: sub_C4BCF
 \       Type: Subroutine
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -31329,7 +31498,18 @@ ENDIF
  BNE C4C24
  BIT playerDrift
  BPL C4C24
- JSR sub_C4DC9
+
+ JSR CalculateVars1     \ Calculate the following:
+                        \
+                        \   L0026 = speedHi / 2
+                        \
+                        \   L0028 = speedHi / 4
+                        \
+                        \   L002D = L002D + 1
+                        \
+                        \   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
+                        \
+                        \ and make the crash/contact sound
 
 .C4C24
 
@@ -31385,7 +31565,7 @@ ENDIF
 \
 \       Name: L4C61
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -31402,7 +31582,7 @@ ENDIF
 \
 \       Name: L4C63
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -31426,10 +31606,9 @@ ENDIF
 \
 \ This routine calcvulates the following:
 \
-\   var05+1 = var05+1 - scaledSpeed * var15Hi
+\   var051 = var051 - scaledSpeed * var15Hi
 \
-\   var05+2 = var05+2 - scaledSpeed * (wingBalance * speedHi + 2048)
-\                       * abs(var08)
+\   var052 = var052 - scaledSpeed * (wingBalance * speedHi + 2048) * abs(var08)
 \
 \ where scaledSpeed = speedHi       if L005D = 0
 \                     speedHi * 2   otherwise
@@ -31475,7 +31654,7 @@ ENDIF
  STA U                  \ Set (U T) = (A T)
                         \           = scaledSpeed * |var15Hi|
 
- LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses var05+1
+ LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses var051
 
  LDA var15Hi            \ Set A = var15Hi so the call to SubtractCoords sets the
                         \ sign to abs(var15)
@@ -31486,10 +31665,10 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   var05+1 = var05+1 - scaledSpeed * |var15Hi|
+                        \   var051 = var051 - scaledSpeed * |var15Hi|
                         \                                   * abs(var15)
                         \
-                        \           = var05+1 - scaledSpeed * var15Hi
+                        \          = var051 - scaledSpeed * var15Hi
 
  LDA speedHi            \ Set U = speedHi
  STA U
@@ -31514,7 +31693,7 @@ ENDIF
                         \   (U T) = U * (V T)
                         \         = scaledSpeed * (wingBalance * speedHi + 2048)
 
- LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var05+2
+ LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var052
 
  LDA var08Hi            \ Set A = var08Hi so the call to SubtractCoords sets the
                         \ sign to abs(var08)
@@ -31525,9 +31704,9 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   var05+2 = var05+2 - scaledSpeed
-                        \                       * (wingBalance * speedHi + 2048)
-                        \                       * abs(var08)
+                        \   var052 = var052 - scaledSpeed
+                        \                     * (wingBalance * speedHi + 2048)
+                        \                     * abs(var08)
 
  RTS                    \ Return from the subroutine
 
@@ -32065,48 +32244,74 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4DC9
+\       Name: CalculateVars1
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Calculate variables based on the speed and spin
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   L0026 = speedHi / 2
+\
+\   L0028 = speedHi / 4
+\
+\   L002D = L002D + 1
+\
+\   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
+\
+\ and make the crash/contact sound.
 \
 \ ******************************************************************************
 
-.sub_C4DC9
+.CalculateVars1
 
- LDA speedHi
+ LDA speedHi            \ Set A = speedHi
+
+                        \ Fall through into CalculateVars2 to calculate the
+                        \ variables and make the crash/contact sound
 
 \ ******************************************************************************
 \
-\       Name: sub_C4DCB
+\       Name: CalculateVars2
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Driving model
+\    Summary: Calculate variables based on L0026 and spin
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   L0026 = A / 2
+\
+\   L0028 = A / 4
+\
+\   L002D = L002D + 1
+\
+\   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
+\
+\ and make the crash/contact sound.
 \
 \ ******************************************************************************
 
-.sub_C4DCB
+.CalculateVars2
 
- LSR A
+ LSR A                  \ Set L0026 = A / 2
  STA L0026
- LSR A
+
+ LSR A                  \ Set L0028 = A / 4
  STA L0028
- INC L002D
- SEC
+
+ INC L002D              \ Set L002D = L002D + 1
+
+ SEC                    \ Rotate spinYawAngleHi right, inserting a 1 into bit 7
  ROR spinYawAngleHi
 
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -33592,9 +33797,9 @@ ENDIF
  SBC #&40               \
  STA P                  \   (Q P) = (Q P) - &140
                         \
-                        \ starting with the high bytes
+                        \ starting with the low bytes
 
- LDA Q                  \ And then the low bytes, so (Q P) contains the screen
+ LDA Q                  \ And then the high bytes, so (Q P) contains the screen
  SBC #1                 \ address of the character block above (as each
  STA Q                  \ character row contains &140 bytes)
 
@@ -34411,10 +34616,10 @@ ENDIF
 
  LDA P                  \ Set (Q P) = (Q P) - &140
  SEC                    \
- SBC #&40               \ starting with the high bytes
+ SBC #&40               \ starting with the low bytes
  STA P
 
- LDA Q                  \ And then the low bytes
+ LDA Q                  \ And then the high bytes
  SBC #&01
  STA Q
 
@@ -34435,10 +34640,10 @@ ENDIF
 
  LDA P                  \ Set (Q P) = (Q P) + &140
  CLC                    \
- ADC #&40               \ starting with the high bytes
+ ADC #&40               \ starting with the low bytes
  STA P
 
- LDA Q                  \ And then the low bytes
+ LDA Q                  \ And then the high bytes
  ADC #&01
  STA Q
 
@@ -35060,7 +35265,7 @@ ORG &594A               \ moved to trackData after the game binary has loaded
 \
 \       Name: xVergeRightLo
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Low byte of segment yaw angles along the right track verge in
 \             front of the player (i.e. along the x-axis)
 \
@@ -35076,7 +35281,7 @@ ORG &5E40
 \
 \       Name: xVergeLeftLo
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Low byte of segment yaw angles along the left track verge in front
 \             of the player (i.e. along the x-axis)
 \
@@ -35090,7 +35295,7 @@ ORG &5E40
 \
 \       Name: xVergeRightLo
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: High byte of segment yaw angles along the right track verge in
 \             front of the player (i.e. along the x-axis)
 \
@@ -35104,7 +35309,7 @@ ORG &5E40
 \
 \       Name: xVergeLeftHi
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: High byte of segment yaw angles along the left track verge in
 \             front of the player (i.e. along the x-axis)
 \
@@ -35118,7 +35323,7 @@ ORG &5E40
 \
 \       Name: vergeDataRight
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Data (such as colour) for the verge marks on the right side of the
 \             track
 \
@@ -35157,7 +35362,7 @@ ORG &5E40
 \
 \       Name: vergeDataLeft
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Data (such as colour) for the verge marks on the left side of the
 \             track
 \
@@ -35181,7 +35386,7 @@ ORG &5E40
 \
 \       Name: yVergeRight
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Segment pitch angles along the right track verge in front of
 \             the player (i.e. along the up-down y-axis)
 \
@@ -35361,7 +35566,7 @@ ORG &5E40
 \
 \       Name: yVergeLeft
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Segment pitch angles along the left track verge in front of
 \             the player (i.e. along the up-down y-axis)
 \
@@ -35429,7 +35634,7 @@ ORG &5E40
 \
 \       Name: bestRacingLine
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Set to the best racing line for each section
 \
 \ ******************************************************************************
@@ -35851,7 +36056,7 @@ ENDIF
 \
 \       Name: markerData
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: The segment flags for each of the three corner markers
 \
 \ ******************************************************************************
@@ -35883,7 +36088,7 @@ ENDIF
 \
 \       Name: var26Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -35894,7 +36099,24 @@ ENDIF
 
 .var26Lo
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var27Lo
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var27Lo
+
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -35921,7 +36143,7 @@ ENDIF
 \
 \       Name: var26Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -35932,7 +36154,24 @@ ENDIF
 
 .var26Hi
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var27Hi
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var27Hi
+
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -35959,7 +36198,7 @@ ENDIF
 \
 \       Name: L62A6
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -35976,7 +36215,7 @@ ENDIF
 \
 \       Name: L62A7
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36008,7 +36247,7 @@ ENDIF
 \
 \       Name: L62AA
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36019,13 +36258,30 @@ ENDIF
 
 .L62AA
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: L62AB
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L62AB
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: L62AC
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36036,7 +36292,24 @@ ENDIF
 
 .L62AC
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: L62AD
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.L62AD
+
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -36153,7 +36426,7 @@ ENDIF
 \
 \       Name: markerListIndex
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: The index of the corresponding entry in the track segment list for
 \             each of the three corner markers
 \
@@ -36169,7 +36442,7 @@ ENDIF
 \
 \       Name: xMarkerLo
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Low byte of the x-axis distance between the track edge and the
 \             three corner markers
 \
@@ -36185,7 +36458,7 @@ ENDIF
 \
 \       Name: xMarkerHi
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: High byte of the x-axis distance between the track edge and the
 \             three corner markers
 \
@@ -36330,9 +36603,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var04Lo
+\       Name: var04xLo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36341,15 +36614,32 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var04Lo
+.var04xLo
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var04zLo
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var04zLo
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: var05Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36360,13 +36650,47 @@ ENDIF
 
 .var05Lo
 
- EQUB 0, 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var051Lo
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var051Lo
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var052Lo
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var052Lo
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: var07Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36383,7 +36707,7 @@ ENDIF
 \
 \       Name: var08Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36400,7 +36724,7 @@ ENDIF
 \
 \       Name: var09Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36417,7 +36741,7 @@ ENDIF
 \
 \       Name: var10Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36434,7 +36758,7 @@ ENDIF
 \
 \       Name: var11Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36445,13 +36769,30 @@ ENDIF
 
 .var11Lo
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var111Lo
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var111Lo
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: var12Lo
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36541,9 +36882,9 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var04Hi
+\       Name: var04xHi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36552,15 +36893,32 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var04Hi
+.var04xHi
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var04zHi
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var04zHi
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: var05Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36571,13 +36929,47 @@ ENDIF
 
 .var05Hi
 
- EQUB 0, 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var051Hi
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var051Hi
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var052Hi
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var052Hi
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: var07Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36594,7 +36986,7 @@ ENDIF
 \
 \       Name: var08Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36611,7 +37003,7 @@ ENDIF
 \
 \       Name: var09Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36628,7 +37020,7 @@ ENDIF
 \
 \       Name: var10Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36645,7 +37037,7 @@ ENDIF
 \
 \       Name: var11Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36656,13 +37048,30 @@ ENDIF
 
 .var11Hi
 
- EQUB 0, 0
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: var111Hi
+\       Type: Variable
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.var111Hi
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: var12Hi
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36706,7 +37115,7 @@ ENDIF
 \
 \       Name: L62F0
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36723,7 +37132,7 @@ ENDIF
 \
 \       Name: wingBalance
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -36790,7 +37199,7 @@ ENDIF
 \
 \       Name: newSectionFetched
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Flag that determines whether a new track section has been fetched
 \
 \ ******************************************************************************
@@ -36853,7 +37262,7 @@ ENDIF
 \
 \       Name: previousSignNumber
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: Stores the number of the sign from the previous call to the
 \             BuildRoadSign routine
 \
@@ -36901,7 +37310,7 @@ ENDIF
 \
 \       Name: horizonTrackWidth
 \       Type: Variable
-\   Category: Track
+\   Category: Track geometry
 \    Summary: The arc of the track at the horizon (i.e. the track width at the
 \             horizon), halved
 \
@@ -36949,7 +37358,7 @@ ENDIF
 \
 \       Name: L62FF
 \       Type: Variable
-\   Category: 
+\   Category: Driving model
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
