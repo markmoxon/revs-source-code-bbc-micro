@@ -178,9 +178,11 @@ ORG &0000
                         \
                         \ Set to 6 in ResetVariables
 
-.L0009
+.oddsOfEngineStart
 
- SKIP 1                 \ 
+ SKIP 1                 \ The chances of the engine starting while revving the
+                        \ engine (the engine will start with a chance of 1 in
+                        \ oddsOfEngineStart)
                         \
                         \ Set to 7 in ResetVariables
 
@@ -440,8 +442,6 @@ ORG &0000
 .speedLo
 
  SKIP 1                 \ Low byte of the car's speed
-                        \
-                        \ In mph? This looks like the fractional part
 
 .positionChangeBCD
 
@@ -861,8 +861,6 @@ ORG &0000
 .speedHi
 
  SKIP 1                 \ High byte of the car's speed
-                        \
-                        \ In mph? This looks like the integer part
 
 .printMode
 
@@ -5289,8 +5287,8 @@ ORG &0B00
  LDA #&7F               \ Set L002D = &7F
  STA L002D
 
- LDA #31                \ Set L0009 = 31
- STA L0009
+ LDA #31                \ Set oddsOfEngineStart = 31
+ STA oddsOfEngineStart
 
 .cras3
 
@@ -8663,8 +8661,8 @@ ENDIF
                         \ half of the track (which is true for both practice
                         \ and qualifying, as well as the starting grid)
 
- LDX #7                 \ Set L0009 = 7
- STX L0009
+ LDX #7                 \ Set oddsOfEngineStart = 7
+ STX oddsOfEngineStart
 
  DEX                    \ Set sectionListValid = 6
  STX sectionListValid
@@ -28969,52 +28967,71 @@ NEXT
 
  LDA L002D
  BEQ C44F5
+
  DEC L0028
  DEC L0028
+
  JMP C452D
 
 .C44F5
 
  STA L0028
+
  STA L0026
+
  LDY L62F0
+
  LDA gearNumber
  BEQ C4510
+
  LDA throttleBrakeState
  BMI C4510
+
  BEQ C450C
+
  LDA L003D
  BNE C4516
+
  BEQ C4510
 
 .C450C
 
  LDA speedHi
+
  BNE C4521
 
 .C4510
 
  TYA
  BEQ C452D
+
  BPL C4521
+
  INY
 
 .C4516
 
  INY
+
  BMI C452A
+
  CPY #4
  BCC C452A
+
  LDY #3
+
  BCS C452A
 
 .C4521
 
  DEY
+
  BPL C452A
- CPY #&FB
+
+ CPY #251
  BCS C452A
- LDY #&FB
+
+ LDY #251
 
 .C452A
 
@@ -29161,12 +29178,15 @@ NEXT
  STA playerSideways     \ Store the value of A in playerSideways, so we can test
                         \ whether the player is facing sideways on the track
 
- EOR #&3F
+ EOR #%00111111
  STA T
+
  LSR A
  CLC
  ADC T
+ 
  JSR MultiplyHeight
+
  CLC
  ADC L005D
  CLC
@@ -29175,32 +29195,45 @@ NEXT
  ADC L0028
  CLC
  ADC L000D
+
  CLC
+
  BPL C4593
+
  SEC
 
 .C4593
 
  ROR A
+
  STA L000D
+
  SEC
  SBC V
  STA spinPitchAngle
+
  LDA #0
  STA W
+
  LDA L0026
  SEC
  SBC #4
+
  BVC C45A8
- LDA #&C8
+
+ LDA #200
 
 .C45A8
 
  STA L0026
+
  CLC
  ADC L002D
+
  BEQ C45B3
+
  BVS C45C7
+
  BPL C45C9
 
 .C45B3
@@ -29237,44 +29270,58 @@ NEXT
 
 .C45C7
 
- LDA #&7F
+ LDA #127
 
 .C45C9
 
  STA L002D
+
  ASL A
  ROL W
  ASL A
  ROL W
  STA V
+
  LDX currentPlayer
  LDA carProgress,X
+
  JSR MultiplyHeight
+
  BPL C45DF
+
  DEC W
 
 .C45DF
 
  LDY playerSegmentIndex
+
  CLC
  ADC ySegmentCoordILo,Y
+
  PHP
+
  CLC
- ADC #&AC
+ ADC #172
+
  PHP
+
  CLC
  ADC V
  STA yPlayerCoordHi
+
  LDA ySegmentCoordIHi,Y
+
  ADC W
  PLP
  ADC #0
  PLP
  ADC #0
  STA yPlayerCoordTop
+
  LDA speedHi
  STA U
- LDA #&21
+
+ LDA #33
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -29282,7 +29329,8 @@ NEXT
  CLC
  ADC U
  STA carSpeedHi,X
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -29721,13 +29769,13 @@ ENDIF
 
  LDY speedHi            \ Set Y to the high byte of (speedHi speedLo)
 
- BNE C46CD              \ If the high byte is non-zero, jump to C46CD to skip
+ BNE dmod1              \ If the high byte is non-zero, jump to dmod1 to skip
                         \ the following
 
  AND #%11110000         \ A contains speedLo, so this sets Y to the high nibble
  TAY                    \ of the low byte of (speedHi speedLo)
 
-.C46CD
+.dmod1
 
  STY playerMoving       \ Store Y in playerMoving, which is zero if the player
                         \ is not moving, non-zero if they are, so this denotes
@@ -29796,9 +29844,9 @@ ENDIF
                         \
                         \   L62FF = var052Hi
 
- LDA L002D              \ If L002D < 2, jump to C4719
+ LDA L002D              \ If L002D < 2, jump to dmod3
  CMP #2
- BCC C4719
+ BCC dmod3
 
                         \ If we get here then L002D >= 2
 
@@ -29807,17 +29855,17 @@ ENDIF
 
  LDA #0                 \ Set A = 0 to use as the zero value
 
-.P4710
+.dmod2
 
  STA var05Lo,X          \ Zero the X-th byte of (var05Hi var05Lo)
  STA var05Hi,X
 
  DEX                    \ Decrement the variable counter
 
- BPL P4710              \ Loop back until we have zeroed all three 16-bit
+ BPL dmod2              \ Loop back until we have zeroed all three 16-bit
                         \ variables
 
-.C4719
+.dmod3
 
  JSR ApplyWingBalance   \ Calculate the following:
                         \
@@ -31067,113 +31115,229 @@ ENDIF
 \       Name: ProcessEngineStart
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Process the keypresses for starting the engine
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Process the keypress for starting the engine
 \
 \ ******************************************************************************
 
 .ProcessEngineStart
 
+                        \ The routine is called from ApplyEngine when the engine
+                        \ is not running
+
  LDX #&DC               \ Scan the keyboard to see if "T" is being pressed
  JSR ScanKeyboard
 
- BEQ C498C              \ If "T" is being pressed, jump to C498C
+ BEQ engs2              \ If "T" is being pressed, jump to engs2
 
- LDY gearNumber
- DEY
- BEQ C4988
- LDA speedHi
- BNE C4993
+ LDY gearNumber         \ If gearNumber = 1, then we are in neutral, so jump to
+ DEY                    \ engs1
+ BEQ engs1
 
-.C4988
+                        \ If we get here then we are still in gear
 
- LDA #0
- BEQ C49C5
+ LDA speedHi            \ Set A = speedHi
 
-.C498C
+ BNE engs3              \ If A <> 0 then we are moving, so jump to engs3 to
+                        \ start the engine and set the rev counter to speedHi,
+                        \ as the engine can be restarted after stalling if we
+                        \ are going fast enough (i.e. if speedHi > 0) 
+
+.engs1
+
+                        \ If we get here then we are either in neutral, or we
+                        \ are not in neutral but are not moving
+
+ LDA #0                 \ Set A = 0 to set as the value of the rev counter
+
+ BEQ SetRevs            \ Jump to SetRevs to zero the rev counter (this BEQ is
+                        \ effectively a JMP as A is always zero)
+
+.engs2
+
+                        \ If we get here then then the engine is not running and
+                        \ "T" is being pressed
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
- AND L0009
- BNE C49BB
+ AND oddsOfEngineStart  \ Set A = A mod oddsOfEngineStart
 
-.C4993
+ BNE SetRevsWithFlutter \ If A is non-zero, jump to SetRevsWithFlutter
 
- LDX #7
- STX L0009
+                        \ Otherwise keep going to start the engine (which has a
+                        \ chance of 1 in oddsOfEngineStart of happening) and set
+                        \ the revs to zero (as A is zero)
+
+.engs3
+
+                        \ If we get here then the engine is not running, and we
+                        \ are either already moving, or "T" is being pressed and
+                        \ we passed through the above (a 1 in oddsOfEngineStart
+                        \ chance)
+
+ LDX #7                 \ Set oddsOfEngineStart = 7, to reset it back to the
+ STX oddsOfEngineStart  \ default chance of starting the engine
 
  LDX #&FF               \ Set engineStatus = &FF to turn on the engine
  STX engineStatus
 
- BMI C49BB
-
-.C499D
-
- STA L0059
+ BMI SetRevsWithFlutter \ Jump to SetRevsWithFlutter to set the rev counter to A
+                        \ with random flutter added (this BMI is effectively a
+                        \ JMP as X is always negative)
 
 \ ******************************************************************************
 \
-\       Name: sub_C499F
+\       Name: UpdateRevs
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Update the rev counter according to the throttle being applied
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   UpdateRevs-2        Set L0059 to A before running the routine
 \
 \ ******************************************************************************
 
-.sub_C499F
+ STA L0059              \ Set L0059 = A
 
- LDA revCount
- LDX throttleBrakeState
- DEX
- BNE C49B0
- ADC #7
- CMP throttleBrake
- BCS C49B0
- CMP #&8C
- BCC C49C5
+.UpdateRevs
 
-.C49B0
+ LDA revCount           \ Set A to the current rev counter
 
- CMP #&2A
- BCC C49B9
- SEC
- SBC #&0C
- BCS C49BB
+ LDX throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
+ DEX                    \ being applied, so jump to urev1
+ BNE urev1
 
-.C49B9
+ ADC #7                 \ Set A = A + 7
+                        \       = revCount + 7
 
- LDA #&28
+ CMP throttleBrake      \ If A >= throttleBrake, then the rev counter is higher
+ BCS urev1              \ than the amount of throttle being applied, so jump to
+                        \ urev1
 
-.C49BB
+ CMP #140               \ If A < 140, jump to SetRevs to set the rev counter to
+ BCC SetRevs            \ the new amount, returning from the subroutine using a
+                        \ tail call
 
- STA T
+.urev1
+
+ CMP #42                \ If A < 42, jump to urev2 to set A = 40, the idling
+ BCC urev2              \ level of the rev counter
+
+ SEC                    \ Set A = A - 12
+ SBC #12
+
+ BCS SetRevsWithFlutter \ Jump to SetRevsWithFlutter to set the rev counter to
+                        \ the new amount, with random flutter added, returning
+                        \ from the subroutine using a tail call (this BCS is
+                        \ effectively a JMP, as we know the subtraction won't
+                        \ underflow as A >= 42)
+
+.urev2
+
+ LDA #40                \ Set A = 40 to set as the rev count
+
+                        \ Fall through into SetRevsWithFlutter to set the rev
+                        \ counter to 40, with random flutter added
+
+\ ******************************************************************************
+\
+\       Name: SetRevsWithFlutter
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Set the rev counter after adding a random flutter
+\
+\ ------------------------------------------------------------------------------
+\
+\ Set the following:
+\
+\   * revCount = A + rand(0-7)
+\
+\   * L005A = revCount
+\
+\   * L003D = 0
+\
+\   * soundRevTarget = revTarget + 25
+\
+\ ******************************************************************************
+
+.SetRevsWithFlutter
+
+ STA T                  \ Store A in T
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
- AND #7
- CLC
- ADC T
+ AND #7                 \ Set A = A mod 8, which is a random number in the range
+                        \ 0 to 7
 
-.C49C5
+ CLC                    \ Set A = A + T
+ ADC T                  \       = random 0-7 + T
 
- STA revCount
- STA L005A
+                        \ Fall through into SetRevs to set the rev counter to A
 
-.C49C9
+\ ******************************************************************************
+\
+\       Name: SetRevs
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Set the rev counter
+\
+\ ------------------------------------------------------------------------------
+\
+\ Set the following:
+\
+\   * revCount = A
+\
+\   * L005A = revCount
+\
+\   * L003D = 0
+\
+\   * soundRevTarget = revTarget + 25
+\
+\ ******************************************************************************
 
- LDA #0
- JMP C4A87
+.SetRevs
+
+ STA revCount           \ Set revCount = A
+
+ STA L005A              \ Set L005A = A
+
+                        \ Fall through into ZeroL003D to zero L003D and set
+                        \ soundRevTarget
+
+\ ******************************************************************************
+\
+\       Name: ZeroL003D
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Zero L003D
+\
+\ ------------------------------------------------------------------------------
+\
+\ Set the following:
+\
+\   * L003D = 0
+\
+\   * soundRevTarget = revTarget + 25
+\
+\ ******************************************************************************
+
+.ZeroL003D
+
+ LDA #0                 \ Set A = 0 to set as the value of L003D
+
+ JMP SetL003D           \ Jump to SetL003D to set tye following:
+                        \
+                        \   L003D = 0
+                        \
+                        \   soundRevTarget = revTarget + 25
+                        \
+                        \ and return from the subroutine using a tail call
 
 \ ******************************************************************************
 \
@@ -31184,170 +31348,222 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Other entry points:
-\
-\   C4A87               
+\ 
 \
 \ ******************************************************************************
 
 .ApplyEngine
 
  LDA engineStatus       \ If the engine is not on, jump to ProcessEngineStart to
- BEQ ProcessEngineStart \ process the keypresses for starting the engine,
+ BEQ ProcessEngineStart \ process the keypress for starting the engine,
                         \ returning from the subroutine using a tail call
 
- LDA L002D
- BNE sub_C499F
+ LDA L002D              \ If L002D <> 0, jump to UpdateRevs, returning from the
+ BNE UpdateRevs         \ subroutine using a tail call
 
  LDA gearChangeKey      \ If bit 7 of gearChangeKey is set then a gear change
- BMI C499D              \ key is being pressed, so jump to C499D
+ BMI UpdateRevs-2       \ key is being pressed, so jump to UpdateRevs-2 to set
+                        \ bit 7 of L0059 before running UpdateRevs and returning
+                        \ from the subroutine using a tail call
 
- LDY gearNumber
- DEY
- BEQ sub_C499F
+ LDY gearNumber         \ If gearNumber = 1, then we are in neutral, so jump to
+ DEY                    \ UpdateRevs, returning from the subroutine using a tail
+ BEQ UpdateRevs         \ call
 
- LDA speedLo
+ LDA speedLo            \ Set (A T) = (speedHi speedLo)
  STA T
  LDA speedHi
- ASL T
- ROL A
- PHP
- BMI C49EE
- ASL T
+
+ ASL T                  \ Set (A T) = (A T) << 1
  ROL A
 
-.C49EE
+ PHP                    \ Store the flags on the stack, so we can retrieve it to
+                        \ check bit 6 of (speedHi speedLo), which is now bit 7
+                        \ of the newly shifted (A T)
 
- STA U
- LDX gearNumber
- LDA trackGearRatio,X
+ BMI engi1              \ If bit 7 of (A T) is set, jump to engi1 to skip the
+                        \ following
+
+ ASL T                  \ Set (A T) = (A T) << 1
+ ROL A
+
+.engi1
+
+ STA U                  \ Set U to the high byte of (A T)
+
+ LDX gearNumber         \ Set A to the gear ratio for the current gear, which is
+ LDA trackGearRatio,X   \ defined in the track data file at trackGearRatio
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = trackGearRatio * high byte of (A T)
 
- ASL T
- ROL A
- PLP
- BPL C4A01
- ASL T
+ ASL T                  \ Set (A T) = (A T) << 1
  ROL A
 
-.C4A01
+ PLP                    \ Retrieve the flags we stored on the stack to check
+ BPL engi2              \ whether bit 6 of (speedHi speedLo) is clear, and if
+                        \ so, jump to engi2
 
- BIT L0059
- BPL C4A37
+ ASL T                  \ Set (A T) = (A T) << 1
+ ROL A
+
+.engi2
+
+ BIT L0059              \ If bit 7 of L0059 is clear, jump to engi6
+ BPL engi6
+
  LDY throttleBrakeState
  DEY
- BNE C4A26
+ BNE engi4
+
  LDY speedHi
- CPY #&16
- BCS C4A26
+ CPY #22
+ BCS engi4
 
  LDY raceStarting       \ Set Y = raceStarting
 
- BPL C4A22              \ If bit 7 of raceStarting is clear, jump to C4A22
+ BPL engi3              \ If bit 7 of raceStarting is clear, then we are not on
+                        \ the grid at the start of a race, so jump to engi3
 
  CPY #%10100000
- BNE C4A26
+ BNE engi4
 
  PHA
- LDA mainLoopCounterLo
- AND #&3F
- CMP #&35
- PLA
- BCC C4A26
 
-.C4A22
+ LDA mainLoopCounterLo
+ AND #63
+ CMP #53
+
+ PLA
+
+ BCC engi4
+
+.engi3
 
  CMP L005A
- BCC C4A2C
+ BCC engi5
 
-.C4A26
+.engi4
 
  LDY #0
  STY L0059
- BEQ C4A37
 
-.C4A2C
+ BEQ engi6
+
+.engi5
 
  LDA L005A
- CMP #&6C
- BCC C4A37
+
+ CMP #108
+ BCC engi6
+
  SEC
  SBC #2
  STA L005A
 
-.C4A37
+.engi6
 
  STA revCount
- CMP #&AA
- BCC C4A3F
- LDA #&AA
 
-.C4A3F
+ CMP #170
+ BCC engi7
+
+ LDA #170
+
+.engi7
 
  CMP #3
- BCS C4A48
- INC engineStatus
- JMP C49C9
+ BCS engi8
 
-.C4A48
+ INC engineStatus
+
+ JMP ZeroL003D
+
+.engi8
 
  SEC
- SBC #&42
- BMI C4A51
- CMP #&11
- BCS C4A58
+ SBC #66
 
-.C4A51
+ BMI engi9
+
+ CMP #17
+ BCS engi10
+
+.engi9
 
  ASL A
  CLC
- ADC #&98
- JMP C4A7F
+ ADC #152
 
-.C4A58
+ JMP engi13
+
+.engi10
 
  SEC
- SBC #&11
+ SBC #17
+
  CMP #4
- BCS C4A66
+ BCS engi11
+
  EOR #&FF
  CLC
- ADC #&BB
- BCS C4A7F
+ ADC #187
 
-.C4A66
+ BCS engi13
+
+.engi11
 
  SEC
  SBC #4
+
  CMP #5
- BCS C4A76
+ BCS engi12
+
  ASL A
  ASL A
  EOR #&FF
  CLC
- ADC #&B7
- BCS C4A7F
+ ADC #183
 
-.C4A76
+ BCS engi13
+
+.engi12
 
  SEC
  SBC #5
  ASL A
  EOR #&FF
  CLC
- ADC #&A3
+ ADC #163
 
-.C4A7F
+.engi13
 
  STA U
+
  LDA trackGearPower,X
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
-.C4A87
+\ ******************************************************************************
+\
+\       Name: SetL003D
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Set L003D and soundRevTarget
+\
+\ ------------------------------------------------------------------------------
+\
+\ Set the following:
+\
+\   * L003D = A
+\
+\   * soundRevTarget = revTarget + 25
+\
+\ ******************************************************************************
 
- STA L003D
+.SetL003D
+
+ STA L003D              \ Set L003D = A
 
  LDA revCount           \ Set soundRevTarget = revCount + 25
  CLC
@@ -31375,8 +31591,10 @@ ENDIF
 
  LDA var07Lo
  STA T
+
  ORA var07Hi
  PHP
+
  LDA var07Hi
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
@@ -31387,20 +31605,29 @@ ENDIF
 
  ASL T
  ROL A
+
  DEY
+
  BNE P4AA2
+
  STA var09Hi,X
+
  PLP
  BEQ C4AB4
+
  EOR var07Hi
+
  SEC
+
  BPL C4AF3
 
 .C4AB4
 
  LDA T
  STA var09Lo,X
+
  JSR sub_C4B88
+
  BCC C4ACF
 
  LDA #0
@@ -31434,7 +31661,9 @@ ENDIF
 
  CMP T
  BCC C4AE9
+
  LSR T
+
  JMP C4AEA
 
 .C4AE9
@@ -31450,12 +31679,14 @@ ENDIF
 
  CMP L62AA,X
  BNE C4AF3
+
  CLC
 
 .C4AF3
 
  ROR L62A6,X
- RTS
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -31485,8 +31716,9 @@ ENDIF
                         \ ensuring that the result is positive
 
  LDA var07Hi
- EOR #&80
+ EOR #%10000000
  STA H
+
  LDA #0
  STA T
 
@@ -31497,7 +31729,9 @@ ENDIF
  JSR ApplyLimitAndSign  \ Set variableG = max((A T), (NN MM)) * abs(H)
 
  JSR sub_C4B88
+
  BCS C4B41
+
  CMP L62AC,X
  BCC C4B3E
 
@@ -31517,11 +31751,14 @@ ENDIF
  LDY throttleBrakeState
  DEY
  BNE C4B41
+
  CPX #0
  BEQ C4B41
+
  LDA #0
  STA var09Hi,X
  STA var09Lo,X
+
  BEQ C4B41
 
 .C4B3E
@@ -31536,7 +31773,7 @@ ENDIF
 
 .C4B41
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -31791,7 +32028,7 @@ ENDIF
 \   * If the brakes are not being applied, set brakes = 0, otherwise set:
 \
 \     * brakes = -L62FF / 8    (front wing)
-\     * brakes = L62FF / 8     (rear wing)
+\     * brakes =  L62FF / 8    (rear wing)
 \
 \   * If we are driving on grass on both sides of the car, then set:
 \
