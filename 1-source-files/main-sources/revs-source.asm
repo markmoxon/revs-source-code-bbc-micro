@@ -606,9 +606,10 @@ ORG &0000
 
  SKIP 0                 \ A counter for the dash data block we are processing
 
-.L0042
+.secondAxis
 
- SKIP 1                 \ 
+ SKIP 1                 \ The number of the second axis to project in the
+                        \ ProjectPlayerYaw routine
 
 .playerPastSegment
 
@@ -3111,12 +3112,31 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: sub_C0D01
+\       Name: ProjectPlayerYaw (Part 1 of 5)
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Project the player's yaw angle vector into 3D world coordinates
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine calculates the vector:
+\
+\   [ xHeading ]
+\   [     0    ]
+\   [ zHeading ]
+\
+\ which contains the yaw angle vector from the point of view of the player,
+\ projected onto the global 3D coordinate system.
+\
+\ In the simplest case, where playerYawAngle is in the first quarter (i.e. in
+\ the range 0 to 90 degrees), this is calculated as follows:
+\
+\   xHeading = sin(playerYawAngle)
+\   zHeading = cos(playerYawAngle)
+\
+\ Similar calculations are done for the other quarters.
+\
+\ This gives us the heading of the player's car, but in world 3D coordinates.
 \
 \ Arguments:
 \
@@ -3124,67 +3144,150 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.sub_C0D01
+.ProjectPlayerYaw
 
  STA J                  \ Set (J T) = (A X)
  STX T                  \           = playerYawAngle
 
- JSR MultiplyBy804      \ Set (U A) = 804 * (A T)
-                        \           = 804 * (A X)
-                        \           = 804 * playerYawAngle
+ JSR GetAngleInRadians  \ Set (U A) to the playerYawAngle, reduced to a quarter
+                        \ circle, converted to radians, and halved
+                        \
+                        \ Let's call this yawRadians / 2, where yawRadians is
+                        \ the reduced player yaw angle in radians
+                        
+ STA G                  \ Set (U G) = (U A) = yawRadians / 2
 
- STA G                  \ Set (U G) = (U A)
-                        \           = 804 * playerYawAngle
+ LDA U                  \ Set (A G) = (U G) = yawRadians / 2
 
- LDA U                  \ Set (H G) = (U G)
- STA H                  \           = 804 * playerYawAngle
+ STA H                  \ Set (H G) = (A G) = yawRadians / 2
 
- LDX #1                 \ Set L0042 = 1
- STX L0042
+                        \ So we now have:
+                        \
+                        \   (H G) = (A G) = (U G) = yawRadians / 2
+                        \
+                        \ This is the angle vector that we now project onto the
+                        \ x- and z-axes of the world 3D coordinate system
 
- LDX #0                 \ Set X = 0
+ LDX #1                 \ Set X = 0 and secondAxis = 1, so we project sin(H G)
+ STX secondAxis         \ into xHeading and cos(H G) into zHeading
+ LDX #0
 
- BIT J                  \ If bit 6 of J is clear, jump to C0D1B
- BVC C0D1B
+ BIT J                  \ If bit 6 of J is clear, then playerYawAngle is in one
+ BVC pyaw1              \ of these ranges:
+                        \
+                        \   * 0 to 63 (%00000000 to %00111111)
+                        \
+                        \   * -128 to -65 (%10000000 to %10111111)
+                        \
+                        \ The degree system in Revs looks like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ So playerYawAngle is in the top-right or bottom-left
+                        \ quarter in the above diagram
+                        \
+                        \ In both cases we jump to pyaw1 to set xHeading to sin
+                        \ and zHeading to cos, as sin gives the x-coordinate (in
+                        \ the left-right axis) and cos gives the y-coordinate
+                        \ (in the up-down axis)
 
- INX                    \ Set X = 1
+                        \ If we get here then bit 6 of J is set, so
+                        \ playerYawAngle is in one of these ranges:
+                        \
+                        \   * 64 to 127 (%01000000 to %01111111)
+                        \
+                        \   * -64 to -1 (%11000000 to %11111111)
+                        \
+                        \ So playerYawAngle is in the bottom-right or top-left
+                        \ quarter in the above diagram
+                        \
+                        \ In both cases we set the variables the other way
+                        \ round, as the triangle we draw to calculate the angle
+                        \ is the opposite way round (i.e. it's reflected in the
+                        \ x-axis or y-axis)
 
- DEC L0042              \ Set L0042 = 0
+ INX                    \ Set X = 1 and secondAxis = 0, so we project sin(H G)
+ DEC secondAxis         \ into zHeading and cos(H G) into xHeading
 
-.C0D1B
+                        \ We now enter a loop that sets xHeading+X to sin(H G)
+                        \ on the first iteration, and sets xHeading+secondAxis
+                        \ to cos(H G) on the second iteration
+                        \
+                        \ The commentary is for the sin(H G) iteration, see the
+                        \ end of the loop for details of how the second
+                        \ iteration calculates cos(H G) instead
 
- CMP #122               \ If A < 122, i.e. U < 122, jump to C0D27
- BCC C0D27
+.pyaw1
 
- BCS C0D4F              \ Jump to C0D4F (this BCS is effectively a JMP as we
+                        \ If we get here, then we are set up to calculate the
+                        \ following:
+                        \
+                        \   * If playerYawAngle is top-right or bottom-left:
+                        \
+                        \     xHeading = sin(playerYawAngle)
+                        \     zHeading = cos(playerYawAngle)
+                        \
+                        \   * If playerYawAngle is bottom-right or top-left:
+                        \
+                        \     xHeading = cos(playerYawAngle)
+                        \     zHeading = sin(playerYawAngle)
+                        \
+                        \ In each case, the calculation gives us the correct
+                        \ coordinate, as the second set of results uses angles
+                        \ that are "reflected" in the x-axis or y-axis by the
+                        \ capping process in the GetAngleInRadians routine
+
+ CMP #122               \ If A < 122, i.e. U < 122 and H < 122, jump to pyaw2
+ BCC pyaw2              \ to calculate sin(H G) for higher values of (H G), as
+                        \ the calculation at pyaw3 only works for smaller angles
+
+ BCS pyaw3              \ Jump to pyaw3 (this BCS is effectively a JMP as we
                         \ just passed through a BCS)
 
  LDA G                  \ It doesn't look like this code is ever reached, so
- CMP #240               \ perhaps it's left over from development?
- BCS C0D4F
+ CMP #240               \ presumably it's left over from development
+ BCS pyaw3
 
-.C0D27
+\ ******************************************************************************
+\
+\       Name: ProjectPlayerYaw (Part 2 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Calculate sin(H G) for smaller angles
+\
+\ ******************************************************************************
 
-                        \ If we get here then (U G) = 804 * playerYawAngle and
-                        \ U < 122
+.pyaw2
+
+                        \ If we get here then (U G) = yawRadians / 2 and U < 122
 
  LDA #171               \ Set A = 171
 
  JSR Multiply8x8        \ Set (A T) = (A * U) * U
  JSR Multiply8x8        \           = A * U^2
-                        \           = 171 * (804 * playerYawAngle)^2
+                        \           = 171 * (yawRadians / 2)^2
 
  STA V                  \ Set (V T) = (A T)
-                        \           = 171 * (804 * playerYawAngle)^2
+                        \           = 171 * (yawRadians / 2)^2
 
- JSR Multiply8x16       \ Set (U T) = U * (V T)
-                        \           = 171 * (804 * playerYawAngle)^3
+ JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+                        \           = (171 / 256) * (yawRadians / 2)^3
+                        \           = 2/3 * (yawRadians / 2)^3
 
  LDA G                  \ Set (A T) = (H G) - (U T)
- SEC                    \           = 804 * playerYawAngle
- SBC T                  \             - 171 * (804 * playerYawAngle)^3
- STA T                  \
-                        \ starting with the low bytes
+ SEC                    \           = yawRadians / 2 - 2/3 * (yawRadians / 2)^3
+ SBC T                  \
+ STA T                  \ starting with the low bytes
 
  LDA H                  \ And then the high bytes
  SBC U
@@ -3192,120 +3295,315 @@ ORG &0B00
  ASL T                  \ Set (A T) = (A T) * 2
  ROL A
 
- STA var26Hi,X          \ Set (var26Hi var26Lo) = (A T)
+                        \ So we now have the following in (A T):
+                        \
+                        \     (yawRadians / 2 - 2/3 * (yawRadians / 2)^3) * 2
+                        \
+                        \   = yawRadians - 4/3 * (yawRadians / 2)^3
+                        \
+                        \   = yawRadians - 4/3 * yawRadians^3 / 2^3
+                        \
+                        \   = yawRadians - 8/6 * yawRadians^3 * 1/8
+                        \
+                        \   = yawRadians - 1/6 * yawRadians^3
+                        \
+                        \   = yawRadians - yawRadians^3 / 3!
+                        \
+                        \ The Taylor series expansion of sin(x) starts like
+                        \ this:
+                        \
+                        \   sin(x) = x - (x^3 / 3!) + (x^5 / 5!) - ...
+                        \
+                        \ If we take the first two parts of the series and
+                        \ apply them to yawRadians, we get:
+                        \
+                        \   sin(yawRadians) = yawRadians - (yawRadians^3 / 3!)
+                        \
+                        \ which is the same as our value in (A T)
+                        \
+                        \ So the value in (A T) is equal to the first two parts
+                        \ of the Taylor series, and we have effectively just
+                        \ calculated an approximation of this:
+                        \
+                        \   (A T) = sin(yawRadians)
+
+ STA xHeadingHi,X       \ Set (xHeadingHi xHeadingLo) = (A T)
  LDA T                  \
- AND #%11111110         \ with the sign bit cleared in bit 0 of var26Lo
- STA var26Lo,X
+ AND #%11111110         \ with the sign bit cleared in bit 0 of xHeadingLo to
+ STA xHeadingLo,X       \ denote a positive result
 
- JMP C0D7F              \ Jump to C0D7F
+ JMP pyaw5              \ Jump to pyaw5 to move on to the next axis
 
-.C0D4F
+\ ******************************************************************************
+\
+\       Name: ProjectPlayerYaw (Part 3 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Calculate sin(H G) for bigger angles
+\
+\ ******************************************************************************
 
-                        \ If we get here then (U G) = 804 * playerYawAngle and
-                        \ U >= 122
+.pyaw3
 
- LDA #0
- SEC
- SBC G
- STA T
+                        \ If we get here then (H G) = yawRadians / 2 and
+                        \ H >= 122
 
- LDA #201
+ LDA #0                 \ Set (U T) = (201 0) - (H G)
+ SEC                    \           = PI/4 - yawRadians / 2 ???
+ SBC G                  \
+ STA T                  \ starting with the low bytes
+
+ LDA #201               \ And then the high bytes
  SBC H
  STA U
 
- STA V
+ STA V                  \ Set (V T) = (U T)
+                        \           = PI/4 - yawRadians / 2
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
+                        \           = (PI/4 - yawRadians / 2) ^ 2
 
- ASL T
- ROL U
+ ASL T                  \ Set (U T) = (U T) * 2
+ ROL U                  \           = (PI/4 - yawRadians / 2) ^ 2 * 2
 
- LDA #0
- SEC
- SBC T
+ LDA #0                 \ Set A = -(U T)
+ SEC                    \
+ SBC T                  \ starting with the low bytes
 
- AND #%11111110
- STA var26Lo,X
+ AND #%11111110         \ Which we store in xHeadingLo, with bit 0 cleared to
+ STA xHeadingLo,X       \ denote a positive result (as it's a sign-magnitude
+                        \ number we want to store)
  
- LDA #0
+ LDA #0                 \ And then the high bytes
  SBC U
- BCC C0D7C
 
- LDA #%11111110
- STA var26Lo,X
+ BCC pyaw4              \ If the subtraction underflowed, then jump to pyaw4 to
+                        \ store the result in xHeadingHi
 
- LDA #&FF
+                        \ Otherwise the subtraction didn't underflow, so we
+                        \ store the highest possible angle in xHeading
 
-.C0D7C
+ LDA #%11111110         \ Set xHeadingLo to the highest possible positive value
+ STA xHeadingLo,X       \ (i.e. all ones except for the sign in bit 0)
 
- STA var26Hi,X
+ LDA #%11111111         \ Set A to the highest possible value of xHeadingHi, so
+                        \ we can store it next
 
-.C0D7F
+.pyaw4
 
- CPX L0042
- BEQ C0D97
+ STA xHeadingHi,X       \ Store A in the high byte in xHeadingHi
 
- LDX L0042
+\ ******************************************************************************
+\
+\       Name: ProjectPlayerYaw (Part 4 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Loop back to calculate cos instead of sin
+\
+\ ******************************************************************************
 
- LDA #0
- SEC
- SBC G
+.pyaw5
+
+ CPX secondAxis         \ If we just processed the second axis, then we have
+ BEQ pyaw6              \ now set both xHeading and zHeading, so jump to pyaw6
+                        \ to set their signs
+
+ LDX secondAxis         \ Otherwise set X = secondAxis so the next time we reach
+                        \ the end of the loop, we take the BEQ branch we just
+                        \ passed through
+
+ LDA #0                 \ Set (H G) = (201 0) - (H G)
+ SEC                    \
+ SBC G                  \ starting with the high bytes
  STA G
 
- LDA #201
+ LDA #201               \ And then the low bytes
  SBC H
  STA H
 
- STA U
+ STA U                  \ Set (U G) = (H G)
+                        \
+                        \ (U G) and (H G) were set to yawRadians / 2 for the
+                        \ first pass through the loop above, so we now have the
+                        \ following:
+                        \
+                        \   201 - yawRadians / 2
+                        \
+                        \ PI is represented by 804, as 804 / 256 = 3.14, so 201
+                        \ represents PI/4, so this the same as:
+                        \
+                        \   PI/4 - yawRadians / 2
+                        \
+                        \ Given that we expect (U G) to contain half the angle
+                        \ we are projecting, this means we are going to find the
+                        \ sine of this angle when we jump back to pyaw1:
+                        \
+                        \   PI/2 - yawRadians
+                        \
+                        \ It's a trigonometric identity that:
+                        \
+                        \   sin(PI/2 − x) = cos(x)
+                        \
+                        \ so jumping back will, in fact, find the cosine of the
+                        \ angle
 
- JMP C0D1B
-
-.C0D97
-
- LDA J
- BPL C0DA3
-
- LDA #1
- ORA var26Lo
- STA var26Lo
-
-.C0DA3
-
- LDA J
- ASL A
- EOR J
- BPL C0DB2
-
- LDA #1
- ORA var26Lo+1
- STA var26Lo+1
-
-.C0DB2
-
- RTS
+ JMP pyaw1              \ Loop back to set the other variable of xHeading and
+                        \ zHeading to the cosine of the angle
 
 \ ******************************************************************************
 \
-\       Name: MultiplyBy804
+\       Name: ProjectPlayerYaw (Part 5 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Apply the correct signs to the result
+\
+\ ******************************************************************************
+
+.pyaw6
+
+                        \ By this point, we have the yaw angle vector's
+                        \ x-coordinate in xHeading and the y-coordinate in
+                        \ zHeading
+                        \
+                        \ The above calculations were done on an angle that was
+                        \ reduced to a quarter-circle, so now we need to add the
+                        \ correct signs according to which quarter-circle the
+                        \ original playerYawAngle in (J T) was in
+
+ LDA J                  \ If J is positive then playerYawAngle is positive (as
+ BPL pyaw7              \ J contains playerYawAngleHi), so jump to pyaw7 to skip
+                        \ the following
+
+                        \ If we get here then playerYawAngle is negative
+                        \
+                        \ The degree system in Revs looks like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ So playerYawAngle is in the left half of the above
+                        \ diagram, where the x-coordinates are negative, so we
+                        \ need to negate the x-coordinate
+
+ LDA #1                 \ Negate xHeading by setting bit 0 of the low byte, as
+ ORA xHeadingLo         \ xHeading is a sign-magnitude number
+ STA xHeadingLo
+
+.pyaw7
+
+ LDA J                  \ If bits 6 and 7 of J are the same (i.e. their EOR is
+ ASL A                  \ zero), jump to pyaw8 to return from the subroutine as
+ EOR J                  \ the sign of zHeading is correct
+ BPL pyaw8
+
+                        \ Bits 6 and 7 of J, i.e. of playerYawAngleHi, are
+                        \ different, so the angle is in one of these ranges:
+                        \
+                        \   * 64 to 127 (%01000000 to %01111111)
+                        \
+                        \   * -128 to -65 (%10000000 to %10111111)
+                        \
+                        \ The degree system in Revs looks like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ So playerYawAngle is in the bottom half of the above
+                        \ diagram, where the y-coordinates are negative, so we
+                        \ need to negate the y-coordinate
+
+
+ LDA #1                 \ Negate zHeading by setting bit 0 of the low byte, as
+ ORA zHeadingLo         \ zHeading is a sign-magnitude number
+ STA zHeadingLo
+
+.pyaw8
+
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: GetAngleInRadians
 \       Type: Subroutine
 \   Category: Maths
-\    Summary: Multiply a 16-bit number by 804
+\    Summary: Convert a 16-bit angle into radians, restricted to the range 0 to
+\             PI/2
 \
 \ ------------------------------------------------------------------------------
 \
-\ Do the following multiplication of unsigned numbers:
+\ Arguments:
 \
-\   (U A) = 804 * (A T) / 256
+\   (A T)               A yaw angle in Revs format (-128 to +127)
+\
+\ Returns:
+\
+\   (U A)               The angle, reduced to a quarter circle, converted to
+\                       radians, and halved
 \
 \ ******************************************************************************
 
-.MultiplyBy804
+.GetAngleInRadians
 
- ASL T                  \ Set (V T) = (A T) * 4
- ROL A
- ASL T
- ROL A
- STA V
+ ASL T                  \ Set (V T) = (A T) << 2
+ ROL A                  \
+ ASL T                  \ This shift multiplies (A T) by four, removing bits 6
+ ROL A                  \ and 7 in the process
+ STA V                  \
+                        \ The degree system in Revs looks like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ The top byte of (A T) is in this range, so shifting to
+                        \ the left by two places drops bits 6 and 7 and scales
+                        \ the angle into the range 0 to 252, as follows:
+                        \
+                        \   * 0 to 63 (%00000000 to %00111111)
+                        \     -> 0 to 252 (%00000000 to %11111100)
+                        \
+                        \   * 64 to 127 (%01000000 to %01111111)
+                        \     -> 0 to 252 (%00000000 to %11111100)
+                        \
+                        \   * -1 to -64 (%11111111 to %11000000)
+                        \     -> 252 to 0 (%11111100 to %00000000)
+                        \
+                        \   * -65 to -128 (%10111111 to %10000000)
+                        \     -> 252 to 0 (%11111100 to %00000000)
+
+                        \ We now convert this number from a Revs angle into
+                        \ radians
+                        \
+                        \ The value of (V T) represents a quarter-circle, which
+                        \ is PI/2 radians, but we actually multiply by PI/4 to
+                        \ return the angle in radians divided by 2, to prevent
+                        \ overflow in the ProjectPlayerYaw routine
 
  LDA #201               \ Set U = 201
  STA U
@@ -3313,8 +3611,14 @@ ORG &0B00
                         \ Fall through into Multiply8x16 to calculate:
                         \
                         \   (U A) = U * (V T) / 256
-                        \         = 201 * (A T) * 4 / 256
-                        \         = 804 * (A T) / 256
+                        \         = 201 * (V T) / 256
+                        \         = (201 / 256) * (V T)
+                        \         = (3.14 / 4) * (V T)
+                        \
+                        \ So we return (U A) = PI/4 * (V T)
+                        \
+                        \ which is the original angle, reduced to a quarter
+                        \ circle, converted to radians, and halved
 
 \ ******************************************************************************
 \
@@ -29383,15 +29687,17 @@ ENDIF
  LDA playerYawAngleHi   \ Set (A X) = (playerYawAngleHi playerYawAngleLo)
  LDX playerYawAngleLo
 
- JSR sub_C0D01          \ ??? Sets var26
+ JSR ProjectPlayerYaw   \ Project the player's yaw angle vector into 3D world
+                        \ coordinates in xHeading, zHeading, thus converting it
+                        \ from an angle into a vector
 
- JSR GetProducts1       \ Calculate the following::
+ JSR GetProducts1       \ Calculate the following:
                         \
-                        \   var07 = xPlayerDelta * var27
-                        \           - zPlayerDelta * var26
+                        \   var07 = xPlayerDelta * zHeading
+                        \           - zPlayerDelta * xHeading
                         \
-                        \   var08 = zPlayerDelta * var27
-                        \           + xPlayerDelta * var26
+                        \   var08 = zPlayerDelta * zHeading
+                        \           + xPlayerDelta * xHeading
 
  LDA var07Lo            \ Set (var15Hi var15Lo) = (var07Hi var07Lo)
  STA var15Lo
@@ -29430,12 +29736,13 @@ ENDIF
                         \
                         \   var16 = spinYawAngle * 132
 
- JSR sub_C4BCF
+ JSR sub_C4BCF          \ ???
 
- JSR sub_C49CE
+ JSR sub_C49CE          \ ???
 
- LDX #1
- JSR sub_C4779
+ LDX #1                 \ Set X = 1, so the call to sub_C4779 ???
+
+ JSR sub_C4779          \ ???
 
  LDA var15Lo            \ Set (var07Hi var07Lo) = (var15Hi var15Lo)
  STA var07Lo
@@ -29457,8 +29764,9 @@ ENDIF
                         \
                         \   var07 = var07 - var08 * steering
 
- LDX #0
- JSR sub_C4779
+ LDX #0                 \ Set X = 0, so the call to sub_C4779 ???
+
+ JSR sub_C4779          \ ???
 
  JSR ApplySteering2     \ Calculate the following in parallel:
                         \
@@ -29484,9 +29792,11 @@ ENDIF
                         \
                         \   L62FF = var052Hi
 
- LDA L002D
+ LDA L002D              \ If L002D < 2, jump to C4719
  CMP #2
  BCC C4719
+
+                        \ If we get here then L002D >= 2
 
  LDX #2                 \ We now zero the three 16-bit bytes at var05, so set a
                         \ counter in X for the three variables
@@ -29515,9 +29825,9 @@ ENDIF
 
  JSR GetProducts2       \ Calculate the following:
                         \
-                        \   var04x = var05 * var27 + var051 * var26
+                        \   var04x = var05 * zHeading + var051 * xHeading
                         \
-                        \   var04z = var051 * var27 - var05 * var26
+                        \   var04z = var051 * zHeading - var05 * xHeading
 
  JSR CalculateVars4     \ Calculate the following:
                         \
@@ -29535,7 +29845,7 @@ ENDIF
                         \
                         \   playerYawAngle = playerYawAngle + spinYawAngle
 
- JSR sub_C44EA
+ JSR sub_C44EA          \ ???
 
  RTS                    \ Return from the subroutine
 
@@ -30162,9 +30472,9 @@ ENDIF
 \
 \   X                   Offset of the 16-bit sign-magnitude value to multiply:
 \
-\                         * 0 = var26
+\                         * 0 = xHeading
 \
-\                         * 1 = var27
+\                         * 1 = zHeading
 \
 \                         * 2 = (steeringHi steeringLo)
 \
@@ -30234,9 +30544,9 @@ ENDIF
  LDA xPlayerDeltaTop,Y
  STA QQ
 
- LDA var26Lo,X          \ Set (SS RR) to the 16-bit sign-magnitude number
+ LDA xHeadingLo,X       \ Set (SS RR) to the 16-bit sign-magnitude number
  STA RR                 \ pointed to by X (variableX)
- LDA var26Hi,X
+ LDA xHeadingHi,X
  STA SS
 
  JSR Multiply16x16      \ Set (A T) = (QQ PP) * (SS RR)
@@ -30362,9 +30672,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var07 = xPlayerDelta * var27 - zPlayerDelta * var26
+\   var07 = xPlayerDelta * zHeading - zPlayerDelta * xHeading
 \
-\   var08 = zPlayerDelta * var27 + xPlayerDelta * var26
+\   var08 = zPlayerDelta * zHeading + xPlayerDelta * xHeading
 \
 \ ******************************************************************************
 
@@ -30381,11 +30691,11 @@ ENDIF
 
  BNE GetProducts        \ Jump to GetProducts to calculate the following:
                         \
-                        \   var07 = xPlayerDelta * var27
-                        \           - zPlayerDelta * var26
+                        \   var07 = xPlayerDelta * zHeading
+                        \           - zPlayerDelta * xHeading
                         \
-                        \   var08 = zPlayerDelta * var27
-                        \           + xPlayerDelta * var26
+                        \   var08 = zPlayerDelta * zHeading
+                        \           + xPlayerDelta * xHeading
                         \
                         \ This BNE is effectively a JMP as X is never zero
 
@@ -30400,9 +30710,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var04x = var05 * var27 + var051 * var26
+\   var04x = var05 * zHeading + var051 * xHeading
 \
-\   var04z = var051 * var27 - var05 * var26
+\   var04z = var051 * zHeading - var05 * xHeading
 \
 \ ******************************************************************************
 
@@ -30420,9 +30730,9 @@ ENDIF
                         \ Fall through into GetProducts to calculate the
                         \ following:
                         \
-                        \   var04x = var05 * var27 + var051 * var26
+                        \   var04x = var05 * zHeading + var051 * xHeading
                         \
-                        \   var04z = var051 * var27 - var05 * var26
+                        \   var04z = var051 * zHeading - var05 * xHeading
 
 \ ******************************************************************************
 \
@@ -30435,15 +30745,15 @@ ENDIF
 \
 \ If bit 7 of X is clear, this routine calculates:
 \
-\   variableA = variableY * var27 + variableY+1 * var26
+\   variableA = variableY * zHeading + variableY+1 * xHeading
 \
-\   variableA+1 = variableY+1 * var27 - variableY * var26
+\   variableA+1 = variableY+1 * zHeading - variableY * xHeading
 \
 \ If bit 7 of X is set, this routine calculates:
 \
-\   variableA = variableY * var27 - variableY+1 * var26
+\   variableA = variableY * zHeading - variableY+1 * xHeading
 \
-\   variableA+1 = variableY+1 * var27 + variableY * var26
+\   variableA+1 = variableY+1 * zHeading + variableY * xHeading
 \
 \ For it to work, the routine must be called with bit 6 of X set.
 \
@@ -30487,17 +30797,19 @@ ENDIF
  STX GG                 \ Store the details of the operation to perform in GG
 
  LDX #1                 \ Set X = 1, so in the call to MultiplyCoords we use
-                        \ var27 as the 16-bit sign-magnitude value to multiply
+                        \ zHeading as the 16-bit sign-magnitude value to
+                        \ multiply
 
  LDA #%00000000         \ Set A = %00000000, so in the call to MultiplyCoords we
                         \ overwrite the result rather than adding, and do not
                         \ negate the multiplication
 
  JSR MultiplyCoords     \ Set variableA = variableY * variableX
-                        \               = variableY * var27
+                        \               = variableY * zHeading
 
  DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
-                        \ var26 as the 16-bit sign-magnitude value to multiply
+                        \ xHeading as the 16-bit sign-magnitude value to
+                        \ multiply
 
  INC N                  \ Point to the next variable after the 16-bit signed
                         \ number we just used, so in the call to MultiplyCoords
@@ -30512,16 +30824,17 @@ ENDIF
  JSR MultiplyCoords     \ Set:
                         \
                         \   variableA = variableA + variableY+1 * variableX
-                        \             = variableA + variableY+1 * var26
+                        \             = variableA + variableY+1 * xHeading
                         \
                         \ if bit 7 of parameter X is clear, or:
                         \
-                        \   variableA = variableA - variableY+1 * var26
+                        \   variableA = variableA - variableY+1 * xHeading
                         \
                         \ if bit 7 of parameter X is set
 
  INX                    \ Set X = 1, so in the call to MultiplyCoords we use
-                        \ var27 as the 16-bit sign-magnitude value to multiply
+                        \ zHeading as the 16-bit sign-magnitude value to
+                        \ multiply
 
  INC K                  \ Point to the next variable after the one we just
                         \ stored the result in, so in the call to MultiplyCoords
@@ -30532,10 +30845,11 @@ ENDIF
                         \ negate the multiplication
 
  JSR MultiplyCoords     \ Set variableA+1 = variableY+1 * variableX
-                        \                 = variableY+1 * var27
+                        \                 = variableY+1 * zHeading
 
  DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
-                        \ var26 as the 16-bit sign-magnitude value to multiply
+                        \ xHeading as the 16-bit sign-magnitude value to
+                        \ multiply
 
  DEC N                  \ Point back to the original variable for the 16-bit
                         \ signed number we just used, so in the call to
@@ -30552,11 +30866,11 @@ ENDIF
  JSR MultiplyCoords     \ Set:
                         \
                         \   variableA+1 = variableA+1 - variableY * variableX
-                        \               = variableA+1 - variableY * var26
+                        \               = variableA+1 - variableY * xHeading
                         \
                         \ if bit 7 of parameter X is clear, or:
                         \
-                        \   variableA+1 = variableA+1 + variableY * var26
+                        \   variableA+1 = variableA+1 + variableY * xHeading
                         \
                         \ if bit 7 of parameter X is set
 
@@ -31080,7 +31394,7 @@ ENDIF
 
 .C4ACF
 
- JSR ApplyLimitThrottle \ If the throttle is being applied, then Set
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
                         \
                         \   variableG = (A T) * abs(H)
                         \
@@ -36086,35 +36400,29 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var26Lo
+\       Name: xHeadingLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the x-coordinate of the vector containing the player's
+\             yaw angle heading
 \
 \ ******************************************************************************
 
-.var26Lo
+.xHeadingLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var27Lo
+\       Name: zHeadingLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the z-coordinate of the vector containing the player's
+\             yaw angle heading
 \
 \ ******************************************************************************
 
-.var27Lo
+.zHeadingLo
 
  EQUB 0
 
@@ -36141,35 +36449,29 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var26Hi
+\       Name: xHeadingHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the x-coordinate of the vector containing the
+\             player's yaw angle heading
 \
 \ ******************************************************************************
 
-.var26Hi
+.xHeadingHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var27Hi
+\       Name: zHeadingHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the vector containing the
+\             player's yaw angle heading
 \
 \ ******************************************************************************
 
-.var27Hi
+.zHeadingHi
 
  EQUB 0
 
@@ -37133,7 +37435,8 @@ ENDIF
 \       Name: wingBalance
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
+\    Summary: Value used in the driving model when calculating the effect of the
+\             two wing settings
 \
 \ ------------------------------------------------------------------------------
 \
