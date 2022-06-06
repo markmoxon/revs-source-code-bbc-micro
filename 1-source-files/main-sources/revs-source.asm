@@ -74,9 +74,13 @@ tyreRight1 = &6FB2      \ The tread on the right tyre in screen memory
 tyreRight2 = &6FBD
 tyreRight3 = &70F8
 
-L713D = &713D           \ A point in the track view next to the left tyre
+leftSurface = &713D     \ A point in the track view next to the left edge of the
+                        \ dashboard, which we use to determine the surface under
+                        \ the left side of the car
 
-L7205 = &7205           \ A point in the track view next to the right tyre
+rightSurface = &7205    \ A point in the track view next to the right edge of
+                        \ the dashboard, which we use to determine the surface
+                        \ under the left right of the car
 
 mirror0 = &7540         \ Mirror 0 base address (left mirror, outer segment)
 mirror1 = &7548         \ Mirror 1 base address (left mirror, middle segment)
@@ -29736,9 +29740,9 @@ ENDIF
                         \
                         \   var16 = spinYawAngle * 132
 
- JSR sub_C4BCF          \ ???
+ JSR ApplyGrassEffect   \ Apply the effects of driving or braking on grass
 
- JSR sub_C49CE          \ ???
+ JSR ApplyEngine        \ Apply the effects of the engine
 
  LDX #1                 \ Set X = 1, so the call to sub_C4779 ???
 
@@ -31060,10 +31064,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4978
+\       Name: ProcessEngineStart
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Process the keypresses for starting the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31071,7 +31075,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C4978
+.ProcessEngineStart
 
  LDX #&DC               \ Scan the keyboard to see if "T" is being pressed
  JSR ScanKeyboard
@@ -31112,7 +31116,20 @@ ENDIF
 
  STA L0059
 
-.C499F
+\ ******************************************************************************
+\
+\       Name: sub_C499F
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.sub_C499F
 
  LDA revCount
  LDX throttleBrakeState
@@ -31160,31 +31177,35 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C49CE
+\       Name: ApplyEngine
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Apply the effects of the engine
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Other entry points:
+\
+\   C4A87               
 \
 \ ******************************************************************************
 
-.sub_C49CE
+.ApplyEngine
 
- LDA engineStatus
- BEQ sub_C4978
+ LDA engineStatus       \ If the engine is not on, jump to ProcessEngineStart to
+ BEQ ProcessEngineStart \ process the keypresses for starting the engine,
+                        \ returning from the subroutine using a tail call
 
  LDA L002D
- BNE C499F
+ BNE sub_C499F
 
  LDA gearChangeKey      \ If bit 7 of gearChangeKey is set then a gear change
  BMI C499D              \ key is being pressed, so jump to C499D
 
  LDY gearNumber
  DEY
- BEQ C499F
+ BEQ sub_C499F
+
  LDA speedLo
  STA T
  LDA speedHi
@@ -31333,7 +31354,7 @@ ENDIF
  ADC #25
  STA soundRevTarget
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -31543,12 +31564,9 @@ ENDIF
 
 .ApplyLimitThrottle
 
- LDY throttleBrakeState \ Set Y = throttleBrakeState - 1
- DEY
-
- BEQ lims1              \ If Y = 0, then throttleBrakeState must be 1, so the
-                        \ throttle is being applied, so jump to lims1 to skip
-                        \ applying the maximum value to variableG, so:
+ LDY throttleBrakeState \ If throttleBrakeState = 1, then the throttle is being
+ DEY                    \ applied, so jump to lims1 to skip applying the maximum
+ BEQ lims1              \ value to variableG, so:
                         \
                         \   variableG = (A T) * abs(H)
 
@@ -31745,72 +31763,162 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4BCF
+\       Name: ApplyGrassEffect
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Apply the effects of driving or braking on grass
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ * If all the following are true:
+\
+\     * There is grass under at least one side of the car
+\     * L005D = 0
+\     * L002D = 0
+\     * Bit 7 of playerDrift is set
+\
+\   then calculate the following:
+\
+\     * L0026 = speedHi / 2
+\     * L0028 = speedHi / 4
+\     * L002D = L002D + 1
+\     * spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
+\
+\   and make the crash/contact sound.
+\
+\ * For each wing, calculate the following:
+\
+\   * If the brakes are not being applied, set brakes = 0, otherwise set:
+\
+\     * brakes = -L62FF / 8    (front wing)
+\     * brakes = L62FF / 8     (rear wing)
+\
+\   * If we are driving on grass on both sides of the car, then set:
+\
+\       L62AA = L4C63 + brakes
+\
+\     otherwise calculate:
+\
+\       L62AA = wingSetting * min(53, speedHi) * abs(var08) + L4C61 + brakes
+\
+\   * Set:
+\
+\       L62AC = L62AA * 243 / 256
 \
 \ ******************************************************************************
 
-.sub_C4BCF
+.ApplyGrassEffect
 
- LDA #0
- LDY throttleBrakeState
- BNE C4BE1
- LDA L62FF
- PHP
+ LDA #0                 \ Set A = 0
+
+ LDY throttleBrakeState \ If throttleBrakeState is non-zero, then the brakes are
+ BNE C4BE1              \ not being applied, so jump to C4BE1 to set H = 0 and
+                        \ G = 0
+
+                        \ If we get here then the brakes are being applied
+
+ LDA L62FF              \ Set A = L62FF
+
+ PHP                    \ Store the N flag on the stack, so the PLP below sets
+                        \ the N flag according to the value of L62FF
+
+ LSR A                  \ Set A = A >> 3
+ LSR A                  \       = L62FF / 8
  LSR A
- LSR A
- LSR A
- PLP
- BPL C4BE1
- ORA #&E0
+
+ PLP                    \ If L62FF is positive, jump to C4BE1 to skip the
+ BPL C4BE1              \ following instruction
+
+ ORA #%11100000         \ Set bits 5-7 of A to ensure that the value of A
+                        \ retains the correct sign after being shifted
+
+                        \ By this point, A = L62FF / 8 and has the correct sign
 
 .C4BE1
 
- STA H
- EOR #&FF
+ STA H                  \ Set H = A
+
+ EOR #&FF               \ Set G = -A
  CLC
  ADC #1
  STA G
- LDA speedHi
+
+                        \ So if the brakes are not being applied we have:
+                        \
+                        \   * G = 0
+                        \   * H = 0
+                        \
+                        \ and if the brakes are being applied, we have:
+                        \
+                        \   * G = -L62FF / 8
+                        \   * H = L62FF / 8
+                        \
+                        \ G is used in the front wing calculation below, while
+                        \ H is used in the rear wing calculation
+
+ LDA speedHi            \ Set U = speedHi
  STA U
- LDX #0
- LDA L713D
- AND L7205
+
+ LDX #0                 \ Set X = 0, to store as the value of L005D if we are
+                        \ not driving on grass
+
+                        \ The leftSurface and rightSurface locations are in
+                        \ screen memory, and are just to the left or right of
+                        \ the dashboard, so:
+                        \
+                        \   * If leftSurface = &FF then there is grass under the
+                        \     left edge of the dashboard
+                        \
+                        \   * If rightSurface = &FF then there is grass under
+                        \     the right edge of the dashboard
+
+ LDA leftSurface        \ Set W so it is &FF if there is grass under both edges
+ AND rightSurface       \ of the dashboard
  STA W
- LDA L713D
- CMP #&FF
+
+ LDA leftSurface        \ If leftSurface = &FF, then there is grass under the
+ CMP #&FF               \ left side of the car, so jump to C4C06
  BEQ C4C06
- LDA L7205
- CMP #&FF
- BNE C4C24
+
+ LDA rightSurface       \ If rightSurface <> &FF, then there isn't grass under
+ CMP #&FF               \ the right side of the car, so jump to C4C24 to skip
+ BNE C4C24              \ the following and set L005D to 0
 
 .C4C06
+
+                        \ If we get here then there is grass under at least one
+                        \ side of the car, and W = &FF if there is grass under
+                        \ both sides
 
  LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = random * speedHi
+                        \
+                        \ So A is a random number that is higher with higher
+                        \ speeds
 
- AND #7
+ AND #7                 \ Set X = A mod 8
  TAX
- BNE C4C12
+
+ BNE C4C12              \ If X = 0, set X = 1
  INX
+
+                        \ So X is now a random number in the range 1 to 7 that
+                        \ is higher with higher speeds
 
 .C4C12
 
- LDA L005D
+ LDA L005D              \ If L005D is non-zero, jump to C4C24
  BNE C4C24
- LDA L005D
+
+ LDA L005D              \ If L002D is non-zero, jump to C4C24
  ORA L002D
  BNE C4C24
- BIT playerDrift
+
+ BIT playerDrift        \ If bit 7 of playerDrift is clear, jump to C4C24
  BPL C4C24
 
  JSR CalculateVars1     \ Calculate the following:
@@ -31827,53 +31935,83 @@ ENDIF
 
 .C4C24
 
- STX L005D
- LDX #1
+ STX L005D              \ Set L005D = X, so:
+                        \
+                        \   * If we are not driving on grass, then L005D = 0
+                        \
+                        \   * If we are driving on grass, then L005D is set to a
+                        \     random number in the range 1 to 7 that is higher
+                        \     with higher speeds
+
+ LDX #1                 \ We now run the following loop, once for each wing
+                        \ setting, so set X to use as a loop counter, from 1
+                        \ (for the front wing) to 0 (for the read wing)
 
 .C4C28
 
- LDA speedHi
- CMP #&35
+ LDA speedHi            \ Set A = speedHi
+
+ CMP #53                \ If A < 53, jump to C4C30
  BCC C4C30
- LDA #&35
+
+ LDA #53                \ Set A = 53, so A has a maximum value of 53
 
 .C4C30
 
- STA U
+ STA U                  \ Store A in U, so we now have the following:
+                        \
+                        \   U = min(53, speedHi) 
 
- LDA wingSetting,X
+ LDA wingSetting,X      \ Set A to the scaled wing setting for wing X
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = wingSetting * min(53, speedHi)
 
- BIT var08Hi
+ BIT var08Hi            \ Set the N flag according to the sign in bit 7 of
+                        \ var08Hi, so the call to Absolute8Bit sets the
+                        \ sign of A to the same sign as var08
 
- JSR Absolute8Bit       \ Set A = |A|
+ JSR Absolute8Bit       \ Set A = A * abs(var08)
+                        \       = wingSetting * min(53, speedHi) * abs(var08)
 
- CLC
- ADC L4C61,X
- LDY #&F3
+ CLC                    \ Set A = A + L4C61 for this wing
+ ADC L4C61,X            \       = wingSetting * min(53, speedHi) * abs(var08)
+                        \         + L4C61
+
+ LDY #243               \ Set U = 243
  STY U
- LDY W
- CPY #&FF
+
+ LDY W                  \ If W <> &FF, then there is not grass under both sides
+ CPY #&FF               \ of the car, so jump to C4C51 to skip the following
  BNE C4C51
- LDA L4C63,X
- LDY #&FF
+
+ LDA L4C63,X            \ There is grass under both sides of the car, so set A
+                        \ to the L4C63 value for this wing
+
+ LDY #&FF               \ Set Y = &FF (this has no effect as Y is already &FF,
+                        \ so this instruction is a bit of a mystery)
 
 .C4C51
 
- CLC
- ADC G,X
- STA L62AA,X
+ CLC                    \ Set A = A + G (front wing) or H (rear wing)
+ ADC G,X                \
+                        \ This adds the effect of the brakes being applied
+
+ STA L62AA,X            \ Store A in L62AA for this wing
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = A * 243
+                        \
+                        \ so A = A * 243 / 256
 
- STA L62AC,X
+ STA L62AC,X            \ Store A in L62AC for this wing
 
- DEX
+ DEX                    \ Decrement the loop counter in X to point to the next
+                        \ wing
 
- BPL C4C28
+ BPL C4C28              \ Loop back until we have processed both wings
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -31890,7 +32028,9 @@ ENDIF
 
 .L4C61
 
- EQUB &35, &35
+ EQUB 53                \ Front wing
+
+ EQUB 53                \ Rear wing
 
 \ ******************************************************************************
 \
@@ -31907,7 +32047,9 @@ ENDIF
 
 .L4C63
 
- EQUB &19, &1A
+ EQUB 25                \ Front wing
+
+ EQUB 26                \ Rear wing
 
 \ ******************************************************************************
 \
@@ -36560,7 +36702,7 @@ ENDIF
 
 .L62AA
 
- EQUB 0
+ EQUB 0                 \ Front wing
 
 \ ******************************************************************************
 \
@@ -36577,7 +36719,7 @@ ENDIF
 
 .L62AB
 
- EQUB 0
+ EQUB 0                 \ Rear wing
 
 \ ******************************************************************************
 \
@@ -36594,7 +36736,7 @@ ENDIF
 
 .L62AC
 
- EQUB 0
+ EQUB 0                 \ Front wing
 
 \ ******************************************************************************
 \
@@ -36611,7 +36753,7 @@ ENDIF
 
 .L62AD
 
- EQUB 0
+ EQUB 0                 \ Rear wing
 
 \ ******************************************************************************
 \
