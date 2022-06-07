@@ -189,10 +189,14 @@ ORG &0000
 .playerYawAngleLo
 
  SKIP 1                 \ Low byte of the player's yaw angle
+                        \
+                        \ This is the left-right rotation of the player's car
 
 .playerYawAngleHi
 
  SKIP 1                 \ High byte of the player's yaw angle
+                        \
+                        \ This is the left-right rotation of the player's car
 
 .yStore1
 
@@ -442,6 +446,10 @@ ORG &0000
 .speedLo
 
  SKIP 1                 \ Low byte of the car's speed
+                        \
+                        \ This appears to be in mph, with the high byte
+                        \ containing the miles per hour, and the low byte
+                        \ containing a fraction
 
 .positionChangeBCD
 
@@ -612,8 +620,8 @@ ORG &0000
 
 .secondAxis
 
- SKIP 1                 \ The number of the second axis to project in the
-                        \ ProjectPlayerYaw routine
+ SKIP 1                 \ The number of the second axis to calculate in the
+                        \ GetRotationMatrix routine
 
 .playerPastSegment
 
@@ -861,6 +869,10 @@ ORG &0000
 .speedHi
 
  SKIP 1                 \ High byte of the car's speed
+                        \
+                        \ This appears to be in mph, with the high byte
+                        \ containing the miles per hour, and the low byte
+                        \ containing a fraction
 
 .printMode
 
@@ -3114,31 +3126,21 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: ProjectPlayerYaw (Part 1 of 5)
+\       Name: GetRotationMatrix (Part 1 of 5)
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Project the player's yaw angle vector into 3D world coordinates
+\    Summary: Calculate the rotation matrix for rotating the player's yaw angle
+\             into the global 3D coordinate system
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine calculates the vector:
+\ This routine calculates the following:
 \
-\   [ xHeading ]
-\   [     0    ]
-\   [ zHeading ]
+\   sinYawAngle = sin(playerYawAngle)
+\   cosYawAngle = cos(playerYawAngle)
 \
-\ which contains the yaw angle vector from the point of view of the player,
-\ projected onto the global 3D coordinate system.
-\
-\ In the simplest case, where playerYawAngle is in the first quarter (i.e. in
-\ the range 0 to 90 degrees), this is calculated as follows:
-\
-\   xHeading = sin(playerYawAngle)
-\   zHeading = cos(playerYawAngle)
-\
-\ Similar calculations are done for the other quarters.
-\
-\ This gives us the heading of the player's car, but in world 3D coordinates.
+\ We can use these to create a rotation matrix that rotates the yaw angle from
+\ the player's frame of reference into the global 3D coordinate system.
 \
 \ Arguments:
 \
@@ -3146,7 +3148,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.ProjectPlayerYaw
+.GetRotationMatrix
 
  STA J                  \ Set (J T) = (A X)
  STX T                  \           = playerYawAngle
@@ -3171,11 +3173,11 @@ ORG &0B00
                         \ x- and z-axes of the world 3D coordinate system
 
  LDX #1                 \ Set X = 0 and secondAxis = 1, so we project sin(H G)
- STX secondAxis         \ into xHeading and cos(H G) into zHeading
+ STX secondAxis         \ into sinYawAngle and cos(H G) into cosYawAngle
  LDX #0
 
  BIT J                  \ If bit 6 of J is clear, then playerYawAngle is in one
- BVC pyaw1              \ of these ranges:
+ BVC rotm1              \ of these ranges:
                         \
                         \   * 0 to 63 (%00000000 to %00111111)
                         \
@@ -3198,10 +3200,8 @@ ORG &0B00
                         \ So playerYawAngle is in the top-right or bottom-left
                         \ quarter in the above diagram
                         \
-                        \ In both cases we jump to pyaw1 to set xHeading to sin
-                        \ and zHeading to cos, as sin gives the x-coordinate (in
-                        \ the left-right axis) and cos gives the y-coordinate
-                        \ (in the up-down axis)
+                        \ In both cases we jump to rotm1 to set sinYawAngle and
+                        \ cosYawAngle
 
                         \ If we get here then bit 6 of J is set, so
                         \ playerYawAngle is in one of these ranges:
@@ -3219,57 +3219,58 @@ ORG &0B00
                         \ x-axis or y-axis)
 
  INX                    \ Set X = 1 and secondAxis = 0, so we project sin(H G)
- DEC secondAxis         \ into zHeading and cos(H G) into xHeading
+ DEC secondAxis         \ into cosYawAngle and cos(H G) into sinYawAngle
 
-                        \ We now enter a loop that sets xHeading+X to sin(H G)
-                        \ on the first iteration, and sets xHeading+secondAxis
-                        \ to cos(H G) on the second iteration
+                        \ We now enter a loop that sets sinYawAngle+X to
+                        \ sin(H G) on the first iteration, and sets
+                        \ sinYawAngle+secondAxis to cos(H G) on the second
+                        \ iteration
                         \
                         \ The commentary is for the sin(H G) iteration, see the
                         \ end of the loop for details of how the second
                         \ iteration calculates cos(H G) instead
 
-.pyaw1
+.rotm1
 
                         \ If we get here, then we are set up to calculate the
                         \ following:
                         \
                         \   * If playerYawAngle is top-right or bottom-left:
                         \
-                        \     xHeading = sin(playerYawAngle)
-                        \     zHeading = cos(playerYawAngle)
+                        \     sinYawAngle = sin(playerYawAngle)
+                        \     cosYawAngle = cos(playerYawAngle)
                         \
                         \   * If playerYawAngle is bottom-right or top-left:
                         \
-                        \     xHeading = cos(playerYawAngle)
-                        \     zHeading = sin(playerYawAngle)
+                        \     sinYawAngle = cos(playerYawAngle)
+                        \     cosYawAngle = sin(playerYawAngle)
                         \
                         \ In each case, the calculation gives us the correct
                         \ coordinate, as the second set of results uses angles
                         \ that are "reflected" in the x-axis or y-axis by the
                         \ capping process in the GetAngleInRadians routine
 
- CMP #122               \ If A < 122, i.e. U < 122 and H < 122, jump to pyaw2
- BCC pyaw2              \ to calculate sin(H G) for higher values of (H G), as
-                        \ the calculation at pyaw3 only works for smaller angles
+ CMP #122               \ If A < 122, i.e. U < 122 and H < 122, jump to rotm2
+ BCC rotm2              \ to calculate sin(H G) for higher values of (H G), as
+                        \ the calculation at rotm3 only works for smaller angles
 
- BCS pyaw3              \ Jump to pyaw3 (this BCS is effectively a JMP as we
+ BCS rotm3              \ Jump to rotm3 (this BCS is effectively a JMP as we
                         \ just passed through a BCS)
 
  LDA G                  \ It doesn't look like this code is ever reached, so
  CMP #240               \ presumably it's left over from development
- BCS pyaw3
+ BCS rotm3
 
 \ ******************************************************************************
 \
-\       Name: ProjectPlayerYaw (Part 2 of 5)
+\       Name: GetRotationMatrix (Part 2 of 5)
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate sin(H G) for smaller angles
 \
 \ ******************************************************************************
 
-.pyaw2
+.rotm2
 
                         \ If we get here then (U G) = yawRadians / 2 and U < 122
 
@@ -3329,23 +3330,23 @@ ORG &0B00
                         \
                         \   (A T) = sin(yawRadians)
 
- STA xHeadingHi,X       \ Set (xHeadingHi xHeadingLo) = (A T)
+ STA sinYawAngleHi,X    \ Set (sinYawAngleHi sinYawAngleLo) = (A T)
  LDA T                  \
- AND #%11111110         \ with the sign bit cleared in bit 0 of xHeadingLo to
- STA xHeadingLo,X       \ denote a positive result
+ AND #%11111110         \ with the sign bit cleared in bit 0 of sinYawAngleLo to
+ STA sinYawAngleLo,X    \ denote a positive result
 
- JMP pyaw5              \ Jump to pyaw5 to move on to the next axis
+ JMP rotm5              \ Jump to rotm5 to move on to the next axis
 
 \ ******************************************************************************
 \
-\       Name: ProjectPlayerYaw (Part 3 of 5)
+\       Name: GetRotationMatrix (Part 3 of 5)
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate sin(H G) for bigger angles
 \
 \ ******************************************************************************
 
-.pyaw3
+.rotm3
 
                         \ If we get here then (H G) = yawRadians / 2 and
                         \ H >= 122
@@ -3372,43 +3373,43 @@ ORG &0B00
  SEC                    \
  SBC T                  \ starting with the low bytes
 
- AND #%11111110         \ Which we store in xHeadingLo, with bit 0 cleared to
- STA xHeadingLo,X       \ denote a positive result (as it's a sign-magnitude
+ AND #%11111110         \ Which we store in sinYawAngleLo, with bit 0 cleared to
+ STA sinYawAngleLo,X    \ denote a positive result (as it's a sign-magnitude
                         \ number we want to store)
  
  LDA #0                 \ And then the high bytes
  SBC U
 
- BCC pyaw4              \ If the subtraction underflowed, then jump to pyaw4 to
-                        \ store the result in xHeadingHi
+ BCC rotm4              \ If the subtraction underflowed, then jump to rotm4 to
+                        \ store the result in sinYawAngleHi
 
                         \ Otherwise the subtraction didn't underflow, so we
-                        \ store the highest possible angle in xHeading
+                        \ store the highest possible angle in sinYawAngle
 
- LDA #%11111110         \ Set xHeadingLo to the highest possible positive value
- STA xHeadingLo,X       \ (i.e. all ones except for the sign in bit 0)
+ LDA #%11111110         \ Set sinYawAngleLo to the highest possible positive
+ STA sinYawAngleLo,X    \ value (i.e. all ones except for the sign in bit 0)
 
- LDA #%11111111         \ Set A to the highest possible value of xHeadingHi, so
-                        \ we can store it next
+ LDA #%11111111         \ Set A to the highest possible value of sinYawAngleHi,
+                        \ so we can store it next
 
-.pyaw4
+.rotm4
 
- STA xHeadingHi,X       \ Store A in the high byte in xHeadingHi
+ STA sinYawAngleHi,X    \ Store A in the high byte in sinYawAngleHi
 
 \ ******************************************************************************
 \
-\       Name: ProjectPlayerYaw (Part 4 of 5)
+\       Name: GetRotationMatrix (Part 4 of 5)
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Loop back to calculate cos instead of sin
 \
 \ ******************************************************************************
 
-.pyaw5
+.rotm5
 
  CPX secondAxis         \ If we just processed the second axis, then we have
- BEQ pyaw6              \ now set both xHeading and zHeading, so jump to pyaw6
-                        \ to set their signs
+ BEQ rotm6              \ now set both sinYawAngle and cosYawAngle, so jump to
+                        \ rotm6 to set their signs
 
  LDX secondAxis         \ Otherwise set X = secondAxis so the next time we reach
                         \ the end of the loop, we take the BEQ branch we just
@@ -3438,7 +3439,7 @@ ORG &0B00
                         \
                         \ Given that we expect (U G) to contain half the angle
                         \ we are projecting, this means we are going to find the
-                        \ sine of this angle when we jump back to pyaw1:
+                        \ sine of this angle when we jump back to rotm1:
                         \
                         \   PI/2 - yawRadians
                         \
@@ -3449,23 +3450,23 @@ ORG &0B00
                         \ so jumping back will, in fact, find the cosine of the
                         \ angle
 
- JMP pyaw1              \ Loop back to set the other variable of xHeading and
-                        \ zHeading to the cosine of the angle
+ JMP rotm1              \ Loop back to set the other variable of sinYawAngle and
+                        \ cosYawAngle to the cosine of the angle
 
 \ ******************************************************************************
 \
-\       Name: ProjectPlayerYaw (Part 5 of 5)
+\       Name: GetRotationMatrix (Part 5 of 5)
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply the correct signs to the result
 \
 \ ******************************************************************************
 
-.pyaw6
+.rotm6
 
                         \ By this point, we have the yaw angle vector's
-                        \ x-coordinate in xHeading and the y-coordinate in
-                        \ zHeading
+                        \ x-coordinate in sinYawAngle and the y-coordinate in
+                        \ cosYawAngle
                         \
                         \ The above calculations were done on an angle that was
                         \ reduced to a quarter-circle, so now we need to add the
@@ -3473,7 +3474,7 @@ ORG &0B00
                         \ original playerYawAngle in (J T) was in
 
  LDA J                  \ If J is positive then playerYawAngle is positive (as
- BPL pyaw7              \ J contains playerYawAngleHi), so jump to pyaw7 to skip
+ BPL rotm7              \ J contains playerYawAngleHi), so jump to rotm7 to skip
                         \ the following
 
                         \ If we get here then playerYawAngle is negative
@@ -3496,16 +3497,16 @@ ORG &0B00
                         \ diagram, where the x-coordinates are negative, so we
                         \ need to negate the x-coordinate
 
- LDA #1                 \ Negate xHeading by setting bit 0 of the low byte, as
- ORA xHeadingLo         \ xHeading is a sign-magnitude number
- STA xHeadingLo
+ LDA #1                 \ Negate sinYawAngle by setting bit 0 of the low byte,
+ ORA sinYawAngleLo      \ as sinYawAngle is a sign-magnitude number
+ STA sinYawAngleLo
 
-.pyaw7
+.rotm7
 
  LDA J                  \ If bits 6 and 7 of J are the same (i.e. their EOR is
- ASL A                  \ zero), jump to pyaw8 to return from the subroutine as
- EOR J                  \ the sign of zHeading is correct
- BPL pyaw8
+ ASL A                  \ zero), jump to rotm8 to return from the subroutine as
+ EOR J                  \ the sign of cosYawAngle is correct
+ BPL rotm8
 
                         \ Bits 6 and 7 of J, i.e. of playerYawAngleHi, are
                         \ different, so the angle is in one of these ranges:
@@ -3533,11 +3534,11 @@ ORG &0B00
                         \ need to negate the y-coordinate
 
 
- LDA #1                 \ Negate zHeading by setting bit 0 of the low byte, as
- ORA zHeadingLo         \ zHeading is a sign-magnitude number
- STA zHeadingLo
+ LDA #1                 \ Negate cosYawAngle by setting bit 0 of the low byte,
+ ORA cosYawAngleLo      \ as cosYawAngle is a sign-magnitude number
+ STA cosYawAngleLo
 
-.pyaw8
+.rotm8
 
  RTS                    \ Return from the subroutine
 
@@ -3605,7 +3606,7 @@ ORG &0B00
                         \ The value of (V T) represents a quarter-circle, which
                         \ is PI/2 radians, but we actually multiply by PI/4 to
                         \ return the angle in radians divided by 2, to prevent
-                        \ overflow in the ProjectPlayerYaw routine
+                        \ overflow in the GetRotationMatrix routine
 
  LDA #201               \ Set U = 201
  STA U
@@ -7657,18 +7658,18 @@ ENDIF
 
                         \ If we get here then no steering is being applied
 
- LDA var09Lo            \ Set T = var09Lo AND %11110000
+ LDA var09FLo           \ Set T = var09FLo AND %11110000
  AND #%11110000
  STA T
 
- LDA var09Hi            \ Set (A T) = (var09Hi var09Lo) AND %11110000
-                        \           = var09 AND %11110000
+ LDA var09FHi           \ Set (A T) = (var09FHi var09FLo) AND %11110000
+                        \           = var09F AND %11110000
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  LSR A                  \ Set (A T) = (A T) >> 2
  ROR T                  \           = |A T| / 4
- LSR A                  \           = (|var09| AND %11110000) / 4
+ LSR A                  \           = (|var09F| AND %11110000) / 4
  ROR T
 
 IF _ACORNSOFT
@@ -29739,32 +29740,39 @@ ENDIF
  LDA playerYawAngleHi   \ Set (A X) = (playerYawAngleHi playerYawAngleLo)
  LDX playerYawAngleLo
 
- JSR ProjectPlayerYaw   \ Project the player's yaw angle vector into 3D world
-                        \ coordinates in xHeading, zHeading, thus converting it
-                        \ from an angle into a vector
-
- JSR GetProducts1       \ Calculate the following:
+ JSR GetRotationMatrix  \ Calculate the rotation matrix for rotating the
+                        \ player's yaw angle into the global 3D coordinate
+                        \ system, as follows:
                         \
-                        \   var07 = xPlayerDelta * zHeading
-                        \           - zPlayerDelta * xHeading
-                        \
-                        \   var08 = zPlayerDelta * zHeading
-                        \           + xPlayerDelta * xHeading
+                        \   [ cosYawAngle   0   -sinYawAngle ]
+                        \   [      0        1         0      ]
+                        \   [ sinYawAngle   0    cosYawAngle ]
 
- LDA var07Lo            \ Set (var15Hi var15Lo) = (var07Hi var07Lo)
+ JSR RotateCoordToCar   \ Rotate the player's delta vector from the 3D world
+                        \ coordinate system to the frame of reference of the
+                        \ player's car, putting the result into:
+                        \
+                        \   [ var07x ]
+                        \   [    -   ]
+                        \   [ var07z ]
+                        \
+                        \ We ignore the y-coordinate as the calculations are
+                        \ all done along the ground
+
+ LDA var07xLo           \ Set (var15Hi var15Lo) = (var07xHi var07xLo)
  STA var15Lo
- LDA var07Hi
+ LDA var07xHi
  STA var15Hi
 
- LDA var08Lo            \ Set (A T) = (var08Hi var08Lo)
+ LDA var07zLo           \ Set (A T) = (var07zHi var07zLo)
  STA T
- LDA var08Hi
+ LDA var07zHi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
-                        \           = |var08|
+                        \           = |var07z|
 
  STA speedHi            \ Set (speedHi speedLo) = (A T)
- LDA T                  \                       = |var08|
+ LDA T                  \                       = |var07z|
  STA speedLo
 
  LDY speedHi            \ Set Y to the high byte of (speedHi speedLo)
@@ -29784,7 +29792,7 @@ ENDIF
 
  JSR ApplySpinYaw       \ Calculate the following:
                         \
-                        \   var07 = var07 - (spinYawAngle * 88)
+                        \   var07x = var07x - (spinYawAngle * 88)
                         \
                         \   var16 = spinYawAngle * 132
 
@@ -29796,25 +29804,25 @@ ENDIF
 
  JSR sub_C4779          \ ???
 
- LDA var15Lo            \ Set (var07Hi var07Lo) = (var15Hi var15Lo)
- STA var07Lo
+ LDA var15Lo            \ Set (var07xHi var07xLo) = (var15Hi var15Lo)
+ STA var07xLo
  LDA var15Hi
- STA var07Hi
+ STA var07xHi
 
- LDA var07Lo            \ Set (var07Hi var07Lo) += (var16Hi var16Lo)
+ LDA var07xLo           \ Set (var07xHi var07xLo) += (var16Hi var16Lo)
  CLC                    \
  ADC var16Lo            \ starting with the low bytes
- STA var07Lo
+ STA var07xLo
 
- LDA var07Hi            \ And then the high bytes
+ LDA var07xHi           \ And then the high bytes
  ADC var16Hi
- STA var07Hi
+ STA var07xHi
 
  JSR ApplySteering1     \ Calculate the following in parallel:
                         \
-                        \   var08 = var08 + var07 * steering
+                        \   var07z = var07z + var07x * steering
                         \
-                        \   var07 = var07 - var08 * steering
+                        \   var07x = var07x - var07z * steering
 
  LDX #0                 \ Set X = 0, so the call to sub_C4779 ???
 
@@ -29822,27 +29830,27 @@ ENDIF
 
  JSR ApplySteering2     \ Calculate the following in parallel:
                         \
-                        \   var09 = var09 + var11 * steering
+                        \   var09F = var09F + var11F * steering
                         \
-                        \   var11 = var11 - var09 * steering
+                        \   var11F = var11F - var09F * steering
 
  JSR CalculateVars3     \ Calculate the following:
                         \
-                        \   var05 = (var09 - var10) * 78
+                        \   var05 = (var09F - var09R) * 78
                         \
-                        \   var09 = var09 >> 2
+                        \   var09F = var09F >> 2
                         \
-                        \   var10 = var10 >> 2
+                        \   var09R = var09R >> 2
                         \
-                        \   var11 = var11 >> 2
+                        \   var11F = var11F >> 2
                         \
-                        \   var111 = var111 >> 2
+                        \   var11R = var11R >> 2
                         \
-                        \   var051 = (var10 * 1.5 + var09) * 410
+                        \   var06x = (var09R * 1.5 + var09F) * 410
                         \
-                        \   var052 = (var111 * 1.5 + var11) * 410
+                        \   var06z = (var11R * 1.5 + var11F) * 410
                         \
-                        \   L62FF = var052Hi
+                        \   L62FF = var06zHi
 
  LDA L002D              \ If L002D < 2, jump to dmod3
  CMP #2
@@ -29869,17 +29877,28 @@ ENDIF
 
  JSR ApplyWingBalance   \ Calculate the following:
                         \
-                        \   var051 = var051 - scaledSpeed * var15Hi
+                        \   var06x = var06x - scaledSpeed * var15Hi
                         \
-                        \   var052 = var052 - scaledSpeed
+                        \   var06z = var06z - scaledSpeed
                         \                     * (wingBalance * speedHi + 2048)
-                        \                     * abs(var08)
+                        \                     * abs(var07z)
 
- JSR GetProducts2       \ Calculate the following:
+ JSR RotateCarToCoord   \ Rotate this vector:
                         \
-                        \   var04x = var05 * zHeading + var051 * xHeading
+                        \   [ var06x ]
+                        \   [    -   ]
+                        \   [ var06z ]
                         \
-                        \   var04z = var051 * zHeading - var05 * xHeading
+                        \ from the frame of reference of the player's car into
+                        \ the 3D world coordinate system, putting the result
+                        \ into:
+                        \
+                        \   [ var04x ]
+                        \   [    -   ]
+                        \   [ var04z ]
+                        \
+                        \ We ignore the y-coordinate as the calculations are
+                        \ all done along the ground
 
  JSR CalculateVars4     \ Calculate the following:
                         \
@@ -29912,7 +29931,7 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var07 = var07 - (spinYawAngle * 88)
+\   var07x = var07x - (spinYawAngle * 88)
 \
 \   var16 = spinYawAngle * 132
 \
@@ -29934,14 +29953,14 @@ ENDIF
  STA U                  \ Set (U T) = (A T)
                         \           = spinYawAngle * 88
 
- LDA var07Lo            \ Set (var07Hi var07Lo) = (var07Hi var07Lo) - (U T)
- SEC                    \                       = var07 - (spinYawAngle * 88)
+ LDA var07xLo           \ Set (var07xHi var07xLo) = (var07xHi var07xLo) - (U T)
+ SEC                    \                         = var07x - (spinYawAngle * 88)
  SBC T
 
- STA var07Lo
- LDA var07Hi
+ STA var07xLo
+ LDA var07xHi
  SBC U
- STA var07Hi
+ STA var07xHi
 
  JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
                         \           = spinYawAngle * 88 * 1.5
@@ -30038,12 +30057,12 @@ ENDIF
 
  CLC                    \ Clear the C flag, to use when A is positive
 
- BPL C476B              \ If A is positive, jump to C476B to skip the following
+ BPL mulh1              \ If A is positive, jump to mulh1 to skip the following
                         \ instruction
 
  SEC                    \ Set the C flag, to use when A is negative
 
-.C476B
+.mulh1
 
                         \ By this point, the C flag contains the sign bit of A
                         \ (set if negative, clear if positive)
@@ -30084,7 +30103,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   0 or 1 (for left or right tyres?)
+\   X                   0 or 1 (for front or rear tyres?)
 \
 \ ******************************************************************************
 
@@ -30135,15 +30154,15 @@ ENDIF
 \       Name: ApplySteering1
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Apply steering to var07 and var08
+\    Summary: Apply steering to var07x and var07z
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following in parallel:
 \
-\   var08 = var08 + var07 * steering
+\   var07z = var07z + var07x * steering
 \
-\   var07 = var07 - var08 * steering
+\   var07x = var07x - var07z * steering
 \
 \ ******************************************************************************
 
@@ -30154,7 +30173,7 @@ ENDIF
                         \ value to multiply
 
  LDY #9                 \ Set Y = 9, so in the call to MultiplyCoords+7 we use
-                        \ var08 as the 16-bit signed number
+                        \ var07z as the 16-bit signed number
 
  LDA #%10000000         \ Clear bit 6 and set bit 7 of H, to store the result
  STA H                  \ rather than adding, and negate the result in the call
@@ -30169,21 +30188,21 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var12 = -var08 * steering
+                        \   var12 = -var07z * steering
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
  LDY #8                 \ Set Y = 8, so in the call to MultiplyCoords we use
-                        \ var07 as the 16-bit signed number
+                        \ var07x as the 16-bit signed number
 
  LDA #%01000000         \ Set bit 6 and clear bit 7 of H, to add the result
  STA H                  \ rather than replacing, and leave the sign of the
                         \ result alone in the call to MultiplyCoords+7
 
  LDA #9                 \ Set A = 9, so in the call to MultiplyCoords+7, we
-                        \ store the result in var08
+                        \ store the result in var07z
 
  JSR MultiplyCoords+7   \ Set:
                         \
@@ -30191,13 +30210,13 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var08 = var08 + var07 * steering
+                        \   var07z = var07z + var07x * steering
 
  LDX #8                 \ Set X = 8, so the call to ApplyVar12 adds var12 to
-                        \ var07
+                        \ var07x
 
- JSR ApplyVar12         \ Set var07 = var07 + var12
-                        \           = var07 - var08 * steering
+ JSR ApplyVar12         \ Set var07x = var07x + var12
+                        \            = var07x - var07z * steering
 
  RTS                    \ Return from the subroutine
 
@@ -30206,15 +30225,15 @@ ENDIF
 \       Name: ApplySteering2
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Apply steering to var09 and var11
+\    Summary: Apply steering to var09F and var11F
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following in parallel:
 \
-\   var09 = var09 + var11 * steering
+\   var09F = var09F + var11F * steering
 \
-\   var11 = var11 - var09 * steering
+\   var11F = var11F - var09F * steering
 \
 \ ******************************************************************************
 
@@ -30225,7 +30244,7 @@ ENDIF
                         \ value to multiply
 
  LDY #12                \ Set Y = 12, so in the call to MultiplyCoords we use
-                        \ var11 as the 16-bit signed number
+                        \ var11F as the 16-bit signed number
 
  LDA #%00000000         \ Clear bits 6 and 7 of H, to store the result rather
  STA H                  \ than adding, and leave the sign of the result alone in
@@ -30240,21 +30259,21 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var12 = var11 * steering
+                        \   var12 = var11F * steering
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
  LDY #10                \ Set Y = 10, so in the call to MultiplyCoords we use
-                        \ var09 as the 16-bit signed number
+                        \ var09F as the 16-bit signed number
 
  LDA #%11000000         \ Set bits 6 and 7 of H, to add the result rather than
  STA H                  \ replacing, and negate the result in the call to
                         \ MultiplyCoords+7
 
  LDA #12                \ Set A = 12, so in the call to MultiplyCoords+7, we
-                        \ store the result in var11
+                        \ store the result in var11F
 
  JSR MultiplyCoords+7   \ Set:
                         \
@@ -30262,13 +30281,13 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var11 = var11 - var09 * steering
+                        \   var11F = var11F - var09F * steering
 
  LDX #10                \ Set X = 8, so the call to ApplyVar12 adds var12 to
-                        \ var09
+                        \ var09F
  
- JSR ApplyVar12         \ Set var09 = var09 + var12
-                        \           = var09 + var11 * steering
+ JSR ApplyVar12         \ Set var09F = var09F + var12
+                        \            = var09F + var11F * steering
 
  RTS                    \ Return from the subroutine
 
@@ -30277,7 +30296,7 @@ ENDIF
 \       Name: ApplyVar12
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Add var12 to var07 or var09
+\    Summary: Add var12 to var07x or var09F
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30285,9 +30304,9 @@ ENDIF
 \
 \   X                   Called with either 8 or 10:
 \
-\                         * 8: set var07 = var07 + var12
+\                         * 8: set var07x = var07x + var12
 \
-\                         * 10: set var09 = var09 + var12
+\                         * 10: set var09F = var09F + var12
 \
 \ ******************************************************************************
 
@@ -30315,21 +30334,21 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var05 = (var09 - var10) * 78
+\   var05 = (var09F - var09R) * 78
 \
-\   var09 = var09 >> 2
+\   var09F = var09F >> 2
 \
-\   var10 = var10 >> 2
+\   var09R = var09R >> 2
 \
-\   var11 = var11 >> 2
+\   var11F = var11F >> 2
 \
-\   var111 = var111 >> 2
+\   var11R = var11R >> 2
 \
-\   var051 = (var10 * 1.5 + var09) * 410
+\   var06x = (var09R * 1.5 + var09F) * 410
 \
-\   var052 = (var111 * 1.5 + var11) * 410
+\   var06z = (var11R * 1.5 + var11F) * 410
 \
-\   L62FF = var052Hi
+\   L62FF = var06zHi
 \
 \ ******************************************************************************
 
@@ -30337,31 +30356,31 @@ ENDIF
 
  LDY #78                \ Set Y = 78
 
- LDA var09Lo            \ Set (A T) = var09 - var10
+ LDA var09FLo           \ Set (A T) = var09F - var09R
  SEC                    \
- SBC var10Lo            \ starting with the low bytes
+ SBC var09RLo           \ starting with the low bytes
  STA T
 
- LDA var09Hi            \ And then the high bytes
- SBC var10Hi
+ LDA var09FHi           \ And then the high bytes
+ SBC var09RHi
 
  JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = (var09 - var10) * 78
+                        \           = (var09F - var09R) * 78
 
  STA var05Hi            \ Set var05 = (A T)
- LDA T                  \           = (var09 - var10) * 78
+ LDA T                  \           = (var09F - var09R) * 78
  STA var05Lo
 
                         \ We now perform the following shifts, making sure to
                         \ keep the signs intact:
                         \
-                        \   var09 = var09 >> 2
+                        \   var09F = var09F >> 2
                         \
-                        \   var10 = var10 >> 2
+                        \   var09R = var09R >> 2
                         \
-                        \   var11 = var11 >> 2
+                        \   var11F = var11F >> 2
                         \
-                        \   var111 = var111 >> 2
+                        \   var11R = var11R >> 2
 
  LDY #1                 \ Set Y = 1, to act as a shift counter in the outer loop
                         \ below, so we right-shift Y + 1 times (i.e. twice)
@@ -30369,12 +30388,12 @@ ENDIF
 .P4817
 
  LDX #3                 \ Set X = 3, to act as a variable counter in the inner
-                        \ loop to work through var111, var11, var10 and var09
+                        \ loop to work through var11R, var11F, var09R and var09F
                         \ (let's call this variableX)
 
 .P4819
 
- LDA var09Hi,X          \ Set A to the high byte of variableX
+ LDA var09FHi,X         \ Set A to the high byte of variableX
 
  CLC                    \ Clear the C flag, to use if variableX is positive
 
@@ -30388,8 +30407,8 @@ ENDIF
 
 .C4820
 
- ROR var09Hi,X          \ Set variableX = variableX >> 1
- ROR var09Lo,X          \
+ ROR var09FHi,X         \ Set variableX = variableX >> 1
+ ROR var09FLo,X         \
                         \ Keeping the sign intact
 
  DEX                    \ Decrement the inner loop counter in X
@@ -30405,12 +30424,12 @@ ENDIF
                         \ following loop, iterating through values 0 and 2, as
                         \ X is decremented twice at the end of the loop
                         \
-                        \ The loop references var10,X and var09,X so the loop
+                        \ The loop references var09R,X and var09F,X so the loop
                         \ iterates through:
                         \
-                        \   * var111 and var11 when X = 2
+                        \   * var11R and var11F when X = 2
                         \
-                        \   * var10 and var09 when X = 0
+                        \   * var09R and var09F when X = 0
                         \
                         \ The comments below are for when X = 2
 
@@ -30419,48 +30438,48 @@ ENDIF
 
 .C4832
 
- LDA var10Lo,X          \ Set (U T) = var111
+ LDA var09RLo,X         \ Set (U T) = var11R
  STA T
- LDA var10Hi,X
+ LDA var09RHi,X
  STA U
 
  JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
-                        \           = var111 * 1.5
+                        \           = var11R * 1.5
 
  STA U                  \ Set (U T) = (A T)
-                        \           = var111 * 1.5
+                        \           = var11R * 1.5
 
- LDA T                  \ Set (A T) = (U T) + var11
- CLC                    \           = var111 * 1.5 + var11
- ADC var09Lo,X          \
+ LDA T                  \ Set (A T) = (U T) + var11F
+ CLC                    \           = var11R * 1.5 + var11F
+ ADC var09FLo,X         \
  STA T                  \ starting with the low bytes
 
  LDY #205               \ Set Y = 205
 
  LDA U                  \ And then the high bytes
- ADC var09Hi,X
+ ADC var09FHi,X
 
  JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = (var111 * 1.5 + var11) * 205
+                        \           = (var11R * 1.5 + var11F) * 205
 
  ASL T                  \ Set (A T) = (A T) * 2
- ROL A                  \           = (var111 * 1.5 + var11) * 410
+ ROL A                  \           = (var11R * 1.5 + var11F) * 410
 
- LDY G                  \ Set var052 = (A T)
- STA var051Hi,Y         \            = (var111 * 1.5 + var11) * 410
+ LDY G                  \ Set var06z = (A T)
+ STA var06xHi,Y         \            = (var11R * 1.5 + var11F) * 410
  LDA T
- STA var051Lo,Y
+ STA var06xLo,Y
 
  DEC G                  \ Decrement G so the next iteration stores the result in
-                        \ var051
+                        \ var06x
 
  DEX                    \ Decrement X twice so the next iteration calculates
- DEX                    \ (var10 * 1.5 + var09) * 410
+ DEX                    \ (var09R * 1.5 + var09F) * 410
 
- BPL C4832              \ Loop back until we have calculated both var052 and
-                        \ var051
+ BPL C4832              \ Loop back until we have calculated both var06z and
+                        \ var06x
 
- LDA var052Hi           \ Set L62FF = var052Hi
+ LDA var06zHi           \ Set L62FF = var06zHi
  STA L62FF
 
  RTS                    \ Return from the subroutine
@@ -30510,23 +30529,23 @@ ENDIF
 \
 \                         * 1 = zPlayerDelta
 \
-\                         * 6 = var05
+\                         * 6 = var06x
 \
-\                         * 7 = var051
+\                         * 7 = var06z
 \
-\                         * 8 = var07
+\                         * 8 = var07x
 \
-\                         * 9 = var08
+\                         * 9 = var07z
 \
-\                         * 10 = var09
+\                         * 10 = var09F
 \
-\                         * 12 = var11
+\                         * 12 = var11F
 \
 \   X                   Offset of the 16-bit sign-magnitude value to multiply:
 \
-\                         * 0 = xHeading
+\                         * 0 = sinYawAngle
 \
-\                         * 1 = zHeading
+\                         * 1 = cosYawAngle
 \
 \                         * 2 = (steeringHi steeringLo)
 \
@@ -30536,11 +30555,11 @@ ENDIF
 \
 \                         * 4 = var04z
 \
-\                         * 8 = var07
+\                         * 8 = var07x
 \
-\                         * 9 = var08
+\                         * 9 = var07z
 \
-\                         * 12 = var11
+\                         * 12 = var11F
 \
 \                         * 14 = var12
 \
@@ -30596,9 +30615,9 @@ ENDIF
  LDA xPlayerDeltaTop,Y
  STA QQ
 
- LDA xHeadingLo,X       \ Set (SS RR) to the 16-bit sign-magnitude number
+ LDA sinYawAngleLo,X    \ Set (SS RR) to the 16-bit sign-magnitude number
  STA RR                 \ pointed to by X (variableX)
- LDA xHeadingHi,X
+ LDA sinYawAngleHi,X
  STA SS
 
  JSR Multiply16x16      \ Set (A T) = (QQ PP) * (SS RR)
@@ -30692,9 +30711,9 @@ ENDIF
 \
 \                         * 6 = 
 \
-\                         * 9 = var08
+\                         * 9 = var07z
 \
-\                         * 12 = var11
+\                         * 12 = var11F
 \
 \                         * 14 = var12
 \
@@ -30715,7 +30734,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetProducts1
+\       Name: RotateCoordToCar
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate various products
@@ -30724,36 +30743,45 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var07 = xPlayerDelta * zHeading - zPlayerDelta * xHeading
+\   [ var07x ]   [ cosYawAngle   0   -sinYawAngle ]   [ xPlayerDelta ]
+\   [    -   ] = [      0        1         0      ] . [ yPlayerDelta ]
+\   [ var07z ]   [ sinYawAngle   0    cosYawAngle ]   [ zPlayerDelta ]
 \
-\   var08 = zPlayerDelta * zHeading + xPlayerDelta * xHeading
+\ This rotates the player's delta vector from the 3D world coordinate system to
+\ the frame of reference of the player's car.
+\
+\ The individual calculations are as follows:
+\
+\   var07x = xPlayerDelta * cosYawAngle - zPlayerDelta * sinYawAngle
+\
+\   var07z = xPlayerDelta * sinYawAngle + zPlayerDelta * cosYawAngle
 \
 \ ******************************************************************************
 
-.GetProducts1
+.RotateCoordToCar
 
- LDY #0                 \ Set Y = 0, so in the call to GetProducts, variableY is
-                        \ xPlayerDelta and variableY+1 is zPlayerDelta
+ LDY #0                 \ Set Y = 0, so in the call to RotateVector, variableY
+                        \ is xPlayerDelta and variableY+1 is zPlayerDelta
 
- LDA #8                 \ Set A = 8, so in the call to GetProducts, we store the
-                        \ result in var07 and var08
+ LDA #8                 \ Set A = 8, so in the call to RotateVector, we store
+                        \ the result in var07x and var07z
 
  LDX #%11000000         \ Set bits 6 and 7 of X, to set the polarity in the call
-                        \ to GetProducts
+                        \ to RotateVector
 
- BNE GetProducts        \ Jump to GetProducts to calculate the following:
+ BNE RotateVector       \ Jump to RotateVector to calculate the following:
                         \
-                        \   var07 = xPlayerDelta * zHeading
-                        \           - zPlayerDelta * xHeading
+                        \   var07x = xPlayerDelta * cosYawAngle
+                        \            - zPlayerDelta * sinYawAngle
                         \
-                        \   var08 = zPlayerDelta * zHeading
-                        \           + xPlayerDelta * xHeading
+                        \   var07z = xPlayerDelta * sinYawAngle
+                        \            + zPlayerDelta * cosYawAngle
                         \
                         \ This BNE is effectively a JMP as X is never zero
 
 \ ******************************************************************************
 \
-\       Name: GetProducts2
+\       Name: RotateCarToCoord
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate various products
@@ -30762,50 +30790,75 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var04x = var05 * zHeading + var051 * xHeading
+\   [ var04x ]   [  cosYawAngle   0   sinYawAngle ]   [ var06x ]
+\   [    -   ] = [       0        1        0      ] . [    -   ]
+\   [ var04z ]   [ -sinYawAngle   0   cosYawAngle ]   [ var06z ]
 \
-\   var04z = var051 * zHeading - var05 * xHeading
+\ This rotates the var06x vector from the frame of reference of the player's car
+\ into the 3D world coordinate system.
+\
+\ The rotation matrix is the transpose of the matrix from RotateCoordToCar,
+\ which is the inverse, so the RotateCarToCoord routine reverses the rotation in
+\ the RotateCoordToCar routine.
+\
+\ The individual calculations are as follows:
+\
+\   var04x = var06x * cosYawAngle + var06z * sinYawAngle
+\
+\   var04z = var06z * cosYawAngle - var06x * sinYawAngle
 \
 \ ******************************************************************************
 
-.GetProducts2
+.RotateCarToCoord
 
- LDY #6                 \ Set Y = 6, so in the call to GetProducts, variableY is
-                        \ var05 and variableY+1 is var051
+ LDY #6                 \ Set Y = 6, so in the call to RotateVector, variableY
+                        \ is var06x and variableY+1 is var06z
 
- LDA #3                 \ Set A = 3, so in the call to GetProducts, we store the
-                        \ result in var04x and var04z
+ LDA #3                 \ Set A = 3, so in the call to RotateVector, we store
+                        \ the result in var04x and var04z
 
  LDX #%01000000         \ Set bit 6 and clear bit 7 of X, to set the polarity in
-                        \ the call to GetProducts
+                        \ the call to RotateVector
 
-                        \ Fall through into GetProducts to calculate the
+                        \ Fall through into RotateVector to calculate the
                         \ following:
                         \
-                        \   var04x = var05 * zHeading + var051 * xHeading
+                        \   var04x = var06x * cosYawAngle + var06z * sinYawAngle
                         \
-                        \   var04z = var051 * zHeading - var05 * xHeading
+                        \   var04z = var06z * cosYawAngle - var06x * sinYawAngle
 
 \ ******************************************************************************
 \
-\       Name: GetProducts
+\       Name: RotateVector
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate various products
+\    Summary: Rotate a vector by a rotation matrix
 \
 \ ------------------------------------------------------------------------------
 \
 \ If bit 7 of X is clear, this routine calculates:
 \
-\   variableA = variableY * zHeading + variableY+1 * xHeading
+\   [  variableA  ]   [ cosYawAngle   0   -sinYawAngle ]   [  variableY  ]
+\   [      -      ] = [      0        1         0      ] . [      -      ]
+\   [ variableA+1 ]   [ sinYawAngle   0    cosYawAngle ]   [ variableY+1 ]
 \
-\   variableA+1 = variableY+1 * zHeading - variableY * xHeading
+\ by doing these individual calculations:
+\
+\   variableA = variableY * cosYawAngle + variableY+1 * sinYawAngle
+\
+\   variableA+1 = variableY+1 * cosYawAngle - variableY * sinYawAngle
 \
 \ If bit 7 of X is set, this routine calculates:
 \
-\   variableA = variableY * zHeading - variableY+1 * xHeading
+\   [  variableA  ]   [  cosYawAngle   0   sinYawAngle ]   [  variableY  ]
+\   [      -      ] = [       0        1        0      ] . [      -      ]
+\   [ variableA+1 ]   [ -sinYawAngle   0   cosYawAngle ]   [ variableY+1 ]
 \
-\   variableA+1 = variableY+1 * zHeading + variableY * xHeading
+\ by doing these individual calculations:
+\
+\   variableA = variableY * cosYawAngle - variableY+1 * sinYawAngle
+\
+\   variableA+1 = variableY+1 * cosYawAngle + variableY * sinYawAngle
 \
 \ For it to work, the routine must be called with bit 6 of X set.
 \
@@ -30815,13 +30868,13 @@ ENDIF
 \
 \                         * 0 = xPlayerDelta and zPlayerDelta
 \
-\                         * 6 = var05 and var051
+\                         * 6 = var06x and var06z
 \
 \   A                   Offset of the variable to store the result in:
 \
 \                         * 3 = var04x and var04z
 \
-\                         * 8 = var07 and var08
+\                         * 8 = var07x and var07z
 \
 \   X                   Details of the operation to perform on the second and
 \                       fourth multiplications:
@@ -30836,7 +30889,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetProducts
+.RotateVector
 
  STY N                  \ Set N to the offset of the 16-bit signed number, and
                         \ let's call this number variableY (as it is specified
@@ -30849,7 +30902,7 @@ ENDIF
  STX GG                 \ Store the details of the operation to perform in GG
 
  LDX #1                 \ Set X = 1, so in the call to MultiplyCoords we use
-                        \ zHeading as the 16-bit sign-magnitude value to
+                        \ cosYawAngle as the 16-bit sign-magnitude value to
                         \ multiply
 
  LDA #%00000000         \ Set A = %00000000, so in the call to MultiplyCoords we
@@ -30857,10 +30910,10 @@ ENDIF
                         \ negate the multiplication
 
  JSR MultiplyCoords     \ Set variableA = variableY * variableX
-                        \               = variableY * zHeading
+                        \               = variableY * cosYawAngle
 
  DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
-                        \ xHeading as the 16-bit sign-magnitude value to
+                        \ sinYawAngle as the 16-bit sign-magnitude value to
                         \ multiply
 
  INC N                  \ Point to the next variable after the 16-bit signed
@@ -30876,16 +30929,16 @@ ENDIF
  JSR MultiplyCoords     \ Set:
                         \
                         \   variableA = variableA + variableY+1 * variableX
-                        \             = variableA + variableY+1 * xHeading
+                        \             = variableA + variableY+1 * sinYawAngle
                         \
                         \ if bit 7 of parameter X is clear, or:
                         \
-                        \   variableA = variableA - variableY+1 * xHeading
+                        \   variableA = variableA - variableY+1 * sinYawAngle
                         \
                         \ if bit 7 of parameter X is set
 
  INX                    \ Set X = 1, so in the call to MultiplyCoords we use
-                        \ zHeading as the 16-bit sign-magnitude value to
+                        \ cosYawAngle as the 16-bit sign-magnitude value to
                         \ multiply
 
  INC K                  \ Point to the next variable after the one we just
@@ -30897,10 +30950,10 @@ ENDIF
                         \ negate the multiplication
 
  JSR MultiplyCoords     \ Set variableA+1 = variableY+1 * variableX
-                        \                 = variableY+1 * zHeading
+                        \                 = variableY+1 * cosYawAngle
 
  DEX                    \ Set X = 0, so in the call to MultiplyCoords we use
-                        \ xHeading as the 16-bit sign-magnitude value to
+                        \ sinYawAngle as the 16-bit sign-magnitude value to
                         \ multiply
 
  DEC N                  \ Point back to the original variable for the 16-bit
@@ -30918,11 +30971,11 @@ ENDIF
  JSR MultiplyCoords     \ Set:
                         \
                         \   variableA+1 = variableA+1 - variableY * variableX
-                        \               = variableA+1 - variableY * xHeading
+                        \               = variableA+1 - variableY * sinYawAngle
                         \
                         \ if bit 7 of parameter X is clear, or:
                         \
-                        \   variableA+1 = variableA+1 + variableY * xHeading
+                        \   variableA+1 = variableA+1 + variableY * sinYawAngle
                         \
                         \ if bit 7 of parameter X is set
 
@@ -31583,19 +31636,19 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   0 or 1 (for left or right tyres?)
+\   X                   0 or 1 (for front or rear tyres?)
 \
 \ ******************************************************************************
 
 .sub_C4A91
 
- LDA var07Lo
+ LDA var07xLo
  STA T
 
- ORA var07Hi
+ ORA var07xHi
  PHP
 
- LDA var07Hi
+ LDA var07xHi
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
 
@@ -31610,12 +31663,12 @@ ENDIF
 
  BNE P4AA2
 
- STA var09Hi,X
+ STA var09FHi,X
 
  PLP
  BEQ C4AB4
 
- EOR var07Hi
+ EOR var07xHi
 
  SEC
 
@@ -31624,17 +31677,17 @@ ENDIF
 .C4AB4
 
  LDA T
- STA var09Lo,X
+ STA var09FLo,X
 
  JSR sub_C4B88
 
  BCC C4ACF
 
  LDA #0
- STA var11Lo
- STA var11Hi
+ STA var11FLo
+ STA var11FHi
 
- LDA var09Hi
+ LDA var09FHi
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -31650,12 +31703,12 @@ ENDIF
                         \
                         \   variableG = max((A T), (NN MM)) * abs(H)
 
- LDA var11Hi,X
+ LDA var11FHi,X
 
  JSR Absolute8Bit       \ Set A = |A|
 
  STA T
- LDA var09Hi,X
+ LDA var09FHi,X
 
  JSR Absolute8Bit       \ Set A = |A|
 
@@ -31699,23 +31752,23 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   0 or 1 (for left or right tyres?)
+\   X                   0 or 1 (for front or rear tyres?)
 \
 \ ******************************************************************************
 
 .sub_C4AF7
 
  LDA #0
- STA var11Hi,X
- STA var11Lo,X
+ STA var11FHi,X
+ STA var11FLo,X
 
- LDY #8                 \ Set Y = 8 so the call to Scale16Bit scales var07
+ LDY #8                 \ Set Y = 8 so the call to Scale16Bit scales var07x
 
- JSR Scale16Bit         \ Scale up var07 by 2^5, capping the result at the
+ JSR Scale16Bit         \ Scale up var07x by 2^5, capping the result at the
                         \ maximum possible positive value of (&7F xx), and
                         \ ensuring that the result is positive
 
- LDA var07Hi
+ LDA var07xHi
  EOR #%10000000
  STA H
 
@@ -31756,8 +31809,8 @@ ENDIF
  BEQ C4B41
 
  LDA #0
- STA var09Hi,X
- STA var09Lo,X
+ STA var09FHi,X
+ STA var09FLo,X
 
  BEQ C4B41
 
@@ -31795,7 +31848,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   G                   Offset from var09 of the variable to set
+\   G                   Offset from var09F of the variable to set
 \
 \ ******************************************************************************
 
@@ -31826,7 +31879,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   G                   Offset from var09 of the variable to set
+\   G                   Offset from var09F of the variable to set
 \
 \ ******************************************************************************
 
@@ -31848,9 +31901,9 @@ ENDIF
 
  LDY G                  \ Set Y to the offset in G
 
- STA var09Hi,Y          \ Store (A T) 
+ STA var09FHi,Y         \ Store (A T) 
  LDA T
- STA var09Lo,Y
+ STA var09FLo,Y
 
  RTS                    \ Return from the subroutine
 
@@ -31870,9 +31923,9 @@ ENDIF
 \
 \   Y                   The offset of the variable to scale
 \
-\                         * 8 = var07
+\                         * 8 = var07x
 \
-\                         * 9 = var08
+\                         * 9 = var07z
 \
 \ ******************************************************************************
 
@@ -31882,7 +31935,7 @@ ENDIF
  STA MM                 \ call variableY
  LDA xPlayerDeltaTop,Y
 
- BPL C4B77              \ If the top byte in A is positive, jump to C4B77 to
+ BPL scal1              \ If the top byte in A is positive, jump to scal1 to
                         \ skip the following
 
  LDA #0                 \ Negate (A MM), starting with the low bytes
@@ -31894,36 +31947,36 @@ ENDIF
  SBC xPlayerDeltaTop,Y  \
                         \   (A MM) = |variableY|
 
-.C4B77
+.scal1
 
  LDY #5                 \ Set Y = 5, to act as a shift counter in the following
                         \ loop
 
-.P4B79
+.scal2
 
  ASL MM                 \ Set (A MM) = (A MM) << 1
  ROL A
 
- BMI C4B84              \ If bit 7 of the top byte in A is set, jump to C4B84
+ BMI scal4              \ If bit 7 of the top byte in A is set, jump to scal4
                         \ to stop shifting and set the top byte to the largest
                         \ possible positive top byte
 
  DEY                    \ Decrement the shift counter
 
- BNE P4B79              \ Loop back until we have left-shifted five times
+ BNE scal2              \ Loop back until we have left-shifted five times
 
-.P4B81
+.scal3
 
  STA NN                 \ Set (NN MM) = (A MM)
 
  RTS                    \ Return from the subroutine
 
-.C4B84
+.scal4
 
  LDA #%01111111         \ Set A = %01111111 to act as the largest possible
                         \ positive top byte 
 
- BNE P4B81              \ Jump to 
+ BNE scal3              \ Jump to scal3 to return (NN MM)
 
 \ ******************************************************************************
 \
@@ -31947,13 +32000,13 @@ ENDIF
  LDY throttleBrakeState
  DEY
  BEQ C4BAF
- LDY #9                 \ Set Y = 8 so the call to Scale16Bit scales var08
+ LDY #9                 \ Set Y = 8 so the call to Scale16Bit scales var07z
 
- JSR Scale16Bit         \ Scale up var08 by 2^5, capping the result at the
+ JSR Scale16Bit         \ Scale up var07z by 2^5, capping the result at the
                         \ maximum possible positive value of (&7F xx), and
                         \ ensuring that the result is positive
 
- LDA var08Hi
+ LDA var07zHi
  EOR #&80
  STA H
  LDA L62AA,X
@@ -32036,7 +32089,7 @@ ENDIF
 \
 \     otherwise calculate:
 \
-\       L62AA = wingSetting * min(53, speedHi) * abs(var08) + L4C61 + brakes
+\       L62AA = wingSetting * min(53, speedHi) * abs(var07z) + L4C61 + brakes
 \
 \   * Set:
 \
@@ -32049,7 +32102,7 @@ ENDIF
  LDA #0                 \ Set A = 0
 
  LDY throttleBrakeState \ If throttleBrakeState is non-zero, then the brakes are
- BNE C4BE1              \ not being applied, so jump to C4BE1 to set H = 0 and
+ BNE gras1              \ not being applied, so jump to gras1 to set H = 0 and
                         \ G = 0
 
                         \ If we get here then the brakes are being applied
@@ -32063,15 +32116,15 @@ ENDIF
  LSR A                  \       = L62FF / 8
  LSR A
 
- PLP                    \ If L62FF is positive, jump to C4BE1 to skip the
- BPL C4BE1              \ following instruction
+ PLP                    \ If L62FF is positive, jump to gras1 to skip the
+ BPL gras1              \ following instruction
 
  ORA #%11100000         \ Set bits 5-7 of A to ensure that the value of A
                         \ retains the correct sign after being shifted
 
                         \ By this point, A = L62FF / 8 and has the correct sign
 
-.C4BE1
+.gras1
 
  STA H                  \ Set H = A
 
@@ -32114,14 +32167,14 @@ ENDIF
  STA W
 
  LDA leftSurface        \ If leftSurface = &FF, then there is grass under the
- CMP #&FF               \ left side of the car, so jump to C4C06
- BEQ C4C06
+ CMP #&FF               \ left side of the car, so jump to gras2
+ BEQ gras2
 
  LDA rightSurface       \ If rightSurface <> &FF, then there isn't grass under
- CMP #&FF               \ the right side of the car, so jump to C4C24 to skip
- BNE C4C24              \ the following and set L005D to 0
+ CMP #&FF               \ the right side of the car, so jump to gras4 to skip
+ BNE gras4              \ the following and set L005D to 0
 
-.C4C06
+.gras2
 
                         \ If we get here then there is grass under at least one
                         \ side of the car, and W = &FF if there is grass under
@@ -32140,23 +32193,23 @@ ENDIF
  AND #7                 \ Set X = A mod 8
  TAX
 
- BNE C4C12              \ If X = 0, set X = 1
+ BNE gras3              \ If X = 0, set X = 1
  INX
 
                         \ So X is now a random number in the range 1 to 7 that
                         \ is higher with higher speeds
 
-.C4C12
+.gras3
 
- LDA L005D              \ If L005D is non-zero, jump to C4C24
- BNE C4C24
+ LDA L005D              \ If L005D is non-zero, jump to gras4
+ BNE gras4
 
- LDA L005D              \ If L002D is non-zero, jump to C4C24
+ LDA L005D              \ If L002D is non-zero, jump to gras4
  ORA L002D
- BNE C4C24
+ BNE gras4
 
- BIT playerDrift        \ If bit 7 of playerDrift is clear, jump to C4C24
- BPL C4C24
+ BIT playerDrift        \ If bit 7 of playerDrift is clear, jump to gras4
+ BPL gras4
 
  JSR CalculateVars1     \ Calculate the following:
                         \
@@ -32170,7 +32223,7 @@ ENDIF
                         \
                         \ and make the crash/contact sound
 
-.C4C24
+.gras4
 
  STX L005D              \ Set L005D = X, so:
                         \
@@ -32184,16 +32237,16 @@ ENDIF
                         \ setting, so set X to use as a loop counter, from 1
                         \ (for the front wing) to 0 (for the read wing)
 
-.C4C28
+.gras5
 
  LDA speedHi            \ Set A = speedHi
 
- CMP #53                \ If A < 53, jump to C4C30
- BCC C4C30
+ CMP #53                \ If A < 53, jump to gras6
+ BCC gras6
 
  LDA #53                \ Set A = 53, so A has a maximum value of 53
 
-.C4C30
+.gras6
 
  STA U                  \ Store A in U, so we now have the following:
                         \
@@ -32204,23 +32257,23 @@ ENDIF
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = wingSetting * min(53, speedHi)
 
- BIT var08Hi            \ Set the N flag according to the sign in bit 7 of
-                        \ var08Hi, so the call to Absolute8Bit sets the
-                        \ sign of A to the same sign as var08
+ BIT var07zHi           \ Set the N flag according to the sign in bit 7 of
+                        \ var07zHi, so the call to Absolute8Bit sets the
+                        \ sign of A to the same sign as var07z
 
- JSR Absolute8Bit       \ Set A = A * abs(var08)
-                        \       = wingSetting * min(53, speedHi) * abs(var08)
+ JSR Absolute8Bit       \ Set A = A * abs(var07z)
+                        \       = wingSetting * min(53, speedHi) * abs(var07z)
 
  CLC                    \ Set A = A + L4C61 for this wing
- ADC L4C61,X            \       = wingSetting * min(53, speedHi) * abs(var08)
+ ADC L4C61,X            \       = wingSetting * min(53, speedHi) * abs(var07z)
                         \         + L4C61
 
  LDY #243               \ Set U = 243
  STY U
 
  LDY W                  \ If W <> &FF, then there is not grass under both sides
- CPY #&FF               \ of the car, so jump to C4C51 to skip the following
- BNE C4C51
+ CPY #&FF               \ of the car, so jump to gras7 to skip the following
+ BNE gras7
 
  LDA L4C63,X            \ There is grass under both sides of the car, so set A
                         \ to the L4C63 value for this wing
@@ -32228,7 +32281,7 @@ ENDIF
  LDY #&FF               \ Set Y = &FF (this has no effect as Y is already &FF,
                         \ so this instruction is a bit of a mystery)
 
-.C4C51
+.gras7
 
  CLC                    \ Set A = A + G (front wing) or H (rear wing)
  ADC G,X                \
@@ -32246,7 +32299,7 @@ ENDIF
  DEX                    \ Decrement the loop counter in X to point to the next
                         \ wing
 
- BPL C4C28              \ Loop back until we have processed both wings
+ BPL gras5              \ Loop back until we have processed both wings
 
  RTS                    \ Return from the subroutine
 
@@ -32299,9 +32352,9 @@ ENDIF
 \
 \ This routine calcvulates the following:
 \
-\   var051 = var051 - scaledSpeed * var15Hi
+\   var06x = var06x - scaledSpeed * var15Hi
 \
-\   var052 = var052 - scaledSpeed * (wingBalance * speedHi + 2048) * abs(var08)
+\   var06z = var06z - scaledSpeed * (wingBalance * speedHi + 2048) * abs(var07z)
 \
 \ where scaledSpeed = speedHi       if L005D = 0
 \                     speedHi * 2   otherwise
@@ -32320,20 +32373,20 @@ ENDIF
  STA U                  \ Set U = A
                         \       = |var15Hi|
 
- CMP speedHi            \ If A >= speedHi, jump to C4C72
- BCS C4C72
+ CMP speedHi            \ If A >= speedHi, jump to bala1
+ BCS bala1
 
  LDA speedHi            \ Set A = speedHi, so A has a minimum value of speedHi
 
-.C4C72
+.bala1
 
- LDY L005D              \ If L005D = 0, jump to C4C77 to skip the following
- BEQ C4C77
+ LDY L005D              \ If L005D = 0, jump to bala2 to skip the following
+ BEQ bala2
 
  ASL A                  \ Set A = A * 2
                         \         speedHi * 2
 
-.C4C77
+.bala2
 
  STA W                  \ Set W = A
                         \       = speedHi       if L005D = 0
@@ -32347,7 +32400,7 @@ ENDIF
  STA U                  \ Set (U T) = (A T)
                         \           = scaledSpeed * |var15Hi|
 
- LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses var051
+ LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses var06x
 
  LDA var15Hi            \ Set A = var15Hi so the call to SubtractCoords sets the
                         \ sign to abs(var15)
@@ -32358,10 +32411,10 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   var051 = var051 - scaledSpeed * |var15Hi|
+                        \   var06x = var06x - scaledSpeed * |var15Hi|
                         \                                   * abs(var15)
                         \
-                        \          = var051 - scaledSpeed * var15Hi
+                        \          = var06x - scaledSpeed * var15Hi
 
  LDA speedHi            \ Set U = speedHi
  STA U
@@ -32386,10 +32439,10 @@ ENDIF
                         \   (U T) = U * (V T)
                         \         = scaledSpeed * (wingBalance * speedHi + 2048)
 
- LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var052
+ LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var06z
 
- LDA var08Hi            \ Set A = var08Hi so the call to SubtractCoords sets the
-                        \ sign to abs(var08)
+ LDA var07zHi           \ Set A = var07zHi so the call to SubtractCoords sets the
+                        \ sign to abs(var07z)
 
  JSR SubtractCoords     \ Set:
                         \
@@ -32397,9 +32450,9 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   var052 = var052 - scaledSpeed
+                        \   var06z = var06z - scaledSpeed
                         \                     * (wingBalance * speedHi + 2048)
-                        \                     * abs(var08)
+                        \                     * abs(var07z)
 
  RTS                    \ Return from the subroutine
 
@@ -36779,29 +36832,27 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xHeadingLo
+\       Name: sinYawAngleLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the x-coordinate of the vector containing the player's
-\             yaw angle heading
+\    Summary: Low byte of the sine of the player's yaw angle
 \
 \ ******************************************************************************
 
-.xHeadingLo
+.sinYawAngleLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zHeadingLo
+\       Name: cosYawAngleLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the z-coordinate of the vector containing the player's
-\             yaw angle heading
+\    Summary: Low byte of the cosine of the player's yaw angle
 \
 \ ******************************************************************************
 
-.zHeadingLo
+.cosYawAngleLo
 
  EQUB 0
 
@@ -36828,29 +36879,27 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xHeadingHi
+\       Name: sinYawAngleHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the x-coordinate of the vector containing the
-\             player's yaw angle heading
+\    Summary: High byte of the sine of the player's yaw angle
 \
 \ ******************************************************************************
 
-.xHeadingHi
+.sinYawAngleHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zHeadingHi
+\       Name: cosYawAngleHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the z-coordinate of the vector containing the
-\             player's yaw angle heading
+\    Summary: High byte of the cosine of the player's yaw angle
 \
 \ ******************************************************************************
 
-.zHeadingHi
+.cosYawAngleHi
 
  EQUB 0
 
@@ -37335,7 +37384,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var051Lo
+\       Name: var06xLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37346,13 +37395,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var051Lo
+.var06xLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var052Lo
+\       Name: var06zLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37363,13 +37412,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var052Lo
+.var06zLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var07Lo
+\       Name: var07xLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37380,13 +37429,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var07Lo
+.var07xLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var08Lo
+\       Name: var07zLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37397,13 +37446,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var08Lo
+.var07zLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var09Lo
+\       Name: var09FLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37414,13 +37463,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var09Lo
+.var09FLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var10Lo
+\       Name: var09RLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37431,13 +37480,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var10Lo
+.var09RLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var11Lo
+\       Name: var11FLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37448,13 +37497,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var11Lo
+.var11FLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var111Lo
+\       Name: var11RLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37465,7 +37514,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var111Lo
+.var11RLo
 
  EQUB 0
 
@@ -37614,7 +37663,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var051Hi
+\       Name: var06xHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37625,13 +37674,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var051Hi
+.var06xHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var052Hi
+\       Name: var06zHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37642,13 +37691,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var052Hi
+.var06zHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var07Hi
+\       Name: var07xHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37659,13 +37708,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var07Hi
+.var07xHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var08Hi
+\       Name: var07zHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37676,13 +37725,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var08Hi
+.var07zHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var09Hi
+\       Name: var09FHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37693,13 +37742,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var09Hi
+.var09FHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var10Hi
+\       Name: var09RHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37710,13 +37759,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var10Hi
+.var09RHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var11Hi
+\       Name: var11FHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37727,13 +37776,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var11Hi
+.var11FHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var111Hi
+\       Name: var11RHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: 
@@ -37744,7 +37793,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.var111Hi
+.var11RHi
 
  EQUB 0
 
