@@ -4092,8 +4092,8 @@ ORG &0B00
 
 .MakeDrivingSounds
 
- LDA L62A6              \ If bit 7 is clear in both L62A6 and L62A7, jump to
- ORA L62A7              \ soun1 to skip the following
+ LDA L62A6              \ If bit 7 of L62A6 is clear for both tyres, jump to
+ ORA L62A6+1            \ soun1 to skip the following
  BPL soun1
 
                         \ Otherwise we add some random pitch variation to the
@@ -10508,9 +10508,9 @@ ENDIF
 
  STA spinYawAngleTop    \ Set spinYawAngleTop = A
 
- LDA #%10000000         \ Set bit 7 in L62A6 and L62A7, so the tyres squeal
+ LDA #%10000000         \ Set bit 7 in L62A6 for both tyres, so they squeal
  STA L62A6
- STA L62A7
+ STA L62A6+1
 
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
@@ -15049,7 +15049,7 @@ ENDIF
                         \
                         \   (WW QQ) = (A QQ) = y-delta
 
- BPL elev1              \ If (A QQ) is positive, jump to elev1 to skip the
+ BPL pang1              \ If (A QQ) is positive, jump to pang1 to skip the
                         \ following
 
  LDA #0                 \ Set (A QQ) = 0 - (WW QQ)
@@ -15064,7 +15064,7 @@ ENDIF
                         \
                         \   (A QQ) = |y-delta|
 
-.elev1
+.pang1
 
  LSR A                  \ Set (A QQ) = (A QQ) >> 3
  ROR QQ                 \            = |y-delta| / 8
@@ -15079,21 +15079,21 @@ ENDIF
                         \ We now compare the two 16-bit values in (A QQ) and
                         \ (L K)
 
- CMP L                  \ If A < L, then (A QQ) < (L K), so jump to elev3
- BCC elev3
+ CMP L                  \ If A < L, then (A QQ) < (L K), so jump to pang3
+ BCC pang3
 
- BNE elev2              \ If A <> L, i.e. A > L, then (A QQ) > (L K), so jump
-                        \ to elev2 to return from the subroutine with the C flag
+ BNE pang2              \ If A <> L, i.e. A > L, then (A QQ) > (L K), so jump
+                        \ to pang2 to return from the subroutine with the C flag
                         \ set
 
                         \ The high bytes are equal, so now we compare the low
                         \ bytes
 
- LDA QQ                 \ If QQ < K, then (A QQ) < (L K), so jump to elev3
+ LDA QQ                 \ If QQ < K, then (A QQ) < (L K), so jump to pang3
  CMP K
- BCC elev3
+ BCC pang3
 
-.elev2
+.pang2
 
                         \ If we get here then (A QQ) >= (L K), so:
                         \
@@ -15103,16 +15103,16 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
-.elev3
+.pang3
 
  LDY #0                 \ Set Y = 0, which we use to count the number of shifts
                         \ in the following calculation
 
  LDA L                  \ Set (A K) = (L K)
 
- JMP elev5              \ Jump to elev5
+ JMP pang5              \ Jump to pang5
 
-.elev4
+.pang4
 
                         \ This part is called from below, if we want to scale
                         \ the division
@@ -15122,7 +15122,7 @@ ENDIF
 
  INY                    \ Increment Y
 
-.elev5
+.pang5
 
                         \ If we get here, then:
                         \
@@ -15160,7 +15160,7 @@ ENDIF
  ASL K                  \ Set (A K) = (A K) << 1
  ROL A
 
- BCC elev4              \ If we just shifted a 0 out of the high byte of (A K),
+ BCC pang4              \ If we just shifted a 0 out of the high byte of (A K),
                         \ then we can keep shifting, so loop back to rotn6 to
                         \ keep shifting both values
 
@@ -15191,25 +15191,25 @@ ENDIF
                         \ using the lower byte of the |y-delta| numerator for
                         \ rounding ???
 
- LDA T                  \ If T >= 128, jump to elev8 to return from the 
+ LDA T                  \ If T >= 128, jump to pang8 to return from the 
  CMP #128               \ subroutine with the C flag set
- BCS elev8
+ BCS pang8
 
- BIT WW                 \ If y-delta is positive, jump to elev6 to skip the
- BPL elev6              \ following and add 60 to T
+ BIT WW                 \ If y-delta is positive, jump to pang6 to skip the
+ BPL pang6              \ following and add 60 to T
 
  LDA #60                \ Set A = 60 - T
  SEC
  SBC T
 
- JMP elev7              \ Jump to elev7
+ JMP pang7              \ Jump to pang7
 
-.elev6
+.pang6
 
  CLC                    \ Set A = T + 60
  ADC #60
 
-.elev7
+.pang7
 
  SEC                    \ Set LL = A - L000D
  SBC L000D
@@ -15217,7 +15217,7 @@ ENDIF
 
  CLC                    \ Clear the C flag to indicate success
 
-.elev8
+.pang8
 
  RTS                    \ Return from the subroutine
 
@@ -28953,10 +28953,10 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: sub_C44EA
+\       Name: ApplyElevation
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate changes in the car's elevation
 \
 \ ------------------------------------------------------------------------------
 \
@@ -28964,17 +28964,17 @@ NEXT
 \
 \ ******************************************************************************
 
-.sub_C44EA
+.ApplyElevation
 
  LDA L002D
- BEQ C44F5
+ BEQ elev1
 
  DEC L0028
  DEC L0028
 
- JMP C452D
+ JMP elev7
 
-.C44F5
+.elev1
 
  STA L0028
 
@@ -28983,62 +28983,62 @@ NEXT
  LDY L62F0
 
  LDA gearNumber
- BEQ C4510
+ BEQ elev3
 
  LDA throttleBrakeState
- BMI C4510
+ BMI elev3
 
- BEQ C450C
+ BEQ elev2
 
  LDA engineTorque
- BNE C4516
+ BNE elev4
 
- BEQ C4510
+ BEQ elev3
 
-.C450C
+.elev2
 
  LDA speedHi
 
- BNE C4521
+ BNE elev5
 
-.C4510
+.elev3
 
  TYA
- BEQ C452D
+ BEQ elev7
 
- BPL C4521
-
- INY
-
-.C4516
+ BPL elev5
 
  INY
 
- BMI C452A
+.elev4
+
+ INY
+
+ BMI elev6
 
  CPY #4
- BCC C452A
+ BCC elev6
 
  LDY #3
 
- BCS C452A
+ BCS elev6
 
-.C4521
+.elev5
 
  DEY
 
- BPL C452A
+ BPL elev6
 
  CPY #251
- BCS C452A
+ BCS elev6
 
  LDY #251
 
-.C452A
+.elev6
 
  STY L62F0
 
-.C452D
+.elev7
 
  LDX playerSegmentIndex \ Set X to the number of the player's track segment from
                         \ the track segment buffer
@@ -29065,14 +29065,14 @@ NEXT
  CMP #60                \ Store the comparison of |zTrackSegmentI| and 60 on the
  PHP                    \ stack
 
- BCC C454F              \ If |zTrackSegmentI| < 60, jump to C454F
+ BCC elev8              \ If |zTrackSegmentI| < 60, jump to elev8
 
  LDA xTrackSegmentI,Y   \ Set A to the segment vector's x-coordinate
 
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |xTrackSegmentI|
 
-.C454F
+.elev8
 
  STA T                  \ Set T = A
 
@@ -29085,19 +29085,19 @@ NEXT
  PLP                    \ Pull the result of the comparison of |zTrackSegmentI|
                         \ and 60 from the stack
 
- BCS C455C              \ If |zTrackSegmentI| >= 60, jump to C455C
+ BCS elev9              \ If |zTrackSegmentI| >= 60, jump to elev9
 
  EOR #%00111111
 
-.C455C
+.elev9
 
  PLP                    \ Pull the sign of zTrackSegmentI from the stack
 
- BPL C4561              \ If zTrackSegmentI is positive, jump to C4561
+ BPL elev10             \ If zTrackSegmentI is positive, jump to elev10
 
  EOR #%10000000
 
-.C4561
+.elev10
 
  PLP                    \ Pull the sign of xTrackSegmentI * zTrackSegmentI from
                         \ the stack
@@ -29130,7 +29130,7 @@ NEXT
                         \ 45 degrees to the right of straight on, and an angle
                         \ of 128 means we are facing backwards along the track
 
- BPL C456E              \ If A is positive, jump to C456E to skip the following
+ BPL elev11             \ If A is positive, jump to elev11 to skip the following
 
  EOR #&FF               \ Invert A, so this effectively reflects the angle into
                         \ the right half of the above diagram:
@@ -29147,10 +29147,10 @@ NEXT
                         \            |   96
                         \           127
 
-.C456E
+.elev11
 
  CMP #64                \ If A < 64, then the player's heading is forwards, so
- BCC C4574              \ jump to C4574
+ BCC elev12             \ jump to elev12
 
  EOR #%01111111         \ A >= 64, so the player's heading is backwards and in
                         \ the bottom-right quadrant, so flip bits 0-6 of A,
@@ -29174,7 +29174,7 @@ NEXT
                         \ conversely, if A is less than 40, we are looking
                         \ forwards or backwards
 
-.C4574
+.elev12
 
  STA playerSideways     \ Store the value of A in playerSideways, so we can test
                         \ whether the player is facing sideways on the track
@@ -29199,11 +29199,11 @@ NEXT
 
  CLC
 
- BPL C4593
+ BPL elev13
 
  SEC
 
-.C4593
+.elev13
 
  ROR A
 
@@ -29220,32 +29220,32 @@ NEXT
  SEC
  SBC #4
 
- BVC C45A8
+ BVC elev14
 
  LDA #200
 
-.C45A8
+.elev14
 
  STA L0026
 
  CLC
  ADC L002D
 
- BEQ C45B3
+ BEQ elev15
 
- BVS C45C7
+ BVS elev17
 
- BPL C45C9
+ BPL elev18
 
-.C45B3
+.elev15
 
  LDA L0026              \ Set A = L0026
 
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |L0026|
 
- CMP #5                 \ If A < 5, jump to C45C3 to skip the following
- BCC C45C3
+ CMP #5                 \ If A < 5, jump to elev16 to skip the following
+ BCC elev16
 
  JSR CalculateVars2     \ Calculate the following:
                         \
@@ -29261,19 +29261,19 @@ NEXT
 
  LDA #1                 \ Set A = 1
 
- BNE C45C9              \ Jump to C45C9 (this BNE is effectively a JMP as A is
+ BNE elev18             \ Jump to elev18 (this BNE is effectively a JMP as A is
                         \ never zero)
 
-.C45C3
+.elev16
 
  LDA #0
- BEQ C45C9
+ BEQ elev18
 
-.C45C7
+.elev17
 
  LDA #127
 
-.C45C9
+.elev18
 
  STA L002D
 
@@ -29288,11 +29288,11 @@ NEXT
 
  JSR MultiplyHeight
 
- BPL C45DF
+ BPL elev19
 
  DEC W
 
-.C45DF
+.elev19
 
  LDY playerSegmentIndex
 
@@ -29729,10 +29729,6 @@ ENDIF
 \   Category: Driving model
 \    Summary: Apply the driving model to the player's car
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
 .ApplyDrivingModel
@@ -29800,10 +29796,11 @@ ENDIF
 
  JSR ApplyEngine        \ Apply the effects of the engine
 
- LDX #1                 \ Set X = 1, so the call to GetForcesOnTyres processes
+ LDX #1                 \ Set X = 1, so the call to ApplyTyresAndSkids processes
                         \ the rear tyres
 
- JSR GetForcesOnTyres   \ ???
+ JSR ApplyTyresAndSkids \ Calculate the forces on the rear tyres and apply skid
+                        \ forces and sound effects where applicable
 
  LDA var15Lo            \ Set (var07xHi var07xLo) = (var15Hi var15Lo)
  STA var07xLo
@@ -29825,10 +29822,11 @@ ENDIF
                         \
                         \   var07x = var07x - var07z * steering
 
- LDX #0                 \ Set X = 0, so the call to GetForcesOnTyres processes
+ LDX #0                 \ Set X = 0, so the call to ApplyTyresAndSkids processes
                         \ the front tyres
 
- JSR GetForcesOnTyres   \ ???
+ JSR ApplyTyresAndSkids \ Calculate the forces on the front tyres and apply skid
+                        \ forces and sound effects where applicable
 
  JSR ApplySteering2     \ Calculate the following in parallel:
                         \
@@ -29918,7 +29916,7 @@ ENDIF
                         \
                         \   playerYawAngle = playerYawAngle + spinYawAngle
 
- JSR sub_C44EA          \ ???
+ JSR ApplyElevation     \ Calculate changes in the car's elevation
 
  RTS                    \ Return from the subroutine
 
@@ -30096,10 +30094,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetForcesOnTyres
+\       Name: ApplyTyresAndSkids
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate the forces on the front or rear tyres
+\    Summary: Calculate the forces on the front or rear tyres and apply skid
+\             forces and sound effects where applicable
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30113,15 +30112,15 @@ ENDIF
 \
 \ ******************************************************************************
 
-.GetForcesOnTyres
+.ApplyTyresAndSkids
 
  LDA L002D              \ If L002D >= 2, jump to gfor1 to stop the tyres from
  CMP #2                 \ squealing
  BCS gfor1
 
- JSR sub_C4A91          \ ???
+ JSR ApplyTyreForces    \ ???
 
- LDA L62A6,X            \ Set A to L62A6 (when X = 0) or L62A7 (when X = 1)
+ LDA L62A6,X            \ Set A to L62A6 for tyre X
 
  AND #%11000000         \ If either of bit 6 or 7 is set in A, jump to gfor3 to
  BNE gfor3              \ make the tyres squeal
@@ -30141,7 +30140,9 @@ ENDIF
 
 .gfor3
 
- JSR sub_C4AF7          \ ???
+ JSR ApplySkidForces    \ Calculate the tyre forces when the car is skidding,
+                        \ returning them in var09F and var11F or var09R and
+                        \ var11R
 
  LDA soundBuffer+3      \ If sound buffer 3 is currently being used, then we are
  BNE gfor4              \ already making the sound of the tyres squealing, so
@@ -30391,19 +30392,19 @@ ENDIF
  LDY #1                 \ Set Y = 1, to act as a shift counter in the outer loop
                         \ below, so we right-shift Y + 1 times (i.e. twice)
 
-.P4817
+.forc1
 
  LDX #3                 \ Set X = 3, to act as a variable counter in the inner
                         \ loop to work through var11R, var11F, var09R and var09F
                         \ (let's call this variableX)
 
-.P4819
+.forc2
 
  LDA var09FHi,X         \ Set A to the high byte of variableX
 
  CLC                    \ Clear the C flag, to use if variableX is positive
 
- BPL C4820              \ If A is positive, jump to C4820 to keep the C flag
+ BPL forc3              \ If A is positive, jump to forc3 to keep the C flag
                         \ clear
 
  SEC                    \ Otherwise set the C flag, to use if variableX is
@@ -30411,7 +30412,7 @@ ENDIF
 
                         \ The C flag now contains the sign bit of A
 
-.C4820
+.forc3
 
  ROR var09FHi,X         \ Set variableX = variableX >> 1
  ROR var09FLo,X         \
@@ -30419,12 +30420,12 @@ ENDIF
 
  DEX                    \ Decrement the inner loop counter in X
 
- BPL P4819              \ Loop back to P4819 until we have shifted all four
+ BPL forc2              \ Loop back to forc2 until we have shifted all four
                         \ variables to the right by one place
 
  DEY                    \ Decrement the shift counter in Y
 
- BPL P4817              \ Loop back until we have right-shifted Y + 1 times
+ BPL forc1              \ Loop back until we have right-shifted Y + 1 times
 
  LDX #2                 \ Set X = 2, to act as a variable counter in the
                         \ following loop, iterating through values 0 and 2, as
@@ -30442,7 +30443,7 @@ ENDIF
  LDA #1                 \ Set G = 1, to use as the index for storing the
  STA G                  \ following calculation
 
-.C4832
+.forc4
 
  LDA var09RLo,X         \ Set (U T) = var11R
  STA T
@@ -30482,7 +30483,7 @@ ENDIF
  DEX                    \ Decrement X twice so the next iteration calculates
  DEX                    \ (var09R * 1.5 + var09F) * 410
 
- BPL C4832              \ Loop back until we have calculated both var06z and
+ BPL forc4              \ Loop back until we have calculated both var06z and
                         \ var06x
 
  LDA var06zHi           \ Set L62FF = var06zHi
@@ -31099,7 +31100,7 @@ ENDIF
  LDX #2                 \ Set X = 2, to act as an axis counter in the following
                         \ loop, working through three axes from 2 to 0
 
-.C4939
+.delf1
 
  LDA #0                 \ Set V = 0, to use as the sign bit for (V A T)
  STA V
@@ -31108,26 +31109,26 @@ ENDIF
  STA T
  LDA var04xHi,X
 
- BPL C4949              \ If A is positive, jump to C4949 to skip the following
+ BPL delf2              \ If A is positive, jump to delf2 to skip the following
                         \ instruction
 
  DEC V                  \ Set V = &FF, so it contains the correct sign bit for
                         \ (V A T)
 
-.C4949
+.delf2
 
  LDY #3                 \ Set Y = 3, to act as a shift counter in the loop
                         \ below, so we left-shift by three places
 
- CPX #2                 \ If X <> 2, jump to C4951 to skip the following
- BNE C4951              \ instruction
+ CPX #2                 \ If X <> 2, jump to delf3 to skip the following
+ BNE delf3              \ instruction
 
                         \ If we get here then X = 2, so (A T) contains var05
 
  LDY #5                 \ Set Y = 5, so for the third axis, we left-shift by
                         \ five places
 
-.C4951
+.delf3
 
  ASL T                  \ Set (V A T) = (V A T) << 1
  ROL A
@@ -31135,7 +31136,7 @@ ENDIF
 
  DEY                    \ Decrement the shift counter in Y
 
- BNE C4951              \ Loop back until we have left-shifted Y times
+ BNE delf3              \ Loop back until we have left-shifted Y times
 
  STA U                  \ Set (V U T) = (V A T)
 
@@ -31165,7 +31166,7 @@ ENDIF
  DEX                    \ Decrement the axis counter in X to point to the next
                         \ axis
 
- BPL C4939              \ Loop back until we have processed all three axes
+ BPL delf1              \ Loop back until we have processed all three axes
 
  RTS                    \ Return from the subroutine
 
@@ -31633,12 +31634,52 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4A91
+\       Name: ApplyTyreForces
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate the tyre forces on the car
 \
 \ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * If var07x is non-zero and var07x and var09F for tyre X have the same sign,
+\     rotate a 1 into bit 7 of L62A6 for tyre X and finish
+\
+\   * var09F = -var07x * 2^5
+\
+\   * Call GetTyreForces to set (A T), H and (NN MM)
+\
+\   * If the throttle is being applied and we are processing the front tyres,
+\     set:
+\
+\       var11F = 0
+\
+\       A = |var09FHi|
+\
+\     otherwise:
+\
+\       * If the throttle is being applied, then 
+\
+\           var11F or var11R = (A T) * abs(H)
+\
+\         otherwise set:
+\
+\           var11F or var11R = max((A T, (NN MM)) * abs(H)
+\
+\       * If |var09FHi| < |var11FHi| (for tyre X):
+\
+\           A = |var09FHi| / 2 + |var11FHi|
+\
+\         or if |var09FHi| >= |var11FHi| (for tyre X)
+\
+\           A = |var09FHi| + |var11FHi| / 2
+\
+\   * Set bit 7 of L62A6 for tyre X as follows:
+\
+\     * Clear if A <= L62AA for tyre X
+\
+\     * Set if A > L62AA for tyre X
 \
 \ Arguments:
 \
@@ -31650,7 +31691,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C4A91
+.ApplyTyreForces
 
  LDA var07xLo           \ Set T = var07xLo
  STA T
@@ -31667,14 +31708,14 @@ ENDIF
  LDY #5                 \ Set Y = 5 to act as a shift counter in the following
                         \ loop
 
-.P4AA2
+.tfor1
 
  ASL T                  \ Set (A T) = (A T) << 1
  ROL A
 
  DEY                    \ Decrement the shift counter
 
- BNE P4AA2              \ Loop back until we have shifted left by five places,
+ BNE tfor1              \ Loop back until we have shifted left by five places,
                         \ so we now have:
                         \
                         \   (A T) = (A T) * 2^5
@@ -31685,21 +31726,22 @@ ENDIF
  PLP                    \ Retrieve the flags that we stored on the stack, which
                         \ will be zero if var07x = 0
 
- BEQ C4AB4              \ If var07x = 0, jump to C4AB4 to set var09FLo to the
+ BEQ tfor2              \ If var07x = 0, jump to tfor2 to set var09FLo to the
                         \ low byte of the result
 
                         \ If we get here then var07x is non-zero
 
- EOR var07xHi           \ If var07xHi and var09FHi have the same sign, this will
-                        \ clear bit 7 of A
+ EOR var07xHi           \ If var07xHi and var09FHi for tyre X have the same
+                        \ sign, this will clear bit 7 of A
 
  SEC                    \ Set the C flag
 
- BPL C4AF3              \ If bit 7 of A is clear, then var07xHi and var09FHi
-                        \ have the same sign, so jump to C4AF3 with the C flag
-                        \ set to rotate a 1 into bit 7 of L62A6 for tyre X
+ BPL tfor7              \ If bit 7 of A is clear, then var07xHi and var09FHi
+                        \ for tyre X have the same sign, so jump to tfor7 with
+                        \ the C flag set to rotate a 1 into bit 7 of L62A6 for
+                        \ tyre X
 
-.C4AB4
+.tfor2
 
                         \ If we get here then either var07x = 0, or var07x is
                         \ non-zero and var07x and var09F have different signs
@@ -31709,10 +31751,25 @@ ENDIF
                         \   var09F = (A T)
                         \          = -var07x * 2^5
 
- JSR sub_C4B88
+ JSR GetTyreForces      \ Calculate the tyre forces due to the throttle or
+                        \ brakes:
+                        \
+                        \   * (A T) = the force
+                        \
+                        \   * H = the sign of the force
+                        \
+                        \   * G = X + 2, so the call to ApplyLimitThrottle sets
+                        \     var11F or var11R accordingly
+                        \
+                        \   * If the throttle is not being applied, (NN MM) is
+                        \     a maximum value for the force
+                        \
+                        \ If the throttle is being applied and we are processing
+                        \ the front tyres, only G is calculated and the C flag
+                        \ is set
 
- BCC C4ACF              \ If the C flag is clear then sub_C4B88 successfully
-                        \ returned a set of calculated values, so jump to C4ACF
+ BCC tfor3              \ If the C flag is clear then GetTyreForces successfully
+                        \ returned a set of calculated values, so jump to tfor3
                         \ to keep going
 
  LDA #0                 \ Set var11F = 0
@@ -31724,17 +31781,17 @@ ENDIF
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |var09FHi|
 
- JMP C4AED              \ Jump to C4AED
+ JMP tfor6              \ Jump to tfor6
 
-.C4ACF
+.tfor3
 
  JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
                         \
-                        \   variableG = (A T) * abs(H)
+                        \   var11F or var11R = (A T) * abs(H)
                         \
                         \ otherwise set:
                         \
-                        \   variableG = max((A T), (NN MM)) * abs(H)
+                        \   var11F or var11R = max((A T), (NN MM)) * abs(H)
 
  LDA var11FHi,X         \ Set A = var11FHi for tyre X
 
@@ -31750,7 +31807,7 @@ ENDIF
                         \       = |var09FHi|
 
  CMP T                  \ If A < T, then |var09FHi| < |var11FHi|, so jump to
- BCC C4AE9              \ C4AE9 to halve A
+ BCC tfor4              \ tfor4 to halve A
 
                         \ If we get here then |var09FHi| >= |var11FHi|, so we
                         \ halve T
@@ -31758,14 +31815,14 @@ ENDIF
  LSR T                  \ Set T = T >> 1
                         \       = |var11FHi| / 2
 
- JMP C4AEA              \ Jump to C4AEA
+ JMP tfor5              \ Jump to tfor5
 
-.C4AE9
+.tfor4
 
  LSR A                  \ Set A = A >> 1
                         \       = |var09FHi| / 2
 
-.C4AEA
+.tfor5
 
  CLC                    \ Set A = A + T
  ADC T                  \
@@ -31777,10 +31834,10 @@ ENDIF
                         \
                         \   A = |var09FHi| + |var11FHi| / 2
 
-.C4AED
+.tfor6
 
- CMP L62AA,X            \ If A <> L62AA for tyre X, jump to C4AF3 with the C
- BNE C4AF3              \ flag set as follows:
+ CMP L62AA,X            \ If A <> L62AA for tyre X, jump to tfor7 with the C
+ BNE tfor7              \ flag set as follows:
                         \
                         \   * Clear if A < L62AA
                         \
@@ -31793,7 +31850,7 @@ ENDIF
                         \
                         \   * Set if A > L62AA
 
-.C4AF3
+.tfor7
 
  ROR L62A6,X            \ Rotate the C flag into bit 7 of L62A6 for tyre X
 
@@ -31801,12 +31858,48 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4AF7
+\       Name: ApplySkidForces
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate the tyre forces when the car is skidding
 \
 \ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * Set var09F or var09R = max(L62AC << 8, scaled |var07x|) * abs(-var07x)
+\
+\   * Call GetTyreForces to set (A T), H and (NN MM)
+\
+\   * If the throttle is being applied and we are processing the front tyres,
+\     return from the subroutine
+\
+\   * If A < L62AC, then:
+\
+\     * If the throttle is being applied, then 
+\
+\         var11F or var11R = (A T) * abs(H)
+\
+\       otherwise set:
+\
+\         var11F or var11R = max((A T, (NN MM)) * abs(H)
+\
+\   * If A >= L62AC, then:
+\
+\     * Set (A T) = L62AC << 8
+\
+\     * If the throttle is being applied, then 
+\
+\         var11F or var11R = (A T) * abs(H)
+\
+\       otherwise set:
+\
+\         var11F or var11R = max((A T, (NN MM)) * abs(H)
+\
+\     * If the throttle is being applied and we are processing the rear tyres,
+\       set:
+\
+\         var09F or var09R = 0
 \
 \ Arguments:
 \
@@ -31818,76 +31911,99 @@ ENDIF
 \
 \ ******************************************************************************
 
-.sub_C4AF7
+.ApplySkidForces
 
- LDA #0
+ LDA #0                 \ Set var11F for tyre X to 0
  STA var11FHi,X
  STA var11FLo,X
 
  LDY #8                 \ Set Y = 8 so the call to Scale16Bit scales var07x
 
- JSR Scale16Bit         \ Scale up var07x by 2^5, capping the result at the
-                        \ maximum possible positive value of (&7F xx), ensuring
-                        \ that the result is positive, and returning the result
-                        \ in (NN MM)
+ JSR Scale16Bit         \ Scale up |var07x| by 2^5, capping the result at the
+                        \ maximum possible positive value of &7Fxx, and
+                        \ returning the result in (NN MM)
 
- LDA var07xHi
- EOR #%10000000
+ LDA var07xHi           \ Set H = var07xHi with the sign flipped, so that
+ EOR #%10000000         \ abs(H) = abs(-var07x)
  STA H
 
- LDA #0
+ LDA #0                 \ Set T = 0
  STA T
 
- LDA L62AC,X
+ LDA L62AC,X            \ Set A to L62AC for tyre X
 
- STX G
+ STX G                  \ Set G to the tyre number in X so the ApplyLimitAndSign
+                        \ routine sets var09F or var09R accordingly
 
- JSR ApplyLimitAndSign  \ Set variableG = max((A T), (NN MM)) * abs(H)
-
- JSR sub_C4B88
-
- BCS C4B41
-
- CMP L62AC,X
- BCC C4B3E
-
- LDA #0
- STA T
-
- LDA L62AC,X
-
- JSR ApplyLimitThrottle \ If the throttle is being applied, then Set
+ JSR ApplyLimitAndSign  \ Set var09F or var09R = max((A T), (NN MM)) * abs(H)
                         \
-                        \   variableG = (A T) * abs(H)
+                        \   = max(L62AC << 8, scaled |var07x|) * abs(-var07x)
+
+ JSR GetTyreForces      \ Calculate the tyre forces due to the throttle or
+                        \ brakes:
+                        \
+                        \   * (A T) = the force
+                        \
+                        \   * H = the sign of the force
+                        \
+                        \   * G = X + 2, so the call to ApplyLimitThrottle sets
+                        \     var11F or var11R accordingly
+                        \
+                        \   * If the throttle is not being applied, (NN MM) is
+                        \     a maximum value for the force
+                        \
+                        \ If the throttle is being applied and we are processing
+                        \ the front tyres, only G is calculated and the C flag
+                        \ is set
+
+ BCS skid2              \ If the C flag is set then GetTyreForces did not return
+                        \ any calculated values, so jump to skid2 to return from
+                        \ the subroutine
+
+ CMP L62AC,X            \ If A < L62AC for tyre X, jump to skid1
+ BCC skid1
+
+ LDA #0                 \ Set T = 0
+ STA T
+
+ LDA L62AC,X            \ Set A to L62AC for tyre X, so A = min(A, L62AC)
+
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
+                        \
+                        \   var11F or var11R = (A T) * abs(H)
                         \
                         \ otherwise set:
                         \
-                        \   variableG = max((A T), (NN MM)) * abs(H)
+                        \   var11F or var11R = max((A T), (NN MM)) * abs(H)
 
- LDY throttleBrakeState
- DEY
- BNE C4B41
+ LDY throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
+ DEY                    \ being applied, so jump to skid2
+ BNE skid2
 
- CPX #0
- BEQ C4B41
+ CPX #0                 \ If X = 0, then we are processing the front tyres, so
+ BEQ skid2              \ jump to skid2
 
- LDA #0
+                        \ If we get here then the throttle is being applied and
+                        \ we are processing the rear tyres
+
+ LDA #0                 \ Set var09F for tyre X to 0
  STA var09FHi,X
  STA var09FLo,X
 
- BEQ C4B41
+ BEQ skid2              \ Jump to skid2 to return from the subroutine (this BEQ
+                        \ is effectively a JMP as A is always zero)
 
-.C4B3E
+.skid1
 
- JSR ApplyLimitThrottle \ If the throttle is being applied, then Set
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
                         \
-                        \   variableG = (A T) * abs(H)
+                        \   var11F or var11R = (A T) * abs(H)
                         \
                         \ otherwise set:
                         \
-                        \   variableG = max((A T), (NN MM)) * abs(H)
+                        \   var11F or var11R = max((A T), (NN MM)) * abs(H)
 
-.C4B41
+.skid2
 
  RTS                    \ Return from the subroutine
 
@@ -31901,7 +32017,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ If the throttle is being applied, then Set
+\ If the throttle is being applied, then set:
 \
 \   variableG = (A T) * abs(H)
 \
@@ -31912,6 +32028,10 @@ ENDIF
 \ Arguments:
 \
 \   G                   Offset of the variable to set:
+\
+\                         * 0 = var09F
+\
+\                         * 1 = var09R
 \
 \                         * 2 = var11F
 \
@@ -31947,6 +32067,10 @@ ENDIF
 \ Arguments:
 \
 \   G                   Offset of the variable to set:
+\
+\                         * 0 = var09F
+\
+\                         * 1 = var09R
 \
 \                         * 2 = var11F
 \
@@ -31988,7 +32112,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ Scale up a 16-bit value by 2^5, capping the result at the maximum possible
-\ positive value of (&7F xx), and ensuring that the result is positive.
+\ positive value of &7Fxx, and ensuring that the result is positive.
 \
 \ Arguments:
 \
@@ -32055,10 +32179,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: sub_C4B88
+\       Name: GetTyreForces
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: 
+\    Summary: Calculate the tyre forces due to the throttle or brakes
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32116,15 +32240,16 @@ ENDIF
 \
 \                         * 3 = var11R
 \
-\   H                   ???
+\   H                   The sign of the force
 \
-\   (A T)               ???
+\   (A T)               The force
 \
-\   (NN MM)             ???
+\   (NN MM)             If the throttle is not being applied, a maximum for the
+\                       force
 \
 \ ******************************************************************************
 
-.sub_C4B88
+.GetTyreForces
 
  TXA                    \ Set G = X + 2
  CLC                    \
@@ -32132,17 +32257,16 @@ ENDIF
  STA G
 
  LDY throttleBrakeState \ If throttleBrakeState = 1 then the throttle is being
- DEY                    \ applied, so jump to C4BAF
- BEQ C4BAF
+ DEY                    \ applied, so jump to tyfo1
+ BEQ tyfo1
 
                         \ If we get here then the throttle is not being applied
 
  LDY #9                 \ Set Y = 8 so the call to Scale16Bit scales var07z
 
- JSR Scale16Bit         \ Scale up var07z by 2^5, capping the result at the
-                        \ maximum possible positive value of (&7F xx), ensuring
-                        \ that the result is positive, and returning the result
-                        \ in (NN MM)
+ JSR Scale16Bit         \ Scale up |var07z| by 2^5, capping the result at the
+                        \ maximum possible positive value of &7Fxx, and
+                        \ returning the result in (NN MM)
 
  LDA var07zHi           \ Set H = var07zHi with the sign flipped
  EOR #%10000000
@@ -32151,7 +32275,7 @@ ENDIF
  LDA L62AA,X            \ Set A to L62AA for tyre X
 
  CPX #1                 \ If X = 1, then we are processing the rear tyres, so
- BEQ C4BBC              \ jump to C4BBC to use this value of A in the
+ BEQ tyfo2              \ jump to tyfo2 to use this value of A in the
                         \ calculation
 
  LSR A                  \ Set A = (A / 2 + L62AA) / 2
@@ -32159,15 +32283,15 @@ ENDIF
  ADC L62AA,X            \       = L62AA * 3 / 4
  LSR A
 
- JMP C4BBC              \ Jump to C4BBC to use this value of A in the
+ JMP tyfo2              \ Jump to tyfo2 to use this value of A in the
                         \ calculation
 
-.C4BAF
+.tyfo1
 
                         \ If we get here then the throttle is being applied
 
  CPX #1                 \ If X <> 1, then we are processing the front tyres, so
- BNE C4BCD              \ jump to C4BCD to return from the subroutine with the C
+ BNE tyfo4              \ jump to tyfo4 to return from the subroutine with the C
                         \ flag set
 
  LDA gearNumber         \ Set H = gearNumber - 1
@@ -32177,7 +32301,7 @@ ENDIF
 
  LDA engineTorque       \ Set A = engineTorque
 
-.C4BBC
+.tyfo2
 
  STA U                  \ Store the value of A in U to use in the multiplication
                         \ below
@@ -32188,21 +32312,21 @@ ENDIF
                         \           = throttleBrake * U
 
  LDY throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
- DEY                    \ being applied, so jump to C4BCB
- BNE C4BCB
+ DEY                    \ being applied, so jump to tyfo3
+ BNE tyfo3
 
  LSR A                  \ The throttle is being applied, so set:
  ROR T                  \
                         \   (A T) = (A T) / 2
 
-.C4BCB
+.tyfo3
 
  CLC                    \ Clear the C flag to indicate that we are returning a
                         \ set of calculated values
 
  RTS                    \ Return from the subroutine
 
-.C4BCD
+.tyfo4
 
  SEC                    \ Set the C flag to indicate that we are not returning
                         \ any calculated values
@@ -37091,30 +37215,15 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ If bit 7 is set L62A6, we make the sound of squealing tyres.
+\ If bit 7 is set in either of these, we make the sound of squealing tyres.
 \
 \ ******************************************************************************
 
 .L62A6
 
- EQUB 0
+ EQUB 0                 \ Front tyres
 
-\ ******************************************************************************
-\
-\       Name: L62A7
-\       Type: Variable
-\   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ If bit 7 is set L62A7, we make the sound of squealing tyres.
-\
-\ ******************************************************************************
-
-.L62A7
-
- EQUB 0
+ EQUB 0                 \ Rear tyres
 
 \ ******************************************************************************
 \
@@ -37148,21 +37257,6 @@ ENDIF
 
  EQUB 0                 \ Front wing
 
-\ ******************************************************************************
-\
-\       Name: L62AB
-\       Type: Variable
-\   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L62AB
-
  EQUB 0                 \ Rear wing
 
 \ ******************************************************************************
@@ -37181,21 +37275,6 @@ ENDIF
 .L62AC
 
  EQUB 0                 \ Front wing
-
-\ ******************************************************************************
-\
-\       Name: L62AD
-\       Type: Variable
-\   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L62AD
 
  EQUB 0                 \ Rear wing
 
