@@ -515,7 +515,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xSegmentVectorI
+\       Name: xTrackSegmentI
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector x-coordinates between two consecutive segments on the
@@ -807,7 +807,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: ySegmentVectorI
+\       Name: yTrackSegmentI
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector y-coordinates between two consecutive segments on the
@@ -1099,7 +1099,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: zSegmentVectorI
+\       Name: zTrackSegmentI
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector z-coordinates between two consecutive segments on the
@@ -1391,7 +1391,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xSegmentVectorO
+\       Name: xTrackSegmentO
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector x-coordinates from the inside to the outside of the track
@@ -1683,7 +1683,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: zSegmentVectorO
+\       Name: zTrackSegmentO
 \       Type: Variable
 \   Category: Track data
 \    Summary: Vector z-coordinates from the inside to the outside of the track

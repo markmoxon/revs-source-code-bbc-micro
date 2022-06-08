@@ -3417,10 +3417,10 @@ ORG &0B00
 
  LDA #0                 \ Set (H G) = (201 0) - (H G)
  SEC                    \
- SBC G                  \ starting with the high bytes
+ SBC G                  \ starting with the low bytes
  STA G
 
- LDA #201               \ And then the low bytes
+ LDA #201               \ And then the high bytes
  SBC H
  STA H
 
@@ -28953,90 +28953,152 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: ApplyElevation
+\       Name: ApplyElevation (Part 1 of 5)
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate changes in the car's elevation
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   * liftFromTorque = the lift of the front of the car caused by accelerating
+\     or braking
 \
 \ ******************************************************************************
 
 .ApplyElevation
 
- LDA L002D
- BEQ elev1
+ LDA L002D              \ Set A = L002D
 
- DEC L0028
+ BEQ elev1              \ If L002D = 0, jump to elev1
+
+ DEC L0028              \ Set L0028 = L0028 - 2
  DEC L0028
 
- JMP elev7
+ JMP elev7              \ Jump to elev7
 
 .elev1
 
- STA L0028
+                        \ If we get here then L002D = 0 and A = 0
 
- STA L0026
+ STA L0028              \ Set L0028 = 0
 
- LDY L62F0
+ STA L0026              \ Set L0026 = 0
 
- LDA gearNumber
- BEQ elev3
+ LDY liftFromTorque     \ Set Y = liftFromTorque
 
- LDA throttleBrakeState
- BMI elev3
+ LDA gearNumber         \ If gearNumber = 0, then we are in reverse, so jump to
+ BEQ elev3              \ elev3
 
- BEQ elev2
+ LDA throttleBrakeState \ If throttleBrakeState is negative, then there is no
+ BMI elev3              \ brake or throttle key press, so jump to elev3
 
- LDA engineTorque
- BNE elev4
+ BEQ elev2              \ If throttleBrakeState = 0, then the brakes are being
+                        \ applied, so jump to elev2
 
- BEQ elev3
+ LDA engineTorque       \ Set A to the engine torque
+
+ BNE elev4              \ If the engine torque is non-zero, jump to elev4
+
+ BEQ elev3              \ Jump to elev3 (this BEQ is effectively a JMP as A is
+                        \ always zero)
 
 .elev2
 
- LDA speedHi
+                        \ If we get here then we are not in reverse gear and the
+                        \ brakes are being applied
 
- BNE elev5
+ LDA speedHi            \ Set A = speedHi
+
+ BNE elev5              \ If A is non-zero, then we are moving, so jump to elev5
 
 .elev3
 
- TYA
- BEQ elev7
+                        \ If we get here then we are:
+                        \
+                        \   * Not in reverse, brakes are being applied, we are
+                        \     not moving
+                        \
+                        \   * In reverse
+                        \
+                        \   * Not in reverse, no brake or throttle key press
+                        \
+                        \   * Not in reverse, no brakes, engine torque is zero
 
- BPL elev5
+ TYA                    \ Set A = Y
+                        \       = liftFromTorque
 
- INY
+ BEQ elev7              \ If liftFromTorque = 0, jump to elev7 to move on to
+                        \ part 2 without updating liftFromTorque
+
+ BPL elev5              \ If liftFromTorque > 0, jump to elev5
+
+                        \ If we get here then liftFromTorque < 0
+
+ INY                    \ Set Y = Y + 1
+                        \       = liftFromTorque + 1
 
 .elev4
 
- INY
+                        \ We jump here if we are not in reverse, we are not
+                        \ applying the brakes, and engine torque is non-zero
 
- BMI elev6
+ INY                    \ Set Y = Y + 1
+                        \       = liftFromTorque + 1   if we jumped here
+                        \       = liftFromTorque + 2   if we came via elev3
 
- CPY #4
+ BMI elev6              \ If Y is negative, jump to elev6 to set liftFromTorque
+                        \ to Y
+
+ CPY #4                 \ If Y < 4, jump to elev6 to set liftFromTorque = Y
  BCC elev6
 
- LDY #3
+ LDY #3                 \ Set Y = 3, so Y has a maximum value of 3
 
- BCS elev6
+ BCS elev6              \ Jump to elev6 (this BCS is effectively a JMP as we
+                        \ just passed through a BCC)
 
 .elev5
 
- DEY
+ DEY                    \ Set Y = Y -1
 
- BPL elev6
+ BPL elev6              \ If Y is positive, jump to elev6 to set liftFromTorque
+                        \ to Y
 
- CPY #251
+ CPY #&FB               \ If Y >= -5, jump to elev6 to set liftFromTorque = Y
  BCS elev6
 
- LDY #251
+ LDY #&FB               \ Set Y = -5, so Y has a minimum value of -5
 
 .elev6
 
- STY L62F0
+ STY liftFromTorque     \ Set liftFromTorque = Y
+
+\ ******************************************************************************
+\
+\       Name: ApplyElevation (Part 2 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Calculate the player's heading and sideways flag
+\
+\ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * playerHeading, which is the player's yaw angle, relative to the direction
+\     of the track, where a heading of 0 means the player is pointing straight
+\     along the track
+\
+\   * playerSideways, which contains the following information:
+\
+\     * If playerSideways < 40, then the player's car is facing forwards or
+\       backwards along the track
+\
+\     * If playerSideways >= 40, then the player's car is facing sideways,
+\       relative to the direction of the track
+\
+\ ******************************************************************************
 
 .elev7
 
@@ -29075,6 +29137,8 @@ NEXT
 .elev8
 
  STA T                  \ Set T = A
+                        \       = |zTrackSegmentI|    if |zTrackSegmentI| < 60
+                        \         |xTrackSegmentI|    if |zTrackSegmentI| >= 60
 
  LSR A                  \ Set A = (A / 2 + T) / 4
  CLC                    \       = (A / 2 + A) / 4
@@ -29087,7 +29151,9 @@ NEXT
 
  BCS elev9              \ If |zTrackSegmentI| >= 60, jump to elev9
 
- EOR #%00111111
+ EOR #%00111111         \ We know bits 6 and 7 of A are clear, as we just
+                        \ shifted A to the right twice, so this flips bits 0 to
+                        \ 5, so the range 0 to 63 gets flipped around to 63 to 0
 
 .elev9
 
@@ -29095,7 +29161,8 @@ NEXT
 
  BPL elev10             \ If zTrackSegmentI is positive, jump to elev10
 
- EOR #%10000000
+ EOR #%10000000         \ Flip the bit 7 of A, so the range 0 to 63 gets
+                        \ changed to -65 to -128
 
 .elev10
 
@@ -29162,7 +29229,7 @@ NEXT
                         \            |  /
                         \            | /
                         \            |/
-                        \            +----- 64
+                        \            +----- 63
                         \            |\
                         \            | \
                         \            |  \
@@ -29179,63 +29246,153 @@ NEXT
  STA playerSideways     \ Store the value of A in playerSideways, so we can test
                         \ whether the player is facing sideways on the track
 
- EOR #%00111111
- STA T
+\ ******************************************************************************
+\
+\       Name: ApplyElevation (Part 3 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Calculate player's elevation above the track
+\
+\ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * L000D
+\
+\   * spinPitchAngle
+\
+\ ******************************************************************************
 
- LSR A
- CLC
- ADC T
- 
- JSR MultiplyHeight
+ EOR #%00111111         \ We know bits 6 and 7 of A are clear, as we know A is
+                        \ in the range 0 to 63, so this flips bits 0 to 5, so
+                        \ the range 0 to 63 gets flipped around to 63 to 0, to
+                        \ give this in A:
+                        \
+                        \            63
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 0
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   32
+                        \            63
 
- CLC
+ STA T                  \ Store the flipped range in T
+
+ LSR A                  \ Set A = A / 2 + T
+ CLC                    \       = 1.5 * T
+ ADC T                  \
+                        \ So we now have this in A, depending on the heading of
+                        \ the player within the segment:
+                        \
+                        \            94
+                        \            |   48
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 0
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   48
+                        \            94
+
+ JSR MultiplyElevation  \ Set:
+                        \
+                        \   A = A * yTrackSegmentI
+                        \
+                        \ flipping the sign if we are facing backwards
+                        \
+                        \ The value given in yTrackSegmentI is the y-coordinate
+                        \ of the segment vector, i.e. the vector from this
+                        \ segment to the next, which is the same as the change
+                        \ in height as we move through the segment
+                        \
+                        \ The calculation above effectively works out the
+                        \ difference in elevation of the car within the segment
+                        \ with respect to its heading, and puts it in A ???
+
+ CLC                    \ Set A = A + L005D + liftFromTorque + L0028 + L000D
  ADC L005D
  CLC
- ADC L62F0
+ ADC liftFromTorque
  CLC
  ADC L0028
  CLC
  ADC L000D
 
- CLC
+ CLC                    \ Clear the C flag, to use when A is positive
 
- BPL elev13
+ BPL elev13             \ If A is positive, jump to elev13
 
- SEC
+ SEC                    \ Set to C flag, so it contains the correct sign bit
+                        \ for the value of A
 
 .elev13
 
- ROR A
+ ROR A                  \ Set A = A / 2, keeping the sign of A intact
 
- STA L000D
+ STA L000D              \ Set L000D = A
 
- SEC
- SBC V
- STA spinPitchAngle
+ SEC                    \ Set spinPitchAngle = A - V
+ SBC V                  \                    = L000D - V
+ STA spinPitchAngle     \
+                        \ We set V to the original value of L000D above, so
+                        \ spinPitchAngle now contains the change in elevation
+                        \ of the car
 
- LDA #0
+\ ******************************************************************************
+\
+\       Name: ApplyElevation (Part 4 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Calculate L002D
+\
+\ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * L002D
+\
+\ ******************************************************************************
+
+ LDA #0                 \ Set W = 0, to use as the high byte of (W A) below
  STA W
 
- LDA L0026
+ LDA L0026              \ Set A = L0026 - 4
  SEC
  SBC #4
 
- BVC elev14
-
- LDA #200
+ BVC elev14             \ The overflow flag is set if L0026 is negative but the
+ LDA #&C8               \ result is positive, in which case we set A = -56, so
+                        \ this sets a minimum value for A of -56, i.e.
+                        \
+                        \   A = max(L0026 - 4, -56)
 
 .elev14
 
- STA L0026
+ STA L0026              \ Set L0026 = A
+                        \           = max(L0026 - 4, -56)
 
- CLC
- ADC L002D
+ CLC                    \ Set A = A + L002D
+ ADC L002D              \       = max(L0026 - 4, -56) + L002D
 
- BEQ elev15
+ BEQ elev15             \ If A = 0, jump to elev15
 
- BVS elev17
+ BVS elev17             \ The overflow flag is set if:
+                        \
+                        \   * L0026 + L002D > 127 and both are < 128
+                        \     (i.e. adding two positives gives a negative)
+                        \
+                        \   * L0026 + L002D < 128 and both are > 127
+                        \     (i.e. adding two negatives gives a positive)
+                        \
+                        \ In either case, we jump to elev17 to set L002D = 127
 
- BPL elev18
+ BPL elev18             \ If A is positive, jump to elev15 to set L002D = A
 
 .elev15
 
@@ -29244,7 +29401,7 @@ NEXT
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |L0026|
 
- CMP #5                 \ If A < 5, jump to elev16 to skip the following
+ CMP #5                 \ If A < 5, jump to elev16 to set L002D = 0
  BCC elev16
 
  JSR CalculateVars2     \ Calculate the following:
@@ -29259,59 +29416,133 @@ NEXT
                         \
                         \ and make the crash/contact sound
 
- LDA #1                 \ Set A = 1
+ LDA #1                 \ Set A = 1, to use as the value of L002D
 
  BNE elev18             \ Jump to elev18 (this BNE is effectively a JMP as A is
                         \ never zero)
 
 .elev16
 
- LDA #0
- BEQ elev18
+ LDA #0                 \ Set A = 0, to use as the value of L002D
+
+ BEQ elev18             \ Jump to elev18 (this BEQ is effectively a JMP as A is
+                        \ always zero)
 
 .elev17
 
- LDA #127
+ LDA #127               \ Set A = 127, to use as the value of L002D
 
 .elev18
 
- STA L002D
+ STA L002D              \ Store the value of A in L002D
 
+\ ******************************************************************************
+\
+\       Name: ApplyElevation (Part 5 of 5)
+\       Type: Subroutine
+\   Category: Driving model
+\    Summary: Calculate the player's 3D y-coordinate and progress speed
+\
+\ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * (yPlayerCoordTop yPlayerCoordHi)
+\
+\   * carSpeedHi for the player's car
+\
+\ ******************************************************************************
+
+ ASL A                  \ Set (W A) = (0 A) << 2
+ ROL W                  \           = L002D << 2
  ASL A
  ROL W
- ASL A
- ROL W
- STA V
 
- LDX currentPlayer
- LDA carProgress,X
+ STA V                  \ Set (W V) = (W A)
+                        \           = L002D << 2
 
- JSR MultiplyHeight
+ LDX currentPlayer      \ Set X to the driver number of the current player
 
- BPL elev19
+ LDA carProgress,X      \ Set A to the lowest byte of the player's progress
+                        \ through the current segment
 
- DEC W
+ JSR MultiplyElevation  \ Set:
+                        \
+                        \   A = A * yTrackSegmentI
+                        \     = carProgress * yTrackSegmentI
+                        \
+                        \ flipping the sign if we are facing backwards
+                        \
+                        \ The value given in yTrackSegmentI is the y-coordinate
+                        \ of the segment vector, i.e. the vector from this
+                        \ segment to the next, which is the same as the change
+                        \ in height as we move through the segment
+                        \
+                        \ The calculation above effectively works out the
+                        \ difference in elevation of the car as it progresses
+                        \ through the segment, and puts it in A
+
+ BPL elev19             \ If A is positive, jump to elev19 to skip the following
+                        \ instruction
+
+ DEC W                  \ A is negative, so set W = W - 1
 
 .elev19
 
- LDY playerSegmentIndex
+ LDY playerSegmentIndex \ Set Y to the index of the player's track segment from
+                        \ the track segment buffer
 
- CLC
- ADC ySegmentCoordILo,Y
+ CLC                    \ Set:
+ ADC ySegmentCoordILo,Y \
+                        \   A = A + ySegmentCoordILo
+                        \     = carProgress * yTrackSegmentI + ySegmentCoordILo
+                        \
+                        \ ySegmentCoordILo is the low byte of the 3D y-coordinate
+                        \ for the player's track segment
+                        \
+                        \ So A now contains the segment's y-coordinate, plus the
+                        \ elevation of the car due to the track's progress
+                        \ through the segment
 
- PHP
+ PHP                    \ Store the C flag on the stack, which will be set if
+                        \ the addition just overflowed
 
- CLC
+ CLC                    \ Set A = A + 172
  ADC #172
 
- PHP
+ PHP                    \ Store the C flag on the stack, which will be set if
+                        \ the addition just overflowed
 
- CLC
+                        \ We now calculate the following for the y-coordinate of
+                        \ the player's 3D coordinates:
+                        \
+                        \   (yPlayerCoordTop yPlayerCoordHi)
+                        \
+                        \     =   A
+                        \       + (W V)
+                        \       + (ySegmentCoordIHi 0)
+                        \       + C flag from the first addition
+                        \       + C flag from the second addition
+                        \
+                        \    =   carProgress * yTrackSegmentI + ySegmentCoordILo
+                        \      + 172
+                        \      + L002D << 2
+                        \      + (ySegmentCoordIHi 0)
+                        \      + C flag from the first addition
+                        \      + C flag from the second addition
+                        \
+                        \    =   carProgress * yTrackSegmentI
+                        \      + 172
+                        \      + L002D << 2
+                        \      + (ySegmentCoordIHi ySegmentCoordILo)
+                        \
+                        \ with all the correct carry bits included
+
+ CLC                    \ We start with the low bytes
  ADC V
  STA yPlayerCoordHi
 
- LDA ySegmentCoordIHi,Y
-
+ LDA ySegmentCoordIHi,Y \ And then the high bytes
  ADC W
  PLP
  ADC #0
@@ -29319,26 +29550,33 @@ NEXT
  ADC #0
  STA yPlayerCoordTop
 
- LDA speedHi
+ LDA speedHi            \ Set U = speedHi, which is the player's speed in mph
  STA U
 
- LDA #33
+ LDA #33                \ Set A = 33
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = speedHi * 33
+                        \
+                        \ So A = speedHi * 33 / 256
 
- ASL U
- CLC
- ADC U
- STA carSpeedHi,X
+ ASL U                  \ Set A = A + U * 2
+ CLC                    \       = speedHi * 33 / 256 + speedHi * 2
+ ADC U                  \       = speedHi * 2.13
+
+ STA carSpeedHi,X       \ Set carSpeedHi for the player's car to speedHi * 2.13
+                        \
+                        \ carSpeedHi is the speed of the car in terms of
+                        \ 1/256-ths of a segment ???
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: MultiplyHeight
+\       Name: MultiplyElevation
 \       Type: Subroutine
 \   Category: Track geometry
-\    Summary: Multiply track height by A
+\    Summary: Multiply the track elevation of a specified track segment by A
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29360,7 +29598,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.MultiplyHeight
+.MultiplyElevation
 
  STA U                  \ Set U to the multiplication factor in A
 
@@ -31192,7 +31430,7 @@ ENDIF
 \       Name: ProcessEngineStart
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Process the keypress for starting the engine
+\    Summary: Process the key press for starting the engine
 \
 \ ******************************************************************************
 
@@ -31451,7 +31689,7 @@ ENDIF
 .ApplyEngine
 
  LDA engineStatus       \ If the engine is not on, jump to ProcessEngineStart to
- BEQ ProcessEngineStart \ process the keypress for starting the engine,
+ BEQ ProcessEngineStart \ process the key press for starting the engine,
                         \ returning from the subroutine using a tail call
 
  LDA L002D              \ If L002D <> 0, jump to CalcRevsNoTorque to calculate
@@ -32803,8 +33041,8 @@ ENDIF
 
  LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var06z
 
- LDA var07zHi           \ Set A = var07zHi so the call to SubtractCoords sets the
-                        \ sign to abs(var07z)
+ LDA var07zHi           \ Set A = var07zHi so the call to SubtractCoords sets
+                        \ the sign to abs(var07z)
 
  JSR SubtractCoords     \ Set:
                         \
@@ -38160,18 +38398,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62F0
+\       Name: liftFromTorque
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The lift of the front of the car caused by acceleration or braking
 \
 \ ******************************************************************************
 
-.L62F0
+.liftFromTorque
 
  EQUB 0
 
