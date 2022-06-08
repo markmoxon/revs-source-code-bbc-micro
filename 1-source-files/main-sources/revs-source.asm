@@ -5285,7 +5285,7 @@ ORG &0B00
 
  STA soundRevTarget     \ Set soundRevTarget = 0 to stop the engine sound
 
- LDA #&7F               \ Set L002D = &7F
+ LDA #127               \ Set L002D = 127
  STA L002D
 
  LDA #31                \ Set oddsOfEngineStart = 31
@@ -29858,8 +29858,9 @@ ENDIF
 
                         \ If we get here then L002D >= 2
 
- LDX #2                 \ We now zero the three 16-bit bytes at var05, so set a
-                        \ counter in X for the three variables
+ LDX #2                 \ We now zero the three 16-bit bytes at var05, var06x
+                        \ and var06z, so set a counter in X for the three
+                        \ variables
 
  LDA #0                 \ Set A = 0 to use as the zero value
 
@@ -30101,6 +30102,22 @@ ENDIF
 \             forces and sound effects where applicable
 \
 \ ------------------------------------------------------------------------------
+\
+\ Calculate the following:
+\
+\   * If L002D >= 2, stop the tyres from squealing
+\
+\   * If L002D < 2:
+\
+\     * Call ApplyTyreForces
+\
+\     * If either bits 6 or 7 are set in L62A6 for tyre X:
+\
+\         * Call ApplySkidForces and make the tyres squeal
+\
+\       otherwise:
+\
+\         * On every other main loop iteration, stop the tyres from squealing
 \
 \ Arguments:
 \
@@ -31209,8 +31226,9 @@ ENDIF
 
  LDA #0                 \ Set A = 0 to set as the value of the rev counter
 
- BEQ SetRevs            \ Jump to SetRevs to zero the rev counter (this BEQ is
-                        \ effectively a JMP as A is always zero)
+ BEQ SetRevsNoTorque    \ Jump to SetRevsNoTorque to zero the rev counter and
+                        \ engine torque (this BEQ is effectively a JMP as A is
+                        \ always zero)
 
 .engs2
 
@@ -31223,7 +31241,7 @@ ENDIF
 
  AND oddsOfEngineStart  \ Set A = A mod oddsOfEngineStart
 
- BNE SetRevsWithFlutter \ If A is non-zero, jump to SetRevsWithFlutter
+ BNE ThrobRevsNoTorque  \ If A is non-zero, jump to ThrobRevsNoTorque
 
                         \ Otherwise keep going to start the engine (which has a
                         \ chance of 1 in oddsOfEngineStart of happening) and set
@@ -31242,28 +31260,29 @@ ENDIF
  LDX #&FF               \ Set engineStatus = &FF to turn on the engine
  STX engineStatus
 
- BMI SetRevsWithFlutter \ Jump to SetRevsWithFlutter to set the rev counter to A
-                        \ with random flutter added (this BMI is effectively a
+ BMI ThrobRevsNoTorque  \ Jump to ThrobRevsNoTorque to set the rev counter to A
+                        \ with a random throb added (this BMI is effectively a
                         \ JMP as X is always negative)
 
 \ ******************************************************************************
 \
-\       Name: UpdateRevs
+\       Name: CalcRevsNoTorque
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Update the rev counter according to the throttle being applied
+\    Summary: Calculate the value of the rev counter according to the throttle
+\             being applied and zero the engine torque
 \
 \ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
-\   UpdateRevs-2        Set L0059 to A before running the routine
+\   CalcRevsNoTorque-2  Set L0059 to A before running the routine
 \
 \ ******************************************************************************
 
  STA L0059              \ Set L0059 = A
 
-.UpdateRevs
+.CalcRevsNoTorque
 
  LDA revCount           \ Set A to the current rev counter
 
@@ -31278,9 +31297,9 @@ ENDIF
  BCS urev1              \ than the amount of throttle being applied, so jump to
                         \ urev1
 
- CMP #140               \ If A < 140, jump to SetRevs to set the rev counter to
- BCC SetRevs            \ the new amount, returning from the subroutine using a
-                        \ tail call
+ CMP #140               \ If A < 140, jump to SetRevsNoTorque to set the rev
+ BCC SetRevsNoTorque    \ counter to the new amount and zero the engine torque,
+                        \ returning from the subroutine using a tail call
 
 .urev1
 
@@ -31290,25 +31309,26 @@ ENDIF
  SEC                    \ Set A = A - 12
  SBC #12
 
- BCS SetRevsWithFlutter \ Jump to SetRevsWithFlutter to set the rev counter to
-                        \ the new amount, with random flutter added, returning
-                        \ from the subroutine using a tail call (this BCS is
-                        \ effectively a JMP, as we know the subtraction won't
-                        \ underflow as A >= 42)
+ BCS ThrobRevsNoTorque  \ Jump to ThrobRevsNoTorque to set the rev counter to
+                        \ the new amount, with a random throb added, and zero
+                        \ the engine torque, returning from the subroutine using
+                        \ a tail call (this BCS is effectively a JMP, as we know
+                        \ the subtraction won't underflow as A >= 42)
 
 .urev2
 
  LDA #40                \ Set A = 40 to set as the rev count
 
-                        \ Fall through into SetRevsWithFlutter to set the rev
-                        \ counter to 40, with random flutter added
+                        \ Fall through into ThrobRevsNoTorque to set the rev
+                        \ counter to 40, with a random throb added
 
 \ ******************************************************************************
 \
-\       Name: SetRevsWithFlutter
+\       Name: ThrobRevsNoTorque
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Set the rev counter after adding a random flutter
+\    Summary: Set the rev counter after adding a random throb and zero the
+\             engine torque
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31324,7 +31344,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.SetRevsWithFlutter
+.ThrobRevsNoTorque
 
  STA T                  \ Store A in T
 
@@ -31338,14 +31358,15 @@ ENDIF
  CLC                    \ Set A = A + T
  ADC T                  \       = random 0-7 + T
 
-                        \ Fall through into SetRevs to set the rev counter to A
+                        \ Fall through into SetRevsNoTorque to set the rev
+                        \ counter to A and zero the engine torque
 
 \ ******************************************************************************
 \
-\       Name: SetRevs
+\       Name: SetRevsNoTorque
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Set the rev counter
+\    Summary: Set the rev counter and zero the engine torque
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31361,7 +31382,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.SetRevs
+.SetRevsNoTorque
 
  STA revCount           \ Set revCount = A
 
@@ -31391,7 +31412,7 @@ ENDIF
 
  LDA #0                 \ Set A = 0 to set as the value of engineTorque
 
- JMP SetEngineTorque    \ Jump to SetEngineTorque to set tye following:
+ JMP SetEngineTorque    \ Jump to SetEngineTorque to set the following:
                         \
                         \   engineTorque = 0
                         \
@@ -31408,7 +31429,22 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate the following:
+\
+\   * If the engine is not on, jump to ProcessEngineStart
+\
+\   * If L002D <> 0, jump to CalcRevsNoTorque to calculate the rev count and
+\     zero the engine torque
+\
+\   * If a gear change key is being pressed, jump to CalcRevsNoTorque-2 to set
+\     bit 7 of L0059, calculate the rev count and zero the engine torque
+\
+\   * If we are in neutral, jump to CalcRevsNoTorque to calculate the rev count
+\     and zero the engine torque
+\
+\   * Otherwise, calculate the engine torque based on gear ratio, power and
+\     revs, setting the engineTorque, revCount and soundRevTarget variables
+\     accordingly, including stalling the engine
 \
 \ ******************************************************************************
 
@@ -31418,17 +31454,19 @@ ENDIF
  BEQ ProcessEngineStart \ process the keypress for starting the engine,
                         \ returning from the subroutine using a tail call
 
- LDA L002D              \ If L002D <> 0, jump to UpdateRevs, returning from the
- BNE UpdateRevs         \ subroutine using a tail call
+ LDA L002D              \ If L002D <> 0, jump to CalcRevsNoTorque to calculate
+ BNE CalcRevsNoTorque   \ the revs and zero the engine torque, returning from
+                        \ the subroutine using a tail call
 
  LDA gearChangeKey      \ If bit 7 of gearChangeKey is set then a gear change
- BMI UpdateRevs-2       \ key is being pressed, so jump to UpdateRevs-2 to set
-                        \ bit 7 of L0059 before running UpdateRevs and returning
-                        \ from the subroutine using a tail call
+ BMI CalcRevsNoTorque-2 \ key is being pressed, so jump to CalcRevsNoTorque-2 to
+                        \ set bit 7 of L0059, calculate the revs and zero the
+                        \ engine torque, returning from the subroutine using a
+                        \ tail call
 
  LDY gearNumber         \ If gearNumber = 1, then we are in neutral, so jump to
- DEY                    \ UpdateRevs, returning from the subroutine using a tail
- BEQ UpdateRevs         \ call
+ DEY                    \ CalcRevsNoTorque, returning from the subroutine using
+ BEQ CalcRevsNoTorque   \ a tail call
 
  LDA speedLo            \ Set (A T) = (speedHi speedLo)
  STA T
@@ -31472,11 +31510,11 @@ ENDIF
  BIT L0059              \ If bit 7 of L0059 is clear, jump to engi6
  BPL engi6
 
- LDY throttleBrakeState
- DEY
+ LDY throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
+ DEY                    \ being applied, so jump to engi4
  BNE engi4
 
- LDY speedHi
+ LDY speedHi            \ If speedHi >= 22, jump to engi4
  CPY #22
  BCS engi4
 
@@ -31485,124 +31523,166 @@ ENDIF
  BPL engi3              \ If bit 7 of raceStarting is clear, then we are not on
                         \ the grid at the start of a race, so jump to engi3
 
- CPY #%10100000
- BNE engi4
+ CPY #160               \ If raceStarting <> 160, then we are not showing the
+ BNE engi4              \ blue lights at the start of the race, so jump to engi4
 
- PHA
+                        \ If we get here then we are showing the blue lights at
+                        \ the start of the race, which we keep showing until the
+                        \ main loop counter is a multiple of 64 (at which point
+                        \ we show the green lights)
 
- LDA mainLoopCounterLo
+ PHA                    \ Store A on the stack to we can retrieve it below
+
+ LDA mainLoopCounterLo  \ If mainLoopCounterLo mod 64 < 53, clear the C flag
  AND #63
  CMP #53
 
- PLA
+ PLA                    \ Retrieve the value of A we stored on the stack above
 
- BCC engi4
+ BCC engi4              \ If mainLoopCounterLo mod 64 < 53, then we have at
+                        \ least 63 - 53 = 10 main loop iterations (including
+                        \ this one) to go until the green lights appear, so jump
+                        \ to engi4
 
 .engi3
 
- CMP L005A
+                        \ If we get here then we are either not on the starting
+                        \ grid, or we are on the starting grid, the blue lights
+                        \ are showing and we have fewer than 10 main loop
+                        \ iterations to go until the lights turn green
+
+ CMP L005A              \ If A < L005A, jump to engi5
  BCC engi5
 
 .engi4
 
- LDY #0
+ LDY #0                 \ Set L0059 = 0
  STY L0059
 
- BEQ engi6
+ BEQ engi6              \ Jump to engi6 (this BEQ is effectively a JMP as Y is
+                        \ always zero)
 
 .engi5
 
- LDA L005A
+                        \ If we get here then we are either not on the starting
+                        \ grid, or we are on the starting grid, the blue lights
+                        \ are showing and we have fewer than 10 main loop
+                        \ iterations to go until the lights turn green, and
+                        \ A < L005A
 
- CMP #108
+ LDA L005A              \ Set A = L005A
+
+ CMP #108               \ If A < 108, jump to engi6
  BCC engi6
 
- SEC
- SBC #2
- STA L005A
+ SEC                    \ Set L005A = L005A - 2
+ SBC #2                 \
+ STA L005A              \ And fall through into engi6 to set revCount to L005A
 
 .engi6
 
- STA revCount
+ STA revCount           \ Set revCount = A
 
- CMP #170
- BCC engi7
+ CMP #170               \ If A < 170, jump to engi7 to skip the following
+ BCC engi7              \ instruction
 
- LDA #170
+ LDA #170               \ Set A = 170, so A has a maximum value of 170
 
 .engi7
 
- CMP #3
+ CMP #3                 \ If A >= 3, jump to engi8
  BCS engi8
 
- INC engineStatus
+ INC engineStatus       \ Increment engineStatus from &FF to 0, which turns the
+                        \ engine off
 
- JMP ZeroEngineTorque
+ JMP ZeroEngineTorque   \ Jump to ZeroEngineTorque to set the engine torque to
+                        \ zero, returning from the subroutine using a tail call
 
 .engi8
 
- SEC
+ SEC                    \ Set A = A - 66
  SBC #66
 
- BMI engi9
+ BMI engi9              \ If A is negative (i.e. revCount < 66), jump to engi9
 
- CMP #17
+ CMP #17                \ If A >= 17, jump to engi10
  BCS engi10
 
 .engi9
 
- ASL A
+ ASL A                  \ Set A = A * 2 + 152
  CLC
  ADC #152
 
- JMP engi13
+ JMP engi13             \ Jump to engi13
 
 .engi10
 
- SEC
+ SEC                    \ Set A = A - 17
  SBC #17
 
- CMP #4
+ CMP #4                 \ If A >= 4, jump to engi11
  BCS engi11
 
- EOR #&FF
- CLC
- ADC #187
+                        \ If we get here then A is in the range 0 to 3
 
- BCS engi13
+ EOR #&FF               \ Set A = ~A, so A is in the range 255 to 252
+
+ CLC                    \ Set A = A + 187
+ ADC #187               \       = ~A + 187
+                        \       = -A - 1 + 187
+                        \       = 186 - A
+
+ BCS engi13             \ Jump to engi13 (the BCS is effectively a JMP as the
+                        \ above addition will always overflow)
 
 .engi11
 
- SEC
+ SEC                    \ Set A = A - 4
  SBC #4
 
- CMP #5
+ CMP #5                 \ If A >= 5, jump to engi12
  BCS engi12
 
- ASL A
+                        \ If we get here then A is in the range 0 to 5
+
+ ASL A                  \ A = ~(A * 4), so A is in the range 255 to 235
  ASL A
  EOR #&FF
- CLC
- ADC #183
 
- BCS engi13
+ CLC                    \ Set A = A + 183
+ ADC #183               \       = ~(A * 4) + 183
+                        \       = -(A * 4) - 1 + 183
+                        \       = 182 - (A * 4)
+
+ BCS engi13             \ Jump to engi13 (the BCS is effectively a JMP as the
+                        \ above addition will always overflow)
 
 .engi12
 
- SEC
+ SEC                    \ Set A = ~((A - 5) * 2)
  SBC #5
  ASL A
  EOR #&FF
- CLC
- ADC #163
+
+ CLC                    \ Set A = A + 163
+ ADC #163               \       = ~((A - 5) * 2) + 163
+                        \       = -((A - 5) * 2) - 1 + 163
+                        \       = 162 - (A - 5) * 2
 
 .engi13
 
- STA U
+ STA U                  \ Set U to A
 
- LDA trackGearPower,X
+ LDA trackGearPower,X   \ Set A to the gear power for the current gear, which is
+                        \ defined in the track data file at trackGearPower
 
  JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = trackGearPower * U
+
+                        \ Fall through into SetEngineTorque to set the engine
+                        \ torque to the high byte in A
 
 \ ******************************************************************************
 \
@@ -31675,7 +31755,7 @@ ENDIF
 \
 \           A = |var09FHi| + |var11FHi| / 2
 \
-\   * Set bit 7 of L62A6 for tyre X as follows:
+\   * Rotate a new bit 7 into L62A6 for tyre X as follows:
 \
 \     * Clear if A <= L62AA for tyre X
 \
@@ -32356,7 +32436,7 @@ ENDIF
 \     * L002D = L002D + 1
 \     * spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
 \
-\   and make the crash/contact sound.
+\   and make the crash/contact sound
 \
 \ * For each wing, calculate the following:
 \
