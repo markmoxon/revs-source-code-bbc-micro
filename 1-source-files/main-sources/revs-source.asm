@@ -198,9 +198,10 @@ ORG &0000
                         \
                         \ This is the left-right rotation of the player's car
 
-.yStore1
+.vectorNumber
 
- SKIP 1                 \ Temporary storage for Y
+ SKIP 1                 \ The segment vector number when building car objects
+                        \ in the BuildCarObjects routine
 
 .L000D
 
@@ -307,7 +308,8 @@ ORG &0000
 
 .thisPitchIndex
 
- SKIP 0                 \ 
+ SKIP 0                 \ The index of the pitch angle in the track segment list
+                        \ for the verge we are processing
 
 .thisObjectIndex
 
@@ -417,9 +419,11 @@ ORG &0000
 
  SKIP 1                 \ 
 
-.L0029
+.vergeTopRight
 
- SKIP 1                 \ 
+ SKIP 1                 \ The track line just above the segment at
+                        \ vergeDepthOfField (i.e. the furthest segment that
+                        \ might contain a verge) when drawing the right verge
 
 .scaleUp
 
@@ -435,13 +439,17 @@ ORG &0000
                         \
                         \ The scaffold is divided by 2^scaleDown
 
-.L002C
+.vergeTopLeft
 
- SKIP 1                 \ 
+ SKIP 1                 \ The track line just above the segment at
+                        \ vergeDepthOfField (i.e. the furthest segment that
+                        \ might contain a verge) when drawing the left verge
 
-.L002D
+.heightAboveTrack
 
- SKIP 1                 \ 
+ SKIP 1                 \ The car's height above the track, for when it is being
+                        \ dropped from the crane, or jumping from hitting the
+                        \ verge too fast
 
 .speedLo
 
@@ -534,21 +542,29 @@ ORG &0000
                         \   * 11 = Right turn road sign
                         \   * 12 = Left turn road sign
 
-.var15Lo
+.xPrevVelocityLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the low byte of the x-coordinate of the
+                        \ player's previous velocity vector during the driving
+                        \ model calculations (i.e. the velocity from the last
+                        \ iteration of the main loop)
 
-.var15Hi
+.xPrevVelocityHi
 
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the high byte of the x-coordinate of the
+                        \ player's previous velocity vector during the driving
+                        \ model calculations (i.e. the velocity from the last
+                        \ iteration of the main loop)
 
-.var16Lo
+.xSpinVelocityLo
 
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the low byte of the scaled spin yaw
+                        \ angle during the driving model calculations
 
-.var16Hi
+.xSpinVelocityHi
 
- SKIP 1                 \ 
+ SKIP 1                 \ Used to store the high byte of the scaled spin yaw
+                        \ angle during the driving model calculations
 
 .revCount
 
@@ -650,7 +666,7 @@ ORG &0000
 
  SKIP 0                 \ The number of the car we are currently drawing
 
-.xStore2
+.xStoreDraw
 
  SKIP 0                 \ Temporary storage for X so it can be preserved through
                         \ calls to DrawCarInPosition, DrawCarOrSign and
@@ -658,15 +674,12 @@ ORG &0000
 
 .thisYawIndex
 
- SKIP 0                 \ 
+ SKIP 0                 \ The index of the yaw angle in the track segment list
+                        \ for the verge we are processing
 
-.temp4
+.thisSignNumber
 
- SKIP 0                 \ Temporary storage
-
-.L0045
-
- SKIP 1                 \ 
+ SKIP 1                 \ The sign number that we are currently building
 
 .timerAdjust
 
@@ -788,9 +801,10 @@ ORG &0000
                         \ If a car's objectDistanceHi is >= 5, then it is drawn
                         \ as a distant car
 
-.temp1
+.markerNumber
 
- SKIP 1                 \ Temporary storage
+ SKIP 1                 \ The marker number that we are drawing in the
+                        \ DrawCornerMarkers routine
 
 .markersToDraw
 
@@ -803,13 +817,18 @@ ORG &0000
                         \
                         \   * Bit 7 set = a gear change key has been pressed
 
-.L0059
+.clutchEngaged
 
- SKIP 1                 \ 
+ SKIP 1                 \ Determines whether the clutch is engaged
+                        \
+                        \   * Bit 7 clear = clutch is engaged
+                        \
+                        \   * Bit 7 set = clutch is not fully engaged
 
-.L005A
 
- SKIP 1                 \ 
+.revsOnGearChange
+
+ SKIP 1                 \ The rev count when the gear was last changed
 
 .positionBehind
 
@@ -2405,7 +2424,7 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: xStore1
+\       Name: xStoreSound
 \       Type: Variable
 \   Category: Sound
 \    Summary: Temporary storage for X so it can be preserved through calls to
@@ -2413,7 +2432,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.xStore1
+.xStoreSound
 
  EQUB &FF
 
@@ -2445,8 +2464,8 @@ ORG &0B00
 
 .MakeSound
 
- STX xStore1            \ Store the value of X in xStore1, so we can preserve it
-                        \ through the routine
+ STX xStoreSound        \ Store the value of X in xStoreSound, so we can
+                        \ preserve it through the call to the MakeSound routine
 
  ASL A                  \ Set A = A * 8
  ASL A                  \
@@ -2510,8 +2529,9 @@ ORG &0B00
 
 .DefineEnvelope
 
- STX xStore1            \ Store the value of X in xStore1, so we can preserve it
-                        \ through the routine
+ STX xStoreSound        \ Store the value of X in xStoreSound, so we can
+                        \ preserve it through the call to the DefineEnvelope
+                        \ routine
 
  CLC                    \ Set (Y X) = envelopeData + A
  ADC #LO(envelopeData)  \
@@ -2542,7 +2562,7 @@ ORG &0B00
 \
 \   X                   The low byte of the address of the OSWORD block
 \
-\   xStore1             The value of X to restore at the end of the routine
+\   xStoreSound         The value of X to restore at the end of the routine
 \
 \ ******************************************************************************
 
@@ -2558,7 +2578,7 @@ ORG &0B00
                         \
                         \  * A = 8 to set up the sound envelope at (Y X)
 
- LDX xStore1            \ Fetch the value of X we stored before calling the
+ LDX xStoreSound        \ Restore the value of X we stored before calling the
                         \ routine, so it doesn't change
 
  RTS                    \ Return from the subroutine
@@ -2586,19 +2606,19 @@ ORG &0B00
 
 .ScaleWingSettings
 
- LDX #1                 \ We are about to loop through the two wing settings, so
-                        \ set a counter in X so we do the rear wing setting
-                        \ first, and then the front wing setting
+ LDX #1                 \ We are about to loop through the two wings, so set a
+                        \ counter in X so we do the rear wing setting first, and
+                        \ then the front wing setting
 
 .wing1
 
  LDA frontWingSetting,X \ Set U = wing setting * 4
- ASL A
- ASL A
+ ASL A                  \
+ ASL A                  \ where the wing setting was entered by the player
  STA U
 
- LDA wingScaleFactor,X  \ Set A to the wingScaleFactor for this wing setting,
-                        \ which is hard-coded to 205
+ LDA wingScaleFactor,X  \ Set A to the wingScaleFactor for this wing, which is
+                        \ hard-coded to 205 for both wings
 
  JSR Multiply8x8        \ Set (A T) = A * U
 
@@ -4092,9 +4112,9 @@ ORG &0B00
 
 .MakeDrivingSounds
 
- LDA L62A6              \ If bit 7 of L62A6 is clear for both tyres, jump to
- ORA L62A6+1            \ soun1 to skip the following
- BPL soun1
+ LDA tyreSqueal         \ If bit 7 of tyreSqueal is clear for both tyres, jump
+ ORA tyreSqueal+1       \ to soun1 to skip the following as no tyres are
+ BPL soun1              \ squealing
 
                         \ Otherwise we add some random pitch variation to the
                         \ crash/contact sound and make the sound of the tyres
@@ -5265,17 +5285,17 @@ ORG &0B00
  LDA #0                 \ Set A = 0, so we can use it to reset variables to zero
                         \ in the following loop
 
- LDX #30                \ We now zero all 30 variable bytes from xPlayerDeltaHi
-                        \ to var12Hi, so so set up a loop counter in X
+ LDX #30                \ We now zero all 30 variable bytes from xPlayerSpeedHi
+                        \ to xSteeringForceHi, so so set up a loop counter in X
 
 .cras2
 
- STA xPlayerDeltaHi,X   \ Zero the X-th byte from xPlayerDeltaHi
+ STA xPlayerSpeedHi,X   \ Zero the X-th byte from xPlayerSpeedHi
 
  DEX                    \ Decrement the loop counter
 
  BPL cras2              \ Loop back until we have zeroed all variables from
-                        \ xPlayerDeltaHi to var12Hi
+                        \ xPlayerSpeedHi to xSteeringForceHi
 
  STA engineStatus       \ Set engineStatus = 0 to turn off the engine
 
@@ -5285,11 +5305,13 @@ ORG &0B00
 
  STA soundRevTarget     \ Set soundRevTarget = 0 to stop the engine sound
 
- LDA #127               \ Set L002D = 127
- STA L002D
+ LDA #127               \ Set heightAboveTrack = 127 so the car is dropped from
+ STA heightAboveTrack   \ this height by the crane (if this is a Novice race, in
+                        \ which case it restarts without calling ResetVariables,
+                        \ which otherwise would zero heightAboveTrack)
 
- LDA #31                \ Set oddsOfEngineStart = 31
- STA oddsOfEngineStart
+ LDA #31                \ Set oddsOfEngineStart = 31 to make it harder to
+ STA oddsOfEngineStart  \ restart the engine (with a 1 in 32 chance)
 
 .cras3
 
@@ -5528,7 +5550,8 @@ ORG &0B00
 
  LDX currentPlayer      \ Set X to the driver number of the current player
 
- STX L0045              \ Set L0045 to the driver number of the current player
+ STX thisDriver         \ Set thisDriver to the driver number of the current
+                        \ player
 
  STX objectNumber       \ Set objectNumber to the driver number of the current
                         \ player
@@ -5566,7 +5589,7 @@ ORG &0B00
 
  TAY                    \ Set Y to the updated track segment index * 3
 
- LDX L0045              \ Set X to the driver number of the current player
+ LDX thisDriver         \ Set X to the driver number of the current player
 
  JSR BuildCarObjects    \ Build the car object for the current player using the
                         \ updated track segment, returning the object's yaw
@@ -6517,7 +6540,7 @@ ORG &0B00
 
                         \ We now set the outer track coordinates for the new
                         \ track segment, as follows:
-                        \ 
+                        \
                         \   [ xSegmentCoordO ]   [ xSegmentCoordI ]   
                         \   [ ySegmentCoordO ] = [ ySegmentCoordI ]
                         \   [ zSegmentCoordO ]   [ zSegmentCoordI ]
@@ -7658,18 +7681,19 @@ ENDIF
 
                         \ If we get here then no steering is being applied
 
- LDA var09FLo           \ Set T = var09FLo AND %11110000
+ LDA xTyreForceNoseLo   \ Set T = xTyreForceNoseLo AND %11110000
  AND #%11110000
  STA T
 
- LDA var09FHi           \ Set (A T) = (var09FHi var09FLo) AND %11110000
-                        \           = var09F AND %11110000
+ LDA xTyreForceNoseHi   \ Set (A T) = (xTyreForceNoseHi xTyreForceNoseLo)
+                        \                                       AND %11110000
+                        \           = xTyreForceNose AND %11110000
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
 
  LSR A                  \ Set (A T) = (A T) >> 2
  ROR T                  \           = |A T| / 4
- LSR A                  \           = (|var09F| AND %11110000) / 4
+ LSR A                  \           = (|xTyreForceNose| AND %11110000) / 4
  ROR T
 
 IF _ACORNSOFT
@@ -8540,7 +8564,7 @@ ENDIF
                         \ playerMoving to processContact
 
  LDX #&7F               \ We now zero all variables from xPlayerCoordHi to
-                        \ L62FF, so set up a loop counter in X
+                        \ zTyreForceBoth, so set up a loop counter in X
 
 .rese2
 
@@ -8549,7 +8573,7 @@ ENDIF
  DEX                    \ Decrement the loop counter
 
  BPL rese2              \ Loop back until we have zeroed all variables from
-                        \ xPlayerCoordHi to L62FF
+                        \ xPlayerCoordHi to zTyreForceBoth
 
  JSR DefineEnvelope     \ Define the first (and only) sound envelope
 
@@ -9767,10 +9791,10 @@ ENDIF
  JSR SetVergeBackground \ Update the background colour table for any verges that
                         \ overlap the left edge of the screen
 
- STY L002C              \ SetVergeBackground sets Y to the track line just above
+ STY vergeTopLeft       \ SetVergeBackground sets Y to the track line just above
                         \ the segment at vergeDepthOfField (i.e. the furthest
                         \ segment that might contain a verge), so store this in
-                        \ L002C
+                        \ vergeTopLeft
 
  LDA horizonListIndex   \ Set A = horizonListIndex
 
@@ -9846,10 +9870,10 @@ ENDIF
  JSR SetVergeBackground \ Update the background colour table for any verges that
                         \ overlap the left edge of the screen
 
- STY L0029              \ SetVergeBackground sets Y to the track line just above
+ STY vergeTopRight      \ SetVergeBackground sets Y to the track line just above
                         \ the segment at vergeDepthOfField (i.e. the furthest
                         \ segment that might contain a verge), so store this in
-                        \ L0029
+                        \ vergeTopRight
 
  RTS                    \ Return from the subroutine
 
@@ -10133,8 +10157,8 @@ ENDIF
                         \ the index of the corresponding entry in the track
                         \ segment list for this corner markers
 
- STY temp1              \ Store the marker number in temp1, so we can retrieve
-                        \ it at the end of the loop
+ STY markerNumber       \ Store the marker number in markerNumber, so we can
+                        \ retrieve it at the end of the loop
 
  LDA markerData,Y       \ If bit 5 of markerData for marker Y is clear, then the
  AND #%00100000         \ marker is white, so jump to corn2 to skip the
@@ -10234,10 +10258,10 @@ ENDIF
  STA colourPalette+2    \ colour 1 (white in the track view), which sets it back
                         \ to the default value
 
- LDY temp1              \ Set Y to the marker counter that we stored in temp1 at
-                        \ the start of the loop
+ LDY markerNumber       \ Set Y to the marker number that we stored in
+                        \ markerNumber at the start of the loop
 
- INY                    \ Increment the marker counter to draw the next loop
+ INY                    \ Increment the marker number to draw the next loop
 
  JMP corn1              \ Loop back to corn1
 
@@ -10508,9 +10532,9 @@ ENDIF
 
  STA spinYawAngleTop    \ Set spinYawAngleTop = A
 
- LDA #%10000000         \ Set bit 7 in L62A6 for both tyres, so they squeal
- STA L62A6
- STA L62A6+1
+ LDA #%10000000         \ Set bit 7 in tyreSqueal for both tyres, so they squeal
+ STA tyreSqueal
+ STA tyreSqueal+1
 
  LDA #4                 \ Make sound #4 (crash/contact) at the current volume
  JSR MakeSound-3        \ level
@@ -12952,7 +12976,7 @@ IF _ACORNSOFT
 
 .gcol8
 
- CPY L002C              \ If Y >= L002C, jump to gcol6 to return from the
+ CPY vergeTopLeft       \ If Y >= vergeTopLeft, jump to gcol6 to return from the
  BCS gcol6              \ subroutine with the colour green
 
  LDX leftSegment,Y      \ Set X to the index within the track segment list of
@@ -13013,8 +13037,8 @@ IF _ACORNSOFT
 
 .gcol12
 
- CPY L0029              \ If Y >= L0029, jump to gcol6 to return from the
- BCS gcol6              \ subroutine with the colour green
+ CPY vergeTopRight      \ If Y >= vergeTopRight, jump to gcol6 to return from
+ BCS gcol6              \ the subroutine with the colour green
 
  LDX rightSegment,Y     \ Set X to the index within the track segment list of
                         \ the segment for the right verge on this track line
@@ -13222,8 +13246,8 @@ IF _SUPERIOR
                         \ If we get here then the pixel byte is on the left
                         \ track verge
 
- CPY L002C              \ If the track line in Y >= L002C, jump to scol3 to
- BCS scol3              \ return colour 3 (green)
+ CPY vergeTopLeft       \ If the track line in Y >= vergeTopLeft, jump to scol3
+ BCS scol3              \ to return colour 3 (green)
 
  LDA leftSegment,Y      \ Set A to the index within the track segment list of
                         \ the segment for the left verge on this track line
@@ -13235,8 +13259,8 @@ IF _SUPERIOR
                         \ If we get here then the pixel byte is on the right
                         \ track verge
 
- CPY L0029              \ If the track line in Y >= L0029, jump to scol3 to
- BCS scol3              \ return colour 3 (green)
+ CPY vergeTopRight      \ If the track line in Y >= vergeTopRight, jump to scol3
+ BCS scol3              \ to return colour 3 (green)
 
  LDA rightSegment,Y     \ Set A to the index within the track segment list of
                         \ the segment for the right verge on this track line
@@ -16050,8 +16074,8 @@ ENDIF
                         \ GetVergeAndMarkers uses the previous segment's verge
                         \ data for our quarter segment's calculation
 
- LDA markersToDraw      \ Store markersToDraw in temp1 so we can restore it
- STA temp1              \ after the call to GetVergeAndMarkers (so the call
+ LDA markersToDraw      \ Store markersToDraw in markerNumber so we can restore
+ STA markerNumber       \ it after the call to GetVergeAndMarkers (so the call
                         \ doesn't change the value of markersToDraw, as we
                         \ don't want to try drawing markers with this
                         \ quarter-size segment)
@@ -16060,9 +16084,9 @@ ENDIF
                         \ markers and verge marks and store them for this
                         \ segment
 
- LDA temp1              \ Retrieve the value of markersToDraw that we stored
- STA markersToDraw      \ in temp1, so any marker calculations in the above
-                        \ call get ignored
+ LDA markerNumber       \ Retrieve the value of markersToDraw that we stored
+ STA markersToDraw      \ in markerNumber, so any marker calculations in the
+                        \ above call get ignored
 
  INC segmentListPointer \ Increment the segment list pointer as we just added a
                         \ new entry to the track segment list
@@ -16716,7 +16740,7 @@ ENDIF
 .gmar2
 
  AND segmentFlagMask,Y  \ Extract the relevant bits of the segment's flags:
- STA W                  \ 
+ STA W                  \
                         \   W = A AND %00101101 if Y = 0 (right verge)
                         \             %00110011 if Y = 1 (left verge)
                         \
@@ -17182,8 +17206,8 @@ ENDIF
 
 .dcar3
 
- STY temp3              \ Store the loop counter in temp3 so we can retrieve it
-                        \ after the following call
+ STY thisDriverNumber   \ Store the loop counter in thisDriverNumber so we can
+                        \ retrieve it after the following call
 
  STX thisPosition       \ Store the position of the car we are considering in
                         \ thisPosition
@@ -17194,8 +17218,8 @@ ENDIF
  LDX thisPosition       \ Retrieve the position of the car that we stored in
                         \ thisPosition above
 
- LDY temp3              \ Retrieve the value of the loop counter that we stored
-                        \ in temp3 above
+ LDY thisDriverNumber   \ Retrieve the value of the loop counter that we stored
+                        \ in thisDriverNumber above
 
  DEY                    \ Decrement the loop counter
 
@@ -18575,7 +18599,7 @@ ENDIF
 \
 \   X                   The driver number of the car object to build
 \
-\   L0045               Same as X
+\   thisDriver          Same as X
 \
 \   Y                   The index * 3 of the track segment to use for the
 \                       calculation
@@ -18598,8 +18622,8 @@ ENDIF
                         \ which gives us the segment vector number of the car
                         \ object we want to build
 
- STA yStore1            \ Store the segment vector number in yStore1 so we can
-                        \ retrieve it in parts 2 and 3
+ STA vectorNumber       \ Store the segment vector number in vectorNumber so we
+                        \ can retrieve it in parts 2 and 3
 
  STY T                  \ Store the index * 3 of the track segment in T
 
@@ -18758,7 +18782,7 @@ ENDIF
                         \
                         \ for the x-axis and z-axis only
 
- LDY yStore1            \ Set Y to the segment vector number that we stored
+ LDY vectorNumber       \ Set Y to the segment vector number that we stored
                         \ above
 
  LDA xTrackSegmentO,Y   \ Set VV to the 3D x-coordinate of the outer segment
@@ -18903,7 +18927,8 @@ ENDIF
                         \ coordinates in xVector4, and set the object's
                         \ visibility, scale and type
 
- LDX L0045              \ Set X = L0045 (driver number of car we are driving)
+ LDX thisDriver         \ Set X = thisDriver (driver number of car we are
+                        \ driving)
 
  LDA objectDistanceHi   \ Set A to the high byte of the distance of the object
 
@@ -18936,7 +18961,7 @@ ENDIF
 
 .bcar9
 
- LDY yStore1            \ Set Y to the segment vector number that we stored
+ LDY vectorNumber       \ Set Y to the segment vector number that we stored
                         \ above
 
  JSR GetSegmentVector   \ Fetch the inner segment vector for the part of the
@@ -19362,8 +19387,8 @@ ENDIF
 
 .DrawCarInPosition
 
- STX xStore2            \ Store X in xStore2 so it can be retrieved at the end
-                        \ of the DrawCarOrSign routine
+ STX xStoreDraw         \ Store X in xStoreDraw so it can be retrieved at the
+                        \ end of the DrawCarOrSign routine
 
  LDA driversInOrder,X   \ Set X to the number of the driver in position X
  TAX
@@ -19403,11 +19428,11 @@ ENDIF
 \
 \                         * 23 = Draw the road sign
 \
-\   xStore2             The value to restore into X at the end of the routine
+\   xStoreDraw          The value to restore into X at the end of the routine
 \
 \ Returns:
 \
-\   X                   X is set to xStore2
+\   X                   X is set to xStoreDraw
 \
 \ ******************************************************************************
 
@@ -19474,7 +19499,8 @@ ENDIF
 
 .dcas3
 
- LDX xStore2            \ Set X = xStore2 so X is unchanged by the routine call
+ LDX xStoreDraw         \ Set X = xStoreDraw so X is unchanged by the routine
+                        \ call
 
  RTS                    \ Return from the subroutine
 
@@ -28969,9 +28995,9 @@ NEXT
 
 .ApplyElevation
 
- LDA L002D              \ Set A = L002D
+ LDA heightAboveTrack   \ Set A = heightAboveTrack
 
- BEQ elev1              \ If L002D = 0, jump to elev1
+ BEQ elev1              \ If heightAboveTrack = 0, jump to elev1
 
  DEC L0028              \ Set L0028 = L0028 - 2
  DEC L0028
@@ -28980,7 +29006,7 @@ NEXT
 
 .elev1
 
-                        \ If we get here then L002D = 0 and A = 0
+                        \ If we get here then heightAboveTrack = 0 and A = 0
 
  STA L0028              \ Set L0028 = 0
 
@@ -29349,13 +29375,13 @@ NEXT
 \       Name: ApplyElevation (Part 4 of 5)
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate L002D
+\    Summary: Calculate the height of the car above the track
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following:
 \
-\   * L002D
+\   * heightAboveTrack
 \
 \ ******************************************************************************
 
@@ -29377,22 +29403,24 @@ NEXT
  STA L0026              \ Set L0026 = A
                         \           = max(L0026 - 4, -56)
 
- CLC                    \ Set A = A + L002D
- ADC L002D              \       = max(L0026 - 4, -56) + L002D
+ CLC                    \ Set A = A + heightAboveTrack
+ ADC heightAboveTrack   \       = max(L0026 - 4, -56) + heightAboveTrack
 
  BEQ elev15             \ If A = 0, jump to elev15
 
  BVS elev17             \ The overflow flag is set if:
                         \
-                        \   * L0026 + L002D > 127 and both are < 128
+                        \   * L0026 + heightAboveTrack > 127 and both are < 128
                         \     (i.e. adding two positives gives a negative)
                         \
-                        \   * L0026 + L002D < 128 and both are > 127
+                        \   * L0026 + heightAboveTrack < 128 and both are > 127
                         \     (i.e. adding two negatives gives a positive)
                         \
-                        \ In either case, we jump to elev17 to set L002D = 127
+                        \ In either case, we jump to elev17 to set
+                        \ heightAboveTrack = 127
 
- BPL elev18             \ If A is positive, jump to elev15 to set L002D = A
+ BPL elev18             \ If A is positive, jump to elev15 to set
+                        \ heightAboveTrack = A
 
 .elev15
 
@@ -29401,7 +29429,7 @@ NEXT
  JSR Absolute8Bit       \ Set A = |A|
                         \       = |L0026|
 
- CMP #5                 \ If A < 5, jump to elev16 to set L002D = 0
+ CMP #5                 \ If A < 5, jump to elev16 to set heightAboveTrack = 0
  BCC elev16
 
  JSR CalculateVars2     \ Calculate the following:
@@ -29410,31 +29438,31 @@ NEXT
                         \
                         \   L0028 = |L0026| / 4
                         \
-                        \   L002D = L002D + 1
+                        \   heightAboveTrack = heightAboveTrack + 1
                         \
                         \   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
                         \
                         \ and make the crash/contact sound
 
- LDA #1                 \ Set A = 1, to use as the value of L002D
+ LDA #1                 \ Set A = 1, to use as the value of heightAboveTrack
 
  BNE elev18             \ Jump to elev18 (this BNE is effectively a JMP as A is
                         \ never zero)
 
 .elev16
 
- LDA #0                 \ Set A = 0, to use as the value of L002D
+ LDA #0                 \ Set A = 0, to use as the value of heightAboveTrack
 
  BEQ elev18             \ Jump to elev18 (this BEQ is effectively a JMP as A is
                         \ always zero)
 
 .elev17
 
- LDA #127               \ Set A = 127, to use as the value of L002D
+ LDA #127               \ Set A = 127, to use as the value of heightAboveTrack
 
 .elev18
 
- STA L002D              \ Store the value of A in L002D
+ STA heightAboveTrack   \ Store the value of A in heightAboveTrack
 
 \ ******************************************************************************
 \
@@ -29454,12 +29482,12 @@ NEXT
 \ ******************************************************************************
 
  ASL A                  \ Set (W A) = (0 A) << 2
- ROL W                  \           = L002D << 2
+ ROL W                  \           = heightAboveTrack << 2
  ASL A
  ROL W
 
  STA V                  \ Set (W V) = (W A)
-                        \           = L002D << 2
+                        \           = heightAboveTrack << 2
 
  LDX currentPlayer      \ Set X to the driver number of the current player
 
@@ -29497,8 +29525,8 @@ NEXT
                         \   A = A + ySegmentCoordILo
                         \     = carProgress * yTrackSegmentI + ySegmentCoordILo
                         \
-                        \ ySegmentCoordILo is the low byte of the 3D y-coordinate
-                        \ for the player's track segment
+                        \ ySegmentCoordILo is the low byte of the 3D
+                        \ y-coordinate for the player's track segment
                         \
                         \ So A now contains the segment's y-coordinate, plus the
                         \ elevation of the car due to the track's progress
@@ -29526,14 +29554,14 @@ NEXT
                         \
                         \    =   carProgress * yTrackSegmentI + ySegmentCoordILo
                         \      + 172
-                        \      + L002D << 2
+                        \      + heightAboveTrack << 2
                         \      + (ySegmentCoordIHi 0)
                         \      + C flag from the first addition
                         \      + C flag from the second addition
                         \
                         \    =   carProgress * yTrackSegmentI
                         \      + 172
-                        \      + L002D << 2
+                        \      + heightAboveTrack << 2
                         \      + (ySegmentCoordIHi ySegmentCoordILo)
                         \
                         \ with all the correct carry bits included
@@ -29986,27 +30014,27 @@ ENDIF
                         \ coordinate system to the frame of reference of the
                         \ player's car, putting the result into:
                         \
-                        \   [ var07x ]
-                        \   [    -   ]
-                        \   [ var07z ]
+                        \   [ xVelocity ]
+                        \   [     -     ]
+                        \   [ zVelocity ]
                         \
                         \ We ignore the y-coordinate as the calculations are
                         \ all done along the ground
 
- LDA var07xLo           \ Set (var15Hi var15Lo) = (var07xHi var07xLo)
- STA var15Lo
- LDA var07xHi
- STA var15Hi
+ LDA xVelocityLo        \ Set (xPrevVelocityHi xPrevVelocityLo)
+ STA xPrevVelocityLo    \           = (xVelocityHi xVelocityLo)
+ LDA xVelocityHi
+ STA xPrevVelocityHi
 
- LDA var07zLo           \ Set (A T) = (var07zHi var07zLo)
+ LDA zVelocityLo        \ Set (A T) = (zVelocityHi zVelocityLo)
  STA T
- LDA var07zHi
+ LDA zVelocityHi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
-                        \           = |var07z|
+                        \           = |zVelocity|
 
  STA speedHi            \ Set (speedHi speedLo) = (A T)
- LDA T                  \                       = |var07z|
+ LDA T                  \                       = |zVelocity|
  STA speedLo
 
  LDY speedHi            \ Set Y to the high byte of (speedHi speedLo)
@@ -30026,11 +30054,12 @@ ENDIF
 
  JSR ApplySpinYaw       \ Calculate the following:
                         \
-                        \   var07x = var07x - (spinYawAngle * 88)
+                        \   xVelocity = xVelocity - (spinYawAngle * 88)
                         \
-                        \   var16 = spinYawAngle * 132
+                        \   xSpinVelocity = spinYawAngle * 132
 
- JSR ApplyGrassEffect   \ Apply the effects of driving or braking on grass
+ JSR ApplyGrassOrTrack  \ Apply the effects of driving and braking, depending on
+                        \ the current driving surface (grass or track)
 
  JSR ApplyEngine        \ Apply the effects of the engine
 
@@ -30040,25 +30069,25 @@ ENDIF
  JSR ApplyTyresAndSkids \ Calculate the forces on the rear tyres and apply skid
                         \ forces and sound effects where applicable
 
- LDA var15Lo            \ Set (var07xHi var07xLo) = (var15Hi var15Lo)
- STA var07xLo
- LDA var15Hi
- STA var07xHi
+ LDA xPrevVelocityLo    \ Set (xVelocityHi xVelocityLo) to the x-coordinate of
+ STA xVelocityLo        \ the velocity vector from the previous iteration of the
+ LDA xPrevVelocityHi    \ main loop, which we stored in (xPrevVelocityHi
+ STA xVelocityHi        \ xPrevVelocityLo)
 
- LDA var07xLo           \ Set (var07xHi var07xLo) += (var16Hi var16Lo)
- CLC                    \
- ADC var16Lo            \ starting with the low bytes
- STA var07xLo
+ LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo) 
+ CLC                    \                   += (xSpinVelocityHi xSpinVelocityLo)
+ ADC xSpinVelocityLo    \
+ STA xVelocityLo        \ starting with the low bytes
 
- LDA var07xHi           \ And then the high bytes
- ADC var16Hi
- STA var07xHi
+ LDA xVelocityHi        \ And then the high bytes
+ ADC xSpinVelocityHi
+ STA xVelocityHi
 
- JSR ApplySteering1     \ Calculate the following in parallel:
+ JSR ApplySteeringSpeed \ Calculate the following in parallel:
                         \
-                        \   var07z = var07z + var07x * steering
+                        \   zVelocity = zVelocity + xVelocity * steering
                         \
-                        \   var07x = var07x - var07z * steering
+                        \   xVelocity = xVelocity - zVelocity * steering
 
  LDX #0                 \ Set X = 0, so the call to ApplyTyresAndSkids processes
                         \ the front tyres
@@ -30066,46 +30095,51 @@ ENDIF
  JSR ApplyTyresAndSkids \ Calculate the forces on the front tyres and apply skid
                         \ forces and sound effects where applicable
 
- JSR ApplySteering2     \ Calculate the following in parallel:
+ JSR ApplySteeringForce \ Calculate the following in parallel:
                         \
-                        \   var09F = var09F + var11F * steering
+                        \   xTyreForceNose =   xTyreForceNose
+                        \                    + zTyreForceNose * steering
                         \
-                        \   var11F = var11F - var09F * steering
+                        \   zTyreForceNose =   zTyreForceNose
+                        \                    - xTyreForceNose * steering
 
- JSR CalculateVars3     \ Calculate the following:
+ JSR ScaleTyreForces    \ Calculate the following:
                         \
-                        \   var05 = (var09F - var09R) * 78
+                        \   spinYawDelta = (xTyreForceNose - xTyreForceRear)
+                        \                   * 78
                         \
-                        \   var09F = var09F >> 2
+                        \   xTyreForceNose = xTyreForceNose >> 2
                         \
-                        \   var09R = var09R >> 2
+                        \   xTyreForceRear = xTyreForceRear >> 2
                         \
-                        \   var11F = var11F >> 2
+                        \   zTyreForceNose = zTyreForceNose >> 2
                         \
-                        \   var11R = var11R >> 2
+                        \   zTyreForceRear = zTyreForceRear >> 2
                         \
-                        \   var06x = (var09R * 1.5 + var09F) * 410
+                        \   xPlayerDelta = (xTyreForceRear * 1.5
+                        \                   + xTyreForceNose) * 410
                         \
-                        \   var06z = (var11R * 1.5 + var11F) * 410
+                        \   zPlayerDelta = (zTyreForceRear * 1.5
+                        \                   + zTyreForceNose) * 410
                         \
-                        \   L62FF = var06zHi
+                        \   zTyreForceBoth = zPlayerDeltaHi
 
- LDA L002D              \ If L002D < 2, jump to dmod3
+ LDA heightAboveTrack   \ If heightAboveTrack < 2, jump to dmod3
  CMP #2
  BCC dmod3
 
-                        \ If we get here then L002D >= 2
+                        \ If we get here then heightAboveTrack >= 2
 
- LDX #2                 \ We now zero the three 16-bit bytes at var05, var06x
-                        \ and var06z, so set a counter in X for the three
-                        \ variables
+ LDX #2                 \ We now zero the three 16-bit bytes at spinYawDelta,
+                        \ xPlayerDelta and zPlayerDelta, so set a counter in X
+                        \ for the three variables
 
  LDA #0                 \ Set A = 0 to use as the zero value
 
 .dmod2
 
- STA var05Lo,X          \ Zero the X-th byte of (var05Hi var05Lo)
- STA var05Hi,X
+ STA spinYawDeltaLo,X   \ Zero the X-th byte of (spinYawDeltaHi spinYawDeltaLo)
+ STA spinYawDeltaHi,X
 
  DEX                    \ Decrement the variable counter
 
@@ -30116,42 +30150,44 @@ ENDIF
 
  JSR ApplyWingBalance   \ Calculate the following:
                         \
-                        \   var06x = var06x - scaledSpeed * var15Hi
+                        \   xPlayerDelta =   xPlayerDelta
+                        \                  - scaledSpeed * xPrevVelocityHi
                         \
-                        \   var06z = var06z - scaledSpeed
-                        \                     * (wingBalance * speedHi + 2048)
-                        \                     * abs(var07z)
+                        \   zPlayerDelta =   zPlayerDelta
+                        \                  - scaledSpeed
+                        \                      * (wingBalance * speedHi + 2048)
+                        \                      * abs(zVelocity)
 
  JSR RotateCarToCoord   \ Rotate this vector:
                         \
-                        \   [ var06x ]
-                        \   [    -   ]
-                        \   [ var06z ]
+                        \   [ xPlayerDelta ]
+                        \   [       -      ]
+                        \   [ zPlayerDelta ]
                         \
                         \ from the frame of reference of the player's car into
                         \ the 3D world coordinate system, putting the result
                         \ into:
                         \
-                        \   [ var04x ]
-                        \   [    -   ]
-                        \   [ var04z ]
+                        \   [ xVelocityDelta ]
+                        \   [        -       ]
+                        \   [ zVelocityDelta ]
                         \
                         \ We ignore the y-coordinate as the calculations are
                         \ all done along the ground
 
- JSR CalculateVars4     \ Calculate the following:
+ JSR UpdateVelocity     \ Calculate the following:
                         \
-                        \   xPlayerDelta = xPlayerDelta + var04x << 5
+                        \   xPlayerSpeed = xPlayerSpeed + xVelocityDelta << 5
                         \
-                        \   zPlayerDelta = zPlayerDelta + var04z << 3
+                        \   zPlayerSpeed = zPlayerSpeed + zVelocityDelta << 3
                         \
-                        \   spinYawAngle = spinYawAngle + var05 << 3
+                        \   spinYawAngle = spinYawAngle + spinYawDelta << 3
 
  JSR ApplyDeltas        \ Calculate the following:
                         \
-                        \   xPlayerCoord = xPlayerCoord + xPlayerDelta * 2
+                        \   xPlayerCoord = xPlayerCoord + xPlayerSpeed * 2
                         \
-                        \   zPlayerCoord = zPlayerCoord + zPlayerDelta * 2
+                        \   zPlayerCoord = zPlayerCoord + zPlayerSpeed * 2
                         \
                         \   playerYawAngle = playerYawAngle + spinYawAngle
 
@@ -30170,9 +30206,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   var07x = var07x - (spinYawAngle * 88)
+\   xVelocity = xVelocity - (spinYawAngle * 88)
 \
-\   var16 = spinYawAngle * 132
+\   xSpinVelocity = spinYawAngle * 132
 \
 \ ******************************************************************************
 
@@ -30192,22 +30228,23 @@ ENDIF
  STA U                  \ Set (U T) = (A T)
                         \           = spinYawAngle * 88
 
- LDA var07xLo           \ Set (var07xHi var07xLo) = (var07xHi var07xLo) - (U T)
- SEC                    \                         = var07x - (spinYawAngle * 88)
- SBC T
+ LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo)
+ SEC                    \           = (xVelocityHi xVelocityLo) - (U T)
+ SBC T                  \           = xVelocity - (spinYawAngle * 88)
+ STA xVelocityLo        \
+                        \ starting with the low bytes
 
- STA var07xLo
- LDA var07xHi
+ LDA xVelocityHi        \ And then the high bytes
  SBC U
- STA var07xHi
+ STA xVelocityHi
 
  JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
                         \           = spinYawAngle * 88 * 1.5
                         \           = spinYawAngle * 132
 
- STA var16Hi            \ Set (var16Hi var16Lo) = (A T)
- LDA T                  \                       = spinYawAngle * 132
- STA var16Lo
+ STA xSpinVelocityHi    \ Set (xSpinVelocityHi xSpinVelocityLo) = (A T)
+ LDA T                  \                                   = spinYawAngle * 132
+ STA xSpinVelocityLo
 
  RTS                    \ Return from the subroutine
 
@@ -30343,13 +30380,13 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   * If L002D >= 2, stop the tyres from squealing
+\   * If heightAboveTrack >= 2, stop the tyres from squealing
 \
-\   * If L002D < 2:
+\   * If heightAboveTrack < 2:
 \
 \     * Call ApplyTyreForces
 \
-\     * If either bits 6 or 7 are set in L62A6 for tyre X:
+\     * If either bits 6 or 7 are set in tyreSqueal for tyre X:
 \
 \         * Call ApplySkidForces and make the tyres squeal
 \
@@ -30369,13 +30406,13 @@ ENDIF
 
 .ApplyTyresAndSkids
 
- LDA L002D              \ If L002D >= 2, jump to gfor1 to stop the tyres from
+ LDA heightAboveTrack   \ If heightAboveTrack >= 2, jump to gfor1 to stop the tyres from
  CMP #2                 \ squealing
  BCS gfor1
 
  JSR ApplyTyreForces    \ ???
 
- LDA L62A6,X            \ Set A to L62A6 for tyre X
+ LDA tyreSqueal,X       \ Set A to tyreSqueal for tyre X
 
  AND #%11000000         \ If either of bit 6 or 7 is set in A, jump to gfor3 to
  BNE gfor3              \ make the tyres squeal
@@ -30396,8 +30433,8 @@ ENDIF
 .gfor3
 
  JSR ApplySkidForces    \ Calculate the tyre forces when the car is skidding,
-                        \ returning them in var09F and var11F or var09R and
-                        \ var11R
+                        \ returning them in xTyreForceNose and zTyreForceNose or
+                        \ xTyreForceRear and zTyreForceRear
 
  LDA soundBuffer+3      \ If sound buffer 3 is currently being used, then we are
  BNE gfor4              \ already making the sound of the tyres squealing, so
@@ -30413,36 +30450,36 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ApplySteering1
+\       Name: ApplySteeringSpeed
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Apply steering to var07x and var07z
+\    Summary: Apply steering to the car's speed in xVelocity and zVelocity
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following in parallel:
 \
-\   var07z = var07z + var07x * steering
+\   zVelocity = zVelocity + xVelocity * steering
 \
-\   var07x = var07x - var07z * steering
+\   xVelocity = xVelocity - zVelocity * steering
 \
 \ ******************************************************************************
 
-.ApplySteering1
+.ApplySteeringSpeed
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords+7 we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
  LDY #9                 \ Set Y = 9, so in the call to MultiplyCoords+7 we use
-                        \ var07z as the 16-bit signed number
+                        \ zVelocity as the 16-bit signed number
 
  LDA #%10000000         \ Clear bit 6 and set bit 7 of H, to store the result
  STA H                  \ rather than adding, and negate the result in the call
                         \ to MultiplyCoords+7
 
  LDA #14                \ Set A = 14, so in the call to MultiplyCoords+7, we
-                        \ store the result in var12
+                        \ store the result in xSteeringForce
 
  JSR MultiplyCoords+7   \ Set:
                         \
@@ -30450,21 +30487,21 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var12 = -var07z * steering
+                        \   xSteeringForce = -zVelocity * steering
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
  LDY #8                 \ Set Y = 8, so in the call to MultiplyCoords we use
-                        \ var07x as the 16-bit signed number
+                        \ xVelocity as the 16-bit signed number
 
  LDA #%01000000         \ Set bit 6 and clear bit 7 of H, to add the result
  STA H                  \ rather than replacing, and leave the sign of the
                         \ result alone in the call to MultiplyCoords+7
 
  LDA #9                 \ Set A = 9, so in the call to MultiplyCoords+7, we
-                        \ store the result in var07z
+                        \ store the result in zVelocity
 
  JSR MultiplyCoords+7   \ Set:
                         \
@@ -30472,48 +30509,48 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var07z = var07z + var07x * steering
+                        \   zVelocity = zVelocity + xVelocity * steering
 
- LDX #8                 \ Set X = 8, so the call to ApplyVar12 adds var12 to
-                        \ var07x
+ LDX #8                 \ Set X = 8, so the call to AddSteeringForce adds
+                        \ xSteeringForce to xVelocity
 
- JSR ApplyVar12         \ Set var07x = var07x + var12
-                        \            = var07x - var07z * steering
+ JSR AddSteeringForce   \ Set xVelocity = xVelocity + xSteeringForce
+                        \               = xVelocity - zVelocity * steering
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: ApplySteering2
+\       Name: ApplySteeringForce
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Apply steering to var09F and var11F
+\    Summary: Apply steering to xTyreForceNose and zTyreForceNose
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following in parallel:
 \
-\   var09F = var09F + var11F * steering
+\   xTyreForceNose = xTyreForceNose + zTyreForceNose * steering
 \
-\   var11F = var11F - var09F * steering
+\   zTyreForceNose = zTyreForceNose - xTyreForceNose * steering
 \
 \ ******************************************************************************
 
-.ApplySteering2
+.ApplySteeringForce
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
  LDY #12                \ Set Y = 12, so in the call to MultiplyCoords we use
-                        \ var11F as the 16-bit signed number
+                        \ zTyreForceNose as the 16-bit signed number
 
  LDA #%00000000         \ Clear bits 6 and 7 of H, to store the result rather
  STA H                  \ than adding, and leave the sign of the result alone in
                         \ the call to MultiplyCoords+7
 
  LDA #14                \ Set A = 14, so in the call to MultiplyCoords+7, we
-                        \ store the result in var12
+                        \ store the result in xSteeringForce
 
  JSR MultiplyCoords+7   \ Set:
                         \
@@ -30521,21 +30558,21 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var12 = var11F * steering
+                        \   xSteeringForce = zTyreForceNose * steering
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
  LDY #10                \ Set Y = 10, so in the call to MultiplyCoords we use
-                        \ var09F as the 16-bit signed number
+                        \ xTyreForceNose as the 16-bit signed number
 
  LDA #%11000000         \ Set bits 6 and 7 of H, to add the result rather than
  STA H                  \ replacing, and negate the result in the call to
                         \ MultiplyCoords+7
 
  LDA #12                \ Set A = 12, so in the call to MultiplyCoords+7, we
-                        \ store the result in var11F
+                        \ store the result in zTyreForceNose
 
  JSR MultiplyCoords+7   \ Set:
                         \
@@ -30543,22 +30580,23 @@ ENDIF
                         \
                         \ so:
                         \
-                        \   var11F = var11F - var09F * steering
+                        \   zTyreForceNose =   zTyreForceNose
+                        \                    - xTyreForceNose * steering
 
- LDX #10                \ Set X = 8, so the call to ApplyVar12 adds var12 to
-                        \ var09F
+ LDX #10                \ Set X = 8, so the call to AddSteeringForce adds
+                        \ xSteeringForce to xTyreForceNose
  
- JSR ApplyVar12         \ Set var09F = var09F + var12
-                        \            = var09F + var11F * steering
+ JSR AddSteeringForce   \ Set xTyreForceNose = xTyreForceNose + xSteeringForce
+                        \           = xTyreForceNose + zTyreForceNose * steering
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: ApplyVar12
+\       Name: AddSteeringForce
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Add var12 to var07x or var09F
+\    Summary: Add the steering force to xVelocity or xTyreForceNose
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30566,83 +30604,84 @@ ENDIF
 \
 \   X                   Called with either 8 or 10:
 \
-\                         * 8: set var07x = var07x + var12
+\                         * 8: set xVelocity += xSteeringForce
 \
-\                         * 10: set var09F = var09F + var12
+\                         * 10: set xTyreForceNose += xSteeringForce
 \
 \ ******************************************************************************
 
-.ApplyVar12
+.AddSteeringForce
 
- LDA xPlayerDeltaHi,X   \ Add (var12Hi var12Lo) to the variable at offset X from
- CLC                    \ (xPlayerDeltaTop xPlayerDeltaHi), starting with the
- ADC var12Lo            \ low bytes
- STA xPlayerDeltaHi,X
+ LDA xPlayerSpeedHi,X   \ Add (xSteeringForceHi xSteeringForceLo) to the
+ CLC                    \ variable at offset X from (xPlayerSpeedTop
+ ADC xSteeringForceLo   \ xPlayerSpeedHi), starting with the low bytes
+ STA xPlayerSpeedHi,X
 
- LDA xPlayerDeltaTop,X  \ And then the high bytes
- ADC var12Hi
- STA xPlayerDeltaTop,X
+ LDA xPlayerSpeedTop,X  \ And then the high bytes
+ ADC xSteeringForceHi
+ STA xPlayerSpeedTop,X
 
  RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: CalculateVars3
+\       Name: ScaleTyreForces
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate lots of variables
+\    Summary: Scale the tyre forces and calculate the combined tyre force on the
+\             player
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following:
 \
-\   var05 = (var09F - var09R) * 78
+\   spinYawDelta = (xTyreForceNose - xTyreForceRear) * 78
 \
-\   var09F = var09F >> 2
+\   xTyreForceNose = xTyreForceNose >> 2
 \
-\   var09R = var09R >> 2
+\   xTyreForceRear = xTyreForceRear >> 2
 \
-\   var11F = var11F >> 2
+\   zTyreForceNose = zTyreForceNose >> 2
 \
-\   var11R = var11R >> 2
+\   zTyreForceRear = zTyreForceRear >> 2
 \
-\   var06x = (var09R * 1.5 + var09F) * 410
+\   xPlayerDelta = (xTyreForceRear * 1.5 + xTyreForceNose) * 410
 \
-\   var06z = (var11R * 1.5 + var11F) * 410
+\   zPlayerDelta = (zTyreForceRear * 1.5 + zTyreForceNose) * 410
 \
-\   L62FF = var06zHi
+\   zTyreForceBoth = zPlayerDeltaHi
 \
 \ ******************************************************************************
 
-.CalculateVars3
+.ScaleTyreForces
 
  LDY #78                \ Set Y = 78
 
- LDA var09FLo           \ Set (A T) = var09F - var09R
+ LDA xTyreForceNoseLo   \ Set (A T) = xTyreForceNose - xTyreForceRear
  SEC                    \
- SBC var09RLo           \ starting with the low bytes
+ SBC xTyreForceRearLo   \ starting with the low bytes
  STA T
 
- LDA var09FHi           \ And then the high bytes
- SBC var09RHi
+ LDA xTyreForceNoseHi   \ And then the high bytes
+ SBC xTyreForceRearHi
 
  JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = (var09F - var09R) * 78
+                        \           = (xTyreForceNose - xTyreForceRear) * 78
 
- STA var05Hi            \ Set var05 = (A T)
- LDA T                  \           = (var09F - var09R) * 78
- STA var05Lo
+ STA spinYawDeltaHi     \ Set spinYawDelta = (A T)
+ LDA T                  \           = (xTyreForceNose - xTyreForceRear) * 78
+ STA spinYawDeltaLo
 
                         \ We now perform the following shifts, making sure to
                         \ keep the signs intact:
                         \
-                        \   var09F = var09F >> 2
+                        \   xTyreForceNose = xTyreForceNose >> 2
                         \
-                        \   var09R = var09R >> 2
+                        \   xTyreForceRear = xTyreForceRear >> 2
                         \
-                        \   var11F = var11F >> 2
+                        \   zTyreForceNose = zTyreForceNose >> 2
                         \
-                        \   var11R = var11R >> 2
+                        \   zTyreForceRear = zTyreForceRear >> 2
 
  LDY #1                 \ Set Y = 1, to act as a shift counter in the outer loop
                         \ below, so we right-shift Y + 1 times (i.e. twice)
@@ -30650,12 +30689,13 @@ ENDIF
 .forc1
 
  LDX #3                 \ Set X = 3, to act as a variable counter in the inner
-                        \ loop to work through var11R, var11F, var09R and var09F
-                        \ (let's call this variableX)
+                        \ loop to work through zTyreForceRear, zTyreForceNose,
+                        \ xTyreForceRear and xTyreForceNose (let's call this
+                        \ variableX)
 
 .forc2
 
- LDA var09FHi,X         \ Set A to the high byte of variableX
+ LDA xTyreForceNoseHi,X \ Set A to the high byte of variableX
 
  CLC                    \ Clear the C flag, to use if variableX is positive
 
@@ -30669,8 +30709,8 @@ ENDIF
 
 .forc3
 
- ROR var09FHi,X         \ Set variableX = variableX >> 1
- ROR var09FLo,X         \
+ ROR xTyreForceNoseHi,X \ Set variableX = variableX >> 1
+ ROR xTyreForceNoseLo,X \
                         \ Keeping the sign intact
 
  DEX                    \ Decrement the inner loop counter in X
@@ -30686,12 +30726,12 @@ ENDIF
                         \ following loop, iterating through values 0 and 2, as
                         \ X is decremented twice at the end of the loop
                         \
-                        \ The loop references var09R,X and var09F,X so the loop
-                        \ iterates through:
+                        \ The loop references xTyreForceRear,X and
+                        \ xTyreForceNose,X, so the loop iterates through:
                         \
-                        \   * var11R and var11F when X = 2
+                        \   * zTyreForceRear and zTyreForceNose when X = 2
                         \
-                        \   * var09R and var09F when X = 0
+                        \   * xTyreForceRear and xTyreForceNose when X = 0
                         \
                         \ The comments below are for when X = 2
 
@@ -30700,49 +30740,51 @@ ENDIF
 
 .forc4
 
- LDA var09RLo,X         \ Set (U T) = var11R
+ LDA xTyreForceRearLo,X \ Set (U T) = zTyreForceRear
  STA T
- LDA var09RHi,X
+ LDA xTyreForceRearHi,X
  STA U
 
  JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
-                        \           = var11R * 1.5
+                        \           = zTyreForceRear * 1.5
 
  STA U                  \ Set (U T) = (A T)
-                        \           = var11R * 1.5
+                        \           = zTyreForceRear * 1.5
 
- LDA T                  \ Set (A T) = (U T) + var11F
- CLC                    \           = var11R * 1.5 + var11F
- ADC var09FLo,X         \
+ LDA T                  \ Set (A T) = (U T) + zTyreForceNose
+ CLC                    \           = zTyreForceRear * 1.5 + zTyreForceNose
+ ADC xTyreForceNoseLo,X \
  STA T                  \ starting with the low bytes
 
  LDY #205               \ Set Y = 205
 
  LDA U                  \ And then the high bytes
- ADC var09FHi,X
+ ADC xTyreForceNoseHi,X
 
  JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = (var11R * 1.5 + var11F) * 205
+                        \           = (zTyreForceRear * 1.5 + zTyreForceNose)
+                        \              * 205
 
  ASL T                  \ Set (A T) = (A T) * 2
- ROL A                  \           = (var11R * 1.5 + var11F) * 410
+ ROL A                  \           = (zTyreForceRear * 1.5 + zTyreForceNose)
+                        \              * 410
 
- LDY G                  \ Set var06z = (A T)
- STA var06xHi,Y         \            = (var11R * 1.5 + var11F) * 410
- LDA T
- STA var06xLo,Y
+ LDY G                  \ Set zPlayerDelta = (A T)
+ STA xPlayerDeltaHi,Y   \           = (zTyreForceRear * 1.5 + zTyreForceNose)
+ LDA T                  \              * 410
+ STA xPlayerDeltaLo,Y
 
  DEC G                  \ Decrement G so the next iteration stores the result in
-                        \ var06x
+                        \ xPlayerDelta
 
  DEX                    \ Decrement X twice so the next iteration calculates
- DEX                    \ (var09R * 1.5 + var09F) * 410
+ DEX                    \ (xTyreForceRear * 1.5 + xTyreForceNose) * 410
 
- BPL forc4              \ Loop back until we have calculated both var06z and
-                        \ var06x
+ BPL forc4              \ Loop back until we have calculated both zPlayerDelta
+                        \ and xPlayerDelta
 
- LDA var06zHi           \ Set L62FF = var06zHi
- STA L62FF
+ LDA zPlayerDeltaHi     \ Set zTyreForceBoth = zPlayerDeltaHi
+ STA zTyreForceBoth
 
  RTS                    \ Return from the subroutine
 
@@ -30787,21 +30829,21 @@ ENDIF
 \
 \   N                   Offset of the 16-bit signed number to multiply:
 \
-\                         * 0 = xPlayerDelta
+\                         * 0 = xPlayerSpeed
 \
-\                         * 1 = zPlayerDelta
+\                         * 1 = zPlayerSpeed
 \
-\                         * 6 = var06x
+\                         * 6 = xPlayerDelta
 \
-\                         * 7 = var06z
+\                         * 7 = zPlayerDelta
 \
-\                         * 8 = var07x
+\                         * 8 = xVelocity
 \
-\                         * 9 = var07z
+\                         * 9 = zVelocity
 \
-\                         * 10 = var09F
+\                         * 10 = xTyreForceNose
 \
-\                         * 12 = var11F
+\                         * 12 = zTyreForceNose
 \
 \   X                   Offset of the 16-bit sign-magnitude value to multiply:
 \
@@ -30813,17 +30855,17 @@ ENDIF
 \
 \   K                   Offset of the variable to store the result in:
 \
-\                         * 3 = var04x
+\                         * 3 = xVelocityDelta
 \
-\                         * 4 = var04z
+\                         * 4 = zVelocityDelta
 \
-\                         * 8 = var07x
+\                         * 8 = xVelocity
 \
-\                         * 9 = var07z
+\                         * 9 = zVelocity
 \
-\                         * 12 = var11F
+\                         * 12 = zTyreForceNose
 \
-\                         * 14 = var12
+\                         * 14 = xSteeringForce
 \
 \   A                   Details of the operation to perform:
 \
@@ -30872,9 +30914,9 @@ ENDIF
 
 .mcoo1
 
- LDA xPlayerDeltaHi,Y   \ Set (QQ PP) to the 16-bit signed number pointed to by
+ LDA xPlayerSpeedHi,Y   \ Set (QQ PP) to the 16-bit signed number pointed to by
  STA PP                 \ Y (variableY)
- LDA xPlayerDeltaTop,Y
+ LDA xPlayerSpeedTop,Y
  STA QQ
 
  LDA sinYawAngleLo,X    \ Set (SS RR) to the 16-bit sign-magnitude number
@@ -30896,9 +30938,9 @@ ENDIF
  BVS AddCoords          \ the result to the variable pointed to by K 
 
  LDA T                  \ Store the result in the variable pointed to by K
- STA xPlayerDeltaHi,Y
+ STA xPlayerSpeedHi,Y
  LDA U
- STA xPlayerDeltaTop,Y
+ STA xPlayerSpeedTop,Y
 
  RTS                    \ Return from the subroutine
 
@@ -30967,30 +31009,30 @@ ENDIF
 \
 \   Y                   Offset of the variable to update:
 \
-\                         * 3 = var04x
+\                         * 3 = xVelocityDelta
 \
-\                         * 4 = var04z
+\                         * 4 = zVelocityDelta
 \
-\                         * 6 = 
+\                         * 6 = xPlayerDelta
 \
-\                         * 9 = var07z
+\                         * 9 = zVelocity
 \
-\                         * 12 = var11F
+\                         * 12 = zTyreForceNose
 \
-\                         * 14 = var12
+\                         * 14 = xSteeringForce
 \
 \ ******************************************************************************
 
 .AddCoords
 
- LDA xPlayerDeltaHi,Y   \ Add (U T) to (xPlayerDeltaTop xPlayerDeltaHi)
+ LDA xPlayerSpeedHi,Y   \ Add (U T) to (xPlayerSpeedTop xPlayerSpeedHi)
  CLC                    \
  ADC T                  \ starting with the low bytes
- STA xPlayerDeltaHi,Y
+ STA xPlayerSpeedHi,Y
 
- LDA xPlayerDeltaTop,Y  \ And then the high bytes
+ LDA xPlayerSpeedTop,Y  \ And then the high bytes
  ADC U
- STA xPlayerDeltaTop,Y
+ STA xPlayerSpeedTop,Y
 
  RTS                    \ Return from the subroutine
 
@@ -31005,39 +31047,39 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   [ var07x ]   [ cosYawAngle   0   -sinYawAngle ]   [ xPlayerDelta ]
-\   [    -   ] = [      0        1         0      ] . [ yPlayerDelta ]
-\   [ var07z ]   [ sinYawAngle   0    cosYawAngle ]   [ zPlayerDelta ]
+\   [ xVelocity ]   [ cosYawAngle   0   -sinYawAngle ]   [ xPlayerSpeed ]
+\   [     -     ] = [      0        1         0      ] . [ yPlayerSpeed ]
+\   [ zVelocity ]   [ sinYawAngle   0    cosYawAngle ]   [ zPlayerSpeed ]
 \
 \ This rotates the player's delta vector from the 3D world coordinate system to
 \ the frame of reference of the player's car.
 \
 \ The individual calculations are as follows:
 \
-\   var07x = xPlayerDelta * cosYawAngle - zPlayerDelta * sinYawAngle
+\   xVelocity = xPlayerSpeed * cosYawAngle - zPlayerSpeed * sinYawAngle
 \
-\   var07z = xPlayerDelta * sinYawAngle + zPlayerDelta * cosYawAngle
+\   zVelocity = xPlayerSpeed * sinYawAngle + zPlayerSpeed * cosYawAngle
 \
 \ ******************************************************************************
 
 .RotateCoordToCar
 
  LDY #0                 \ Set Y = 0, so in the call to RotateVector, variableY
-                        \ is xPlayerDelta and variableY+1 is zPlayerDelta
+                        \ is xPlayerSpeed and variableY+1 is zPlayerSpeed
 
  LDA #8                 \ Set A = 8, so in the call to RotateVector, we store
-                        \ the result in var07x and var07z
+                        \ the result in xVelocity and zVelocity
 
  LDX #%11000000         \ Set bits 6 and 7 of X, to set the polarity in the call
                         \ to RotateVector
 
  BNE RotateVector       \ Jump to RotateVector to calculate the following:
                         \
-                        \   var07x = xPlayerDelta * cosYawAngle
-                        \            - zPlayerDelta * sinYawAngle
+                        \   xVelocity =   xPlayerSpeed * cosYawAngle
+                        \               - zPlayerSpeed * sinYawAngle
                         \
-                        \   var07z = xPlayerDelta * sinYawAngle
-                        \            + zPlayerDelta * cosYawAngle
+                        \   zVelocity =   xPlayerSpeed * sinYawAngle
+                        \               + zPlayerSpeed * cosYawAngle
                         \
                         \ This BNE is effectively a JMP as X is never zero
 
@@ -31052,12 +31094,12 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   [ var04x ]   [  cosYawAngle   0   sinYawAngle ]   [ var06x ]
-\   [    -   ] = [       0        1        0      ] . [    -   ]
-\   [ var04z ]   [ -sinYawAngle   0   cosYawAngle ]   [ var06z ]
+\   [ xVelocityDelta ]   [  cosYawAngle   0   sinYawAngle ]   [ xPlayerDelta ]
+\   [        -       ] = [       0        1        0      ] . [       -      ]
+\   [ zVelocityDelta ]   [ -sinYawAngle   0   cosYawAngle ]   [ zPlayerDelta ]
 \
-\ This rotates the var06x vector from the frame of reference of the player's car
-\ into the 3D world coordinate system.
+\ This rotates the xPlayerDelta vector from the frame of reference of the
+\ player's car into the 3D world coordinate system.
 \
 \ The rotation matrix is the transpose of the matrix from RotateCoordToCar,
 \ which is the inverse, so the RotateCarToCoord routine reverses the rotation in
@@ -31065,19 +31107,19 @@ ENDIF
 \
 \ The individual calculations are as follows:
 \
-\   var04x = var06x * cosYawAngle + var06z * sinYawAngle
+\   xVelocityDelta = xPlayerDelta * cosYawAngle + zPlayerDelta * sinYawAngle
 \
-\   var04z = var06z * cosYawAngle - var06x * sinYawAngle
+\   zVelocityDelta = zPlayerDelta * cosYawAngle - xPlayerDelta * sinYawAngle
 \
 \ ******************************************************************************
 
 .RotateCarToCoord
 
  LDY #6                 \ Set Y = 6, so in the call to RotateVector, variableY
-                        \ is var06x and variableY+1 is var06z
+                        \ is xPlayerDelta and variableY+1 is zPlayerDelta
 
  LDA #3                 \ Set A = 3, so in the call to RotateVector, we store
-                        \ the result in var04x and var04z
+                        \ the result in xVelocityDelta and zVelocityDelta
 
  LDX #%01000000         \ Set bit 6 and clear bit 7 of X, to set the polarity in
                         \ the call to RotateVector
@@ -31085,9 +31127,11 @@ ENDIF
                         \ Fall through into RotateVector to calculate the
                         \ following:
                         \
-                        \   var04x = var06x * cosYawAngle + var06z * sinYawAngle
+                        \   xVelocityDelta =   xPlayerDelta * cosYawAngle
+                        \                    + zPlayerDelta * sinYawAngle
                         \
-                        \   var04z = var06z * cosYawAngle - var06x * sinYawAngle
+                        \   zVelocityDelta =   zPlayerDelta * cosYawAngle
+                        \                    - xPlayerDelta * sinYawAngle
 
 \ ******************************************************************************
 \
@@ -31128,15 +31172,15 @@ ENDIF
 \
 \   Y                   Offset of the 16-bit signed number to multiply:
 \
-\                         * 0 = xPlayerDelta and zPlayerDelta
+\                         * 0 = xPlayerSpeed and zPlayerSpeed
 \
-\                         * 6 = var06x and var06z
+\                         * 6 = xPlayerDelta and zPlayerDelta
 \
 \   A                   Offset of the variable to store the result in:
 \
-\                         * 3 = var04x and var04z
+\                         * 3 = xVelocityDelta and zVelocityDelta
 \
-\                         * 8 = var07x and var07z
+\                         * 8 = xVelocity and zVelocity
 \
 \   X                   Details of the operation to perform on the second and
 \                       fourth multiplications:
@@ -31255,9 +31299,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   xPlayerCoord = xPlayerCoord + xPlayerDelta * 2
+\   xPlayerCoord = xPlayerCoord + xPlayerSpeed * 2
 \
-\   zPlayerCoord = zPlayerCoord + zPlayerDelta * 2
+\   zPlayerCoord = zPlayerCoord + zPlayerSpeed * 2
 \
 \   playerYawAngle = playerYawAngle + spinYawAngle
 \
@@ -31265,8 +31309,8 @@ ENDIF
 
 .ApplyDeltas
 
- LDX #1                 \ Set X = 1, to act as an axis counter for xPlayerDelta
-                        \ and zPlayerDelta
+ LDX #1                 \ Set X = 1, to act as an axis counter for xPlayerSpeed
+                        \ and zPlayerSpeed
                         \
                         \ The comments below are for when X = 1
 
@@ -31281,9 +31325,9 @@ ENDIF
  LDA #0                 \ Set V = 0, to use as the sign bit for (V A T)
  STA V
 
- LDA xPlayerDeltaHi,X   \ Set (V A T) = zPlayerDelta
+ LDA xPlayerSpeedHi,X   \ Set (V A T) = zPlayerSpeed
  STA T
- LDA xPlayerDeltaTop,X
+ LDA xPlayerSpeedTop,X
 
  BPL delt2              \ If A is positive, jump to delt2 to skip the following
                         \ instruction
@@ -31299,7 +31343,7 @@ ENDIF
  STA U
 
  LDA xPlayerCoordLo,Y   \ Set zPlayerCoord = zPlayerCoord + (U A T)
- ADC T                  \                  = zPlayerCoord + zPlayerDelta * 2
+ ADC T                  \                  = zPlayerCoord + zPlayerSpeed * 2
  STA xPlayerCoordLo,Y   \
                         \ starting with the low bytes
 
@@ -31315,7 +31359,7 @@ ENDIF
  DEY                    \ xPlayerCoord variable
 
  DEX                    \ Decrement X so the next iteration sets (V A T) to
-                        \ xPlayerDelta
+                        \ xPlayerSpeed
 
  BPL delt1              \ Loop back until we have updated both xPlayerCoord and
                         \ zPlayerCoord
@@ -31333,24 +31377,24 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: CalculateVars4
+\       Name: UpdateVelocity
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Update the axis deltas and spin angle delta
+\    Summary: Update the player's velocity and spin yaw angle
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following:
 \
-\   xPlayerDelta = xPlayerDelta + var04x << 5
+\   xPlayerSpeed = xPlayerSpeed + xVelocityDelta << 5
 \
-\   zPlayerDelta = zPlayerDelta + var04z << 3
+\   zPlayerSpeed = zPlayerSpeed + zVelocityDelta << 3
 \
-\   spinYawAngle = spinYawAngle + var05 << 3
+\   spinYawAngle = spinYawAngle + spinYawDelta << 3
 \
 \ ******************************************************************************
 
-.CalculateVars4
+.UpdateVelocity
 
  LDX #2                 \ Set X = 2, to act as an axis counter in the following
                         \ loop, working through three axes from 2 to 0
@@ -31360,9 +31404,9 @@ ENDIF
  LDA #0                 \ Set V = 0, to use as the sign bit for (V A T)
  STA V
 
- LDA var04xLo,X         \ Set (A T) = var04x for axis X
+ LDA xVelocityDeltaLo,X \ Set (A T) = xVelocityDelta for axis X
  STA T
- LDA var04xHi,X
+ LDA xVelocityDeltaHi,X
 
  BPL delf2              \ If A is positive, jump to delf2 to skip the following
                         \ instruction
@@ -31378,7 +31422,8 @@ ENDIF
  CPX #2                 \ If X <> 2, jump to delf3 to skip the following
  BNE delf3              \ instruction
 
-                        \ If we get here then X = 2, so (A T) contains var05
+                        \ If we get here then X = 2, so (A T) contains
+                        \ spinYawDelta
 
  LDY #5                 \ Set Y = 5, so for the third axis, we left-shift by
                         \ five places
@@ -31397,26 +31442,26 @@ ENDIF
 
                         \ In the following, we update:
                         \
-                        \   * xPlayerDelta when X = 0
+                        \   * xPlayerSpeed when X = 0
                         \
-                        \   * zPlayerDelta when X = 1
+                        \   * zPlayerSpeed when X = 1
                         \
                         \   * spinYawAngle when X = 2
                         \
                         \ The following comments are for when X = 0
 
- LDA xPlayerDeltaLo,X   \ Set xPlayerDelta = xPlayerDelta + (V U T)
+ LDA xPlayerSpeedLo,X   \ Set xPlayerSpeed = xPlayerSpeed + (V U T)
  CLC                    \
  ADC T                  \ starting with the low bytes
- STA xPlayerDeltaLo,X
+ STA xPlayerSpeedLo,X
 
- LDA xPlayerDeltaHi,X   \ Then the high bytes
+ LDA xPlayerSpeedHi,X   \ Then the high bytes
  ADC U
- STA xPlayerDeltaHi,X
+ STA xPlayerSpeedHi,X
 
- LDA xPlayerDeltaTop,X  \ And then the top bytes
+ LDA xPlayerSpeedTop,X  \ And then the top bytes
  ADC V
- STA xPlayerDeltaTop,X
+ STA xPlayerSpeedTop,X
 
  DEX                    \ Decrement the axis counter in X to point to the next
                         \ axis
@@ -31514,11 +31559,11 @@ ENDIF
 \
 \ Other entry points:
 \
-\   CalcRevsNoTorque-2  Set L0059 to A before running the routine
+\   CalcRevsNoTorque-2  Set clutchEngaged to A before running the routine
 \
 \ ******************************************************************************
 
- STA L0059              \ Set L0059 = A
+ STA clutchEngaged      \ Set clutchEngaged = A
 
 .CalcRevsNoTorque
 
@@ -31574,7 +31619,7 @@ ENDIF
 \
 \   * revCount = A + rand(0-7)
 \
-\   * L005A = revCount
+\   * revsOnGearChange = revCount
 \
 \   * engineTorque = 0
 \
@@ -31612,7 +31657,7 @@ ENDIF
 \
 \   * revCount = A
 \
-\   * L005A = revCount
+\   * revsOnGearChange = revCount
 \
 \   * engineTorque = 0
 \
@@ -31624,7 +31669,7 @@ ENDIF
 
  STA revCount           \ Set revCount = A
 
- STA L005A              \ Set L005A = A
+ STA revsOnGearChange   \ Set revsOnGearChange = A
 
                         \ Fall through into ZeroEngineTorque to zero
                         \ engineTorque and set soundRevTarget
@@ -31671,11 +31716,12 @@ ENDIF
 \
 \   * If the engine is not on, jump to ProcessEngineStart
 \
-\   * If L002D <> 0, jump to CalcRevsNoTorque to calculate the rev count and
-\     zero the engine torque
+\   * If heightAboveTrack <> 0, jump to CalcRevsNoTorque to calculate the rev
+\     count and zero the engine torque
 \
 \   * If a gear change key is being pressed, jump to CalcRevsNoTorque-2 to set
-\     bit 7 of L0059, calculate the rev count and zero the engine torque
+\     bit 7 of clutchEngaged to indicate that the clutch is not engaged,
+\     calculate the rev count and zero the engine torque
 \
 \   * If we are in neutral, jump to CalcRevsNoTorque to calculate the rev count
 \     and zero the engine torque
@@ -31692,15 +31738,16 @@ ENDIF
  BEQ ProcessEngineStart \ process the key press for starting the engine,
                         \ returning from the subroutine using a tail call
 
- LDA L002D              \ If L002D <> 0, jump to CalcRevsNoTorque to calculate
- BNE CalcRevsNoTorque   \ the revs and zero the engine torque, returning from
-                        \ the subroutine using a tail call
+ LDA heightAboveTrack   \ If heightAboveTrack <> 0, jump to CalcRevsNoTorque to
+ BNE CalcRevsNoTorque   \ calculate the revs and zero the engine torque,
+                        \ returning from the subroutine using a tail call
 
  LDA gearChangeKey      \ If bit 7 of gearChangeKey is set then a gear change
  BMI CalcRevsNoTorque-2 \ key is being pressed, so jump to CalcRevsNoTorque-2 to
-                        \ set bit 7 of L0059, calculate the revs and zero the
-                        \ engine torque, returning from the subroutine using a
-                        \ tail call
+                        \ set bit 7 of clutchEngaged to indicate that the clutch
+                        \ is not engaged, calculate the revs and zero the engine
+                        \ torque, returning from the subroutine using a tail
+                        \ call
 
  LDY gearNumber         \ If gearNumber = 1, then we are in neutral, so jump to
  DEY                    \ CalcRevsNoTorque, returning from the subroutine using
@@ -31713,40 +31760,54 @@ ENDIF
  ASL T                  \ Set (A T) = (A T) << 1
  ROL A
 
- PHP                    \ Store the flags on the stack, so we can retrieve it to
-                        \ check bit 6 of (speedHi speedLo), which is now bit 7
-                        \ of the newly shifted (A T)
+ PHP                    \ Store the flags on the stack, so we can retrieve it
+                        \ below
 
  BMI engi1              \ If bit 7 of (A T) is set, jump to engi1 to skip the
                         \ following
 
  ASL T                  \ Set (A T) = (A T) << 1
- ROL A
+ ROL A                  \
+                        \ so we only do this shift if we won't lose a bit off
+                        \ the left end of A
 
 .engi1
 
- STA U                  \ Set U to the high byte of (A T)
+ STA U                  \ Set U to the high byte of (A T), i.e. to the high byte
+                        \ of either speed * 2 or speed * 4
+                        \
+                        \ As the high byte in speedHi contains the speed in mph
+                        \ and the low byte contains the fraction, this just
+                        \ discards the fractional part of the calculation
 
  LDX gearNumber         \ Set A to the gear ratio for the current gear, which is
  LDA trackGearRatio,X   \ defined in the track data file at trackGearRatio
 
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = trackGearRatio * high byte of (A T)
+                        \           = trackGearRatio * speed * 2
+                        \       or    trackGearRatio * speed * 4
 
  ASL T                  \ Set (A T) = (A T) << 1
- ROL A
+ ROL A                  \           = trackGearRatio * speed * 4
+                        \             trackGearRatio * speed * 8
 
- PLP                    \ Retrieve the flags we stored on the stack to check
- BPL engi2              \ whether bit 6 of (speedHi speedLo) is clear, and if
-                        \ so, jump to engi2
+ PLP                    \ Retrieve the flags we stored on the stack above, and
+ BPL engi2              \ if bit 7 is clear, skip the following, as we already
+                        \ doubled the result above
 
  ASL T                  \ Set (A T) = (A T) << 1
- ROL A
+ ROL A                  \
+                        \ So we only do this shift if we didn't do it above,
+                        \ which means we have the following result, calculated
+                        \ in one of two ways to preserve accuracy:
+                        \
+                        \   (A T) = trackGearRatio * speed * 8
 
 .engi2
 
- BIT L0059              \ If bit 7 of L0059 is clear, jump to engi6
- BPL engi6
+ BIT clutchEngaged      \ If bit 7 of clutchEngaged is clear then the clutch is
+ BPL engi6              \ engaged, so jump to engi6
 
  LDY throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
  DEY                    \ being applied, so jump to engi4
@@ -31789,13 +31850,18 @@ ENDIF
                         \ are showing and we have fewer than 10 main loop
                         \ iterations to go until the lights turn green
 
- CMP L005A              \ If A < L005A, jump to engi5
+                        \ Above, we set (A T) = trackGearRatio * speed * 8
+
+ CMP revsOnGearChange   \ If A < revsOnGearChange, jump to engi5
  BCC engi5
 
 .engi4
 
- LDY #0                 \ Set L0059 = 0
- STY L0059
+                        \ If we get here then A > revsOnGearChange, so the revs
+                        \ are higher than at the last gear change
+
+ LDY #0                 \ Set clutchEngaged = 0 to indicate that the clutch is
+ STY clutchEngaged      \ engaged
 
  BEQ engi6              \ Jump to engi6 (this BEQ is effectively a JMP as Y is
                         \ always zero)
@@ -31806,16 +31872,17 @@ ENDIF
                         \ grid, or we are on the starting grid, the blue lights
                         \ are showing and we have fewer than 10 main loop
                         \ iterations to go until the lights turn green, and
-                        \ A < L005A
+                        \ A < revsOnGearChange
 
- LDA L005A              \ Set A = L005A
+ LDA revsOnGearChange   \ Set A = revsOnGearChange
 
  CMP #108               \ If A < 108, jump to engi6
  BCC engi6
 
- SEC                    \ Set L005A = L005A - 2
+ SEC                    \ Set revsOnGearChange = revsOnGearChange - 2
  SBC #2                 \
- STA L005A              \ And fall through into engi6 to set revCount to L005A
+ STA revsOnGearChange   \ And fall through into engi6 to set revCount to the new
+                        \ value of revsOnGearChange
 
 .engi6
 
@@ -31961,43 +32028,43 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   * If var07x is non-zero and var07x and var09F for tyre X have the same sign,
-\     rotate a 1 into bit 7 of L62A6 for tyre X and finish
+\   * If xVelocity is non-zero and xVelocity and xTyreForceNose for tyre X have
+\     the same sign, rotate a 1 into bit 7 of tyreSqueal for tyre X and finish
 \
-\   * var09F = -var07x * 2^5
+\   * xTyreForceNose = -xVelocity * 2^5
 \
 \   * Call GetTyreForces to set (A T), H and (NN MM)
 \
 \   * If the throttle is being applied and we are processing the front tyres,
 \     set:
 \
-\       var11F = 0
+\       zTyreForceNose = 0
 \
-\       A = |var09FHi|
+\       A = |xTyreForceNoseHi|
 \
 \     otherwise:
 \
-\       * If the throttle is being applied, then 
+\       * If the throttle is being applied, then set:
 \
-\           var11F or var11R = (A T) * abs(H)
+\           zTyreForceNose or zTyreForceRear = (A T) * abs(H)
 \
 \         otherwise set:
 \
-\           var11F or var11R = max((A T, (NN MM)) * abs(H)
+\           zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
 \
-\       * If |var09FHi| < |var11FHi| (for tyre X):
+\       * If |xTyreForceNoseHi| < |zTyreForceNoseHi| (for tyre X):
 \
-\           A = |var09FHi| / 2 + |var11FHi|
+\           A = |xTyreForceNoseHi| / 2 + |zTyreForceNoseHi|
 \
-\         or if |var09FHi| >= |var11FHi| (for tyre X)
+\         or if |xTyreForceNoseHi| >= |zTyreForceNoseHi| (for tyre X)
 \
-\           A = |var09FHi| + |var11FHi| / 2
+\           A = |xTyreForceNoseHi| + |zTyreForceNoseHi| / 2
 \
-\   * Rotate a new bit 7 into L62A6 for tyre X as follows:
+\   * Rotate a new bit 7 into tyreSqueal for tyre X as follows:
 \
-\     * Clear if A <= L62AA for tyre X
+\     * Clear if A <= wingForce for tyre X
 \
-\     * Set if A > L62AA for tyre X
+\     * Set if A > wingForce for tyre X
 \
 \ Arguments:
 \
@@ -32011,17 +32078,17 @@ ENDIF
 
 .ApplyTyreForces
 
- LDA var07xLo           \ Set T = var07xLo
+ LDA xVelocityLo        \ Set T = xVelocityLo
  STA T
 
- ORA var07xHi           \ Set A = var07xLo OR var07xHi and store the flags on
- PHP                    \ the stack, which will be zero if both the high and
-                        \ low bytes of var07x are zero, i.e. if var07x = 0
+ ORA xVelocityHi        \ Set A = xVelocityLo OR xVelocityHi and store the flags
+ PHP                    \ on the stack, which will be zero if both the high and
+                        \ low bytes of xVelocity are zero, i.e. if xVelocity = 0
 
- LDA var07xHi           \ Set (A T) = (var07xHi var07xLo)
+ LDA xVelocityHi        \ Set (A T) = (xVelocityHi xVelocityLo)
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
-                        \           = -var07x
+                        \           = -xVelocity
 
  LDY #5                 \ Set Y = 5 to act as a shift counter in the following
                         \ loop
@@ -32037,37 +32104,39 @@ ENDIF
                         \ so we now have:
                         \
                         \   (A T) = (A T) * 2^5
-                        \         = -var07x * 2^5
+                        \         = -xVelocity * 2^5
 
- STA var09FHi,X         \ Set var09FHi for tyre X to the high byte of the result
+ STA xTyreForceNoseHi,X \ Set xTyreForceNoseHi for tyre X to the high byte of
+                        \ the result
 
  PLP                    \ Retrieve the flags that we stored on the stack, which
-                        \ will be zero if var07x = 0
+                        \ will be zero if xVelocity = 0
 
- BEQ tfor2              \ If var07x = 0, jump to tfor2 to set var09FLo to the
-                        \ low byte of the result
+ BEQ tfor2              \ If xVelocity = 0, jump to tfor2 to set
+                        \ xTyreForceNoseLo to the low byte of the result
 
-                        \ If we get here then var07x is non-zero
+                        \ If we get here then xVelocity is non-zero
 
- EOR var07xHi           \ If var07xHi and var09FHi for tyre X have the same
-                        \ sign, this will clear bit 7 of A
+ EOR xVelocityHi        \ If xVelocityHi and xTyreForceNoseHi for tyre X have
+                        \ the same sign, this will clear bit 7 of A
 
  SEC                    \ Set the C flag
 
- BPL tfor7              \ If bit 7 of A is clear, then var07xHi and var09FHi
-                        \ for tyre X have the same sign, so jump to tfor7 with
-                        \ the C flag set to rotate a 1 into bit 7 of L62A6 for
-                        \ tyre X
+ BPL tfor7              \ If bit 7 of A is clear, then xVelocityHi and
+                        \ xTyreForceNoseHi for tyre X have the same sign, so
+                        \ jump to tfor7 with the C flag set to rotate a 1 into
+                        \ bit 7 of tyreSqueal for tyre X
 
 .tfor2
 
-                        \ If we get here then either var07x = 0, or var07x is
-                        \ non-zero and var07x and var09F have different signs
+                        \ If we get here then either xVelocity = 0, or xVelocity
+                        \ is non-zero and xVelocity and xTyreForceNose have
+                        \ different signs
 
- LDA T                  \ Set var09FLo = T, so we now have:
- STA var09FLo,X         \
-                        \   var09F = (A T)
-                        \          = -var07x * 2^5
+ LDA T                  \ Set xTyreForceNoseLo = T, so we now have:
+ STA xTyreForceNoseLo,X \
+                        \   xTyreForceNose = (A T)
+                        \                  = -xVelocity * 2^5
 
  JSR GetTyreForces      \ Calculate the tyre forces due to the throttle or
                         \ brakes:
@@ -32077,7 +32146,7 @@ ENDIF
                         \   * H = the sign of the force
                         \
                         \   * G = X + 2, so the call to ApplyLimitThrottle sets
-                        \     var11F or var11R accordingly
+                        \     zTyreForceNose or zTyreForceRear accordingly
                         \
                         \   * If the throttle is not being applied, (NN MM) is
                         \     a maximum value for the force
@@ -32090,87 +32159,88 @@ ENDIF
                         \ returned a set of calculated values, so jump to tfor3
                         \ to keep going
 
- LDA #0                 \ Set var11F = 0
- STA var11FLo
- STA var11FHi
+ LDA #0                 \ Set zTyreForceNose = 0
+ STA zTyreForceNoseLo
+ STA zTyreForceNoseHi
 
- LDA var09FHi           \ Set A = var09FHi
+ LDA xTyreForceNoseHi   \ Set A = xTyreForceNoseHi
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |var09FHi|
+                        \       = |xTyreForceNoseHi|
 
  JMP tfor6              \ Jump to tfor6
 
 .tfor3
 
- JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then set
+                        \ zTyreForceNose or zTyreForceRear to:
                         \
-                        \   var11F or var11R = (A T) * abs(H)
+                        \   (A T) * abs(H)
                         \
-                        \ otherwise set:
+                        \ otherwise set it to:
                         \
-                        \   var11F or var11R = max((A T), (NN MM)) * abs(H)
+                        \    max((A T), (NN MM)) * abs(H)
 
- LDA var11FHi,X         \ Set A = var11FHi for tyre X
+ LDA zTyreForceNoseHi,X \ Set A = zTyreForceNoseHi for tyre X
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |var11FHi|
+                        \       = |zTyreForceNoseHi|
 
  STA T                  \ Set T = A
-                        \       = |var11FHi|
+                        \       = |zTyreForceNoseHi|
 
- LDA var09FHi,X         \ Set A = var09FHi for tyre X
+ LDA xTyreForceNoseHi,X \ Set A = xTyreForceNoseHi for tyre X
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |var09FHi|
+                        \       = |xTyreForceNoseHi|
 
- CMP T                  \ If A < T, then |var09FHi| < |var11FHi|, so jump to
- BCC tfor4              \ tfor4 to halve A
+ CMP T                  \ If A < T then |xTyreForceNoseHi| < |zTyreForceNoseHi|,
+ BCC tfor4              \ so jump to tfor4 to halve A
 
-                        \ If we get here then |var09FHi| >= |var11FHi|, so we
-                        \ halve T
+                        \ If we get here then |xTyreForceNoseHi| >=
+                        \ |zTyreForceNoseHi|, so we halve T
 
  LSR T                  \ Set T = T >> 1
-                        \       = |var11FHi| / 2
+                        \       = |zTyreForceNoseHi| / 2
 
  JMP tfor5              \ Jump to tfor5
 
 .tfor4
 
  LSR A                  \ Set A = A >> 1
-                        \       = |var09FHi| / 2
+                        \       = |xTyreForceNoseHi| / 2
 
 .tfor5
 
  CLC                    \ Set A = A + T
  ADC T                  \
-                        \ So if |var09FHi| < |var11FHi|:
+                        \ So if |xTyreForceNoseHi| < |zTyreForceNoseHi|:
                         \
-                        \   A = |var09FHi| / 2 + |var11FHi|
+                        \   A = |xTyreForceNoseHi| / 2 + |zTyreForceNoseHi|
                         \
-                        \ or if |var09FHi| >= |var11FHi|:
+                        \ or if |xTyreForceNoseHi| >= |zTyreForceNoseHi|:
                         \
-                        \   A = |var09FHi| + |var11FHi| / 2
+                        \   A = |xTyreForceNoseHi| + |zTyreForceNoseHi| / 2
 
 .tfor6
 
- CMP L62AA,X            \ If A <> L62AA for tyre X, jump to tfor7 with the C
+ CMP wingForce,X        \ If A <> wingForce for tyre X, jump to tfor7 with the C
  BNE tfor7              \ flag set as follows:
                         \
-                        \   * Clear if A < L62AA
+                        \   * Clear if A < wingForce
                         \
-                        \   * Set if A > L62AA
+                        \   * Set if A > wingForce
 
- CLC                    \ Clear the C flag for when A = L62AA, so in all we have
-                        \ the following for the C flag:
+ CLC                    \ Clear the C flag for when A = wingForce, so in all we
+                        \ have the following for the C flag:
                         \
-                        \   * Clear if A <= L62AA
+                        \   * Clear if A <= wingForce
                         \
-                        \   * Set if A > L62AA
+                        \   * Set if A > wingForce
 
 .tfor7
 
- ROR L62A6,X            \ Rotate the C flag into bit 7 of L62A6 for tyre X
+ ROR tyreSqueal,X       \ Rotate the C flag into bit 7 of tyreSqueal for tyre X
 
  RTS                    \ Return from the subroutine
 
@@ -32185,39 +32255,40 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   * Set var09F or var09R = max(L62AC << 8, scaled |var07x|) * abs(-var07x)
+\   * Set xTyreForceNose or xTyreForceRear
+\         = max(wingForce95 << 8, scaled |xVelocity|) * abs(-xVelocity)
 \
 \   * Call GetTyreForces to set (A T), H and (NN MM)
 \
 \   * If the throttle is being applied and we are processing the front tyres,
 \     return from the subroutine
 \
-\   * If A < L62AC, then:
+\   * If A < wingForce95, then:
 \
 \     * If the throttle is being applied, then 
 \
-\         var11F or var11R = (A T) * abs(H)
+\         zTyreForceNose or zTyreForceRear = (A T) * abs(H)
 \
 \       otherwise set:
 \
-\         var11F or var11R = max((A T, (NN MM)) * abs(H)
+\         zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
 \
-\   * If A >= L62AC, then:
+\   * If A >= wingForce95, then:
 \
-\     * Set (A T) = L62AC << 8
+\     * Set (A T) = wingForce95 << 8
 \
 \     * If the throttle is being applied, then 
 \
-\         var11F or var11R = (A T) * abs(H)
+\         zTyreForceNose or zTyreForceRear = (A T) * abs(H)
 \
 \       otherwise set:
 \
-\         var11F or var11R = max((A T, (NN MM)) * abs(H)
+\         zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
 \
 \     * If the throttle is being applied and we are processing the rear tyres,
 \       set:
 \
-\         var09F or var09R = 0
+\         xTyreForceNose or xTyreForceRear = 0
 \
 \ Arguments:
 \
@@ -32231,31 +32302,34 @@ ENDIF
 
 .ApplySkidForces
 
- LDA #0                 \ Set var11F for tyre X to 0
- STA var11FHi,X
- STA var11FLo,X
+ LDA #0                 \ Set zTyreForceNose for tyre X to 0
+ STA zTyreForceNoseHi,X
+ STA zTyreForceNoseLo,X
 
- LDY #8                 \ Set Y = 8 so the call to Scale16Bit scales var07x
+ LDY #8                 \ Set Y = 8 so the call to Scale16Bit scales xVelocity
 
- JSR Scale16Bit         \ Scale up |var07x| by 2^5, capping the result at the
+ JSR Scale16Bit         \ Scale up |xVelocity| by 2^5, capping the result at the
                         \ maximum possible positive value of &7Fxx, and
                         \ returning the result in (NN MM)
 
- LDA var07xHi           \ Set H = var07xHi with the sign flipped, so that
- EOR #%10000000         \ abs(H) = abs(-var07x)
+ LDA xVelocityHi        \ Set H = xVelocityHi with the sign flipped, so that
+ EOR #%10000000         \ abs(H) = abs(-xVelocity)
  STA H
 
  LDA #0                 \ Set T = 0
  STA T
 
- LDA L62AC,X            \ Set A to L62AC for tyre X
+ LDA wingForce95,X      \ Set A to wingForce95 for tyre X
 
  STX G                  \ Set G to the tyre number in X so the ApplyLimitAndSign
-                        \ routine sets var09F or var09R accordingly
+                        \ routine sets xTyreForceNose or xTyreForceRear
+                        \ accordingly
 
- JSR ApplyLimitAndSign  \ Set var09F or var09R = max((A T), (NN MM)) * abs(H)
+ JSR ApplyLimitAndSign  \ Set xTyreForceNose or xTyreForceRear
+                        \                       = max((A T), (NN MM)) * abs(H)
                         \
-                        \   = max(L62AC << 8, scaled |var07x|) * abs(-var07x)
+                        \   =   max(wingForce95 << 8, scaled |xVelocity|)
+                        \     * abs(-xVelocity)
 
  JSR GetTyreForces      \ Calculate the tyre forces due to the throttle or
                         \ brakes:
@@ -32265,7 +32339,7 @@ ENDIF
                         \   * H = the sign of the force
                         \
                         \   * G = X + 2, so the call to ApplyLimitThrottle sets
-                        \     var11F or var11R accordingly
+                        \     zTyreForceNose or zTyreForceRear accordingly
                         \
                         \   * If the throttle is not being applied, (NN MM) is
                         \     a maximum value for the force
@@ -32278,21 +32352,23 @@ ENDIF
                         \ any calculated values, so jump to skid2 to return from
                         \ the subroutine
 
- CMP L62AC,X            \ If A < L62AC for tyre X, jump to skid1
+ CMP wingForce95,X      \ If A < wingForce95 for tyre X, jump to skid1
  BCC skid1
 
  LDA #0                 \ Set T = 0
  STA T
 
- LDA L62AC,X            \ Set A to L62AC for tyre X, so A = min(A, L62AC)
+ LDA wingForce95,X      \ Set A to wingForce95 for tyre X, so
+                        \ A = min(A, wingForce95)
 
- JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then set
+                        \ zTyreForceNose or zTyreForceRear to:
                         \
-                        \   var11F or var11R = (A T) * abs(H)
+                        \   (A T) * abs(H)
                         \
-                        \ otherwise set:
+                        \ otherwise set it to:
                         \
-                        \   var11F or var11R = max((A T), (NN MM)) * abs(H)
+                        \    max((A T), (NN MM)) * abs(H)
 
  LDY throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
  DEY                    \ being applied, so jump to skid2
@@ -32304,22 +32380,23 @@ ENDIF
                         \ If we get here then the throttle is being applied and
                         \ we are processing the rear tyres
 
- LDA #0                 \ Set var09F for tyre X to 0
- STA var09FHi,X
- STA var09FLo,X
+ LDA #0                 \ Set xTyreForceNose for tyre X to 0
+ STA xTyreForceNoseHi,X
+ STA xTyreForceNoseLo,X
 
  BEQ skid2              \ Jump to skid2 to return from the subroutine (this BEQ
                         \ is effectively a JMP as A is always zero)
 
 .skid1
 
- JSR ApplyLimitThrottle \ If the throttle is being applied, then set:
+ JSR ApplyLimitThrottle \ If the throttle is being applied, then set
+                        \ zTyreForceNose or zTyreForceRear to:
                         \
-                        \   var11F or var11R = (A T) * abs(H)
+                        \   (A T) * abs(H)
                         \
-                        \ otherwise set:
+                        \ otherwise set it to:
                         \
-                        \   var11F or var11R = max((A T), (NN MM)) * abs(H)
+                        \    max((A T), (NN MM)) * abs(H)
 
 .skid2
 
@@ -32330,8 +32407,8 @@ ENDIF
 \       Name: ApplyLimitThrottle
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Apply a maximum limit to a 16-bit number, but not if the throttle
-\             is being applied
+\    Summary: Apply a maximum limit to a 16-bit number, unless the throttle is
+\             being applied
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32347,13 +32424,13 @@ ENDIF
 \
 \   G                   Offset of the variable to set:
 \
-\                         * 0 = var09F
+\                         * 0 = xTyreForceNose
 \
-\                         * 1 = var09R
+\                         * 1 = xTyreForceRear
 \
-\                         * 2 = var11F
+\                         * 2 = zTyreForceNose
 \
-\                         * 3 = var11R
+\                         * 3 = zTyreForceRear
 \
 \ ******************************************************************************
 
@@ -32374,7 +32451,7 @@ ENDIF
 \       Name: ApplyLimitAndSign
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Apply a maximum and a sign to a 16-bit number
+\    Summary: Apply a maximum limit and a sign to a 16-bit number
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32386,13 +32463,13 @@ ENDIF
 \
 \   G                   Offset of the variable to set:
 \
-\                         * 0 = var09F
+\                         * 0 = xTyreForceNose
 \
-\                         * 1 = var09R
+\                         * 1 = xTyreForceRear
 \
-\                         * 2 = var11F
+\                         * 2 = zTyreForceNose
 \
-\                         * 3 = var11R
+\                         * 3 = zTyreForceRear
 \
 \ ******************************************************************************
 
@@ -32414,9 +32491,9 @@ ENDIF
 
  LDY G                  \ Set Y to the offset in G
 
- STA var09FHi,Y         \ Store (A T) 
+ STA xTyreForceNoseHi,Y \ Store (A T) 
  LDA T
- STA var09FLo,Y
+ STA xTyreForceNoseLo,Y
 
  RTS                    \ Return from the subroutine
 
@@ -32436,9 +32513,9 @@ ENDIF
 \
 \   Y                   The offset of the variable to scale
 \
-\                         * 8 = var07x
+\                         * 8 = xVelocity
 \
-\                         * 9 = var07z
+\                         * 9 = zVelocity
 \
 \ Returns:
 \
@@ -32448,9 +32525,9 @@ ENDIF
 
 .Scale16Bit
 
- LDA xPlayerDeltaHi,Y   \ Set (A MM) to the variable pointed to by Y, which we
+ LDA xPlayerSpeedHi,Y   \ Set (A MM) to the variable pointed to by Y, which we
  STA MM                 \ call variableY
- LDA xPlayerDeltaTop,Y
+ LDA xPlayerSpeedTop,Y
 
  BPL scal1              \ If the top byte in A is positive, jump to scal1 to
                         \ skip the following
@@ -32461,7 +32538,7 @@ ENDIF
  STA MM
 
  LDA #0                 \ And then the high bytes, so we now have:
- SBC xPlayerDeltaTop,Y  \
+ SBC xPlayerSpeedTop,Y  \
                         \   (A MM) = |variableY|
 
 .scal1
@@ -32508,12 +32585,12 @@ ENDIF
 \
 \   * If the throttle is not being applied:
 \
-\     * (NN MM) = scaled up var07z
+\     * (NN MM) = scaled up zVelocity
 \
-\     * H = var07zHi with the sign flipped
+\     * H = zVelocityHi with the sign flipped
 \
-\     * (A T) = throttleBrake * L62AA           (rear tyres)
-\             = throttleBrake * L62AA * 3 / 4   (front tyres)
+\     * (A T) = throttleBrake * wingForce           (rear tyres)
+\             = throttleBrake * wingForce * 3 / 4   (front tyres)
 \
 \     * C flag clear
 \
@@ -32554,9 +32631,9 @@ ENDIF
 \   G                   Set to the correct offset for calling ApplyLimitThrottle
 \                       or ApplyLimitAndSign:
 \
-\                         * 2 = var11F
+\                         * 2 = zTyreForceNose
 \
-\                         * 3 = var11R
+\                         * 3 = zTyreForceRear
 \
 \   H                   The sign of the force
 \
@@ -32580,25 +32657,25 @@ ENDIF
 
                         \ If we get here then the throttle is not being applied
 
- LDY #9                 \ Set Y = 8 so the call to Scale16Bit scales var07z
+ LDY #9                 \ Set Y = 8 so the call to Scale16Bit scales zVelocity
 
- JSR Scale16Bit         \ Scale up |var07z| by 2^5, capping the result at the
+ JSR Scale16Bit         \ Scale up |zVelocity| by 2^5, capping the result at the
                         \ maximum possible positive value of &7Fxx, and
                         \ returning the result in (NN MM)
 
- LDA var07zHi           \ Set H = var07zHi with the sign flipped
+ LDA zVelocityHi        \ Set H = zVelocityHi with the sign flipped
  EOR #%10000000
  STA H
 
- LDA L62AA,X            \ Set A to L62AA for tyre X
+ LDA wingForce,X        \ Set A to wingForce for tyre X
 
  CPX #1                 \ If X = 1, then we are processing the rear tyres, so
  BEQ tyfo2              \ jump to tyfo2 to use this value of A in the
                         \ calculation
 
- LSR A                  \ Set A = (A / 2 + L62AA) / 2
- CLC                    \       = (L62AA / 2 + L62AA) / 2
- ADC L62AA,X            \       = L62AA * 3 / 4
+ LSR A                  \ Set A = (A / 2 + wingForce) / 2
+ CLC                    \       = (wingForce / 2 + wingForce) / 2
+ ADC wingForce,X        \       = wingForce * 3 / 4
  LSR A
 
  JMP tyfo2              \ Jump to tyfo2 to use this value of A in the
@@ -32653,7 +32730,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ApplyGrassEffect
+\       Name: ApplyGrassOrTrack
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply the effects of driving or braking on grass
@@ -32664,40 +32741,41 @@ ENDIF
 \
 \     * There is grass under at least one side of the car
 \     * L005D = 0
-\     * L002D = 0
+\     * heightAboveTrack = 0
 \     * Bit 7 of playerDrift is set
 \
 \   then calculate the following:
 \
 \     * L0026 = speedHi / 2
 \     * L0028 = speedHi / 4
-\     * L002D = L002D + 1
+\     * heightAboveTrack = heightAboveTrack + 1
 \     * spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
 \
 \   and make the crash/contact sound
 \
 \ * For each wing, calculate the following:
 \
-\   * If the brakes are not being applied, set brakes = 0, otherwise set:
+\   * If the brakes are not being applied, set brakeForce = 0, otherwise set:
 \
-\     * brakes = -L62FF / 8    (front wing)
-\     * brakes =  L62FF / 8    (rear wing)
+\     * brakeForce = -zTyreForceBoth / 8    (front wing)
+\     * brakeForce =  zTyreForceBoth / 8    (rear wing)
 \
 \   * If we are driving on grass on both sides of the car, then set:
 \
-\       L62AA = L4C63 + brakes
+\       wingForce = wingForceGrass + brakeForce
 \
 \     otherwise calculate:
 \
-\       L62AA = wingSetting * min(53, speedHi) * abs(var07z) + L4C61 + brakes
+\       wingForce = wingSetting * min(53, speedHi) * abs(zVelocity)
+\                   + wingForceTrack + brakeForce
 \
 \   * Set:
 \
-\       L62AC = L62AA * 243 / 256
+\       wingForce95 = wingForce * 243 / 256
 \
 \ ******************************************************************************
 
-.ApplyGrassEffect
+.ApplyGrassOrTrack
 
  LDA #0                 \ Set A = 0
 
@@ -32707,22 +32785,23 @@ ENDIF
 
                         \ If we get here then the brakes are being applied
 
- LDA L62FF              \ Set A = L62FF
+ LDA zTyreForceBoth     \ Set A = zTyreForceBoth
 
  PHP                    \ Store the N flag on the stack, so the PLP below sets
-                        \ the N flag according to the value of L62FF
+                        \ the N flag according to the value of zTyreForceBoth
 
  LSR A                  \ Set A = A >> 3
- LSR A                  \       = L62FF / 8
+ LSR A                  \       = zTyreForceBoth / 8
  LSR A
 
- PLP                    \ If L62FF is positive, jump to gras1 to skip the
- BPL gras1              \ following instruction
+ PLP                    \ If zTyreForceBoth is positive, jump to gras1 to skip
+ BPL gras1              \ the following instruction
 
  ORA #%11100000         \ Set bits 5-7 of A to ensure that the value of A
                         \ retains the correct sign after being shifted
 
-                        \ By this point, A = L62FF / 8 and has the correct sign
+                        \ By this point, A = zTyreForceBoth / 8 and has the
+                        \ correct sign
 
 .gras1
 
@@ -32740,8 +32819,8 @@ ENDIF
                         \
                         \ and if the brakes are being applied, we have:
                         \
-                        \   * G = -L62FF / 8
-                        \   * H = L62FF / 8
+                        \   * G = -zTyreForceBoth / 8
+                        \   * H = zTyreForceBoth / 8
                         \
                         \ G is used in the front wing calculation below, while
                         \ H is used in the rear wing calculation
@@ -32804,8 +32883,8 @@ ENDIF
  LDA L005D              \ If L005D is non-zero, jump to gras4
  BNE gras4
 
- LDA L005D              \ If L002D is non-zero, jump to gras4
- ORA L002D
+ LDA L005D              \ If heightAboveTrack is non-zero, jump to gras4
+ ORA heightAboveTrack
  BNE gras4
 
  BIT playerDrift        \ If bit 7 of playerDrift is clear, jump to gras4
@@ -32817,7 +32896,7 @@ ENDIF
                         \
                         \   L0028 = speedHi / 4
                         \
-                        \   L002D = L002D + 1
+                        \   heightAboveTrack = heightAboveTrack + 1
                         \
                         \   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
                         \
@@ -32857,26 +32936,28 @@ ENDIF
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = wingSetting * min(53, speedHi)
 
- BIT var07zHi           \ Set the N flag according to the sign in bit 7 of
-                        \ var07zHi, so the call to Absolute8Bit sets the
-                        \ sign of A to the same sign as var07z
+ BIT zVelocityHi        \ Set the N flag according to the sign in bit 7 of
+                        \ zVelocityHi, so the call to Absolute8Bit sets the
+                        \ sign of A to the same sign as zVelocity
 
- JSR Absolute8Bit       \ Set A = A * abs(var07z)
-                        \       = wingSetting * min(53, speedHi) * abs(var07z)
+ JSR Absolute8Bit       \ Set A = A * abs(zVelocity)
+                        \       = wingSetting * min(53, speedHi)
+                        \                     * abs(zVelocity)
 
- CLC                    \ Set A = A + L4C61 for this wing
- ADC L4C61,X            \       = wingSetting * min(53, speedHi) * abs(var07z)
-                        \         + L4C61
+ CLC                    \ Set A = A + wingForceTrack for this wing
+ ADC wingForceTrack,X   \       = wingSetting * min(53, speedHi)
+                        \                     * abs(zVelocity)
+                        \         + wingForceTrack
 
- LDY #243               \ Set U = 243
+ LDY #243               \ Set U = 243 to use in the 95% calculation below
  STY U
 
  LDY W                  \ If W <> &FF, then there is not grass under both sides
  CPY #&FF               \ of the car, so jump to gras7 to skip the following
  BNE gras7
 
- LDA L4C63,X            \ There is grass under both sides of the car, so set A
-                        \ to the L4C63 value for this wing
+ LDA wingForceGrass,X   \ There is grass under both sides of the car, so set A
+                        \ to the wingForceGrass value for this wing
 
  LDY #&FF               \ Set Y = &FF (this has no effect as Y is already &FF,
                         \ so this instruction is a bit of a mystery)
@@ -32887,14 +32968,15 @@ ENDIF
  ADC G,X                \
                         \ This adds the effect of the brakes being applied
 
- STA L62AA,X            \ Store A in L62AA for this wing
+ STA wingForce,X        \ Store A in wingForce for this wing
 
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = A * 243
                         \
                         \ so A = A * 243 / 256
+                        \      = A * 0.95
 
- STA L62AC,X            \ Store A in L62AC for this wing
+ STA wingForce95,X      \ Store A in wingForce95 for this wing
 
  DEX                    \ Decrement the loop counter in X to point to the next
                         \ wing
@@ -32905,18 +32987,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L4C61
+\       Name: wingForceTrack
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The base downward force from the weight of the car when on the
+\             track, to which the downward force from the wings is added
 \
 \ ******************************************************************************
 
-.L4C61
+.wingForceTrack
 
  EQUB 53                \ Front wing
 
@@ -32924,18 +33003,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L4C63
+\       Name: wingForceGrass
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The base downward force from the weight of the car when on grass,
+\             to which the downward force from the wings is added
 \
 \ ******************************************************************************
 
-.L4C63
+.wingForceGrass
 
  EQUB 25                \ Front wing
 
@@ -32952,9 +33028,10 @@ ENDIF
 \
 \ This routine calcvulates the following:
 \
-\   var06x = var06x - scaledSpeed * var15Hi
+\   xPlayerDelta = xPlayerDelta - scaledSpeed * xPrevVelocityHi
 \
-\   var06z = var06z - scaledSpeed * (wingBalance * speedHi + 2048) * abs(var07z)
+\   zPlayerDelta = zPlayerDelta - scaledSpeed * (wingBalance * speedHi + 2048)
+\                                             * abs(zVelocity)
 \
 \ where scaledSpeed = speedHi       if L005D = 0
 \                     speedHi * 2   otherwise
@@ -32965,13 +33042,13 @@ ENDIF
 
 .ApplyWingBalance
 
- LDA var15Hi            \ Set A = var15Hi
+ LDA xPrevVelocityHi    \ Set A = xPrevVelocityHi
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |var15Hi|
+                        \       = |xPrevVelocityHi|
 
  STA U                  \ Set U = A
-                        \       = |var15Hi|
+                        \       = |xPrevVelocityHi|
 
  CMP speedHi            \ If A >= speedHi, jump to bala1
  BCS bala1
@@ -32995,15 +33072,16 @@ ENDIF
                         \ Let's call this value scaledSpeed
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = scaledSpeed * |var15Hi|
+                        \           = scaledSpeed * |xPrevVelocityHi|
 
  STA U                  \ Set (U T) = (A T)
-                        \           = scaledSpeed * |var15Hi|
+                        \           = scaledSpeed * |xPrevVelocityHi|
 
- LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses var06x
+ LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses
+                        \ xPlayerDelta
 
- LDA var15Hi            \ Set A = var15Hi so the call to SubtractCoords sets the
-                        \ sign to abs(var15)
+ LDA xPrevVelocityHi    \ Set A = xPrevVelocityHi so the call to SubtractCoords
+                        \ sets the sign to abs(xPrevVelocity)
 
  JSR SubtractCoords     \ Set:
                         \
@@ -33011,10 +33089,11 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   var06x = var06x - scaledSpeed * |var15Hi|
-                        \                                   * abs(var15)
+                        \   xPlayerDelta = xPlayerDelta
+                        \                  - scaledSpeed * |xPrevVelocityHi|
+                        \                                * abs(xPrevVelocity)
                         \
-                        \          = var06x - scaledSpeed * var15Hi
+                        \       = xPlayerDelta - scaledSpeed * xPrevVelocityHi
 
  LDA speedHi            \ Set U = speedHi
  STA U
@@ -33039,10 +33118,11 @@ ENDIF
                         \   (U T) = U * (V T)
                         \         = scaledSpeed * (wingBalance * speedHi + 2048)
 
- LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses var06z
+ LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses
+                        \ zPlayerDelta
 
- LDA var07zHi           \ Set A = var07zHi so the call to SubtractCoords sets
-                        \ the sign to abs(var07z)
+ LDA zVelocityHi        \ Set A = zVelocityHi so the call to SubtractCoords sets
+                        \ the sign to abs(zVelocity)
 
  JSR SubtractCoords     \ Set:
                         \
@@ -33050,9 +33130,9 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   var06z = var06z - scaledSpeed
+                        \   zPlayerDelta = zPlayerDelta - scaledSpeed
                         \                     * (wingBalance * speedHi + 2048)
-                        \                     * abs(var07z)
+                        \                     * abs(zVelocity)
 
  RTS                    \ Return from the subroutine
 
@@ -33079,8 +33159,8 @@ ENDIF
  LSR A
  LSR A
 
- STA temp4              \ Store the sign number in temp4, so we can retrieve it
-                        \ below
+ STA thisSignNumber     \ Store the sign number in thisSignNumber, so we can
+                        \ retrieve it below
 
  CMP previousSignNumber \ If previousSignNumber doesn't already contain this
  BNE sign1              \ sign number, jump to sign1 to skip the following
@@ -33223,7 +33303,7 @@ ENDIF
  CMP #64                \ If A < 64, jump to sign2 to skip the following
  BCC sign2
 
- LDY temp4              \ Set previousSignNumber to the sign number from the
+ LDY thisSignNumber     \ Set previousSignNumber to the sign number from the
  STY previousSignNumber \ trackSectionData, so the next time we display a sign
                         \ it will be the next sign
 
@@ -33603,7 +33683,7 @@ ENDIF
 \
 \   L0028 = speedHi / 4
 \
-\   L002D = L002D + 1
+\   heightAboveTrack = heightAboveTrack + 1
 \
 \   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
 \
@@ -33633,7 +33713,7 @@ ENDIF
 \
 \   L0028 = A / 4
 \
-\   L002D = L002D + 1
+\   heightAboveTrack = heightAboveTrack + 1
 \
 \   spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
 \
@@ -33649,7 +33729,7 @@ ENDIF
  LSR A                  \ Set L0028 = A / 4
  STA L0028
 
- INC L002D              \ Set L002D = L002D + 1
+ INC heightAboveTrack   \ Set heightAboveTrack = heightAboveTrack + 1
 
  SEC                    \ Rotate spinYawAngleHi right, inserting a 1 into bit 7
  ROR spinYawAngleHi
@@ -37526,10 +37606,10 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62A6
+\       Name: tyreSqueal
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
+\    Summary: A flag to determine whether the front or rear tyres are squealing
 \
 \ ------------------------------------------------------------------------------
 \
@@ -37537,7 +37617,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.L62A6
+.tyreSqueal
 
  EQUB 0                 \ Front tyres
 
@@ -37560,18 +37640,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62AA
+\       Name: wingForce
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The downward force from the front and rear wings
 \
 \ ******************************************************************************
 
-.L62AA
+.wingForce
 
  EQUB 0                 \ Front wing
 
@@ -37579,18 +37655,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62AC
+\       Name: wingForce95
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: 95% of the downward force from the front and rear wings
 \
 \ ******************************************************************************
 
-.L62AC
+.wingForce95
 
  EQUB 0                 \ Front wing
 
@@ -37598,39 +37670,39 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaLo
+\       Name: xPlayerSpeedLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the x-coordinate of the vector containing the change
-\             in coordinate of the player's car during this main loop iteration
+\    Summary: Low byte of the x-coordinate of the velocity vector (i.e. x-axis
+\             speed) for the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (xPlayerDeltaTop xPlayerDeltaHi
-\ xPlayerDeltaLo).
+\ The speed is stored as a 24-bit number in (xPlayerSpeedTop xPlayerSpeedHi
+\ xPlayerSpeedLo).
 \
 \ ******************************************************************************
 
-.xPlayerDeltaLo
+.xPlayerSpeedLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaLo
+\       Name: zPlayerSpeedLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Low byte of the z-coordinate of the vector containing the change
-\             in coordinate of the player's car during this main loop iteration
+\    Summary: Low byte of the z-coordinate of the velocity vector (i.e. z-axis
+\             speed) for the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (zPlayerDeltaTop zPlayerDeltaHi
-\ zPlayerDeltaLo).
+\ The speed is stored as a 24-bit number in (zPlayerSpeedTop zPlayerSpeedHi
+\ zPlayerSpeedLo).
 \
 \ ******************************************************************************
 
-.zPlayerDeltaLo
+.zPlayerSpeedLo
 
  EQUB 0
 
@@ -37644,7 +37716,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
+\ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
 \ spinYawAngleHi).
 \
 \ ******************************************************************************
@@ -37831,39 +37903,39 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaHi
+\       Name: xPlayerSpeedHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the x-coordinate of the vector containing the change
-\             in coordinate of the player's car during this main loop iteration
+\    Summary: High byte of the x-coordinate of the velocity vector (i.e. x-axis
+\             speed) for the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (xPlayerDeltaTop xPlayerDeltaHi
-\ xPlayerDeltaLo).
+\ The speed is stored as a 24-bit number in (xPlayerSpeedTop xPlayerSpeedHi
+\ xPlayerSpeedLo).
 \
 \ ******************************************************************************
 
-.xPlayerDeltaHi
+.xPlayerSpeedHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaHi
+\       Name: zPlayerSpeedHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: High byte of the z-coordinate of the vector containing the change
-\             in coordinate of the player's car during this main loop iteration
+\    Summary: High byte of the z-coordinate of the velocity vector (i.e. z-axis
+\             speed) for the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (zPlayerDeltaTop zPlayerDeltaHi
-\ zPlayerDeltaLo).
+\ The speed is stored as a 24-bit number in (zPlayerSpeedTop zPlayerSpeedHi
+\ zPlayerSpeedLo).
 \
 \ ******************************************************************************
 
-.zPlayerDeltaHi
+.zPlayerSpeedHi
 
  EQUB 0
 
@@ -37877,7 +37949,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
+\ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
 \ spinYawAngleHi).
 \
 \ ******************************************************************************
@@ -37888,205 +37960,167 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var04xLo
+\       Name: xVelocityDeltaLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the x-coordinate of the change in velocity of the
+\             player's car in terms of 3D world coordinates
 \
 \ ******************************************************************************
 
-.var04xLo
+.xVelocityDeltaLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var04zLo
+\       Name: zVelocityDeltaLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the z-coordinate of the change in velocity of the
+\             player's car in terms of 3D world coordinates
 \
 \ ******************************************************************************
 
-.var04zLo
+.zVelocityDeltaLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var05Lo
+\       Name: spinYawDeltaLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the change in the spin yaw angle for the player's car
 \
 \ ******************************************************************************
 
-.var05Lo
+.spinYawDeltaLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var06xLo
+\       Name: xPlayerDeltaLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the x-coordinate of the change in velocity of the
+\             player's car in the player's frame of reference
 \
 \ ******************************************************************************
 
-.var06xLo
+.xPlayerDeltaLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var06zLo
+\       Name: zPlayerDeltaLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the z-coordinate of the change in velocity of the
+\             player's car in the player's frame of reference
 \
 \ ******************************************************************************
 
-.var06zLo
+.zPlayerDeltaLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var07xLo
+\       Name: xVelocityLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the x-coordinate of the player's velocity vector,
+\             from the player's frame of reference
 \
 \ ******************************************************************************
 
-.var07xLo
+.xVelocityLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var07zLo
+\       Name: zVelocityLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the z-coordinate of the player's velocity vector,
+\             from the player's frame of reference
 \
 \ ******************************************************************************
 
-.var07zLo
+.zVelocityLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var09FLo
+\       Name: xTyreForceNoseLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the x-coordinate of the force vector produced by the
+\             front tyres in the nose of the car
 \
 \ ******************************************************************************
 
-.var09FLo
+.xTyreForceNoseLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var09RLo
+\       Name: xTyreForceRearLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the x-coordinate of the force vector produced by the
+\             rear tyres of the car
 \
 \ ******************************************************************************
 
-.var09RLo
+.xTyreForceRearLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var11FLo
+\       Name: zTyreForceNoseLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
+\    Summary: Low byte of the z-coordinate of the force vector produced by the
+\             front tyres in the nose of the car
+
 \ ******************************************************************************
 
-.var11FLo
+.zTyreForceNoseLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var11RLo
+\       Name: zTyreForceRearLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the z-coordinate of the force vector produced by the
+\             rear tyres
 \
 \ ******************************************************************************
 
-.var11RLo
+.zTyreForceRearLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var12Lo
+\       Name: xSteeringForceLo
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the sideways force applied by steering
 \
 \ ******************************************************************************
 
-.var12Lo
+.xSteeringForceLo
 
  EQUB 0
 
@@ -38110,39 +38144,39 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaTop
+\       Name: xPlayerSpeedTop
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Top byte of the x-coordinate of the vector containing the change
-\             in coordinate of the player's car during this main loop iteration
+\    Summary: Top byte of the x-coordinate of the velocity vector (i.e. x-axis
+\             speed) for the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (xPlayerDeltaTop xPlayerDeltaHi
-\ xPlayerDeltaLo).
+\ The speed is stored as a 24-bit number in (xPlayerSpeedTop xPlayerSpeedHi
+\ xPlayerSpeedLo).
 \
 \ ******************************************************************************
 
-.xPlayerDeltaTop
+.xPlayerSpeedTop
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaTop
+\       Name: zPlayerSpeedTop
 \       Type: Variable
 \   Category: Driving model
-\    Summary: Top byte of the x-coordinate of the vector containing the change
-\             in coordinate of the player's car during this main loop iteration
+\    Summary: Top byte of the z-coordinate of the velocity vector (i.e. z-axis
+\             speed) for the player's car during this main loop iteration
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (zPlayerDeltaTop zPlayerDeltaHi
-\ zPlayerDeltaLo).
+\ The speed is stored as a 24-bit number in (zPlayerSpeedTop zPlayerSpeedHi
+\ zPlayerSpeedLo).
 \
 \ ******************************************************************************
 
-.zPlayerDeltaTop
+.zPlayerSpeedTop
 
  EQUB 0
 
@@ -38156,7 +38190,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The delta is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
+\ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
 \ spinYawAngleHi).
 \
 \ ******************************************************************************
@@ -38167,205 +38201,167 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: var04xHi
+\       Name: xVelocityDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the x-coordinate of the change in velocity of the
+\             player's car in terms of 3D world coordinates
 \
 \ ******************************************************************************
 
-.var04xHi
+.xVelocityDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var04zHi
+\       Name: zVelocityDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the change in velocity of the
+\             player's car in terms of 3D world coordinates
 \
 \ ******************************************************************************
 
-.var04zHi
+.zVelocityDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var05Hi
+\       Name: spinYawDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the change in the spin yaw angle for the player's car
 \
 \ ******************************************************************************
 
-.var05Hi
+.spinYawDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var06xHi
+\       Name: xPlayerDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the x-coordinate of the change in velocity of the
+\             player's car in the player's frame of reference
 \
 \ ******************************************************************************
 
-.var06xHi
+.xPlayerDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var06zHi
+\       Name: zPlayerDeltaHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the change in velocity of the
+\             player's car in the player's frame of reference
 \
 \ ******************************************************************************
 
-.var06zHi
+.zPlayerDeltaHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var07xHi
+\       Name: xVelocityHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the x-coordinate of the player's velocity vector,
+\             from the player's frame of reference
 \
 \ ******************************************************************************
 
-.var07xHi
+.xVelocityHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var07zHi
+\       Name: zVelocityHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the player's velocity vector,
+\             from the player's frame of reference
 \
 \ ******************************************************************************
 
-.var07zHi
+.zVelocityHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var09FHi
+\       Name: xTyreForceNoseHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the x-coordinate of the force vector produced by the
+\             front tyres in the nose of the car
 \
 \ ******************************************************************************
 
-.var09FHi
+.xTyreForceNoseHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var09RHi
+\       Name: xTyreForceRearHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the x-coordinate of the force vector produced by the
+\             rear tyres of the car
 \
 \ ******************************************************************************
 
-.var09RHi
+.xTyreForceRearHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var11FHi
+\       Name: zTyreForceNoseHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the force vector produced by the
+\             front tyres in the nose of the car
 \
 \ ******************************************************************************
 
-.var11FHi
+.zTyreForceNoseHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var11RHi
+\       Name: zTyreForceRearHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the force vector produced by the
+\             rear tyres
 \
 \ ******************************************************************************
 
-.var11RHi
+.zTyreForceRearHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: var12Hi
+\       Name: xSteeringForceHi
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the sideways force applied by steering
 \
 \ ******************************************************************************
 
-.var12Hi
+.xSteeringForceHi
 
  EQUB 0
 
@@ -38466,14 +38462,14 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: temp3
+\       Name: thisDriverNumber
 \       Type: Variable
 \   Category: Drawing objects
-\    Summary: Temporary storage, used when drawing cars
+\    Summary: The number of the current driver when drawing cars
 \
 \ ******************************************************************************
 
-.temp3
+.thisDriverNumber
 
  EQUB 0
 
@@ -38638,18 +38634,15 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: L62FF
+\       Name: zTyreForceBoth
 \       Type: Variable
 \   Category: Driving model
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the z-coordinate of the force vector produced by the
+\             front and tyres combined
 \
 \ ******************************************************************************
 
-.L62FF
+.zTyreForceBoth
 
  EQUB 0
 
@@ -40614,7 +40607,7 @@ ENDIF
 
 .cars3
 
- STX xStore2            \ Store X in xStore2 so it gets preserved through
+ STX xStoreDraw         \ Store X in xStoreDraw so it gets preserved through
                         \ the call to DrawCarOrSign
 
  JSR DrawCarOrSign      \ Draw the specified part of the four-object car just
