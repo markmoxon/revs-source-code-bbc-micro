@@ -421,7 +421,6 @@ ORG CODE%
  EQUB &CF, &60
  EQUB &0F, &88
 
-.L53CF
                         \ Track section 25
 
  EQUB &00, &8E          \ These bytes appear to be unused (Silverstone only uses
@@ -2584,13 +2583,15 @@ ORG CODE%
 \       Name: trackGearRatio
 \       Type: Variable
 \   Category: Track data
-\    Summary: 
+\    Summary: The gear ratio for each gear
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
-
+\ The rev count is calculated by multiplying the track gear ratio by the current
+\ speed, so lower gears correspond to more revs at the same wheel speed when
+\ compared to higher gears.
+\
 \ ******************************************************************************
 
  EQUB 103               \ Reverse
@@ -2612,12 +2613,14 @@ ORG CODE%
 \       Name: trackGearPower
 \       Type: Variable
 \   Category: Track data
-\    Summary: 
+\    Summary: The power for each gear
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The engine torque is calculated by multiplying the rev count by the power for
+\ the relevant gear, so lower gears create more torque at the same rev count
+\ when compared to higher gears.
 \
 \ ******************************************************************************
 

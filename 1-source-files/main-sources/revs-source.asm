@@ -203,9 +203,11 @@ ORG &0000
  SKIP 1                 \ The segment vector number when building car objects
                         \ in the BuildCarObjects routine
 
-.L000D
+.playerPitchAngle
 
- SKIP 1                 \ 
+ SKIP 1                 \ The player's pitch angle
+                        \
+                        \ This is the up-down rotation of the player's car
 
 .segmentOffset
 
@@ -394,9 +396,11 @@ ORG &0000
                         \
                         \   * Bit 7 set = facing backwards
 
-.L0026
+.yGravityDelta
 
- SKIP 1                 \ 
+ SKIP 1                 \ The distance in the y-axis that the car would fall if
+                        \ the track wasn't there, for use when calculating the
+                        \ outcome of jumps and being dropped from the crane
 
 .vergeType
 
@@ -415,9 +419,11 @@ ORG &0000
                         \   * 3 = rightGrassStart, the right edge of the right
                         \         verge
 
-.L0028
+.yJumpHeight
 
- SKIP 1                 \ 
+ SKIP 1                 \ The height of the car's jump (or crane lift), in terms
+                        \ of track lines, which we use to alter the position of
+                        \ the horizon
 
 .vergeTopRight
 
@@ -451,9 +457,10 @@ ORG &0000
                         \ dropped from the crane, or jumping from hitting the
                         \ verge too fast
 
-.speedLo
+.playerSpeedLo
 
- SKIP 1                 \ Low byte of the car's speed
+ SKIP 1                 \ Low byte of the speed of the player's car along the
+                        \ track
                         \
                         \ This appears to be in mph, with the high byte
                         \ containing the miles per hour, and the low byte
@@ -461,8 +468,7 @@ ORG &0000
 
 .positionChangeBCD
 
- SKIP 1                 \ Some kind of delta in BCD for the player's race
-                        \ position ???
+ SKIP 1                 \ The change in BCD for the player's race position
                         \
                         \ Gets added to currentPositionBCD when non-zero
                         \
@@ -507,7 +513,7 @@ ORG &0000
                         \ verge edge we are drawing, to use as the track line's
                         \ background colour
 
-.xCoord
+.xPixelCoord
 
  SKIP 1                 \ The pixel x-coordinate of the centre of the current
                         \ object
@@ -516,7 +522,7 @@ ORG &0000
                         \ of the screen, 80 is the centre and 159 is the right
                         \ edge
 
-.yCoord
+.yPixelCoord
 
  SKIP 1                 \ The pixel y-coordinate of the centre of the current
                         \ object
@@ -751,7 +757,8 @@ ORG &0000
 
 .spinPitchAngle
 
- SKIP 1                 \ 
+ SKIP 1                 \ The amount of pitch angle spin that is being applied
+                        \ to the player's car
 
 .prevYawIndex
 
@@ -845,9 +852,10 @@ ORG &0000
  SKIP 1                 \ The index of the segment within the track verge buffer
                         \ that is closest to the player's car
 
-.L005D
+.bumpyGrassHeight
 
- SKIP 1                 \ 
+ SKIP 1                 \ The height of the bumps when driving over grass, which
+                        \ fluctuates randomly in the range 1 to 7
 
 .edgeYawAngle
 
@@ -885,9 +893,10 @@ ORG &0000
                         \
                         \   * Non-zero = reset the track section list
 
-.speedHi
+.playerSpeedHi
 
- SKIP 1                 \ High byte of the car's speed
+ SKIP 1                 \ High byte of the speed of the player's car along the
+                        \ track
                         \
                         \ This appears to be in mph, with the high byte
                         \ containing the miles per hour, and the low byte
@@ -1359,7 +1368,7 @@ ORG &0100
                         \
                         \ Only applies to sections with bit 7 of the flag byte
                         \ set, in which case carSectionSpeed is set to the
-                        \ trackDriverSpeed value from the preceding track 
+                        \ trackDriverSpeed value from the preceding track
                         \ section
                         \
                         \ Set to 255 in ResetVariables, which means no minimum
@@ -1665,7 +1674,7 @@ ORG &0380
                         \       * Clear = steer left
                         \
                         \       * Set = steer right
-                        
+
 .segmentFlags
 
  SKIP 1                 \ Flags for a track segment in the track segment buffer
@@ -1802,43 +1811,52 @@ ORG &0880
 
  SKIP 4                 \ These bytes appear to be unused
 
-.xVector7Lo
+.xHelmetCoordLo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the x-coordinate of the body/helmet object
+                        \ in the four-object car
 
-.yVector7Lo
+.yHelmetCoordLo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the y-coordinate of the body/helmet object
+                        \ in the four-object car
 
-.zVector7Lo
+.zHelmetCoordLo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the z-coordinate of the body/helmet object
+                        \ in the four-object car
 
  SKIP 3                 \ These bytes appear to be unused
 
-.xVector3Lo
+.xCoord1Lo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the x-coordinate of the temporary
+                        \ coordinate variable (xCoord1, yCoord1, zCoord1)
 
-.yVector3Lo
+.yCoord1Lo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the y-coordinate of the temporary
+                        \ coordinate variable (xCoord1, yCoord1, zCoord1)
 
-.zVector3Lo
+.zCoord1Lo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the z-coordinate of the temporary
+                        \ coordinate variable (xCoord1, yCoord1, zCoord1)
 
-.xVector4Lo
+.xCoord2Lo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the x-coordinate of the temporary
+                        \ coordinate variable (xCoord2, yCoord2, zCoord2)
 
-.yVector4Lo
+.yCoord2Lo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the y-coordinate of the temporary
+                        \ coordinate variable (xCoord2, yCoord2, zCoord2)
 
-.zVector4Lo
+.zCoord2Lo
 
- SKIP 1
+ SKIP 1                 \ The low byte of the z-coordinate of the temporary
+                        \ coordinate variable (xCoord2, yCoord2, zCoord2)
 
 .xSegmentCoordIHi
 
@@ -1880,43 +1898,52 @@ ORG &0880
 
  SKIP 4                 \ These bytes appear to be unused
 
-.xVector7Hi
+.xHelmetCoordHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the x-coordinate of the body/helmet
+                        \ object in the four-object car
 
-.yVector7Hi
+.yHelmetCoordHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the y-coordinate of the body/helmet
+                        \ object in the four-object car
 
-.zVector7Hi
+.zHelmetCoordHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the z-coordinate of the body/helmet
+                        \ object in the four-object car
 
  SKIP 3                 \ These bytes appear to be unused
 
-.xVector3Hi
+.xCoord1Hi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the x-coordinate of the temporary
+                        \ coordinate variable (xCoord1, yCoord1, zCoord1)
 
-.yVector3Hi
+.yCoord1Hi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the y-coordinate of the temporary
+                        \ coordinate variable (xCoord1, yCoord1, zCoord1)
 
-.zVector3Hi
+.zCoord1Hi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the z-coordinate of the temporary
+                        \ coordinate variable (xCoord1, yCoord1, zCoord1)
 
-.xVector4Hi
+.xCoord2Hi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the x-coordinate of the temporary
+                        \ coordinate variable (xCoord2, yCoord2, zCoord2)
 
-.yVector4Hi
+.yCoord2Hi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the y-coordinate of the temporary
+                        \ coordinate variable (xCoord2, yCoord2, zCoord2)
 
-.zVector4Hi
+.zCoord2Hi
 
- SKIP 1
+ SKIP 1                 \ The high byte of the z-coordinate of the temporary
+                        \ coordinate variable (xCoord2, yCoord2, zCoord2)
 
 \ ******************************************************************************
 \
@@ -2768,22 +2795,22 @@ ORG &0B00
 \                         * Index * 3 of the track segment to use for the
 \                           section coordinates for the inner track
 \
-\                         * &F4 = xVector7
+\                         * &F4 = xHelmetCoord
 \
-\                         * &FA = xVector3
+\                         * &FA = xCoord1
 \
-\                         * &FD = xVector4
+\                         * &FD = xCoord2
 \
 \   Y                   The offset of the vectorY variable to add:
 \
 \                         * Index * 3 of the track segment to use for the
 \                           section coordinates for the inner track
 \
-\                         * &F4 = xVector7
+\                         * &F4 = xHelmetCoord
 \
-\                         * &FA = xVector3
+\                         * &FA = xCoord1
 \
-\                         * &FD = xVector4
+\                         * &FD = xCoord2
 \
 \   (SS T)              The value to add to the first axis
 \
@@ -2939,7 +2966,7 @@ ORG &0B00
 \
 \ Arguments:
 \
-\   T                   This has an effect, not sure what ???
+\   T                   This has something to do with rounding the result
 \
 \   A                   Unsigned integer
 \
@@ -3178,7 +3205,7 @@ ORG &0B00
                         \
                         \ Let's call this yawRadians / 2, where yawRadians is
                         \ the reduced player yaw angle in radians
-                        
+
  STA G                  \ Set (U G) = (U A) = yawRadians / 2
 
  LDA U                  \ Set (A G) = (U G) = yawRadians / 2
@@ -3372,7 +3399,7 @@ ORG &0B00
                         \ H >= 122
 
  LDA #0                 \ Set (U T) = (201 0) - (H G)
- SEC                    \           = PI/4 - yawRadians / 2 ???
+ SEC                    \           = PI/4 - yawRadians / 2
  SBC G                  \
  STA T                  \ starting with the low bytes
 
@@ -3396,7 +3423,7 @@ ORG &0B00
  AND #%11111110         \ Which we store in sinYawAngleLo, with bit 0 cleared to
  STA sinYawAngleLo,X    \ denote a positive result (as it's a sign-magnitude
                         \ number we want to store)
- 
+
  LDA #0                 \ And then the high bytes
  SBC U
 
@@ -5272,7 +5299,8 @@ ORG &0B00
  DEC crashedIntoFence   \ Decrement crashedIntoFence from 0 to &FF so the main
                         \ driving loop will pause while showing the fence
 
- INC horizonLine        \ Increment horizonLine ???
+ INC horizonLine        \ Increment horizonLine to simulate us ditching forward
+                        \ into the fence (so the horizon goes up by a line)
 
  JSR DrawFence          \ Draw the fence that we crash into when running off the
                         \ track
@@ -5299,7 +5327,8 @@ ORG &0B00
 
  STA engineStatus       \ Set engineStatus = 0 to turn off the engine
 
- STA L0026              \ Set L0026 = 0
+ STA yGravityDelta      \ Set yGravityDelta = to cancel the effect of gravity on
+                        \ the car
 
  STA soundRevCount      \ Set soundRevCount = 0 to stop the engine sound
 
@@ -5558,16 +5587,16 @@ ORG &0B00
 
  LDY playerSegmentIndex \ Build the car object for the current player using
  JSR BuildCarObjects    \ the player's track segment from the track segment
-                        \ buffer, returning the car's 3D coordinates in xVector4
+                        \ buffer, returning the car's 3D coordinates in xCoord2
 
  LDX #2                 \ We are about to copy the three axes of the resulting
                         \ vectors, so set an axis counter in X
 
 .bpla1
 
- LDA xVector4Lo,X       \ Copy the car's 3D coordinates from xVector4 into
+ LDA xCoord2Lo,X        \ Copy the car's 3D coordinates from xCoord2 into
  STA xPlayerCoordHi,X   \ xPlayerCoord
- LDA xVector4Hi,X
+ LDA xCoord2Hi,X
  STA xPlayerCoordTop,X
 
  DEX                    \ Decrement the axis counter
@@ -5640,9 +5669,9 @@ ORG &0B00
 \ This routine is also called with X = &FD, in which case it copies the
 \ following:
 \
-\   Y-th (xTrackSectionIHi xTrackSectionILo) to (xVector4Hi xVector4Lo)
-\   Y-th (yTrackSectionIHi yTrackSectionILo) to (yVector4Hi yVector4Lo)
-\   Y-th (zTrackSectionIHi zTrackSectionILo) to (zVector4Hi zVector4Lo)
+\   Y-th (xTrackSectionIHi xTrackSectionILo) to (xCoord2Hi xCoord2Lo)
+\   Y-th (yTrackSectionIHi yTrackSectionILo) to (yCoord2Hi yCoord2Lo)
+\   Y-th (zTrackSectionIHi zTrackSectionILo) to (zCoord2Hi zCoord2Lo)
 \
 \ Arguments:
 \
@@ -5654,7 +5683,7 @@ ORG &0B00
 \                         * 0-117 = The index * 3 of the track segment where we
 \                                   store the coordinates
 \
-\                         * &FD = Copy to (xVector4, yVector4, zVector4)
+\                         * &FD = Copy to (xCoord2, yCoord2, zCoord2)
 \
 \ ******************************************************************************
 
@@ -6080,7 +6109,7 @@ ORG &0B00
  BCS incp2              \ sectionListValid is within the list, so jump to incp2
                         \ to skip the following
 
- LDX sectionListStart   \ Set X = sectionListStart, so the minimum value of 
+ LDX sectionListStart   \ Set X = sectionListStart, so the minimum value of
                         \ sectionListValid is sectionListStart, at the start of
                         \ the list
 
@@ -6541,7 +6570,7 @@ ORG &0B00
                         \ We now set the outer track coordinates for the new
                         \ track segment, as follows:
                         \
-                        \   [ xSegmentCoordO ]   [ xSegmentCoordI ]   
+                        \   [ xSegmentCoordO ]   [ xSegmentCoordI ]
                         \   [ ySegmentCoordO ] = [ ySegmentCoordI ]
                         \   [ zSegmentCoordO ]   [ zSegmentCoordI ]
                         \
@@ -9342,7 +9371,7 @@ ENDIF
                         \ working back to position 1 in the table
 
                         \ First we cap the pitch angle of the current entry in
-                        \ the verge buffer to a maximum of N ???
+                        \ the verge buffer to a maximum of N
 
  LDA yVergeRight,X      \ Set A to the pitch angle of the current entry in the
                         \ verge buffer (i.e. the last entry we will fill, which
@@ -9393,7 +9422,7 @@ ENDIF
                         \ the verge buffer
                         \
                         \ So this stops us from displaying verges on any hills
-                        \ between the horizon and the player ???
+                        \ between the horizon and the player
 
  LDX vergeDepthOfField  \ Set X = to the current verge depth of field, which is
                         \ the index within the verge buffer beyond which we do
@@ -9744,7 +9773,7 @@ ENDIF
                         \ leftSegment off a page boundary would break this code
 
  STA R                  \ Set R = 0 to use as the low byte in (S R)
- 
+
  STA MM                 \ Set MM = 0 to use as the low byte in (NN MM)
 
  LDY segmentListPointer \ Set Y to index of the last entry in the track segment
@@ -10207,13 +10236,13 @@ ENDIF
  ASL V                  \ so A < 96 or A >= -96
  ROL A
 
- CLC                    \ Set xCoord = A + 80
+ CLC                    \ Set xPixelCoord = A + 80
  ADC #80                \
- STA xCoord             \ where 80 is the x-coordinate of the middle of the
+ STA xPixelCoord        \ where 80 is the x-coordinate of the middle of the
                         \ screen (as the screen is 160 pixels wide)
 
- LDA yVergeRight,X      \ Set yCoord = X-th value from yVergeRight
- STA yCoord             \
+ LDA yVergeRight,X      \ Set yPixelCoord = X-th value from yVergeRight
+ STA yPixelCoord        \
                         \ Which is the pitch angle (i.e. y-coordinate) of
                         \ the verge that has the corner markes
 
@@ -10565,7 +10594,7 @@ ENDIF
 \
 \   nextEdge            The next edge (as a scaled scaffold measurement)
 \
-\   xCoord              The pixel x-coordinate of the centre of the object
+\   xPixelCoord         The pixel x-coordinate of the centre of the object
 \
 \   colourData          Colour data:
 \
@@ -10722,7 +10751,7 @@ ENDIF
                         \
                         \   * Left edge, set:
                         \
-                        \       thisEdge = xCoord + thisEdge / 2
+                        \       thisEdge = xPixelCoord + thisEdge / 2
                         \       blockNumber = thisEdge / 4
                         \
                         \   * Right or extra edge, set:
@@ -10758,8 +10787,8 @@ ENDIF
 
 .draw2
 
- CLC                    \ Set thisEdge = A + xCoord
- ADC xCoord             \              = thisEdge / 2 + xCoord
+ CLC                    \ Set thisEdge = A + xPixelCoord
+ ADC xPixelCoord        \              = thisEdge / 2 + xPixelCoord
  STA thisEdge
 
  LSR A                  \ Set blockNumber = A / 4
@@ -10788,7 +10817,7 @@ ENDIF
                         \ the edge type, so now we set nextEdgeCoord and
                         \ nextBlockNumber as follows:
                         \
-                        \   nextEdgeCoord = xCoord + nextEdge / 2
+                        \   nextEdgeCoord = xPixelCoord + nextEdge / 2
                         \
                         \   nextBlockNumber = nextEdgeCoord / 4
 
@@ -10814,8 +10843,8 @@ ENDIF
 
 .draw6
 
- CLC                    \ Set nextEdgeCoord = A + xCoord
- ADC xCoord             \        = nextEdge / 2 + xCoord
+ CLC                    \ Set nextEdgeCoord = A + xPixelCoord
+ ADC xPixelCoord        \        = nextEdge / 2 + xPixelCoord
  STA nextEdgeCoord
 
  LSR A                  \ Set nextBlockNumber = A / 4
@@ -10826,7 +10855,7 @@ ENDIF
                         \
                         \   * Left edge:
                         \
-                        \       thisEdge = xCoord + thisEdge / 2
+                        \       thisEdge = xPixelCoord + thisEdge / 2
                         \       blockNumber = thisEdge / 4
                         \
                         \   * Right or extra edge, set:
@@ -10836,7 +10865,7 @@ ENDIF
                         \
                         \ and we also have the following:
                         \
-                        \   nextEdgeCoord = xCoord + nextEdge / 2
+                        \   nextEdgeCoord = xPixelCoord + nextEdge / 2
                         \   nextBlockNumber = nextEdgeCoord / 4
                         \
                         \ So we have:
@@ -12788,7 +12817,8 @@ IF _ACORNSOFT
 
  LDA horizonLine        \ Set A to the track line number of the horizon
 
- JSR SetMarker+3        \ Call SetMarker+3 ???
+ JSR SetMarker+3        \ Call SetMarker+3 to insert a marker value at the
+                        \ horizon line
 
  LDA colourPalette+1    \ Otherwise the byte is in the sky, so set A to logical
                         \ colour 1 (blue) from the colour palette
@@ -12991,7 +13021,7 @@ IF _ACORNSOFT
                         \ mark for the segment beyond segment X
 
  JSR SetMarker          \ Call SetMarker to insert a &AA marker into the screen
-                        \ buffer at the left verge ???
+                        \ buffer at the left verge
 
 .gcol9
 
@@ -13052,7 +13082,7 @@ IF _ACORNSOFT
                         \ mark for the segment beyond segment X
 
  JSR SetMarker          \ Call SetMarker to insert a &AA marker into the screen
-                        \ buffer at the right verge ???
+                        \ buffer at the right verge
 
 .gcol13
 
@@ -13522,9 +13552,9 @@ IF _SUPERIOR
  LDY playerSegmentIndex \ Set Y to the index of the player's segment in the
                         \ track segment buffer
 
- LDA #60                \ Set A = 60 - speedHi
+ LDA #60                \ Set A = 60 - playerSpeedHi
  SEC
- SBC speedHi
+ SBC playerSpeedHi
 
  BPL asst9              \ If the result is positive, jump to asst9 to skip the
                         \ following instruction
@@ -13535,7 +13565,7 @@ IF _SUPERIOR
 .asst9
 
  ASL A                  \ Set U = A * 2 + 32
- ADC #32                \       = 32 + (60 - speedHi) * 2
+ ADC #32                \       = 32 + (60 - playerSpeedHi) * 2
  STA U                  \
                         \ So U is 32 if we are doing more than 60, and higher
                         \ with lower speeds
@@ -14192,9 +14222,9 @@ ENDIF
 \                       for this this object (i.e. the index of the data for the
 \                       object's first part)
 \
-\   xCoord              The pixel x-coordinate of the centre of the object
+\   xPixelCoord         The pixel x-coordinate of the centre of the object
 \
-\   yCoord              The object's y-coordinate (for the centre of the object)
+\   yPixelCoord         The object's y-coordinate (for the centre of the object)
 \                       in terms of track lines, so 80 is the top of the track
 \                       view and 0 is the bottom of the track view
 \
@@ -14242,8 +14272,8 @@ ENDIF
  LDX objectTop,Y        \ Set A to the scaled scaffold for the top of this part
  LDA scaledScaffold,X   \ of the object
 
- CLC                    \ Set A = A + yCoord
- ADC yCoord             \
+ CLC                    \ Set A = A + yPixelCoord
+ ADC yPixelCoord        \
                         \ so A is now the track line of the top of the object
 
  BMI drob9              \ If A > 128, then the top of this object part is well
@@ -14262,8 +14292,8 @@ ENDIF
  LDX objectBottom,Y     \ Set A to the scaled scaffold for the bottom of this
  LDA scaledScaffold,X   \ part of the object
 
- CLC                    \ Set A = A + yCoord
- ADC yCoord             \
+ CLC                    \ Set A = A + yPixelCoord
+ ADC yPixelCoord        \
                         \ so A is now the track line of the bottom of the object
 
  BMI drob3              \ If A < 0, then the bottom of this object part is lower
@@ -14446,11 +14476,11 @@ ENDIF
 \   X                   The offset of the variable to use for the object's 3D
 \                       coordinates
 \
-\                         * &F4 = xVector7
+\                         * &F4 = xHelmetCoord
 \
-\                         * &FA = xVector3
+\                         * &FA = xCoord1
 \
-\                         * &FD = xVector4
+\                         * &FD = xCoord2
 \
 \   Y                   The offset of the second variable to use:
 \
@@ -14486,11 +14516,11 @@ ENDIF
                         \ values of X and Y, but for the purposes of simplicity,
                         \ the comments will assume the following:
                         \
-                        \   * X = &FD, xVector4
+                        \   * X = &FD, xCoord2
                         \
                         \   * Y = 0, xPlayerCoord
 
- LDA xSegmentCoordILo,X \ Set (VV PP) = xVector4 - xPlayerCoord
+ LDA xSegmentCoordILo,X \ Set (VV PP) = xCoord2 - xPlayerCoord
  SEC                    \
  SBC xPlayerCoordHi,Y   \ starting with the low bytes
  STA PP
@@ -14524,7 +14554,7 @@ ENDIF
  STA SS                 \ Set (SS PP) = (VV PP)
                         \             = |x-delta|
 
- LDA zSegmentCoordILo,X \ Set (GG RR) = zVector4 - zPlayerCoord
+ LDA zSegmentCoordILo,X \ Set (GG RR) = zCoord2 - zPlayerCoord
  SEC                    \
  SBC zPlayerCoordHi,Y   \ starting with the low bytes
  STA RR
@@ -14691,14 +14721,14 @@ ENDIF
  ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
                         \ shift so A contains the correct high byte (we don't
                         \ care about the low byte any more)
-                        
+
                         \ So by this point, (A PP) and (UU RR) have both been
                         \ scaled by the same number of shifts
 
  STA V                  \ Set V = A, the high byte of the scaled |x-delta|
 
  LDA RR                 \ Set T = RR, the low byte of the scaled |z-delta|, to
- STA T                  \ use for rounding the result in Divide8x8 ???
+ STA T                  \ use for rounding the result in Divide8x8
 
  LDA UU                 \ Set A = UU, the high byte of the scaled |z-delta|
 
@@ -14713,7 +14743,7 @@ ENDIF
                         \       = 256 * |z-delta| / |x-delta|
                         \
                         \ using the lower byte of the |z-delta| numerator for
-                        \ rounding ???
+                        \ rounding
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
@@ -14910,14 +14940,14 @@ ENDIF
  ROR A                  \ We just shifted a 1 out of bit 7 of A, so reverse the
                         \ shift so A contains the correct high byte (we don't
                         \ care about the low byte any more)
-                        
+
                         \ So by this point, (A RR) and (SS PP) have both been
                         \ scaled by the same number of shifts
 
  STA V                  \ Set V = A, the high byte of the scaled |z-delta|
 
  LDA PP                 \ Set T = PP, the low byte of the scaled |x-delta|, to
- STA T                  \ use for rounding the result in Divide8x8 ???
+ STA T                  \ use for rounding the result in Divide8x8
 
  LDA SS                 \ Set A = SS, the high byte of the scaled |x-delta|
 
@@ -14932,7 +14962,7 @@ ENDIF
                         \       = 256 * |x-delta| / |z-delta|
                         \
                         \ using the lower byte of the |x-delta| numerator for
-                        \ rounding ???
+                        \ rounding
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
@@ -15006,11 +15036,11 @@ ENDIF
 \   X                   The offset of the variable to use for the object's 3D
 \                       coordinates
 \
-\                         * &F4 = yVector7
+\                         * &F4 = yHelmetCoord
 \
-\                         * &FA = yVector3
+\                         * &FA = yCoord1
 \
-\                         * &FD = yVector4
+\                         * &FD = yCoord2
 \
 \   Y                   The offset of the second variable to use:
 \
@@ -15055,11 +15085,11 @@ ENDIF
                         \ values of X and Y, but for the purposes of simplicity,
                         \ the comments will assume the following:
                         \
-                        \   * X = &FD, yVector4
+                        \   * X = &FD, yCoord2
                         \
                         \   * Y = 0, yPlayerCoord
 
- LDA ySegmentCoordILo,X \ Set (WW QQ) = yVector4 - yPlayerCoord
+ LDA ySegmentCoordILo,X \ Set (WW QQ) = yCoord2 - yPlayerCoord
  SEC                    \
  SBC yPlayerCoordHi,Y   \ starting with the low bytes
  STA QQ
@@ -15205,7 +15235,7 @@ ENDIF
  STA scaleUp
 
  LDA QQ                 \ Set T = QQ, the low byte of the scaled |y-delta|, to
- STA T                  \ use for rounding the result in Divide8x8 ???
+ STA T                  \ use for rounding the result in Divide8x8
 
  LDA TT                 \ Set A = TT, the high byte of the scaled |y-delta|
 
@@ -15213,9 +15243,9 @@ ENDIF
                         \       = 256 * (|y-delta| / 8) / |x-delta|
                         \
                         \ using the lower byte of the |y-delta| numerator for
-                        \ rounding ???
+                        \ rounding
 
- LDA T                  \ If T >= 128, jump to pang8 to return from the 
+ LDA T                  \ If T >= 128, jump to pang8 to return from the
  CMP #128               \ subroutine with the C flag set
  BCS pang8
 
@@ -15235,8 +15265,8 @@ ENDIF
 
 .pang7
 
- SEC                    \ Set LL = A - L000D
- SBC L000D
+ SEC                    \ Set LL = A - playerPitchAngle
+ SBC playerPitchAngle
  STA LL
 
  CLC                    \ Clear the C flag to indicate success
@@ -15494,7 +15524,7 @@ ENDIF
 
  TAY                    \ Set Y = the section number * 8 that we calculated in
                         \ part 3
- 
+
  STY thisSectionNumber  \ Store the section number * 8 in thisSectionNumber, so
                         \ we can retrieve it below when looping back
 
@@ -15511,13 +15541,13 @@ ENDIF
  STX sectionCounter     \ Store the loop counter in sectionCounter
 
  LDX #&FD               \ Copy the first trackSectionI coordinate for track
- JSR GetSectionCoord    \ section Y into xVector4, so xVector4 is the 3D
+ JSR GetSectionCoord    \ section Y into xCoord2, so xCoord2 is the 3D
                         \ coordinate of the inner track at the start of the
                         \ section (or, if this is the second loop where Y has
-                        \ been incremented by 3, xVector4 is the 3D coordinate
+                        \ been incremented by 3, xCoord2 is the 3D coordinate
                         \ of the outer track)
 
- JSR GetObjYawAngle-2   \ Calculate xVector4's yaw angle, from the point of view
+ JSR GetObjYawAngle-2   \ Calculate xCoord2's yaw angle, from the point of view
                         \ of the player, returning it in (JJ II)
 
  LDY sectionCounter     \ Set Y to the loop counter
@@ -15550,10 +15580,10 @@ ENDIF
                         \ is the same pitch angle as the inner track)
 
  LDX #&FD               \ Set X = &FD so the call to GetObjPitchAngle uses
-                        \ xVector4, which we set above to the 3D coordinate of
+                        \ xCoord2, which we set above to the 3D coordinate of
                         \ the inner track at the start of the section
 
- JSR GetObjPitchAngle-2 \ Calculate xVector4's pitch angle, from the point
+ JSR GetObjPitchAngle-2 \ Calculate xCoord2's pitch angle, from the point
                         \ of view of the player, returning it in A and LL
 
  LDX sectionCounter     \ Set X to the loop counter, which we know is less than
@@ -16008,14 +16038,14 @@ ENDIF
                         \ For clarity, the following comments will assume we are
                         \ working with the x-axis
 
- LDA xSegmentCoordILo,Y \ Set xVector3 = xSegmentCoord for previous segment
+ LDA xSegmentCoordILo,Y \ Set xCoord1 = xSegmentCoord for previous segment
  CLC                    \                 + (V T)
  ADC T                  \
- STA xVector3Lo,X       \ starting with the low bytes
+ STA xCoord1Lo,X        \ starting with the low bytes
 
  LDA xSegmentCoordIHi,Y \ And then the high bytes
  ADC V
- STA xVector3Hi,X
+ STA xCoord1Hi,X
 
  INX                    \ Increment the axis counter in X
 
@@ -16041,31 +16071,31 @@ ENDIF
 
 .gseg8
 
-                        \ By the time we get here, xVector3 contains the 3D
+                        \ By the time we get here, xCoord1 contains the 3D
                         \ coordinates of the previous segment, plus a quarter
                         \ of the vector from the previous segment to the current
                         \ segment
 
  LDX #&FA               \ Set X = &FA so the call to GetSegmentYawAngle uses
-                        \ xVector3
+                        \ xCoord1
 
  JSR GetSegmentYawAngle \ Calculate the yaw angle and distance between the
-                        \ player's car and xVector3, and store the results in
+                        \ player's car and xCoord1, and store the results in
                         \ the track segment list at the segment list pointer
                         \
                         \ Also set (A K) = (L K) = the distance between the car
-                        \ and xvector3
+                        \ and xCoord1
 
- JSR GetObjPitchAngle-2 \ Calculate xVector3's pitch angle, from the point
+ JSR GetObjPitchAngle-2 \ Calculate xCoord1's pitch angle, from the point
                         \ of view of the player, returning it in A and LL
                         \
-                        \ If xVector3 is not visible on-screen, the C flag is
+                        \ If xCoord1 is not visible on-screen, the C flag is
                         \ set, otherwise it will be clear
 
- BCS gseg9              \ If xVector3 is not visible on-screen, jump to gseg9
+ BCS gseg9              \ If xCoord1 is not visible on-screen, jump to gseg9
                         \ to return from the subroutine
 
-                        \ If we get here then xVector3 is visible, so we can
+                        \ If we get here then xCoord1 is visible, so we can
                         \ store the results as our final entry in the track
                         \ segment list
 
@@ -17469,7 +17499,7 @@ ENDIF
                         \ driver Y in A, which is positive as driver Y is ahead
                         \ of driver X
 
- CMP #5                 \ If A >= 5, then the cars are not very close, so jump 
+ CMP #5                 \ If A >= 5, then the cars are not very close, so jump
  BCS tact4              \ to tact18 via tact4 to update the car status byte for
                         \ this driver to N = 0, and then move on to the next
                         \ driver
@@ -17891,7 +17921,7 @@ ENDIF
                         \ If we get here then the high byte of the difference
                         \ is non-zero, so now we need to check whether this is
                         \ down to the objects being close but either side of the
-                        \ starting line 
+                        \ starting line
                         \
                         \ This is because the segment number resets to zero at
                         \ the starting line, so objects that are on either side
@@ -18042,7 +18072,7 @@ ENDIF
 .mcar2
 
                         \ If we get here then bit 7 of this section's flag byte
-                        \ is clear, and A contains this section's flag byte 
+                        \ is clear, and A contains this section's flag byte
 
  LSR A                  \ Set the C flag to bit 0 of A, i.e. to bit 0 of this
                         \ section's flag byte
@@ -18565,17 +18595,17 @@ ENDIF
 \ This routine calculates the 3D coordinate of the specified car, given its
 \ progress through the current segment and the racing line, as follows:
 \
-\   [ xVector4 ]   [ xSegmentCoordI        ]   [ xTrackSegmentI ]
-\   [ yVector4 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
-\   [ zVector4 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
+\   [ xCoord2 ]   [ xSegmentCoordI        ]   [ xTrackSegmentI ]
+\   [ yCoord2 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
+\   [ zCoord2 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
 \
-\                   [ xTrackSegmentO ]
-\                 + [        0       ] * carRacingLine * 4
-\                   [ zTrackSegmentO ]
+\                  [ xTrackSegmentO ]
+\                + [        0       ] * carRacingLine * 4
+\                  [ zTrackSegmentO ]
 \
-\                   [  0  ]
-\                 + [ 144 ]
-\                   [  0  ]
+\                  [  0  ]
+\                + [ 144 ]
+\                  [  0  ]
 \
 \ In the above:
 \
@@ -18591,9 +18621,9 @@ ENDIF
 \ This part calculates the 3D coordinate of the car along the inside edge of
 \ the track, i.e. the first part of the above:
 \
-\   [ xVector4 ]   [ xSegmentCoordI        ]   [ xTrackSegmentI ]
-\   [ yVector4 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
-\   [ zVector4 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
+\   [ xCoord2 ]   [ xSegmentCoordI        ]   [ xTrackSegmentI ]
+\   [ yCoord2 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
+\   [ zCoord2 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
 \
 \ Arguments:
 \
@@ -18608,7 +18638,7 @@ ENDIF
 \
 \   X                   X is set to the driver number in thisDriver
 \
-\   xVector4            Contains the object's 3D coordinates (for the one-object
+\   xCoord2             Contains the object's 3D coordinates (for the one-object
 \                       car) or the coordinates of the rear tyres (for the
 \                       four-object car
 \
@@ -18646,8 +18676,8 @@ ENDIF
 
                         \ We now calculate the following:
                         \
-                        \   xVector4 =   xSegmentCoordI
-                        \              + xTrackSegmentI * carProgress
+                        \   xCoord2 =   xSegmentCoordI
+                        \             + xTrackSegmentI * carProgress
 
  LDX #0                 \ We are about to work our way through the three axes,
                         \ so set X = 0 to use as an axis counter, working
@@ -18713,19 +18743,19 @@ ENDIF
                         \ which is the xSegmentCoordI entry for the track
                         \ segment passed to the routine (Y contains the
                         \ index * 3 of the track segment), and store the result
-                        \ in xVector4
+                        \ in xCoord2
                         \
                         \ For the y-axis of the coordinate, i.e. for the
                         \ multiplication:
                         \
-                        \   yVector4 = ySegmentCoordI + (V A)
+                        \   yCoord2 = ySegmentCoordI + (V A)
                         \
                         \ then we add ySegmentCoordIHi mod 32 instead of
                         \ ySegmentCoordIHi
 
- CLC                    \ Set (xVector4Hi xVector4Lo)
+ CLC                    \ Set (xCoord2Hi xCoord2Lo)
  ADC xSegmentCoordILo,Y \     = (xSegmentCoordIHi xSegmentCoordILo) + (V A)
- STA xVector4Lo,X       \
+ STA xCoord2Lo,X        \
                         \ starting with the low bytes
 
  LDA xSegmentCoordIHi,Y \ And then the high bytes (though with a short interlude
@@ -18743,11 +18773,11 @@ ENDIF
 
  PLP                    \ Now we can finally add the high bytes
  ADC V
- STA xVector4Hi,X
+ STA xCoord2Hi,X
 
  INY                    \ Increment the axis pointer for xSegmentCoordI
 
- INX                    \ Increment the axis pointer for xVector4
+ INX                    \ Increment the axis pointer for xCoord2
 
  CPX #3                 \ Loop back until X has looped through all three axes
  BNE bcar1
@@ -18765,20 +18795,20 @@ ENDIF
 \ This part adds in the vector from the inside edge of the track to the car,
 \ i.e. the second part of the above:
 \
-\   [ xVector4 ]   [ xVector4 ]   [ xTrackSegmentO ]
-\   [ yVector4 ] = [ yVector4 ] + [        0       ] * carRacingLine * 4
-\   [ zVector4 ]   [ zVector4 ]   [ zTrackSegmentO ]
+\   [ xCoord2 ]   [ xCoord2 ]   [ xTrackSegmentO ]
+\   [ yCoord2 ] = [ yCoord2 ] + [        0       ] * carRacingLine * 4
+\   [ zCoord2 ]   [ zCoord2 ]   [ zTrackSegmentO ]
 \
-\                                 [  0  ]
-\                               + [ 144 ]
-\                                 [  0  ]
+\                               [  0  ]
+\                             + [ 144 ]
+\                               [  0  ]
 \
 \ ******************************************************************************
 
                         \ We start by calculating the following:
                         \
-                        \   xVector4 =   xSegmentCoordI
-                        \              + xTrackSegmentO * carRacingLine * 4
+                        \   xCoord2 =   xSegmentCoordI
+                        \             + xTrackSegmentO * carRacingLine * 4
                         \
                         \ for the x-axis and z-axis only
 
@@ -18859,14 +18889,14 @@ ENDIF
  ASL A
  ROL V
 
- CLC                    \ Set (xVector4Hi xVector4Lo) = (xVector4Hi xVector4Lo)
- ADC xVector4Lo,X       \                                + (V A)
- STA xVector4Lo,X       \
+ CLC                    \ Set (xCoord2Hi xCoord2Lo) = (xCoord2Hi xCoord2Lo)
+ ADC xCoord2Lo,X        \                              + (V A)
+ STA xCoord2Lo,X        \
                         \ starting with the low bytes
 
- LDA xVector4Hi,X       \ And then the high bytes
+ LDA xCoord2Hi,X        \ And then the high bytes
  ADC V
- STA xVector4Hi,X
+ STA xCoord2Hi,X
 
  INX                    \ Set X = X + 2, so we skip the y-axis
  INX
@@ -18876,13 +18906,13 @@ ENDIF
 
                         \ Finally, we add 144 to the y-coordinate
 
- LDA yVector4Lo         \ Set (yVector4Hi yVector4Lo) += 144
+ LDA yCoord2Lo          \ Set (yCoord2Hi yCoord2Lo) += 144
  CLC                    \
  ADC #144               \ starting with the low bytes
- STA yVector4Lo
+ STA yCoord2Lo
 
  BCC bcar8              \ And then the high bytes
- INC yVector4Hi
+ INC yCoord2Hi
 
 \ ******************************************************************************
 \
@@ -18895,7 +18925,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Now that we have the car's 3D coordinates in xVector4, we calculate the car's
+\ Now that we have the car's 3D coordinates in xCoord2, we calculate the car's
 \ yaw and pitch angles, and use them to create either one car object, or four
 \ car objects if this is the four-object car.
 \
@@ -18903,17 +18933,17 @@ ENDIF
 \ close enough and is visible), then we calculate the coordinates for the three
 \ extra objects as follows:
 \
-\                     [ xVector4 ]   [ xTrackSegmentI ]
-\   Front tyres =     [ yVector4 ] + [ yTrackSegmentI ] / 2
-\                     [ zVector4 ]   [ zTrackSegmentI ]
+\                     [ xCoord2 ]   [ xTrackSegmentI ]
+\   Front tyres =     [ yCoord2 ] + [ yTrackSegmentI ] / 2
+\                     [ zCoord2 ]   [ zTrackSegmentI ]
 \
-\                     [ xVector4 ]   [ xTrackSegmentI ]
-\   Body and helmet = [ yVector4 ] + [ yTrackSegmentI ] / 4
-\                     [ zVector4 ]   [ zTrackSegmentI ]
+\                     [ xCoord2 ]   [ xTrackSegmentI ]
+\   Body and helmet = [ yCoord2 ] + [ yTrackSegmentI ] / 4
+\                     [ zCoord2 ]   [ zTrackSegmentI ]
 \
-\                     [ xVector4 ]   [ xTrackSegmentI ]
-\   Rear tyres =      [ yVector4 ] + [ yTrackSegmentI ] / 8
-\                     [ zVector4 ]   [ zTrackSegmentI ]
+\                     [ xCoord2 ]   [ xTrackSegmentI ]
+\   Rear tyres =      [ yCoord2 ] + [ yTrackSegmentI ] / 8
+\                     [ zCoord2 ]   [ zTrackSegmentI ]
 \
 \ ******************************************************************************
 
@@ -18924,7 +18954,7 @@ ENDIF
                         \ change this later if required)
 
  JSR GetObjectAngles-2  \ Calculate the object's yaw and pitch angles, using the
-                        \ coordinates in xVector4, and set the object's
+                        \ coordinates in xCoord2, and set the object's
                         \ visibility, scale and type
 
  LDX thisDriver         \ Set X = thisDriver (driver number of car we are
@@ -18976,43 +19006,44 @@ ENDIF
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDY #&FD               \ Set Y = &FD so the call to AddVectors uses xVector4
+ LDY #&FD               \ Set Y = &FD so the call to AddVectors uses xCoord2
 
- LDX #&FA               \ Set X = &FA so the call to AddVectors uses xVector3
+ LDX #&FA               \ Set X = &FA so the call to AddVectors uses xCoord1
 
  JSR AddVectors         \ Set:
                         \
-                        \                         [ (SS T) ]
-                        \   xVector3 = xVector4 + [ (TT U) ] / 2
-                        \                         [ (UU V) ]
+                        \                       [ (SS T) ]
+                        \   xCoord1 = xCoord2 + [ (TT U) ] / 2
+                        \                       [ (UU V) ]
                         \
-                        \ So xVector3 contains the 3D coordinates of the front
+                        \ So xCoord1 contains the 3D coordinates of the front
                         \ tyres of the four-object car
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDX #&F4               \ Set X = &F4 so the call to AddVectors uses xVector7
+ LDX #&F4               \ Set X = &F4 so the call to AddVectors uses
+                        \ xHelmetCoord
 
  JSR AddVectors         \ Set:
                         \
-                        \                         [ (SS T) ]
-                        \   xVector7 = xVector4 + [ (TT U) ] / 4
-                        \                         [ (UU V) ]
+                        \                            [ (SS T) ]
+                        \   xHelmetCoord = xCoord2 + [ (TT U) ] / 4
+                        \                            [ (UU V) ]
                         \
-                        \ So xVector7 contains the 3D coordinates of the helmet
-                        \ and body of the four-object car
+                        \ So xHelmetCoord contains the 3D coordinates of the
+                        \ helmet and body of the four-object car
 
  JSR HalveCoordinate    \ Halve the coordinate in (SS T), (TT U) and (UU V)
 
- LDX #&FD               \ Set X = &FD so the call to AddVectors uses xVector4
+ LDX #&FD               \ Set X = &FD so the call to AddVectors uses xCoord2
 
  JSR AddVectors         \ Set:
                         \
-                        \                         [ (SS T) ]
-                        \   xVector4 = xVector4 + [ (TT U) ] / 8
-                        \                         [ (UU V) ]
+                        \                       [ (SS T) ]
+                        \   xCoord2 = xCoord2 + [ (TT U) ] / 8
+                        \                       [ (UU V) ]
                         \
-                        \ So xVector4 contains the 3D coordinates of the rear
+                        \ So xCoord2 contains the 3D coordinates of the rear
                         \ tyres of the four-object car
 
                         \ Now that we have the 3D coordinates of the extra three
@@ -19028,7 +19059,7 @@ ENDIF
                         \ tyres in the four-object car
 
  JSR GetObjectAngles-2  \ Calculate the object's yaw and pitch angles, using the
-                        \ coordinates of the rear tyres in xVector4, and set the
+                        \ coordinates of the rear tyres in xCoord2, and set the
                         \ object's visibility, scale and type
 
  LDA #21                \ Set objectNumber = 21, to use as then object number
@@ -19038,11 +19069,11 @@ ENDIF
                         \ helmet in the four-object car
 
  LDX #&F4               \ Set X = &F4 so the call to GetObjectAngles uses
-                        \ xVector7
+                        \ xHelmetCoord
 
  JSR GetObjectAngles    \ Calculate the object's yaw and pitch angles, using the
-                        \ coordinates of the body and helmet in xVector7, and
-                        \ set the object's visibility, scale and type
+                        \ coordinates of the body and helmet in xHelmetCoord,
+                        \ and set the object's visibility, scale and type
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
  STA objectNumber       \ for the rear tyres in the four-object car
@@ -19051,10 +19082,10 @@ ENDIF
                         \ tyres in the four-object car
 
  LDX #&FA               \ Set X = &FA so the call to GetObjectAngles uses
-                        \ xVector3
+                        \ xCoord1
 
  JSR GetObjectAngles    \ Calculate the object's yaw and pitch angles, using the
-                        \ coordinates of the front tyres using xVector3, and set
+                        \ coordinates of the front tyres using xCoord1, and set
                         \ the object's visibility, scale and type
 
 .bcar10
@@ -19108,21 +19139,21 @@ ENDIF
 \   X                   The offset of the variable to use for the object's 3D
 \                       coordinates in the GetObjYawAngle routine:
 \
-\                         * &F4 = xVector7
+\                         * &F4 = xHelmetCoord
 \
-\                         * &FA = xVector3
+\                         * &FA = xCoord1
 \
-\                         * &FD = xVector4
+\                         * &FD = xCoord2
 \
 \ Other entry points:
 \
-\   GetObjectAngles-2   Use xVector4 for the object's 3D coordinates in the call
+\   GetObjectAngles-2   Use xCoord2 for the object's 3D coordinates in the call
 \                       to GetObjYawAngle
 \
 \ ******************************************************************************
 
  LDX #&FD               \ Set X = &FD so the calls to GetObjYawAngle and
-                        \ GetObjPitchAngle use xVector4 and yVector4 for the
+                        \ GetObjPitchAngle use xCoord2 and yCoord2 for the
                         \ object's 3D coordinates
 
 .GetObjectAngles
@@ -19483,14 +19514,14 @@ ENDIF
  ASL T                  \ so -128 <= A < 128
  ROL A
 
- CLC                    \ Set xCoord = 80 + A
+ CLC                    \ Set xPixelCoord = 80 + A
  ADC #80                \
- STA xCoord             \ This moves xCoord so that it is centred on the
+ STA xPixelCoord        \ This moves xPixelCoord so that it is centred on the
                         \ screen, as the centre x-coordinate of the screen is
                         \ at 80 pixels
 
- LDA objectPitchAngle,X \ Set yCoord to this object's pitch angle
- STA yCoord
+ LDA objectPitchAngle,X \ Set yPixelCoord to this object's pitch angle
+ STA yPixelCoord
 
  LDA objectScaleUp,X    \ Set scaleUp to this object's scale factor (i.e. the
  STA scaleUp            \ size of the car
@@ -20095,14 +20126,14 @@ ENDIF
  LDA vergeOnScreenEdge  \ Set WW = ~vergeOnScreenEdge
  EOR #&FF               \
  STA WW                 \ So WW is 0 if the edge is partially on-screen, or &FF
-                        \ otherwise ???
+                        \ otherwise
 
 .dver13
 
                         \ We now modify both the DrawVergeByteLeft and
                         \ DrawVergeByteRight routines so they do nothing on
                         \ entry, and either increment or decrement Y on exit,
-                        \ depending on the polarity of WW ???
+                        \ depending on the polarity of WW
                         \
                         \ We modify the routines as follows:
                         \
@@ -20485,7 +20516,7 @@ ENDIF
  CMP #3                 \ If %ab = 3, so the colour to the left of the verge
  BEQ dver21             \ edge is green, jump to dver21 to skip the following
 
-                        \ Otherwise, disable the DrawGreass routines ???
+                        \ Otherwise, disable the DrawGreass routines
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
@@ -20661,7 +20692,7 @@ ENDIF
 
  LDY thisPitchIndex     \ Set Y to the original pitch angle index that we stored
                         \ above, so Y is preserved through calls to the routine
- 
+
  RTS                    \ Return from the subroutine
 
  EQUB &A5, &53          \ These bytes appear to be unused
@@ -21680,7 +21711,7 @@ ENDIF
  DEY                    \ Decrement the track line in Y
 
  LDA backgroundColour,Y \ Set A to the contents of the background colour table
-                        \ for track line Y 
+                        \ for track line Y
 
  BNE upba4              \ If the background colour currently in the table is
                         \ non-zero, jump to upba4 to return from the subroutine
@@ -21697,7 +21728,7 @@ ENDIF
                         \
                         \   * %100xx0xx denotes that this value is being set to
                         \     backgroundLeft by the UpdateBackground routine
-                        
+
 .upba2
 
  CPY #80                \ If Y >= 80, then this is not a valid track line
@@ -22718,8 +22749,9 @@ ENDIF
  EQUB 20                \ INT(0.5 + 20.53) = 21 (doesn't match)
  EQUB 20                \ INT(0.5 + 19.80) = 20
 
- EQUB &81, &81, &81     \ These bytes appear to be unused
- EQUB &81, &81, &81
+ EQUB &81, &81          \ These bytes appear to be unused
+ EQUB &81, &81
+ EQUB &81, &81
 
 \ ******************************************************************************
 \
@@ -23033,7 +23065,7 @@ ENDIF
 
  RTS                    \ Return from the subroutine
 
- EQUB 0, 0              \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -25954,7 +25986,7 @@ ENDIF
 
  EQUB 255               \ End token
 
- EQUB 0, 0              \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -27224,7 +27256,7 @@ ENDIF
 
  EQUB 4, 9, 25
 
- EQUB 0                 \ This byte appears to be unused
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -27260,7 +27292,7 @@ ENDIF
 
  EQUB 1                 \ Points for the fastest lap
 
- EQUB 0, 0              \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -28568,7 +28600,7 @@ NEXT
 
  RTS                    \ Return from the subroutine
 
- EQUB 0                 \ This byte appears to be unused
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -28999,8 +29031,8 @@ NEXT
 
  BEQ elev1              \ If heightAboveTrack = 0, jump to elev1
 
- DEC L0028              \ Set L0028 = L0028 - 2
- DEC L0028
+ DEC yJumpHeight        \ Set yJumpHeight = yJumpHeight - 2
+ DEC yJumpHeight
 
  JMP elev7              \ Jump to elev7
 
@@ -29008,9 +29040,9 @@ NEXT
 
                         \ If we get here then heightAboveTrack = 0 and A = 0
 
- STA L0028              \ Set L0028 = 0
+ STA yJumpHeight        \ Set yJumpHeight = 0
 
- STA L0026              \ Set L0026 = 0
+ STA yGravityDelta      \ Set yGravityDelta = 0
 
  LDY liftFromTorque     \ Set Y = liftFromTorque
 
@@ -29035,7 +29067,7 @@ NEXT
                         \ If we get here then we are not in reverse gear and the
                         \ brakes are being applied
 
- LDA speedHi            \ Set A = speedHi
+ LDA playerSpeedHi      \ Set A = playerSpeedHi
 
  BNE elev5              \ If A is non-zero, then we are moving, so jump to elev5
 
@@ -29135,7 +29167,7 @@ NEXT
                         \ which gives us the number of the segment vector for
                         \ the track segment containing the player
 
- LDA L000D              \ Set V = L000D
+ LDA playerPitchAngle   \ Set V = playerPitchAngle
  STA V
 
  LDA xTrackSegmentI,Y   \ Store the sign of the segment vector's x-coordinate
@@ -29283,9 +29315,13 @@ NEXT
 \
 \ Calculate the following:
 \
-\   * L000D
+\   * Set A to the elevation change of the car due to the sideways angle of the
+\     car in the current segment
 \
-\   * spinPitchAngle
+\   * playerPitchAngle = (A + bumpyGrassHeight + liftFromTorque + yJumpHeight
+\                           + playerPitchAngle) / 2
+\
+\   * spinPitchAngle = playerPitchAngle - original value of playerPitchAngle
 \
 \ ******************************************************************************
 
@@ -29339,16 +29375,16 @@ NEXT
                         \
                         \ The calculation above effectively works out the
                         \ difference in elevation of the car within the segment
-                        \ with respect to its heading, and puts it in A ???
+                        \ with respect to its heading, and puts it in A
 
- CLC                    \ Set A = A + L005D + liftFromTorque + L0028 + L000D
- ADC L005D
+ CLC                    \ Set A = A + bumpyGrassHeight + liftFromTorque
+ ADC bumpyGrassHeight   \           + yJumpHeight + playerPitchAngle
  CLC
  ADC liftFromTorque
  CLC
- ADC L0028
+ ADC yJumpHeight
  CLC
- ADC L000D
+ ADC playerPitchAngle
 
  CLC                    \ Clear the C flag, to use when A is positive
 
@@ -29361,14 +29397,14 @@ NEXT
 
  ROR A                  \ Set A = A / 2, keeping the sign of A intact
 
- STA L000D              \ Set L000D = A
+ STA playerPitchAngle   \ Set playerPitchAngle = A
 
  SEC                    \ Set spinPitchAngle = A - V
- SBC V                  \                    = L000D - V
+ SBC V                  \                    = playerPitchAngle - V
  STA spinPitchAngle     \
-                        \ We set V to the original value of L000D above, so
-                        \ spinPitchAngle now contains the change in elevation
-                        \ of the car
+                        \ We set V to the original value of playerPitchAngle
+                        \ above, so spinPitchAngle now contains the change in
+                        \ elevation of the car
 
 \ ******************************************************************************
 \
@@ -29381,62 +29417,85 @@ NEXT
 \
 \ Calculate the following:
 \
-\   * heightAboveTrack
+\   * yGravityDelta = max(yGravityDelta - 4, -56)
+\
+\   * If the car falls past ground level, calculate the following to make the
+\     car bounce upwards by half the rate that it's falling:
+\
+\       * yGravityDelta = |yGravityDelta| / 2
+\
+\       * yJumpHeight = |yGravityDelta| / 4
+\
+\       * spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
+\
+\       * heightAboveTrack = 1
+\
+\     and make the crash/contact sound
+\
+\   * Clip heightAboveTrack to the range 0 to 127
 \
 \ ******************************************************************************
 
  LDA #0                 \ Set W = 0, to use as the high byte of (W A) below
  STA W
 
- LDA L0026              \ Set A = L0026 - 4
- SEC
- SBC #4
+ LDA yGravityDelta      \ Set A = yGravityDelta - 4
+ SEC                    \
+ SBC #4                 \ This applies the effect of gravity on the car, which
+                        \ makes the car fall faster all the time that it's
+                        \ falling
 
- BVC elev14             \ The overflow flag is set if L0026 is negative but the
- LDA #&C8               \ result is positive, in which case we set A = -56, so
-                        \ this sets a minimum value for A of -56, i.e.
+ BVC elev14             \ The overflow flag is set if yGravityDelta is negative
+ LDA #&C8               \ but the result is positive, in which case we set
+                        \ A = -56, so this sets a minimum value for A of -56:
                         \
-                        \   A = max(L0026 - 4, -56)
+                        \   A = max(yGravityDelta - 4, -56)
 
 .elev14
 
- STA L0026              \ Set L0026 = A
-                        \           = max(L0026 - 4, -56)
+ STA yGravityDelta      \ Set yGravityDelta = A
+                        \                   = max(yGravityDelta - 4, -56)
 
  CLC                    \ Set A = A + heightAboveTrack
- ADC heightAboveTrack   \       = max(L0026 - 4, -56) + heightAboveTrack
+ ADC heightAboveTrack   \       = max(yGravityDelta - 4, -56) + heightAboveTrack
 
  BEQ elev15             \ If A = 0, jump to elev15
 
  BVS elev17             \ The overflow flag is set if:
                         \
-                        \   * L0026 + heightAboveTrack > 127 and both are < 128
+                        \   * yGravityDelta + heightAboveTrack > 127
+                        \     and both are < 128
                         \     (i.e. adding two positives gives a negative)
                         \
-                        \   * L0026 + heightAboveTrack < 128 and both are > 127
+                        \   * yGravityDelta + heightAboveTrack < 128
+                        \     and both are > 127
                         \     (i.e. adding two negatives gives a positive)
                         \
-                        \ In either case, we jump to elev17 to set
+                        \ In either case, jump to elev17 to set
                         \ heightAboveTrack = 127
 
- BPL elev18             \ If A is positive, jump to elev15 to set
+ BPL elev18             \ If A is positive, jump to elev18 to set
                         \ heightAboveTrack = A
 
 .elev15
 
- LDA L0026              \ Set A = L0026
+ LDA yGravityDelta      \ Set A = yGravityDelta
 
  JSR Absolute8Bit       \ Set A = |A|
-                        \       = |L0026|
+                        \       = |yGravityDelta|
 
  CMP #5                 \ If A < 5, jump to elev16 to set heightAboveTrack = 0
  BCC elev16
 
- JSR CalculateVars2     \ Calculate the following:
+                        \ If we get here then the car has fallen past ground
+                        \ level, so we need to bounce it upwards
+
+ JSR ApplyBounce        \ Calculate the following to make the car bounce upwards
+                        \ by half the rate that it's falling:
                         \
-                        \   L0026 = |L0026| / 2
+                        \   yGravityDelta = |yGravityDelta| / 2
                         \
-                        \   L0028 = |L0026| / 4
+                        \   yJumpHeight = |yGravityDelta| / 4
                         \
                         \   heightAboveTrack = heightAboveTrack + 1
                         \
@@ -29444,7 +29503,8 @@ NEXT
                         \
                         \ and make the crash/contact sound
 
- LDA #1                 \ Set A = 1, to use as the value of heightAboveTrack
+ LDA #1                 \ Set A = 1, to use as the value of heightAboveTrack,
+                        \ overriding the calculation we just did
 
  BNE elev18             \ Jump to elev18 (this BNE is effectively a JMP as A is
                         \ never zero)
@@ -29475,9 +29535,12 @@ NEXT
 \
 \ Calculate the following:
 \
-\   * (yPlayerCoordTop yPlayerCoordHi)
+\   * (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
+\                                        + carProgress * yTrackSegmentI
+\                                        + heightAboveTrack / 4
+\                                        + 172
 \
-\   * carSpeedHi for the player's car
+\   * carSpeedHi for the player's car = playerSpeedHi * 2.13
 \
 \ ******************************************************************************
 
@@ -29561,7 +29624,7 @@ NEXT
                         \
                         \    =   carProgress * yTrackSegmentI
                         \      + 172
-                        \      + heightAboveTrack << 2
+                        \      + heightAboveTrack / 4
                         \      + (ySegmentCoordIHi ySegmentCoordILo)
                         \
                         \ with all the correct carry bits included
@@ -29578,24 +29641,25 @@ NEXT
  ADC #0
  STA yPlayerCoordTop
 
- LDA speedHi            \ Set U = speedHi, which is the player's speed in mph
- STA U
+ LDA playerSpeedHi      \ Set U = playerSpeedHi, which is the player's speed in
+ STA U                  \ mph
 
  LDA #33                \ Set A = 33
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = speedHi * 33
+                        \           = playerSpeedHi * 33
                         \
-                        \ So A = speedHi * 33 / 256
+                        \ So A = playerSpeedHi * 33 / 256
 
  ASL U                  \ Set A = A + U * 2
- CLC                    \       = speedHi * 33 / 256 + speedHi * 2
- ADC U                  \       = speedHi * 2.13
+ CLC                    \       = playerSpeedHi * 33 / 256 + playerSpeedHi * 2
+ ADC U                  \       = playerSpeedHi * 2.13
 
- STA carSpeedHi,X       \ Set carSpeedHi for the player's car to speedHi * 2.13
+ STA carSpeedHi,X       \ Set carSpeedHi for the player's car to playerSpeedHi *
+                        \ 2.13
                         \
-                        \ carSpeedHi is the speed of the car in terms of
-                        \ 1/256-ths of a segment ???
+                        \ carSpeedHi is now the speed of the car in terms of
+                        \ 1/256-ths of a segment
 
  RTS                    \ Return from the subroutine
 
@@ -29783,7 +29847,7 @@ NEXT
                         \ a set bit 7 meaning the player's car is drifting
                         \ sideways by more than 22 in this iteration around the
                         \ main driving loop (where the full track width is 256)
- 
+
  SBC carRacingLine,X    \ Set A = A - the racing line for the player
                         \
                         \ So A contains the distance that the car has moved in
@@ -30033,24 +30097,27 @@ ENDIF
  JSR Absolute16Bit      \ Set (A T) = |A T|
                         \           = |zVelocity|
 
- STA speedHi            \ Set (speedHi speedLo) = (A T)
- LDA T                  \                       = |zVelocity|
- STA speedLo
+ STA playerSpeedHi      \ Set (playerSpeedHi playerSpeedLo) = (A T)
+ LDA T                  \                                   = |zVelocity|
+ STA playerSpeedLo
 
- LDY speedHi            \ Set Y to the high byte of (speedHi speedLo)
+ LDY playerSpeedHi      \ Set Y to the high byte of (playerSpeedHi
+                        \ playerSpeedLo)
 
  BNE dmod1              \ If the high byte is non-zero, jump to dmod1 to skip
                         \ the following
 
- AND #%11110000         \ A contains speedLo, so this sets Y to the high nibble
- TAY                    \ of the low byte of (speedHi speedLo)
+ AND #%11110000         \ A contains playerSpeedLo, so this sets Y to the high
+ TAY                    \ nibble of the low byte of (playerSpeedHi
+                        \ playerSpeedLo)
 
 .dmod1
 
  STY playerMoving       \ Store Y in playerMoving, which is zero if the player
                         \ is not moving, non-zero if they are, so this denotes
-                        \ the player as moving if (speedHi speedLo) is non-zero,
-                        \ ignoring the bottom nibble of the low byte
+                        \ the player as moving if (playerSpeedHi playerSpeedLo)
+                        \ is non-zero, ignoring the bottom nibble of the
+                        \ low byte
 
  JSR ApplySpinYaw       \ Calculate the following:
                         \
@@ -30074,7 +30141,7 @@ ENDIF
  LDA xPrevVelocityHi    \ main loop, which we stored in (xPrevVelocityHi
  STA xVelocityHi        \ xPrevVelocityLo)
 
- LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo) 
+ LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo)
  CLC                    \                   += (xSpinVelocityHi xSpinVelocityLo)
  ADC xSpinVelocityLo    \
  STA xVelocityLo        \ starting with the low bytes
@@ -30154,9 +30221,9 @@ ENDIF
                         \                  - scaledSpeed * xPrevVelocityHi
                         \
                         \   zPlayerDelta =   zPlayerDelta
-                        \                  - scaledSpeed
-                        \                      * (wingBalance * speedHi + 2048)
-                        \                      * abs(zVelocity)
+                        \                 - scaledSpeed
+                        \                 * (wingBalance * playerSpeedHi + 2048)
+                        \                 * abs(zVelocity)
 
  JSR RotateCarToCoord   \ Rotate this vector:
                         \
@@ -30406,11 +30473,11 @@ ENDIF
 
 .ApplyTyresAndSkids
 
- LDA heightAboveTrack   \ If heightAboveTrack >= 2, jump to gfor1 to stop the tyres from
- CMP #2                 \ squealing
+ LDA heightAboveTrack   \ If heightAboveTrack >= 2, jump to gfor1 to stop the
+ CMP #2                 \ tyres from squealing
  BCS gfor1
 
- JSR ApplyTyreForces    \ ???
+ JSR ApplyTyreForces    \ Calculate the tyre forces on the car
 
  LDA tyreSqueal,X       \ Set A to tyreSqueal for tyre X
 
@@ -30585,7 +30652,7 @@ ENDIF
 
  LDX #10                \ Set X = 8, so the call to AddSteeringForce adds
                         \ xSteeringForce to xTyreForceNose
- 
+
  JSR AddSteeringForce   \ Set xTyreForceNose = xTyreForceNose + xSteeringForce
                         \           = xTyreForceNose + zTyreForceNose * steering
 
@@ -30935,7 +31002,7 @@ ENDIF
                         \ pointed to by K
 
  BIT H                  \ If bit 6 of H is set, then jump to AddCoords to add
- BVS AddCoords          \ the result to the variable pointed to by K 
+ BVS AddCoords          \ the result to the variable pointed to by K
 
  LDA T                  \ Store the result in the variable pointed to by K
  STA xPlayerSpeedHi,Y
@@ -31495,12 +31562,13 @@ ENDIF
 
                         \ If we get here then we are still in gear
 
- LDA speedHi            \ Set A = speedHi
+ LDA playerSpeedHi      \ Set A = playerSpeedHi
 
  BNE engs3              \ If A <> 0 then we are moving, so jump to engs3 to
-                        \ start the engine and set the rev counter to speedHi,
-                        \ as the engine can be restarted after stalling if we
-                        \ are going fast enough (i.e. if speedHi > 0) 
+                        \ start the engine and set the rev counter to
+                        \ playerSpeedHi, as the engine can be restarted after
+                        \ stalling if we are going fast enough (i.e. if
+                        \ playerSpeedHi > 0)
 
 .engs1
 
@@ -31753,9 +31821,9 @@ ENDIF
  DEY                    \ CalcRevsNoTorque, returning from the subroutine using
  BEQ CalcRevsNoTorque   \ a tail call
 
- LDA speedLo            \ Set (A T) = (speedHi speedLo)
+ LDA playerSpeedLo      \ Set (A T) = (playerSpeedHi playerSpeedLo)
  STA T
- LDA speedHi
+ LDA playerSpeedHi
 
  ASL T                  \ Set (A T) = (A T) << 1
  ROL A
@@ -31776,9 +31844,9 @@ ENDIF
  STA U                  \ Set U to the high byte of (A T), i.e. to the high byte
                         \ of either speed * 2 or speed * 4
                         \
-                        \ As the high byte in speedHi contains the speed in mph
-                        \ and the low byte contains the fraction, this just
-                        \ discards the fractional part of the calculation
+                        \ As the high byte in playerSpeedHi contains the speed
+                        \ in mph and the low byte contains the fraction, this
+                        \ just discards the fractional part of the calculation
 
  LDX gearNumber         \ Set A to the gear ratio for the current gear, which is
  LDA trackGearRatio,X   \ defined in the track data file at trackGearRatio
@@ -31813,7 +31881,7 @@ ENDIF
  DEY                    \ being applied, so jump to engi4
  BNE engi4
 
- LDY speedHi            \ If speedHi >= 22, jump to engi4
+ LDY playerSpeedHi      \ If playerSpeedHi >= 22, jump to engi4
  CPY #22
  BCS engi4
 
@@ -32265,7 +32333,7 @@ ENDIF
 \
 \   * If A < wingForce95, then:
 \
-\     * If the throttle is being applied, then 
+\     * If the throttle is being applied, then
 \
 \         zTyreForceNose or zTyreForceRear = (A T) * abs(H)
 \
@@ -32277,7 +32345,7 @@ ENDIF
 \
 \     * Set (A T) = wingForce95 << 8
 \
-\     * If the throttle is being applied, then 
+\     * If the throttle is being applied, then
 \
 \         zTyreForceNose or zTyreForceRear = (A T) * abs(H)
 \
@@ -32491,7 +32559,7 @@ ENDIF
 
  LDY G                  \ Set Y to the offset in G
 
- STA xTyreForceNoseHi,Y \ Store (A T) 
+ STA xTyreForceNoseHi,Y \ Store (A T)
  LDA T
  STA xTyreForceNoseLo,Y
 
@@ -32568,7 +32636,7 @@ ENDIF
 .scal4
 
  LDA #%01111111         \ Set A = %01111111 to act as the largest possible
-                        \ positive top byte 
+                        \ positive top byte
 
  BNE scal3              \ Jump to scal3 to return (NN MM)
 
@@ -32740,18 +32808,27 @@ ENDIF
 \ * If all the following are true:
 \
 \     * There is grass under at least one side of the car
-\     * L005D = 0
+\     * bumpyGrassHeight = 0
 \     * heightAboveTrack = 0
 \     * Bit 7 of playerDrift is set
 \
-\   then calculate the following:
+\   then calculate the following to make the car jump when it hits the verge:
 \
-\     * L0026 = speedHi / 2
-\     * L0028 = speedHi / 4
+\     * yGravityDelta = playerSpeedHi / 2
+\     * yJumpHeight = playerSpeedHi / 4
 \     * heightAboveTrack = heightAboveTrack + 1
 \     * spinYawAngleHi = spinYawAngleHi >> 1 with bit 7 set
 \
 \   and make the crash/contact sound
+\
+\ * If there is grass under at least one side of the car, then:
+\
+\     * bumpyGrassHeight = random number in the range 1 to 7 that is higher with
+\                          higher speeds
+\
+\   otherwise:
+\
+\     * bumpyGrassHeight = 0
 \
 \ * For each wing, calculate the following:
 \
@@ -32766,7 +32843,7 @@ ENDIF
 \
 \     otherwise calculate:
 \
-\       wingForce = wingSetting * min(53, speedHi) * abs(zVelocity)
+\       wingForce = wingSetting * min(53, playerSpeedHi) * abs(zVelocity)
 \                   + wingForceTrack + brakeForce
 \
 \   * Set:
@@ -32825,11 +32902,11 @@ ENDIF
                         \ G is used in the front wing calculation below, while
                         \ H is used in the rear wing calculation
 
- LDA speedHi            \ Set U = speedHi
+ LDA playerSpeedHi      \ Set U = playerSpeedHi
  STA U
 
- LDX #0                 \ Set X = 0, to store as the value of L005D if we are
-                        \ not driving on grass
+ LDX #0                 \ Set X = 0, to store as the value of bumpyGrassHeight
+                        \ if we are not driving on grass
 
                         \ The leftSurface and rightSurface locations are in
                         \ screen memory, and are just to the left or right of
@@ -32851,7 +32928,7 @@ ENDIF
 
  LDA rightSurface       \ If rightSurface <> &FF, then there isn't grass under
  CMP #&FF               \ the right side of the car, so jump to gras4 to skip
- BNE gras4              \ the following and set L005D to 0
+ BNE gras4              \ the following and set bumpyGrassHeight to 0
 
 .gras2
 
@@ -32864,7 +32941,7 @@ ENDIF
                         \ second and will therefore be pretty random
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = random * speedHi
+                        \           = random * playerSpeedHi
                         \
                         \ So A is a random number that is higher with higher
                         \ speeds
@@ -32880,21 +32957,28 @@ ENDIF
 
 .gras3
 
- LDA L005D              \ If L005D is non-zero, jump to gras4
+ LDA bumpyGrassHeight   \ If bumpyGrassHeight is non-zero, jump to gras4
  BNE gras4
 
- LDA L005D              \ If heightAboveTrack is non-zero, jump to gras4
- ORA heightAboveTrack
- BNE gras4
+ LDA bumpyGrassHeight   \ If heightAboveTrack is non-zero, jump to gras4 (the
+ ORA heightAboveTrack   \ LDA is not required here, so perhaps it's left over
+ BNE gras4              \ from development)
 
- BIT playerDrift        \ If bit 7 of playerDrift is clear, jump to gras4
- BPL gras4
+ BIT playerDrift        \ If bit 7 of playerDrift is clear, then the player's
+ BPL gras4              \ car is not moving significantly sideways, so jump to
+                        \ gras4
 
- JSR CalculateVars1     \ Calculate the following:
+                        \ If we get here then the player's car is drifting, and
+                        \ the car is not jumping on bumpy grass (as
+                        \ bumpyGrassHeight = 0) and is glued to the track (as
+                        \ heightAboveTrack = 0)
+
+ JSR ApplyVergeJump     \ Calculate the following variables to apply a jump to
+                        \ the car when we hit the track verge:
                         \
-                        \   L0026 = speedHi / 2
+                        \   yGravityDelta = playerSpeedHi / 2
                         \
-                        \   L0028 = speedHi / 4
+                        \   yJumpHeight = playerSpeedHi / 4
                         \
                         \   heightAboveTrack = heightAboveTrack + 1
                         \
@@ -32904,13 +32988,14 @@ ENDIF
 
 .gras4
 
- STX L005D              \ Set L005D = X, so:
+ STX bumpyGrassHeight   \ Set bumpyGrassHeight = X, so:
                         \
-                        \   * If we are not driving on grass, then L005D = 0
+                        \   * If we are not driving on grass, then
+                        \     bumpyGrassHeight = 0
                         \
-                        \   * If we are driving on grass, then L005D is set to a
-                        \     random number in the range 1 to 7 that is higher
-                        \     with higher speeds
+                        \   * If we are driving on grass, then bumpyGrassHeight
+                        \     is set to a random number in the range 1 to 7 that
+                        \     is higher with higher speeds
 
  LDX #1                 \ We now run the following loop, once for each wing
                         \ setting, so set X to use as a loop counter, from 1
@@ -32918,7 +33003,7 @@ ENDIF
 
 .gras5
 
- LDA speedHi            \ Set A = speedHi
+ LDA playerSpeedHi      \ Set A = playerSpeedHi
 
  CMP #53                \ If A < 53, jump to gras6
  BCC gras6
@@ -32929,23 +33014,23 @@ ENDIF
 
  STA U                  \ Store A in U, so we now have the following:
                         \
-                        \   U = min(53, speedHi) 
+                        \   U = min(53, playerSpeedHi)
 
  LDA wingSetting,X      \ Set A to the scaled wing setting for wing X
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = wingSetting * min(53, speedHi)
+                        \           = wingSetting * min(53, playerSpeedHi)
 
  BIT zVelocityHi        \ Set the N flag according to the sign in bit 7 of
                         \ zVelocityHi, so the call to Absolute8Bit sets the
                         \ sign of A to the same sign as zVelocity
 
  JSR Absolute8Bit       \ Set A = A * abs(zVelocity)
-                        \       = wingSetting * min(53, speedHi)
+                        \       = wingSetting * min(53, playerSpeedHi)
                         \                     * abs(zVelocity)
 
  CLC                    \ Set A = A + wingForceTrack for this wing
- ADC wingForceTrack,X   \       = wingSetting * min(53, speedHi)
+ ADC wingForceTrack,X   \       = wingSetting * min(53, playerSpeedHi)
                         \                     * abs(zVelocity)
                         \         + wingForceTrack
 
@@ -33030,11 +33115,12 @@ ENDIF
 \
 \   xPlayerDelta = xPlayerDelta - scaledSpeed * xPrevVelocityHi
 \
-\   zPlayerDelta = zPlayerDelta - scaledSpeed * (wingBalance * speedHi + 2048)
-\                                             * abs(zVelocity)
+\   zPlayerDelta = zPlayerDelta
+\                     - scaledSpeed * (wingBalance * playerSpeedHi + 2048)
+\                                   * abs(zVelocity)
 \
-\ where scaledSpeed = speedHi       if L005D = 0
-\                     speedHi * 2   otherwise
+\ where scaledSpeed = playerSpeedHi       if bumpyGrassHeight = 0
+\                     playerSpeedHi * 2   otherwise
 \
 \ and wingBalance = 60 + (rearWingSetting * 3 + frontWingSetting) / 2
 \
@@ -33050,24 +33136,25 @@ ENDIF
  STA U                  \ Set U = A
                         \       = |xPrevVelocityHi|
 
- CMP speedHi            \ If A >= speedHi, jump to bala1
+ CMP playerSpeedHi      \ If A >= playerSpeedHi, jump to bala1
  BCS bala1
 
- LDA speedHi            \ Set A = speedHi, so A has a minimum value of speedHi
+ LDA playerSpeedHi      \ Set A = playerSpeedHi, so A has a minimum value of
+                        \ playerSpeedHi
 
 .bala1
 
- LDY L005D              \ If L005D = 0, jump to bala2 to skip the following
- BEQ bala2
+ LDY bumpyGrassHeight   \ If bumpyGrassHeight = 0, jump to bala2 to skip the
+ BEQ bala2              \ following
 
  ASL A                  \ Set A = A * 2
-                        \         speedHi * 2
+                        \         playerSpeedHi * 2
 
 .bala2
 
  STA W                  \ Set W = A
-                        \       = speedHi       if L005D = 0
-                        \         speedHi * 2   otherwise
+                        \       = playerSpeedHi       if bumpyGrassHeight = 0
+                        \         playerSpeedHi * 2   otherwise
                         \
                         \ Let's call this value scaledSpeed
 
@@ -33095,7 +33182,7 @@ ENDIF
                         \
                         \       = xPlayerDelta - scaledSpeed * xPrevVelocityHi
 
- LDA speedHi            \ Set U = speedHi
+ LDA playerSpeedHi      \ Set U = playerSpeedHi
  STA U
 
  LDA wingBalance        \ Set A = wingBalance, which is calculated as:
@@ -33103,12 +33190,12 @@ ENDIF
                         \   60 + (rearWingSetting * 3 + frontWingSetting) / 2
 
  JSR Multiply8x8        \ Set (A T) = A * U
-                        \           = wingBalance * speedHi
+                        \           = wingBalance * playerSpeedHi
 
  CLC                    \ Set V = A + 8
  ADC #8                 \
  STA V                  \ so (V T) = (A T) + (8 0)
-                        \          = wingBalance * speedHi + 2048
+                        \          = wingBalance * playerSpeedHi + 2048
 
  LDA W                  \ Set U = W
  STA U                  \       = scaledSpeed
@@ -33116,7 +33203,8 @@ ENDIF
  JSR Multiply8x16       \ Set:
                         \
                         \   (U T) = U * (V T)
-                        \         = scaledSpeed * (wingBalance * speedHi + 2048)
+                        \         =   scaledSpeed
+                        \           * (wingBalance * playerSpeedHi + 2048)
 
  LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses
                         \ zPlayerDelta
@@ -33131,8 +33219,8 @@ ENDIF
                         \ so that's:
                         \
                         \   zPlayerDelta = zPlayerDelta - scaledSpeed
-                        \                     * (wingBalance * speedHi + 2048)
-                        \                     * abs(zVelocity)
+                        \                 * (wingBalance * playerSpeedHi + 2048)
+                        \                 * abs(zVelocity)
 
  RTS                    \ Return from the subroutine
 
@@ -33248,17 +33336,17 @@ ENDIF
  TAY
 
  LDX #&FD               \ Set X = &FD so the calls to GetSectionCoord,
-                        \ GetObjYawAngle and GetObjPitchAngle use xVector4,
-                        \ yVector4 and zVector4
+                        \ GetObjYawAngle and GetObjPitchAngle use xCoord2,
+                        \ yCoord2 and zCoord2
 
  JSR GetSectionCoord    \ Copy the first trackSectionI coordinate for track
-                        \ section Y into xVector4, so xVector4 contains the 3D
+                        \ section Y into xCoord2, so xCoord2 contains the 3D
                         \ coordinates of the inside track for the start of this
                         \ track section, i.e.
                         \
-                        \   [ xVector4 ]   [ xTrackSectionI ]
-                        \   [ yVector4 ] = [ yTrackSectionI ]
-                        \   [ zVector4 ]   [ zTrackSectionI ]
+                        \   [ xCoord2 ]   [ xTrackSectionI ]
+                        \   [ yCoord2 ] = [ yTrackSectionI ]
+                        \   [ zCoord2 ]   [ zTrackSectionI ]
 
  LDY #6                 \ Set Y = 6 so the call to GetObjYawAngle uses
                         \ xRoadSignCoord for the second variable, so we
@@ -33266,7 +33354,7 @@ ENDIF
                         \ the following 3D coordinates (if we just consider the
                         \ the x-axis, for clarity):
                         \
-                        \    xVector4 - xRoadSignCoord
+                        \    xCoord2 - xRoadSignCoord
                         \  = xTrackSectionI - (xPlayerCoord - xTrackSignVector)
                         \  = xTrackSectionI - xPlayerCoord + xTrackSignVector
                         \  = xTrackSectionI + xTrackSignVector - xPlayerCoord
@@ -33670,18 +33758,18 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: CalculateVars1
+\       Name: ApplyVergeJump
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate variables based on the speed and spin
+\    Summary: Apply a jump to the player's car when hitting the track verge
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following:
 \
-\   L0026 = speedHi / 2
+\   yGravityDelta = playerSpeedHi / 2
 \
-\   L0028 = speedHi / 4
+\   yJumpHeight = playerSpeedHi / 4
 \
 \   heightAboveTrack = heightAboveTrack + 1
 \
@@ -33691,27 +33779,27 @@ ENDIF
 \
 \ ******************************************************************************
 
-.CalculateVars1
+.ApplyVergeJump
 
- LDA speedHi            \ Set A = speedHi
+ LDA playerSpeedHi      \ Set A = playerSpeedHi
 
-                        \ Fall through into CalculateVars2 to calculate the
+                        \ Fall through into ApplyBounce to calculate the
                         \ variables and make the crash/contact sound
 
 \ ******************************************************************************
 \
-\       Name: CalculateVars2
+\       Name: ApplyBounce
 \       Type: Subroutine
 \   Category: Driving model
-\    Summary: Calculate variables based on L0026 and spin
+\    Summary: Apply a bounce to the player's car when it hits the ground
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following:
 \
-\   L0026 = A / 2
+\   yGravityDelta = A / 2
 \
-\   L0028 = A / 4
+\   yJumpHeight = A / 4
 \
 \   heightAboveTrack = heightAboveTrack + 1
 \
@@ -33721,13 +33809,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.CalculateVars2
+.ApplyBounce
 
- LSR A                  \ Set L0026 = A / 2
- STA L0026
+ LSR A                  \ Set yGravityDelta = A / 2
+ STA yGravityDelta
 
- LSR A                  \ Set L0028 = A / 4
- STA L0028
+ LSR A                  \ Set yJumpHeight = A / 4
+ STA yJumpHeight
 
  INC heightAboveTrack   \ Set heightAboveTrack = heightAboveTrack + 1
 
@@ -34644,7 +34732,7 @@ ENDIF
                         \ If we get here then driver X has a bigger number than
                         \ the current player, so we ignore it (is this because
                         \ the only players with numbers higher than the current
-                        \ player are other players, rather than drivers) ???
+                        \ player are other players, rather than drivers)
 
  RTS                    \ Return from the subroutine
 
@@ -36163,7 +36251,7 @@ ENDIF
                         \ time the IRQ routine reaches section 4 of the custom
                         \ screen
 
- LDA speedHi            \ Set tyreTravel = tyreTravel + speedHi + 48
+ LDA playerSpeedHi      \ Set tyreTravel = tyreTravel + playerSpeedHi + 48
  CLC
  ADC #48
  ADC tyreTravel
@@ -37067,9 +37155,12 @@ ORG &5E40
 
 .bestRacingLine
 
- SKIP 24
+ SKIP 26                \ One byte for each of the maximum possible 26 track
+                        \ sections
 
- SKIP 8                 \ Unused ???
+ EQUB &00, &00          \ These bytes appear to be unused
+ EQUB &00, &00
+ EQUB &00, &00
 
 \ ******************************************************************************
 \
@@ -37114,7 +37205,7 @@ ORG &5E40
 
  EQUB %11110000         \ Colour 3 then 2 (green then white)           wwww wwww
  EQUB %11111000         \                                              gwww wwww
- EQUB %11111100         \   * pixelMaskVerge for leftTrackStart ???    ggww wwww
+ EQUB %11111100         \   * pixelMaskVerge for leftTrackStart        ggww wwww
  EQUB %11111110         \                                              gggw wwww
 
  EQUB %00000000         \ Colour 1 then 0 (red then black)             bbbb bbbb
@@ -37124,7 +37215,7 @@ ORG &5E40
 
  EQUB %00000000         \ Colour 2 then 0 (white then black)           bbbb bbbb
  EQUB %10000000         \                                              wbbb bbbb
- EQUB %11000000         \   * pixelMaskVerge for rightVergeStart ???   wwbb bbbb
+ EQUB %11000000         \   * pixelMaskVerge for rightVergeStart       wwbb bbbb
  EQUB %11100000         \                                              wwwb bbbb
 
  EQUB %00001111         \ Colour 0 then 1 (black then red)             rrrr rrrr
@@ -37435,7 +37526,8 @@ ENDIF
 
  EQUB 0
 
- EQUB 0, 0, 0           \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes appear to be unused
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -37899,7 +37991,7 @@ ENDIF
 
  EQUB 0
 
- EQUB 0, 0              \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
