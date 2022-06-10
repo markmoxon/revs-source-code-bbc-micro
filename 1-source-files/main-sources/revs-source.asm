@@ -11666,7 +11666,7 @@ ELIF _SUPERIOR
                         \ after the object
 
  INC blockNumber        \ Fill the column to the right of the edge we just drew,
- JSR FillAfterObject    \ so the correct background colour is shown to the right
+ JSR FillAfterObjectS   \ so the correct background colour is shown to the right
  DEC blockNumber        \ of the object part
 
 ENDIF
