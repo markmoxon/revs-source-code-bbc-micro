@@ -208,7 +208,7 @@ During compilation, details of every step are output in a file called `compile.t
 
 ## Building different variants of Revs
 
-This repository contains the source code for two different variants of the cassette version of Elite:
+This repository contains the source code for two different variants of Revs:
 
 * The Acornsoft variant, which is the original release
 
@@ -257,7 +257,7 @@ d37f9cba   1455  d37f9cba   1455   Yes   Revs1.bin
 
 ### Differences between the variants
 
-The main difference between the two variants is steering assist.
+The main difference between the two variants is that the Superior Software release contains a new feature: steering assist.
 
 The only other difference is in the recording of player drift, which governs when the player loses traction when sliding sideways. In the Superior Software variant, drifting is ignored if it occurs in the first three segments of a track section. This is implemented in the SetPlayerDriftS routine, which is not present in the original Acornsoft variant.
 
