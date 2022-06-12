@@ -16312,7 +16312,7 @@ ENDIF
                         \           128
                         \
                         \ An angle of 0 means our car is facing forwards along
-                        \ the track, while and angle of +32 means we are facing
+                        \ the track, while an angle of +32 means we are facing
                         \ 45 degrees to the right of straight on, and an angle
                         \ of 128 means we are facing backwards along the track
 
@@ -20196,7 +20196,7 @@ ENDIF
                         \ four-pixel bytes as it does in the rest of the code,
                         \ but we can still think of it as containing the
                         \ "palette" for the track verges, it's just a more
-                        \ sophisticated palette - stripy toothpaste is still
+                        \ sophisticated palette - stripey toothpaste is still
                         \ toothpaste, after all
 
 .dver16
@@ -29251,7 +29251,7 @@ NEXT
                         \           128
                         \
                         \ An angle of 0 means our car is facing forwards along
-                        \ the track, while and angle of +32 means we are facing
+                        \ the track, while an angle of +32 means we are facing
                         \ 45 degrees to the right of straight on, and an angle
                         \ of 128 means we are facing backwards along the track
 
