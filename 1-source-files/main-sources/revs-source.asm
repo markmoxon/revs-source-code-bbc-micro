@@ -11609,10 +11609,10 @@ ELIF _SUPERIOR
 
 .sraw2
 
- JSR GetColourS         \ The current byte in the screen buffer is zero, which
+ JSR GetColourSup       \ The current byte in the screen buffer is zero, which
                         \ means it should inherit the colour of the byte to the
-                        \ left, so call GetColourS to work out what this byte's
-                        \ colour would be on-screen, and put it into A
+                        \ left, so call GetColourSup to work out what this
+                        \ byte's colour would be on-screen, and put it into A
 
 .sraw3
 
@@ -11666,7 +11666,7 @@ ELIF _SUPERIOR
                         \ after the object
 
  INC blockNumber        \ Fill the column to the right of the edge we just drew,
- JSR FillAfterObjectS   \ so the correct background colour is shown to the right
+ JSR FillAfterObjectSup \ so the correct background colour is shown to the right
  DEC blockNumber        \ of the object part
 
 ENDIF
@@ -12073,7 +12073,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetTyreDashEdgeS
+\       Name: GetTyreDashEdgeSup
 \       Type: Subroutine
 \   Category: Dashboard
 \    Summary: Copy the pixel bytes along the tyre and dashboard edges so they
@@ -12095,7 +12095,7 @@ ENDIF
 
 IF _SUPERIOR
 
-.GetTyreDashEdgeS
+.GetTyreDashEdgeSup
 
  STX sedg7+1            \ Modify the following instruction at sedg7:
                         \
@@ -12115,14 +12115,14 @@ IF _SUPERIOR
                         \
                         \   LDA #&55 -> LDA #&55            when A = &55
 
-                        \ Fall through into FillAfterObjectS to copy the edge
+                        \ Fall through into FillAfterObjectSup to copy the edge
                         \ data to the location specified in (S R)
 
 ENDIF
 
 \ ******************************************************************************
 \
-\       Name: FillAfterObjectS
+\       Name: FillAfterObjectSup
 \       Type: Subroutine
 \   Category: Drawing objects
 \    Summary: Fill the block to the right of an object
@@ -12144,7 +12144,7 @@ ENDIF
 
 IF _SUPERIOR
 
-.FillAfterObjectS
+.FillAfterObjectSup
 
  LDA blockNumber        \ Set A to the dash data block number in blockNumber
 
@@ -12205,7 +12205,7 @@ IF _SUPERIOR
 .sedg1
 
                         \ This part of the loop, between segd1 and segd5, is
-                        \ only used by the GetTyreDashEdgeS routine, which
+                        \ only used by the GetTyreDashEdgeSup routine, which
                         \ modifies the loop to copy pixels instead of filling
                         \ them
 
@@ -12249,10 +12249,10 @@ IF _SUPERIOR
                         \               Y = &09
 
 
- JSR GetColourS         \ The current byte in the screen buffer is zero, which
+ JSR GetColourSup       \ The current byte in the screen buffer is zero, which
                         \ means it should inherit the colour of the byte to the
-                        \ left, so call GetColourS to work out what this byte's
-                        \ colour would be on-screen, and put it into A
+                        \ left, so call GetColourSup to work out what this
+                        \ byte's colour would be on-screen, and put it into A
 
  BNE sedg7              \ If the result is non-zero, then jump to sedg7 to skip
                         \ the following instruction
@@ -12424,33 +12424,33 @@ IF _ACORNSOFT
 
 ELIF _SUPERIOR
 
- LDY #&EF               \ Set Y = &DF so the call to GetTyreDashEdgeS modifies
-                        \ the FillAfterObjectS routine at sedg5 to BNE sedg1,
+ LDY #&EF               \ Set Y = &DF so the call to GetTyreDashEdgeSup modifies
+                        \ the FillAfterObjectSup routine at sedg5 to BNE sedg1,
                         \ so the routine copies into (S R) instead of filling
                         \ the screen buffer
 
- LDA #0                 \ Set A = 0, so the call to GetTyreDashEdgeS modifies
+ LDA #0                 \ Set A = 0, so the call to GetTyreDashEdgeSup modifies
                         \ theFillObject routine to store 0 as the value for
                         \ colour 0 (instead of the &55 that the screen buffer
                         \ uses to represent black)
 
- JSR GetTyreDashEdgeS   \ Modify the FillAfterObjectS routine and run it to copy
-                        \ the edge bytes into the table at (S R)
+ JSR GetTyreDashEdgeSup \ Modify the FillAfterObjectSup routine and run it to
+                        \ copy the edge bytes into the table at (S R)
 
- LDX #LO(P)             \ Set X so the call to GetTyreDashEdgeS modifies the
-                        \ FillAfterObjectS routine at back to drawing to (Q P)
+ LDX #LO(P)             \ Set X so the call to GetTyreDashEdgeSup modifies the
+                        \ FillAfterObjectSup routine at back to drawing to (Q P)
 
- LDY #&09               \ Set Y = &09 so the call to GetTyreDashEdgeS modifies
-                        \ the FillAfterObjectS routine at sedg5 back to BNE
+ LDY #&09               \ Set Y = &09 so the call to GetTyreDashEdgeSup modifies
+                        \ the FillAfterObjectSup routine at sedg5 back to BNE
                         \ sedg8
 
- LDA #&55               \ Set A = &55, so the call to GetTyreDashEdgeS modifies
-                        \ the FillAfterObjectS routine back to storing &55 as
-                        \ the value for colour 0
+ LDA #&55               \ Set A = &55, so the call to GetTyreDashEdgeSup
+                        \ modifies the FillAfterObjectSup routine back to
+                        \ storing &55 as the value for colour 0
 
  INC blockNumber        \ Increment the block number
 
- JSR GetTyreDashEdgeS   \ Modify the FillAfterObjectS routine back to its
+ JSR GetTyreDashEdgeSup \ Modify the FillAfterObjectSup routine back to its
                         \ default code and run it, which fills the block to the
                         \ right of the dashboard or tyre edge with the
                         \ appropriate content
@@ -12468,7 +12468,7 @@ ENDIF
 \
 \       Name: CopyTyreDashEdges
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Dashboard
 \    Summary: Fetch the pixel bytes from the right edge of the left tyre and the
 \             right edge of the dashboard, and fill to the right of the edge
 \
@@ -13195,7 +13195,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: GetColourS
+\       Name: GetColourSup
 \       Type: Subroutine
 \   Category: Screen buffer
 \    Summary: Calculate the colour of a specific pixel byte in the screen buffer
@@ -13216,7 +13216,7 @@ ENDIF
 
 IF _SUPERIOR
 
-.GetColourS
+.GetColourSup
 
  CPY horizonLine        \ If Y <= horizonLine then the byte we want to check is
  BCC scol1              \ below the horizon, so jump to scol1 to work out the
@@ -13686,7 +13686,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: SetPlayerDriftS
+\       Name: SetPlayerDriftSup
 \       Type: Subroutine
 \   Category: Car geometry
 \    Summary: Record player drift, but only if the player is not in the first
@@ -13711,7 +13711,7 @@ ENDIF
 
 IF _SUPERIOR
 
-.SetPlayerDriftS
+.SetPlayerDriftSup
 
  BCC drif1              \ If the C flag is clear, jump to drif1 to skip the
                         \ following
@@ -23301,7 +23301,7 @@ ENDIF
 \
 \       Name: pixelsToLeft
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: Pixel byte with all the pixels to the left of position X set
 \
 \ ******************************************************************************
@@ -23406,7 +23406,7 @@ ENDIF
 \
 \       Name: pixelsEdgeRight
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: Pixel byte with all the pixels to the right of position X set,
 \             plus pixel X
 \
@@ -23724,7 +23724,7 @@ ENDIF
 \
 \       Name: pixelByte
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: A table of pixel bytes with individual pixels set
 \
 \ ******************************************************************************
@@ -25420,7 +25420,7 @@ ENDIF
 \
 \       Name: colourPalette
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: The main colour palette that maps logical colours 0 to 3 to
 \             physical colours
 \
@@ -25703,7 +25703,7 @@ ENDIF
 \
 \       Name: pixelsToRight
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: Pixel byte with all the pixels to the right of position X set
 \
 \ ******************************************************************************
@@ -26132,7 +26132,7 @@ ENDIF
 \
 \       Name: yLookupHi
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: Lookup table for converting pixel y-coordinate to high byte of
 \             screen address
 \
@@ -27793,7 +27793,7 @@ ENDIF
 \
 \       Name: yLookupLo
 \       Type: Variable
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: Lookup table for converting pixel y-coordinate to low byte of
 \             screen address
 \
@@ -29872,7 +29872,7 @@ IF _ACORNSOFT
 
 ELIF _SUPERIOR
 
- JSR SetPlayerDriftS    \ Set bit 7 of playerDrift if both A >= 22 and the
+ JSR SetPlayerDriftSup  \ Set bit 7 of playerDrift if both A >= 22 and the
                         \ objSectionSegmt for the player is >= 3, so the
                         \ Superior version does not record drift in the first
                         \ three segments of a new track section
@@ -35350,7 +35350,7 @@ ENDIF
 \
 \       Name: GetScreenAddress
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Drawing pixels
 \    Summary: Return the screen address for a specified screen coordinate
 \
 \ ------------------------------------------------------------------------------
@@ -36807,7 +36807,7 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: xVergeRightLo
+\       Name: xVergeRightHi
 \       Type: Variable
 \   Category: Track geometry
 \    Summary: High byte of segment yaw angles along the right track verge in
@@ -40536,7 +40536,7 @@ ENDIF
 \
 \       Name: AddRacePoints
 \       Type: Subroutine
-\   Category: Driving
+\   Category: Drivers
 \    Summary: Add the race points to the driver's total points
 \
 \ ------------------------------------------------------------------------------
@@ -41192,7 +41192,7 @@ ORG &7B00
 \
 \       Name: DrawTrackView (Part 4 of 4)
 \       Type: Subroutine
-\   Category: Graphics
+\   Category: Screen buffer
 \    Summary: Revert all the code modifications made by the DrawTrackView
 \             routine
 \  Deep dive: Drawing around the dashboard
