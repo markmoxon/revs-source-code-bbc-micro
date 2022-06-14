@@ -2776,7 +2776,7 @@ ORG &0B00
 \
 \       Name: AddVectors
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Geometry)
 \    Summary: Add two three-axis vectors together
 \
 \ ------------------------------------------------------------------------------
@@ -2855,7 +2855,7 @@ ORG &0B00
 \
 \       Name: Multiply8x8
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Calculate (A T) = T * U
 \
 \ ------------------------------------------------------------------------------
@@ -2952,7 +2952,7 @@ ORG &0B00
 \
 \       Name: Divide8x8
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Calculate T = 256 * A / V
 \
 \ ------------------------------------------------------------------------------
@@ -3175,7 +3175,7 @@ ORG &0B00
 \
 \       Name: GetRotationMatrix (Part 1 of 5)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Calculate the rotation matrix for rotating the player's yaw angle
 \             into the global 3D coordinate system
 \
@@ -3312,7 +3312,7 @@ ORG &0B00
 \
 \       Name: GetRotationMatrix (Part 2 of 5)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Calculate sin(H G) for smaller angles
 \
 \ ******************************************************************************
@@ -3388,7 +3388,7 @@ ORG &0B00
 \
 \       Name: GetRotationMatrix (Part 3 of 5)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Calculate sin(H G) for bigger angles
 \
 \ ******************************************************************************
@@ -3447,7 +3447,7 @@ ORG &0B00
 \
 \       Name: GetRotationMatrix (Part 4 of 5)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Loop back to calculate cos instead of sin
 \
 \ ******************************************************************************
@@ -3504,7 +3504,7 @@ ORG &0B00
 \
 \       Name: GetRotationMatrix (Part 5 of 5)
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Apply the correct signs to the result
 \
 \ ******************************************************************************
@@ -3593,7 +3593,7 @@ ORG &0B00
 \
 \       Name: GetAngleInRadians
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Geometry)
 \    Summary: Convert a 16-bit angle into radians, restricted to the range 0 to
 \             PI/2
 \
@@ -3674,7 +3674,7 @@ ORG &0B00
 \
 \       Name: Multiply8x16
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Multiply an 8-bit and a 16-bit number
 \
 \ ------------------------------------------------------------------------------
@@ -3727,7 +3727,7 @@ ORG &0B00
 \
 \       Name: Multiply16x16
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Multiply a sign-magnitude 16-bit number and a signed 16-bit number
 \
 \ ------------------------------------------------------------------------------
@@ -3898,7 +3898,7 @@ ORG &0B00
 \
 \       Name: Absolute16Bit
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Calculate the absolute value (modulus) of a 16-bit number
 \
 \ ------------------------------------------------------------------------------
@@ -3940,7 +3940,7 @@ ORG &0B00
 \
 \       Name: Negate16Bit
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Negate a 16-bit number
 \
 \ ------------------------------------------------------------------------------
@@ -7285,7 +7285,7 @@ ORG &0B00
 \
 \       Name: GetBestRacingLine
 \       Type: Subroutine
-\   Category: Track geometry
+\   Category: Tactics
 \    Summary: Calculate the best racing line to take for the current track
 \             segment
 \
@@ -13320,7 +13320,7 @@ ENDIF
 \
 \       Name: AssistSteering
 \       Type: Subroutine
-\   Category: Keyboard
+\   Category: Tactics
 \    Summary: Apply Computer Assisted Steering (CAS) when configured
 \
 \ ------------------------------------------------------------------------------
@@ -13365,7 +13365,7 @@ ENDIF
 \   A                   A is set to steeringLo
 \
 \   (U T)               The new amount of steering to apply, adjusted to add
-\                       steering assistance, as a sign-magnitude number
+\                       Computer Assisted Steering, as a sign-magnitude number
 \
 \ Other entry points:
 \
@@ -13458,8 +13458,9 @@ IF _SUPERIOR
                         \   * A = 2 if we are steering left
                         \
                         \ We now spend the rest of the routine calculating the
-                        \ amount of assisted steering to apply, returning the
-                        \ result in the sign-magnitude number (U T)
+                        \ amount of Computer Assisted Steering (CAS) to apply,
+                        \ returning the result in the sign-magnitude number
+                        \ (U T)
 
  LDX #50                \ Set X = 50 to use as the value for steering left
 
@@ -17311,7 +17312,7 @@ ENDIF
 \
 \       Name: ApplyDriverTactics (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Car geometry
+\   Category: Tactics
 \    Summary: Process all cars, checking first to see if the car we are
 \             processing has just overtaken the car in front of it
 \
@@ -17487,7 +17488,7 @@ ENDIF
 \
 \       Name: ApplyDriverTactics (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Car geometry
+\   Category: Tactics
 \    Summary: The car we are processing has not overtaken the car in front of
 \             it, so apply driving tactics
 \
@@ -17748,7 +17749,7 @@ ENDIF
 \
 \       Name: ApplyDriverTactics (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Car geometry
+\   Category: Tactics
 \    Summary: Update the car status and loop back for the next car
 \
 \ ******************************************************************************
@@ -19539,7 +19540,7 @@ ENDIF
 \
 \       Name: HalveCoordinate
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Geometry)
 \    Summary: Halve a coordinate with three 16-bit axes
 \
 \ ------------------------------------------------------------------------------
@@ -23184,7 +23185,7 @@ ENDIF
 \
 \       Name: startDialLo
 \       Type: Variable
-\   Category: Screen buffer
+\   Category: Drawing pixels
 \    Summary: The low byte of the screen address of the start of the dial hand
 \             on the rev counter
 \
@@ -23457,7 +23458,7 @@ ENDIF
 \
 \       Name: Absolute8Bit
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Calculate the absolute value (modulus) of an 8-bit number
 \
 \ ------------------------------------------------------------------------------
@@ -25577,7 +25578,7 @@ ENDIF
 \
 \       Name: startDialHi
 \       Type: Variable
-\   Category: Screen buffer
+\   Category: Drawing pixels
 \    Summary: The high byte of the screen address of the start of the dial hand
 \             on the rev counter
 \
@@ -25762,7 +25763,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: menuKeysSuperior
+\       Name: menuKeysSup
 \       Type: Variable
 \   Category: Keyboard
 \    Summary: Negative inkey values for the menu keys (SPACE, "1", "2" and "3")
@@ -25777,7 +25778,7 @@ IF _ACORNSOFT
 
 ELIF _SUPERIOR
 
-.menuKeysSuperior
+.menuKeysSup
 
  EQUB &9D               \ Negative inkey value for SPACE
  EQUB &CF               \ Negative inkey value for "1"
@@ -27241,7 +27242,7 @@ ENDIF
 \
 \       Name: timeFromOption
 \       Type: Variable
-\   Category: Drivers
+\   Category: Keyboard
 \    Summary: Table to convert from the option numbers in the qualifying lap
 \             duration menu to the actual number of minutes
 \
@@ -27262,7 +27263,7 @@ ENDIF
 \
 \       Name: lapsFromOption
 \       Type: Variable
-\   Category: Drivers
+\   Category: Keyboard
 \    Summary: Table to convert from the option numbers in the laps menu to the
 \             actual number of laps
 \
@@ -28919,7 +28920,7 @@ NEXT
 \
 \       Name: SetBestRacingLine
 \       Type: Subroutine
-\   Category: Car geometry
+\   Category: Tactics
 \    Summary: Calculate the optimum racing line for each track section
 \
 \ ------------------------------------------------------------------------------
@@ -30319,7 +30320,7 @@ ENDIF
 \
 \       Name: Multiply8x16Signed
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Multiply an 8-bit and a 16-bit number and apply a sign to the
 \             result
 \
@@ -30379,7 +30380,7 @@ ENDIF
 \
 \       Name: MultiplyBy1Point5
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Multiply a 16-bit signed number by 1.5
 \
 \ ------------------------------------------------------------------------------
@@ -30859,7 +30860,7 @@ ENDIF
 \
 \       Name: MultiplyCoords
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Arithmetic)
 \    Summary: Multiply a 16-bit coordinate value and a 16-bit factor, optionally
 \             tallying or changing the sign of the result
 \
@@ -31015,7 +31016,7 @@ ENDIF
 \
 \       Name: SubtractCoords
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Subtract from a specified coordinate variable
 \
 \ ------------------------------------------------------------------------------
@@ -31065,7 +31066,7 @@ ENDIF
 \
 \       Name: AddCoords
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Add to a specified coordinate variable
 \
 \ ------------------------------------------------------------------------------
@@ -31107,8 +31108,9 @@ ENDIF
 \
 \       Name: RotateCoordToCar
 \       Type: Subroutine
-\   Category: Driving model
-\    Summary: Calculate various products
+\   Category: Maths (Geometry)
+\    Summary: Rotate a vector from the 3D world coordinate system into the frame
+\             of reference of the player's car
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31154,8 +31156,9 @@ ENDIF
 \
 \       Name: RotateCarToCoord
 \       Type: Subroutine
-\   Category: Driving model
-\    Summary: Calculate various products
+\   Category: Maths (Geometry)
+\    Summary: Rotate a vector from the frame of reference of the player's car
+\             into the 3D world coordinate system
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31204,7 +31207,7 @@ ENDIF
 \
 \       Name: RotateVector
 \       Type: Subroutine
-\   Category: Driving model
+\   Category: Maths (Geometry)
 \    Summary: Rotate a vector by a rotation matrix
 \
 \ ------------------------------------------------------------------------------
@@ -32569,7 +32572,7 @@ ENDIF
 \
 \       Name: Scale16Bit
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Scale up a 16-bit value by 2^5
 \
 \ ------------------------------------------------------------------------------
@@ -33437,7 +33440,7 @@ ENDIF
 \
 \       Name: AddScaledVector
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Geometry)
 \    Summary: Add a scaled vector to another vector, one axis at a time
 \
 \ ------------------------------------------------------------------------------
@@ -36268,12 +36271,12 @@ ENDIF
 
 .tyre1
 
- LDA tyreLeft3,X        \ Set tyreLeft3 = tyreLeft3 EOR tyreTread1
- EOR tyreTread1,X
+ LDA tyreLeft3,X        \ Set tyreLeft3 = tyreLeft3 EOR tyreTreadLeft
+ EOR tyreTreadLeft,X
  STA tyreLeft3,X
 
- LDA tyreRight3,X       \ Set tyreRight3 = tyreRight3 EOR tyreTread2
- EOR tyreTread2,X
+ LDA tyreRight3,X       \ Set tyreRight3 = tyreRight3 EOR tyreTreadRight
+ EOR tyreTreadRight,X
  STA tyreRight3,X
 
  CPX #3                 \ If X >= 3, jump to tyre2 to skip the following
@@ -36311,29 +36314,37 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: tyreTread1
+\       Name: tyreTreadLeft
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: Tyre tread pattern
+\    Summary: Tyre tread pattern for the left tyre
 \
 \ ******************************************************************************
 
-.tyreTread1
+.tyreTreadLeft
 
- EQUB &F0, &F0, &C0, &C0, &80
+ EQUB %11110000
+ EQUB %11110000
+ EQUB %11000000
+ EQUB %11000000
+ EQUB %10000000
 
 \ ******************************************************************************
 \
-\       Name: tyreTread2
+\       Name: tyreTreadRight
 \       Type: Variable
 \   Category: Dashboard
-\    Summary: Tyre tread pattern
+\    Summary: Tyre tread pattern for the right tyre
 \
 \ ******************************************************************************
 
-.tyreTread2
+.tyreTreadRight
 
- EQUB &F0, &F0, &30, &30, &10
+ EQUB %11110000
+ EQUB %11110000
+ EQUB %00110000
+ EQUB %00110000
+ EQUB %00010000
 
 \ ******************************************************************************
 \
@@ -37148,7 +37159,7 @@ ORG &5E40
 \
 \       Name: bestRacingLine
 \       Type: Variable
-\   Category: Track geometry
+\   Category: Tactics
 \    Summary: Set to the best racing line for each section
 \
 \ ******************************************************************************
@@ -37294,7 +37305,7 @@ ENDIF
 \
 \       Name: arctanY
 \       Type: Variable
-\   Category: Maths
+\   Category: Maths (Geometry)
 \    Summary: Table for arctan values when calculating yaw angles
 \
 \ ******************************************************************************
@@ -37309,7 +37320,7 @@ ENDIF
 \
 \       Name: arctanP
 \       Type: Variable
-\   Category: Maths
+\   Category: Maths (Geometry)
 \    Summary: Table for arctan values when calculating pitch angles
 \
 \ ------------------------------------------------------------------------------
@@ -37324,18 +37335,22 @@ ENDIF
 
 .arctanP
 
- EQUB &FF, &FE, &FC, &FA
- EQUB &F8, &F6, &F5, &F3, &F1, &EF, &ED, &EC, &EA, &E8, &E7, &E5
- EQUB &E4, &E2, &E0, &DF, &DD, &DC, &DA, &D9, &D8, &D6, &D5, &D3
- EQUB &D2, &D1, &CF, &CE, &CD, &CC, &CA, &C9, &C8, &C7, &C5, &C4
- EQUB &C3, &C2, &C1, &C0, &BF, &BD, &BC, &BB, &BA, &B9, &B8, &B7
- EQUB &B6, &B5, &B4, &B3, &B2, &B1, &B0, &AF, &AE, &AD, &AC, &AC
- EQUB &AB, &AA, &A9, &A8, &A7, &A6, &A5, &A5, &A4, &A3, &A2, &A1
- EQUB &A1, &A0, &9F, &9E, &9E, &9D, &9C, &9B, &9B, &9A, &99, &98
- EQUB &98, &97, &96, &96, &95, &94, &94, &93, &92, &92, &91, &90
- EQUB &90, &8F, &8E, &8E, &8D, &8D, &8C, &8B, &8B, &8A, &8A, &89
- EQUB &89, &88, &87, &87, &86, &86, &85, &85, &84, &84, &83, &83
- EQUB &82, &82, &81, &81
+ EQUB &FF, &FE, &FC, &FA, &F8, &F6, &F5, &F3
+ EQUB &F1, &EF, &ED, &EC, &EA, &E8, &E7, &E5
+ EQUB &E4, &E2, &E0, &DF, &DD, &DC, &DA, &D9
+ EQUB &D8, &D6, &D5, &D3, &D2, &D1, &CF, &CE
+ EQUB &CD, &CC, &CA, &C9, &C8, &C7, &C5, &C4
+ EQUB &C3, &C2, &C1, &C0, &BF, &BD, &BC, &BB
+ EQUB &BA, &B9, &B8, &B7, &B6, &B5, &B4, &B3
+ EQUB &B2, &B1, &B0, &AF, &AE, &AD, &AC, &AC
+ EQUB &AB, &AA, &A9, &A8, &A7, &A6, &A5, &A5
+ EQUB &A4, &A3, &A2, &A1, &A1, &A0, &9F, &9E
+ EQUB &9E, &9D, &9C, &9B, &9B, &9A, &99, &98
+ EQUB &98, &97, &96, &96, &95, &94, &94, &93
+ EQUB &92, &92, &91, &90, &90, &8F, &8E, &8E
+ EQUB &8D, &8D, &8C, &8B, &8B, &8A, &8A, &89
+ EQUB &89, &88, &87, &87, &86, &86, &85, &85
+ EQUB &84, &84, &83, &83, &82, &82, &81, &81
 
 \ ******************************************************************************
 \
@@ -37377,7 +37392,7 @@ ENDIF
 \
 \       Name: zPlayerCoordHi
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The high byte of the z-coordinate of the player's 3D coordinates
 \
 \ ------------------------------------------------------------------------------
@@ -37395,7 +37410,7 @@ ENDIF
 \
 \       Name: xPlayerCoordTop
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The top byte of the x-coordinate of the player's 3D coordinates
 \
 \ ------------------------------------------------------------------------------
@@ -37413,7 +37428,7 @@ ENDIF
 \
 \       Name: yPlayerCoordTop
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The top byte of the y-coordinate of the player's 3D coordinates
 \
 \ ------------------------------------------------------------------------------
@@ -37431,7 +37446,7 @@ ENDIF
 \
 \       Name: zPlayerCoordTop
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The top byte of the z-coordinate of the player's 3D coordinates
 \
 \ ------------------------------------------------------------------------------
@@ -37632,7 +37647,7 @@ ENDIF
 \
 \       Name: steeringLo
 \       Type: Variable
-\   Category: Car geometry
+\   Category: Dashboard
 \    Summary: The low byte of the steering wheel position
 \
 \ ------------------------------------------------------------------------------
@@ -37679,7 +37694,7 @@ ENDIF
 \
 \       Name: steeringHi
 \       Type: Variable
-\   Category: Car geometry
+\   Category: Dashboard
 \    Summary: The high byte of the steering wheel position
 \
 \ ------------------------------------------------------------------------------
@@ -37857,7 +37872,7 @@ ENDIF
 \
 \       Name: zPlayerCoordLo
 \       Type: Variable
-\   Category: 3D objects
+\   Category: Car geometry
 \    Summary: The low byte of the z-coordinate of the player's 3D coordinates
 \
 \ ------------------------------------------------------------------------------
@@ -39193,7 +39208,7 @@ ENDIF
 \
 \       Name: GetSteeringAssist
 \       Type: Subroutine
-\   Category: Car geometry
+\   Category: Tactics
 \    Summary: Fetch the current Computer Assisted Steering (CAS) status and show
 \             or hide the CAS indicator
 \
@@ -40016,7 +40031,7 @@ IF _ACORNSOFT
 
 ELIF _SUPERIOR
 
- LDX menuKeysSuperior,Y \ Fetch the key number for menu option Y
+ LDX menuKeysSup,Y      \ Fetch the key number for menu option Y
 
 ENDIF
 
@@ -40128,7 +40143,7 @@ ENDIF
 \
 \       Name: ConvertNumberToBCD
 \       Type: Subroutine
-\   Category: Maths
+\   Category: Maths (Arithmetic)
 \    Summary: Convert a number into binary coded decimal (BCD), for printing
 \
 \ ------------------------------------------------------------------------------

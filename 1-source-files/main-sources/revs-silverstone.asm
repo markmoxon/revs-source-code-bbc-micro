@@ -2729,7 +2729,7 @@ ORG CODE%
 \ ******************************************************************************
 \
 \       Name: CallTrackHook
-\       Type: Variable
+\       Type: Subroutine
 \   Category: Track data
 \    Summary: The track file's hook code
 \  Deep dive: The track data file format
