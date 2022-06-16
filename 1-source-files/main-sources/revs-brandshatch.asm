@@ -35,12 +35,46 @@ LOAD% = &70DB           \ The load address of the track binary
 
 CODE% = &5300           \ The assembly address of the track data
 
+thisSectionFlags = &0001
+thisVectorNumber = &0002
+yStore = &001B
+horizonLine = &001F
+frontSegmentIndex = &0024
+directionFacing = &0025
+segmentCounter = &0042
+playerPastSegment = &0043
+xStore = &0045
+vergeBufferEnd = &004B
+horizonListIndex = &0051
+playerSpeedHi = &0063
+currentPlayer = &006F
+T = &0074
+U = &0075
+V = &0076
+W = &0077
+topTrackLine = &007F
+blockOffset = &0082
+objTrackSection = &06E8
 Multiply8x8 = &0C00
 Absolute16Bit = &0E40
-sub_C13E0 = &13E0
-sub_C1933 = &1933
+UpdateVectorNumber = &13E0
+MovePlayerBack = &140B
+CheckVergeOnScreen = &1933
+gseg13 = &2490
+gtrm2 = &2535
 Absolute8Bit = &3450
-sub_C4610 = &4610
+MultiplyElevation = &4610
+xTrackSegmentI = &5400
+yTrackSegmentI = &5500
+zTrackSegmentI = &5600
+xTrackSegmentO = &5700
+zTrackSegmentO = &5800
+xVergeRightLo = &5E40
+xVergeLeftLo = &5E68
+xVergeRightHi = &5E90
+xVergeLeftHi = &5EB8
+yVergeRight = &5F20
+yVergeLeft = &5F48
 
 \ ******************************************************************************
 \
@@ -56,7 +90,7 @@ ORG CODE%
 \
 \       Name: trackData
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -100,9 +134,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L53F0
+\       Name: sub_C53F0
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -111,10 +145,12 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L53F0
+.sub_C53F0
 
- STA &75
- LDA #&CD
+ STA U
+
+ LDA #205
+
  JMP Multiply8x8
 
  EQUB &00
@@ -123,7 +159,7 @@ ORG CODE%
 \
 \       Name: L53F8
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -140,7 +176,7 @@ ORG CODE%
 \
 \       Name: L53F9
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -157,7 +193,7 @@ ORG CODE%
 \
 \       Name: L53FA
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -174,7 +210,7 @@ ORG CODE%
 \
 \       Name: L53FB
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -191,7 +227,7 @@ ORG CODE%
 \
 \       Name: L53FC
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -208,7 +244,7 @@ ORG CODE%
 \
 \       Name: L53FD
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -225,7 +261,7 @@ ORG CODE%
 \
 \       Name: L53FE
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -242,7 +278,7 @@ ORG CODE%
 \
 \       Name: L53FF
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -257,152 +293,42 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5400
+\       Name: modifyAddressLo
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
-\ ------------------------------------------------------------------------------
-\
-\ BBC addr = value poked in subroutine
-\ (Plus any related pokes)
-\ Instruction before modification               -> After modification
-\
-\ Modifications applied by L5700 routine, poking value from L5400 into addresses
-\ in L5500:
-\
-\ !&1249 = L5672 in sub_C122D
-\ Also needs ?&1248 = &20
-\ 1248   B9 05 59   LDA trackData+&605,Y        -> JSR L5672
-\
-\ !&128A = L5A1B in sub_C1267
-\ 1289   20 E0 13   JSR sub_C13E0               -> JSR L5A1B
-\
-\ !&13CA = L5572 in sub_C12F7
-\ 13C9   20 DA 13   JSR sub_C13DA               -> JSR L5572
-\
-\ !&1427 = L5572 in sub_C1420
-\ 1426   20 DA 13   JSR sub_C13DA               -> JSR L5572
-\
-\ !&12FC = L54F1 in sub_C12F7
-\ Also needs ?&12FB = &20
-\ 12FB   18         CLC                         -> JSR L54F1
-\ 12FC   69 03      ADC #&03
-\
-\ !&261B = L56AF in sub_C2565
-\ Also needs !&261A = &4C
-\ 261A   85 1F      STA L001F                   -> JMP L56AF
-\ 261C   84 51      STY L0051
-\
-\ !&248C = L56BC in sub_C23D2
-\ Also needs ?&248B = &4C
-\ 248B   B0 2B      BCS C24B8                   -> JMP L56BC
-\ 248D   4C 03 24   JMP C2403
-\
-\ !&2539 = L5772 in sub_C24F6
-\ Also needs ?&2538 = &20
-\ 2538   99 48 5F   STA &5F48,Y                 -> JSR L5772
-\
-\ !&1594 = L57A1 in ProcessDrivingKeys
-\ 1593   20 00 0C   JSR Multiply8x8             -> JSR L57A1
-\
-\ !&4CD1 = L5562 in sub_C4CA4
-\ 4CD0   BD D0 53   LDA trackData+&0D0,X        -> LDA L5562,X
-\
-\ !&4CC9 = L5562 in sub_C4CA4
-\ 4CC8   BD F0 53   LDA trackData+&0F0,X        -> LDA L5662,X
-\
-\ !&4CC1 = L5762 in sub_C4CA4
-\ 4CC0   BD E0 53   LDA trackData+&0E0,X        -> LDA L5762,X
-\
-\ !&44D6 = L58A0 in Set5FB0
-\ 44D5   B9 D0 59   LDA L59D0,Y                 -> LDA L58A0,Y
-\
-\ !&4CD7 = L5462 in sub_C4CA4
-\ 4CD6   BD EA 59   LDA trackData+&6EA,X        -> LDA L5462,X
-\
-\ !&4CE1 = L5462 in sub_C4CA4
-\ 4CE0   BD EA 59   LDA trackData+&6EA,X        -> LDA L5462,X
-\
-\ !&1947 = L56C8 in sub_C193E
-\ 1946   20 33 19   JSR sub_C1933               -> JSR L56C8
-\
-\ !&24F3 = L55BD in sub_C24B9
-\ 24F2   20 0B 14   JSR sub_C140B               -> JSR L55BD
-\
-\ !&462C = L54EB in sub_C4626
-\ 462B   20 50 34   JSR Absolute8Bit            -> JSR L54EB
-\
-\ !&2543 = L53F0 in sub_C24F6
-\ 2542   20 50 34   JSR Absolute8Bit            -> JSR L53F0
-\
-\ Modifications applied by L5600 routine:
-\
-\ ?&3574 = 4 in L3550
-\ Not sure what this does, it's an entry in a table variable
-\
-\ ?&35F4 = &0B in L35D0
-\ Not sure what this does, it's an entry in a table variable
-\
-\ !&45CC = L59E9 in sub_C44EA
-\ Also needs &461B -> &45CB, ?&45CB = &20
-\ 45CB   0A         ASL A                       -> JSR L59E9
-\ 45CC   26 77      ROL &77
-\
-\ ?&2772 = &4B in sub_C2692
-\ 2771   C9 3C      CMP #&3C                    -> CMP #&4B
-\
-\ Modifications applied by L5672 routine:
-\
-\ ?&23B3 = A in sub_C22FF
-\ 23B2   A9 07      LDA #&07                    -> LDA #A
-\
-\ Modifications applied by L56C8 routine:
-\
-\ ?&1FEA = A in sub_C1FB4
-\ Also needs &1B0B -> &1FE9, ?&1FE9 = &A2
-\ 1FE9   A6 1F      LDX &1F                     -> LDX #A
-\
-\ Modifications applied by L5772 routine:
-\
-\ ?&1FEA = A in sub_C1FB4
-\ Also needs &1B0B -> &1FE9, ?&1FE9 = &A2
-\ 1FE9   A6 1F      LDX &1F                     -> LDX #A
-\
-\ Modifications applied by L5800 routine:
-\
-\ ?&1248 = &20 (see JSR L5672 above)
-\ ?&12FB = &20 (see JSR L54EB above)
-\ ?&2538 = &20 (see JSR L5772 above)
-\ ?&45CB = &20 (see JSR L57AD above)
-\
-\ ?&2545 = &EA in sub_C24F6
-\ 2545   4A         LSR A                       -> NOP
-\
-\ ?&4F55 = &16 in sub_C4F44
-\ 4F54   C9 12      CMP #&12                    -> CMP #&16
-\
-\ ?&4F59 = &16 in sub_C4F44
-\ 4F58   A9 12      LDA #&12                    -> LDA #&16
-\
-\ ?&24EA = &0D in L24AF
-\ Not sure what this does, it's an entry in a table variable
-\
-\ ?&1FE9 = &A2 (see LDX #A above)
-\
 \ ******************************************************************************
 
-.L5400
+.modifyAddressLo
 
- EQUB &49, &8A, &CA, &27, &FC, &1B, &8C, &39
- EQUB &94, &D1, &C9, &C1, &D6, &D7, &E1, &47
- EQUB &F3, &2C, &43, &00
+ EQUB &49               \ !&1249
+ EQUB &8A               \ !&128A
+ EQUB &CA               \ !&13CA
+ EQUB &27               \ !&1427
+ EQUB &FC               \ !&12FC
+ EQUB &1B               \ !&261B
+ EQUB &8C               \ !&248C
+ EQUB &39               \ !&2539
+ EQUB &94               \ !&1594
+ EQUB &D1               \ !&4CD1
+ EQUB &C9               \ !&4CC9
+ EQUB &C1               \ !&4CC1
+ EQUB &D6               \ !&44D6
+ EQUB &D7               \ !&4CD7
+ EQUB &E1               \ !&4CE1
+ EQUB &47               \ !&1947
+ EQUB &F3               \ !&24F3
+ EQUB &2C               \ !&462C
+ EQUB &43               \ !&2543
+
+ EQUB &00
 
 \ ******************************************************************************
 \
-\       Name: L5414
+\       Name: modifyAddressHi
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -411,17 +337,35 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5414
+.modifyAddressHi
 
- EQUB &12, &12, &13, &14, &12, &26, &24, &25
- EQUB &15, &4C, &4C, &4C, &44, &4C, &4C, &19
- EQUB &24, &46, &25, &00
+ EQUB &12               \ !&1249
+ EQUB &12               \ !&128A
+ EQUB &13               \ !&13CA
+ EQUB &14               \ !&1427
+ EQUB &12               \ !&12FC
+ EQUB &26               \ !&261B
+ EQUB &24               \ !&248C
+ EQUB &25               \ !&2539
+ EQUB &15               \ !&1594
+ EQUB &4C               \ !&4CD1
+ EQUB &4C               \ !&4CC9
+ EQUB &4C               \ !&4CC1
+ EQUB &44               \ !&44D6
+ EQUB &4C               \ !&4CD7
+ EQUB &4C               \ !&4CE1
+ EQUB &19               \ !&1947
+ EQUB &24               \ !&24F3
+ EQUB &46               \ !&462C
+ EQUB &25               \ !&2543
+
+ EQUB &00
 
 \ ******************************************************************************
 \
 \       Name: L5428
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -443,9 +387,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5462
+\       Name: extraSignData
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -454,7 +398,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5462
+.extraSignData
 
  EQUB &0C, &10, &23, &20, &38, &4D
  EQUB &58, &60, &6C, &8C, &A4, &B5, &C0, &D4
@@ -462,9 +406,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5472
+\       Name: sub_C5472
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -473,93 +417,120 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5472
+.sub_C5472
 
  LDA L53FA
  ASL A
+
  LDA L53FB
  ROL A
+
  PHA
+
  ROL A
  ROL A
  ROL A
- AND #&07
- STA &75
+ AND #%00000111
+ STA U
+
  LSR A
+
  PLA
- AND #&3F
+
+ AND #%00111111
+
  BCC L548C
 
 .L5488
 
- EOR #&3F
- ADC #&00
+ EOR #%00111111
+ ADC #0
 
 .L548C
 
  TAX
+
  LDY L57BF,X
+
  LDA L58BF,X
  TAX
- LDA &75
+
+ LDA U
  CLC
- ADC #&01
- AND #&02
+ ADC #1
+
+ AND #%00000010
  BNE L54A3
- STY &76
- STX &77
+
+ STY V
+
+ STX W
+
  BEQ L54A7
 
 .L54A3
 
- STX &76
- STY &77
+ STX V
+
+ STY W
 
 .L54A7
 
- LDA &75
- CMP #&04
+ LDA U
+ CMP #4
  BCC L54B3
- LDA #&00
- SBC &76
- STA &76
+
+ LDA #0
+ SBC V
+ STA V
 
 .L54B3
 
- LDA &75
- CMP #&06
+ LDA U
+ CMP #6
  BCS L54C3
- CMP #&02
+
+ CMP #2
  BCC L54C3
- LDA #&00
- SBC &77
- STA &77
+
+ LDA #0
+ SBC W
+ STA W
 
 .L54C3
 
- LDY &02
- LDA #&88
- STA &75
- LDA &76
- STA L5400,Y
- JSR L57BB
- STA L5800,Y
- LDA &77
- STA L5600,Y
- JSR L57BB
+ LDY thisVectorNumber
+
+ LDA #%10001000
+ STA U
+
+ LDA V
+ STA xTrackSegmentI,Y
+
+ JSR sub_C57BB
+
+ STA zTrackSegmentO,Y
+
+ LDA W
+ STA zTrackSegmentI,Y
+
+ JSR sub_C57BB
+
  EOR #&FF
  CLC
- ADC #&01
- STA L5700,Y
+ ADC #1
+ STA xTrackSegmentO,Y
+
  LDA L53FC
- STA L5500,Y
+ STA yTrackSegmentI,Y
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L54EB
+\       Name: sub_C54EB
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -568,17 +539,19 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L54EB
+.sub_C54EB
 
- EOR &25
+ EOR directionFacing
+
  JSR Absolute8Bit
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L54F1
+\       Name: sub_C54F1
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -587,25 +560,27 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L54F1
+.sub_C54F1
 
- LDA &01
- AND #&40
+ LDA thisSectionFlags
+ AND #%01000000
  BEQ L54FA
- JSR L5582
+
+ JSR sub_C5582
 
 .L54FA
 
- LDA &24
+ LDA frontSegmentIndex
  CLC
- ADC #&03
+ ADC #3
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L5500
+\       Name: newContentLo
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -614,17 +589,35 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5500
+.newContentLo
 
- EQUB &72, &1B, &72, &72, &F1, &AF, &BC, &72
- EQUB &A1, &62, &62, &62, &A0, &62, &62, &C8
- EQUB &BD, &EB, &F0, &00
+ EQUB LO(sub_C5672)
+ EQUB LO(sub_C5A1B)
+ EQUB LO(sub_C5572)
+ EQUB LO(sub_C5572)
+ EQUB LO(sub_C54F1)
+ EQUB LO(sub_C56AF)
+ EQUB LO(sub_C56BC)
+ EQUB LO(sub_C5772)
+ EQUB LO(sub_C57A1)
+ EQUB LO(xExtraSignVector)
+ EQUB LO(yExtraSignVector)
+ EQUB LO(zExtraSignVector)
+ EQUB LO(extraRacingLine)
+ EQUB LO(extraSignData)
+ EQUB LO(extraSignData)
+ EQUB LO(sub_C56C8)
+ EQUB LO(sub_C55BD)
+ EQUB LO(sub_C54EB)
+ EQUB LO(sub_C53F0)
+
+ EQUB &00
 
 \ ******************************************************************************
 \
-\       Name: L5514
+\       Name: newContentHi
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -633,17 +626,35 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5514
+.newContentHi
 
- EQUB &56, &5A, &55, &55
- EQUB &54, &56, &56, &57, &57, &55, &56, &57
- EQUB &58, &54, &54, &56, &55, &54, &53, &00
+ EQUB HI(sub_C5672)
+ EQUB HI(sub_C5A1B)
+ EQUB HI(sub_C5572)
+ EQUB HI(sub_C5572)
+ EQUB HI(sub_C54F1)
+ EQUB HI(sub_C56AF)
+ EQUB HI(sub_C56BC)
+ EQUB HI(sub_C5772)
+ EQUB HI(sub_C57A1)
+ EQUB HI(xExtraSignVector)
+ EQUB HI(yExtraSignVector)
+ EQUB HI(zExtraSignVector)
+ EQUB HI(extraRacingLine)
+ EQUB HI(extraSignData)
+ EQUB HI(extraSignData)
+ EQUB HI(sub_C56C8)
+ EQUB HI(sub_C55BD)
+ EQUB HI(sub_C54EB)
+ EQUB HI(sub_C53F0)
+
+ EQUB &00
 
 \ ******************************************************************************
 \
 \       Name: L5528
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -665,9 +676,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5562
+\       Name: xExtraSignVector
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -676,7 +687,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5562
+.xExtraSignVector
 
  EQUB &F0, &D6, &D8, &0C, &09, &FE
  EQUB &F6, &32, &1C, &DF, &F4, &F2, &F8, &33
@@ -684,9 +695,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5572
+\       Name: sub_C5572
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -695,13 +706,15 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5572
+.sub_C5572
 
- LDA &01
- AND #&40
+ LDA thisSectionFlags
+ AND #%01000000
  BEQ L557E
- JSR sub_C13E0
- JSR L55C4
+
+ JSR UpdateVectorNumber
+
+ JSR sub_C55C4
 
 .L557E
 
@@ -709,9 +722,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L557F
+\       Name: sub_C557F
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -720,15 +733,15 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L557F
+.sub_C557F
 
- JSR sub_C13E0
+ JSR UpdateVectorNumber
 
 \ ******************************************************************************
 \
-\       Name: L5582
+\       Name: sub_C5582
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -737,55 +750,69 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5582
+.sub_C5582
 
  LDY L53F8
+
  LDA L53FD
+
  SEC
- BIT &25
+
+ BIT directionFacing
  BMI L55A0
- ADC #&00
+
+ ADC #0
+
  CMP L5728,Y
  BCC L55B6
- LDA #&00
+
+ LDA #0
+
  INY
+
  CPY L53F9
  BCC L55B6
- LDY #&00
+
+ LDY #0
+
  BEQ L55B6
 
 .L55A0
 
- SBC #&01
+ SBC #1
+
  BCS L55B6
+
  TYA
- AND #&7F
+ AND #%01111111
  TAY
- CPY #&01
+
+ CPY #1
  BCS L55AF
+
  LDY L53F9
 
 .L55AF
 
  DEY
+
  LDA L5728,Y
  SEC
- SBC #&01
+ SBC #1
 
 .L55B6
 
  STA L53FD
- STY L53F8
 
-.L55BC
+ STY L53F8
 
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L55BD
+\       Name: sub_C55BD
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -794,17 +821,18 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L55BD
+.sub_C55BD
 
- BIT &43
- BMI L55BC
- JMP &140B
+ BIT playerPastSegment
+ BMI sub_C55BD-1
+
+ JMP MovePlayerBack
 
 \ ******************************************************************************
 \
-\       Name: L55C4
+\       Name: sub_C55C4
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -813,42 +841,57 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L55C4
+.sub_C55C4
 
- STX &45
+ STX xStore
+
  LDY L53F8
+
  BMI L55FA
+
  LDA L5528,Y
- STA &74
+ STA T
+
  LDA L5428,Y
- BIT &25
+
+ BIT directionFacing
+
  JSR Absolute16Bit
- STA &75
- LDA &74
+
+ STA U
+
+ LDA T
  CLC
  ADC L53FA
  STA L53FA
- LDA &75
+
+ LDA U
  ADC L53FB
  STA L53FB
+
  LDA L5628,Y
- BIT &25
+
+ BIT directionFacing
+
  JSR Absolute8Bit
+
  CLC
  ADC L53FC
  STA L53FC
 
 .L55FA
 
- JSR L5472
- LDX &45
+ JSR sub_C5472
+
+ LDX xStore
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L5600
+\       Name: ModifyGameCode (Part 3 of 3)
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -857,25 +900,30 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5600
+.mods3
 
- LDA #&04
+ LDA #4
  STA &3574
- LDA #&0B
+
+ LDA #11
  STA &35F4
+
  LDA #&E9
  STA &45CC
+
  LDA #&59
  STA &45CD
+
  LDA #&4B
  STA &2772
+
  RTS
 
 \ ******************************************************************************
 \
 \       Name: L561A
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -893,7 +941,7 @@ ORG CODE%
 \
 \       Name: L5628
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -911,15 +959,32 @@ ORG CODE%
  EQUB &01, &FF, &FE, &FE, &01, &00, &00, &00
  EQUB &FC, &02, &03, &FD, &FD, &01, &03, &00
  EQUB &FE, &00, &01, &FC, &FC, &03, &03, &FC
- EQUB &FE, &01, &1A, &4C, &D9, &E6, &0D, &08
+ EQUB &FE, &01
+
+\ ******************************************************************************
+\
+\       Name: yExtraSignVector
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: 
+\
+\ ------------------------------------------------------------------------------
+\
+\ 
+\
+\ ******************************************************************************
+
+.yExtraSignVector
+
+ EQUB &1A, &4C, &D9, &E6, &0D, &08
  EQUB &EC, &06, &E0, &10, &12, &05, &1E, &01
  EQUB &FA, &08
 
 \ ******************************************************************************
 \
-\       Name: L5672
+\       Name: sub_C5672
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -928,46 +993,58 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5672
+.sub_C5672
 
- STY &1B
+ STY yStore
+
  LDA L5905,Y
- STA &02
+ STA thisVectorNumber
+
  TYA
  LSR A
  LSR A
  LSR A
  TAY
+
  LDA L5846,Y
  STA L53FA
+
  LDA L5864,Y
  STA L53FB
+
  LDA L5828,Y
  STA L53FC
+
  LDA L5882,Y
  LSR A
  ROR A
  STA L53F8
- LDA #&0E
+
+ LDA #14
  ROR A
  STA &23B3
- LDA #&00
+
+ LDA #0
  STA L53FD
- BIT &25
+
+ BIT directionFacing
  BMI L56AA
- JSR L55C4
+
+ JSR sub_C55C4
 
 .L56AA
 
- LDY &1B
- LDA &02
+ LDY yStore
+
+ LDA thisVectorNumber
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L56AF
+\       Name: sub_C56AF
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -976,15 +1053,20 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L56AF
+.sub_C56AF
 
  PHA
- LDA &42
- CMP #&0C
+
+ LDA segmentCounter
+ CMP #12
+
  PLA
+
  BCS L56BB
- STA &1F
- STY &51
+
+ STA horizonLine
+
+ STY horizonListIndex
 
 .L56BB
 
@@ -992,9 +1074,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L56BC
+\       Name: sub_C56BC
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1003,23 +1085,26 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L56BC
+.sub_C56BC
 
  BCC L56C5
- LDA &42
- CMP #&0A
+
+ LDA segmentCounter
+ CMP #10
+
  BCC L56C5
+
  RTS
 
 .L56C5
 
- JMP &2490
+ JMP gseg13
 
 \******************************************************************************
 \
-\       Name: L56C8
+\       Name: sub_C56C8
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1028,83 +1113,260 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L56C8
+.sub_C56C8
 
  TYA
- AND #&20
- STA &82
- LDA #&00
+ AND #%00100000
+ STA blockOffset
+
+ LDA #0
 
 .L56CF
 
- STA &7F
+ STA topTrackLine
 
 .L56D1
 
  DEY
- LDA &5F20,Y
- CMP &1F
+
+ LDA yVergeRight,Y
+
+ CMP horizonLine
  BCS L56F7
- CMP &7F
+
+ CMP topTrackLine
  BCS L56CF
- LDA &7F
- ADC #&00
- STA &5F20,Y
- LDA &82
+
+ LDA topTrackLine
+ ADC #0
+ STA yVergeRight,Y
+
+ LDA blockOffset
+
  BNE L56D1
- LDA &7F
+
+ LDA topTrackLine
+
  STA &1FEA
+
  INY
- JSR &253B
+
+ JSR gtrm2+6
+
  DEY
+
  SEC
- ROR &82
+ ROR blockOffset
+
  BMI L56D1
 
 .L56F7
 
- LDY &4B
+ LDY vergeBufferEnd
  DEY
- STY &75
- JMP sub_C1933
+ STY U
+
+ JMP CheckVergeOnScreen
 
  EQUB &00
 
 \ ******************************************************************************
 \
-\       Name: L5700
+\       Name: ModifyGameCode (Part 1 of 3)
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine modifies the main game code. The routine is in three parts, which
+\ are run via the CallTrackHook routine once the track has been loaded.
+\
+\ There are two types of modification:
+\
+\   * 16-bit pokes take values from (newContentHi newContentLo) and poke them
+\     into the addresses given in (modifyAddressHi modifyAddressLo)
+\
+\   * 8-bit pokes are done with straightforward LDA and STA instructions
+\
+\ Using BBC BASIC terminology, 16-bit pokes are shown as:
+\
+\   !&xxxx = y
+\
+\ while 8-bit pokes are shown as:
+\
+\   ?&xxxx = y
+\
+\ Each of these pokes the value y into address &xxxx.
+\
+\ Modifications are shown in the following format:
+\
+\ !<address> = <new value> in <subroutine>
+\ Also needs <related pokes>
+\ <instructions before modification>                -> <after modification>
+\
+\ There are other routines in this file that modify the main game code, but
+\ these modifications are performed while the game is running. These are also
+\ listed below.
+\
+\ Modifications applied by ModifyGameCode (Part 1 of 3)
+\ -----------------------------------------------------
+\
+\ !&1249 = sub_C5672 in GetSectionCoords
+\ Also needs ?&1248 = &20 from ModifyGameCode (Part 2 of 3)
+\ 1248   B9 05 59   LDA trackSectionFrom,Y          -> JSR sub_C5672
+\
+\ !&128A = sub_C5A1B in GetFirstSegment
+\ 1289   20 E0 13   JSR UpdateVectorNumber          -> JSR sub_C5A1B
+\
+\ !&13CA = sub_C5572 in GetTrackSegment
+\ 13C9   20 DA 13   JSR UpdateCurveVector           -> JSR sub_C5572
+\
+\ !&1427 = sub_C5572 in TurnPlayerAround
+\ 1426   20 DA 13   JSR UpdateCurveVector           -> JSR sub_C5572
+\
+\ !&12FC = sub_C54F1 in GetTrackSegment
+\ Also needs ?&12FB = &20 from ModifyGameCode (Part 2 of 3)
+\ 12FB   18         CLC                             -> JSR sub_C54F1
+\ 12FC   69 03      ADC #3
+\
+\ !&261B = sub_C56AF and ?&261A = &4C in GetVergeAndMarkers
+\ 261A   85 1F      STA horizonLine                 -> JMP sub_C56AF
+\ 261C   84 51      STY horizonListIndex
+\
+\ !&248C = sub_C56BC and ?&248B = &4C in GetSegmentAngles
+\ 248B   B0 2B      BCS gseg16                      -> JMP sub_C56BC
+\ 248D   4C 03 24   JMP gseg4
+\
+\ !&2539 = sub_C5772 in GetTrackAndMarkers
+\ Also needs ?&2538 = &20 from ModifyGameCode (Part 2 of 3)
+\ 2538   99 48 5F   STA yVergeLeft,Y                -> JSR sub_C5772
+\
+\ !&1594 = sub_C57A1 in ProcessDrivingKeys
+\ 1593   20 00 0C   JSR Multiply8x8                 -> JSR sub_C57A1
+\
+\ !&4CD1 = xExtraSignVector in BuildRoadSign
+\ 4CD0   BD D0 53   LDA xTrackSignVector,X          -> LDA xExtraSignVector,X
+\
+\ !&4CC9 = yExtraSignVector in BuildRoadSign
+\ 4CC8   BD F0 53   LDA yTrackSignVector,X          -> LDA yExtraSignVector,X
+\
+\ !&4CC1 = zExtraSignVector in BuildRoadSign
+\ 4CC0   BD E0 53   LDA zTrackSignVector,X          -> LDA zExtraSignVector,X
+\
+\ !&44D6 = extraRacingLine in bestRacingLine
+\ 44D5   B9 D0 59   LDA trackRacingLine,Y           -> LDA extraRacingLine,Y
+\
+\ !&4CD7 = extraSignData in BuildRoadSign
+\ 4CD6   BD EA 59   LDA trackSignData,X             -> LDA extraSignData,X
+\
+\ !&4CE1 = extraSignData in BuildRoadSign
+\ 4CE0   BD EA 59   LDA trackSignData,X             -> LDA extraSignData,X
+\
+\ !&1947 = sub_C56C8 in MapSegmentsToLines
+\ 1946   20 33 19   JSR CheckVergeOnScreen          -> JSR sub_C56C8
+\
+\ !&24F3 = sub_C55BD in MovePlayerSegment
+\ 24F2   20 0B 14   JSR MovePlayerBack              -> JSR sub_C55BD
+\
+\ !&462C = sub_C54EB in MovePlayerOnTrack
+\ 462B   20 50 34   JSR Absolute8Bit                -> JSR sub_C54EB
+\
+\ !&2543 = sub_C53F0 in GetTrackAndMarkers
+\ 2542   20 50 34   JSR Absolute8Bit                -> JSR sub_C53F0
+\
+\ Modifications applied by ModifyGameCode (Part 2 of 3)
+\ -----------------------------------------------------
+\
+\ ?&1248 = &20 (see JSR sub_C5672 above)
+\ ?&12FB = &20 (see JSR sub_C54EB above)
+\ ?&2538 = &20 (see JSR sub_C5772 above)
+\ ?&45CB = &20 (see JSR L57AD above)
+\
+\ ?&2545 = &EA in GetTrackAndMarkers
+\ 2545   4A         LSR A                           -> NOP
+\
+\ ?&4F55 = 22 in MoveHorizon
+\ 4F54   C9 12      CMP #18                         -> CMP #22
+\
+\ ?&4F59 = 22 in MoveHorizon
+\ 4F58   A9 12      LDA #18                         -> LDA #22
+\
+\ ?&24EA = 13 in MovePlayerSegment
+\ 24E9   C9 0E      CMP #14                         -> CMP #13
+\
+\ ?&1FE9 = &A2 (see LDX #A above)
+\
+\ Modifications applied by ModifyGameCode (Part 3 of 3)
+\ -----------------------------------------------------
+\
+\ ?&3574 = 4 in objectTop
+\ ?&35F4 = 11 = 3 + 8  in objectBottom
+\ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)        -> (4, -3, 1, 0)
+\                    Coordinates: (10, 4, 9, 10)    -> (1, -4, 9, 10)
+\ Changes chicane sign into a u-turn
+\
+\ !&45CC = sub_C59E9 in ApplyElevation
+\ Also needs ?&45CB = &20 from ModifyGameCode (Part 2 of 3)
+\ 45CB   0A         ASL A                           -> JSR sub_C59E9
+\ 45CC   26 77      ROL W
+\
+\ ?&2772 = &4B in ApplyDriverTactics
+\ 2771   C9 3C      CMP #60                         -> CMP #75
+\
+\ Modifications applied by sub_C5672
+\ ----------------------------------
+\
+\ ?&23B3 = A in GetSectionAngles
+\ 23B2   A9 07      LDA #7                          -> LDA #A
+\
+\ Modifications applied by sub_C56C8
+\ ----------------------------------
+\
+\ ?&1FEA = A in DrawObject
+\ Also needs ?&1FE9 = &A2 from ModifyGameCode (Part 2 of 3)
+\ 1FE9   A6 1F      LDX horizonLine                 -> LDX #A
+\
+\ Modifications applied by sub_C5772
+\ ----------------------------------
+\
+\ ?&1FEA = A in DrawObject
+\ Also needs ?&1FE9 = &A2 from ModifyGameCode (Part 2 of 3)
+\ 1FE9   A6 1F      LDX horizonLine                 -> LDX #A
 \
 \ ******************************************************************************
 
-.L5700
+.ModifyGameCode
 
- LDX #&12
+ LDX #18
 
-.L5702
+.mods1
 
- LDA L5414,X
- STA &75
- LDA L5400,X
- STA &74
- LDY #&00
- LDA L5500,X
- STA (&74),Y
+ LDA modifyAddressHi,X
+ STA U
+
+ LDA modifyAddressLo,X
+ STA T
+
+ LDY #0
+
+ LDA newContentLo,X
+ STA (T),Y
+
  INY
- LDA L5514,X
- STA (&74),Y
+
+ LDA newContentHi,X
+ STA (T),Y
+
  DEX
- BPL L5702
+
+ BPL mods1
+
  LDA #&4C
  STA &261A
  STA &248B
- JMP L5800
+
+ JMP mods2
 
  EQUB &00
 
@@ -1112,7 +1374,7 @@ ORG CODE%
 \
 \       Name: L5728
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1134,9 +1396,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5762
+\       Name: zExtraSignVector
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1145,7 +1407,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5762
+.zExtraSignVector
 
  EQUB &D2, &04, &1C, &EC, &0A, &EB
  EQUB &F7, &2D, &1B, &2B, &F8, &10, &F2, &29
@@ -1153,9 +1415,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5772
+\       Name: sub_C5772
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1164,39 +1426,48 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5772
+.sub_C5772
 
  STA &1FEA
- STA &5F48,Y
+
+ STA yVergeLeft,Y
 
 .L5778
 
- LDA &5E40,Y
+ LDA xVergeRightLo,Y
  SEC
- SBC &5E68,Y
- LDA &5E90,Y
- SBC &5EB8,Y
+ SBC xVergeLeftLo,Y
+
+ LDA xVergeRightHi,Y
+ SBC xVergeLeftHi,Y
+
  BPL L5793
- LDA &5E40,Y
- STA &5E68,Y
- LDA &5E90,Y
- STA &5EB8,Y
+
+ LDA xVergeRightLo,Y
+ STA xVergeLeftLo,Y
+
+ LDA xVergeRightHi,Y
+ STA xVergeLeftHi,Y
 
 .L5793
 
- LDA &5F20,Y
- STA &5F48,Y
+ LDA yVergeRight,Y
+ STA yVergeLeft,Y
+
  INY
- CPY #&09
+
+ CPY #9
  BCC L5778
- LDY &51
+
+ LDY horizonListIndex
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L57A1
+\       Name: sub_C57A1
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1205,30 +1476,39 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L57A1
+.sub_C57A1
 
- LDY &6F
- LDA &06E8,Y
- LDY #&B5
- CMP #&20
+ LDY currentPlayer
+
+ LDA objTrackSection,Y
+
+ LDY #181
+
+ CMP #32
  BNE L57AE
- LDY #&F0
+
+ LDY #240
 
 .L57AE
 
  TYA
+
  JSR Multiply8x8
- STA &75
+
+ STA U
+
  JSR Multiply8x8
- ASL &74
+
+ ASL T
  ROL A
+
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L57BB
+\       Name: sub_C57BB
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1237,16 +1517,17 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L57BB
+.sub_C57BB
 
  PHP
- JMP &461B
+
+ JMP MultiplyElevation+11
 
 \ ******************************************************************************
 \
 \       Name: L57BF
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1269,9 +1550,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5800
+\       Name: ModifyGameCode (Part 2 of 3)
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1280,7 +1561,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5800
+.mods2
 
  LDA #&20
  STA &1248
@@ -1291,22 +1572,23 @@ ORG CODE%
  LDA #&EA
  STA &2545
 
- LDA #&16
+ LDA #22
  STA &4F55
  STA &4F59
- LDA #&0D
+
+ LDA #13
  STA &24EA
 
  LDA #&A2
  STA &1FE9
 
- JMP L5600
+ JMP mods3
 
 \ ******************************************************************************
 \
 \       Name: L5828
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1326,7 +1608,7 @@ ORG CODE%
 \
 \       Name: L5846
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1347,7 +1629,7 @@ ORG CODE%
 \
 \       Name: L5864
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1368,7 +1650,7 @@ ORG CODE%
 \
 \       Name: L5882
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1386,9 +1668,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L58A0
+\       Name: extraRacingLine
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1397,7 +1679,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L58A0
+.extraRacingLine
 
  EQUB &18, &33, &18, &00, &4F, &31, &68, &19
  EQUB &30, &19, &2E, &18, &18, &18, &18, &33
@@ -1408,7 +1690,7 @@ ORG CODE%
 \
 \       Name: L58BF
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1433,7 +1715,7 @@ ORG CODE%
 \
 \       Name: L5900
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1450,7 +1732,7 @@ ORG CODE%
 \
 \       Name: L5905
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1492,7 +1774,7 @@ ORG CODE%
 \
 \       Name: L59D0
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1510,9 +1792,9 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5919
+\       Name: sub_C59E9
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1521,25 +1803,30 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5919
+.sub_C59E9
 
- BNE L5924
- LDA &63
- JSR sub_C4610
- BPL L5924
- DEC &77
+ BNE L59F4
 
-.L5924
+ LDA playerSpeedHi
+
+ JSR MultiplyElevation
+
+ BPL L59F4
+
+ DEC W
+
+.L59F4
 
  ASL A
- ROL &77
+ ROL W
+
  RTS
 
 \ ******************************************************************************
 \
 \       Name: L5928
 \       Type: Variable
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1554,29 +1841,194 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5A00
+\       Name: trackLapTimeSec
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Lap times for adjusting the race class (seconds)
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If the slowest lap time is a human player, and it's slower than one of these
+\ times, then we change the race class to the relevant difficulty.
 \
 \ ******************************************************************************
 
-.L5A00
+ EQUB 50                \ Set class to Novice if slowest lap time > 1:50
 
- EQUB &32, &28, &00, &01, &01, &00, &67, &00
- EQUB &67, &4A, &3C, &32, &2C, &A1, &00, &A1
- EQUB &74, &5D, &4F, &44, &86, &92, &98, &05
- EQUB &25, &46, &00
+ EQUB 40                \ Set class to Amateur if slowest lap time > 1:40
+
+ EQUB 0                 \ Otherwise set class to Professional
 
 \ ******************************************************************************
 \
-\       Name: L5A1B
+\       Name: trackLapTimeMin
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Lap times for adjusting the race class (minutes)
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ If the slowest lap time is a human player, and it's slower than one of these
+\ times, then we change the race class to the relevant difficulty.
+\
+\ ******************************************************************************
+
+ EQUB 1                 \ Set class to Novice if slowest lap time > 1:50
+
+ EQUB 1                 \ Set class to Amateur if slowest lap time > 1:40
+
+ EQUB 0                 \ Otherwise set class to Professional
+
+\ ******************************************************************************
+\
+\       Name: trackGearRatio
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The gear ratio for each gear
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ The rev count is calculated by multiplying the track gear ratio by the current
+\ speed, so lower gears correspond to more revs at the same wheel speed when
+\ compared to higher gears.
+\
+\ ******************************************************************************
+
+ EQUB 103               \ Reverse
+
+ EQUB 0                 \ Neutral
+
+ EQUB 103               \ First gear
+
+ EQUB 74                \ Second gear
+
+ EQUB 60                \ Third gear
+
+ EQUB 50                \ Fourth gear
+
+ EQUB 44                \ Fifth gear
+
+\ ******************************************************************************
+\
+\       Name: trackGearPower
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The power for each gear
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ The engine torque is calculated by multiplying the rev count by the power for
+\ the relevant gear, so lower gears create more torque at the same rev count
+\ when compared to higher gears.
+\
+\ ******************************************************************************
+
+ EQUB 161               \ Reverse
+
+ EQUB 0                 \ Neutral
+
+ EQUB 161               \ First gear
+
+ EQUB 116               \ Second gear
+
+ EQUB 93                \ Third gear
+
+ EQUB 79                \ Fourth gear
+
+ EQUB 68                \ Fifth gear
+
+\ ******************************************************************************
+\
+\       Name: trackBaseSpeed
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The base speed for each race class, used when generating the best
+\             racing lines and non-player driver speeds
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 134               \ Base speed for Novice
+
+ EQUB 146               \ Base speed for Amateur
+
+ EQUB 152               \ Base speed for Professional
+
+\ ******************************************************************************
+\
+\       Name: trackStartPosition
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The starting race position of the player during a practice or
+\             qualifying lap
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 5
+
+\ ******************************************************************************
+\
+\       Name: trackCarSpacing
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The spacing between the cars at the start of a qualifying lap, in
+\             segments
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 37
+
+\ ******************************************************************************
+\
+\       Name: trackTimerAdjust
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Adjustment factor for the speed of the timers to allow for
+\             fine-tuning of time on a per-track basis
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ The value of the timerAdjust variable in the main game code is incremented on
+\ every iteration of the main driving loop. When it reaches the value in
+\ trackTimerAdjust, the timers adds 18/100 of a second rather than 9/100 of
+\ a second. Decreasing this value therefore speeds up the timers, allowing their
+\ speed to be adjusted on a per-track basis.
+\
+\ Setting this value to 255 disables the timer adjustment.
+\
+\ ******************************************************************************
+
+ EQUB 70
+
+\ ******************************************************************************
+\
+\       Name: trackRaceSlowdown
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Slowdown factor for non-player drivers in the race
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ Reduce the speed of all cars in a race by this amount (this does not affect
+\ the speed during qualifying). I suspect this is used for testing purposes.
+\
+\ ******************************************************************************
+
+ EQUB 0
+
+\ ******************************************************************************
+\
+\       Name: sub_C5A1B
 \       Type: Subroutine
-\   Category: 
+\   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
@@ -1585,10 +2037,11 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5A1B 
+.sub_C5A1B
 
- JSR L557F
- JMP L5472
+ JSR sub_C557F
+
+ JMP sub_C5472
 
  EQUB 0
 
@@ -1596,51 +2049,72 @@ ORG CODE%
 \
 \       Name: CallTrackHook
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The track file's hook code
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
 .CallTrackHook
 
- JMP L5700
+ JMP ModifyGameCode     \ Modify the main game code
 
 \ ******************************************************************************
 \
 \       Name: trackChecksum
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The track file's checksum
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
 .trackChecksum
 
- EQUB &87, &D4, &78, &52
+ EQUB &87               \ Counts the number of data bytes ending in %00
+
+ EQUB &D4               \ Counts the number of data bytes ending in %01
+
+ EQUB &78               \ Counts the number of data bytes ending in %10
+ 
+ EQUB &52               \ Counts the number of data bytes ending in %11
+
+\ ******************************************************************************
+\
+\       Name: trackGameName
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The game name
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This string is checked by the loader to see whether a track file has been
+\ loaded (and if not, it loads one).
+\
+\ ******************************************************************************
+
+.trackGameName
+
+ EQUS "REVS"            \ Game name
 
 \ ******************************************************************************
 \
 \       Name: trackName
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: The track name
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This string is shown on the loading screen.
 \
 \ ******************************************************************************
 
- EQUS "REVS"            \ Game name
- EQUS "Brands Hatch"    \ Track name
+.trackName
+
+ EQUS "Brands Hatch"     \ Track name
  EQUB 13
 
  EQUB &DC, &20, &22, &20, &42, &52
