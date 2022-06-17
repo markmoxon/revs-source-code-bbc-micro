@@ -4,7 +4,8 @@
 \
 \ Revs was written by Geoffrey J Crammond and is copyright Acornsoft 1985
 \
-\ The code on this site has been disassembled from the original game discs
+\ The code on this site has been reconstructed from a disassembly of the
+\ original game binaries
 \
 \ The commentary is copyright Mark Moxon, and any misunderstandings or mistakes
 \ in the documentation are entirely my fault
@@ -676,7 +677,7 @@ ORG &0000
 
  SKIP 0                 \ Temporary storage for X so it can be preserved through
                         \ calls to DrawCarInPosition, DrawCarOrSign and
-                        \ DrawVergeEdge
+                        \ DrawSegmentEdge
 
 .thisYawIndex
 
@@ -799,7 +800,7 @@ ORG &0000
 .pixelMaskIndex
 
  SKIP 1                 \ The index into the vergePixelMask table for the colour
-                        \ of the verge edge we are drawing in DrawVergeEdge
+                        \ of the verge edge we are drawing in DrawSegmentEdge
 
 .objectDistanceHi
 
@@ -9091,6 +9092,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Check whether a verge coordinate is on-screen
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9148,6 +9150,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Map verges in the track segment list to track lines in the track
 \             view
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9455,11 +9458,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdges
+\       Name: DrawVergeEdge
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: Draw all the individual edges that make up an entire track verge
-\             edge in the screen buffer
+\    Summary: Draw one of the four track verge edges into the screen buffer
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9514,7 +9517,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.DrawVergeEdges
+.DrawVergeEdge
 
  STY vergeType          \ Set vergeType to the type of verge that we are
                         \ going to draw
@@ -9568,12 +9571,13 @@ ENDIF
  LDY prevPitchIndex     \ Set Y = prevPitchIndex, to use as the index to the
                         \ verge's pitch angles
 
- SEC                    \ Set the C flag to pass to DrawVergeEdge so it does not
-                        \ draw the edge (as this is the first call for this edge
-                        \ so we just set up the variables, ready for the next
-                        \ call)
+ SEC                    \ Set the C flag to pass to DrawSegmentEdge so it does
+                        \ not draw the edge (as this is the first call for this
+                        \ edge so we just set up the variables, ready for the
+                        \ next call)
 
- JSR DrawVergeEdge      \ Draw the verge edge for this entry in the verge buffer
+ JSR DrawSegmentEdge    \ Draw the verge edge for this entry (i.e. this segment)
+                        \ in the verge buffer
 
 .vedg1
 
@@ -9624,8 +9628,8 @@ ENDIF
 
  STY vergeDepthOfField  \ Set Y = vergeDepthOfField
 
- SEC                    \ Set the C flag to pass to DrawVergeEdge so it does not
-                        \ draw the edge
+ SEC                    \ Set the C flag to pass to DrawSegmentEdge so it does
+                        \ not draw the edge
 
  LDA vergeType          \ Set A to the type of verge we are drawing
 
@@ -9654,7 +9658,7 @@ ENDIF
                         \ green and black, so is this how we draw the track for
                         \ segments that are beyond the verge depth of field
 
- CLC                    \ Set the C flag to pass to DrawVergeEdge so it draws
+ CLC                    \ Set the C flag to pass to DrawSegmentEdge so it draws
                         \ the edge
 
  BCC vedg5              \ Jump to vedg5 with the C flag clear and A set to
@@ -9686,7 +9690,7 @@ ENDIF
                         \
                         \   * A = pixelMaskVerge + 8 for white
                         \
-                        \ And then pass this to DrawVergeEdge
+                        \ And then pass this to DrawSegmentEdge
 
  LDA vergeType          \ Set A to the type of verge we are drawing
 
@@ -9699,18 +9703,19 @@ ENDIF
                         \ but just sets up the variables
 
  LDA #0                 \ Set A = 0, so we pass A = pixelMaskVerge to
-                        \ DrawVergeEdge
+                        \ DrawSegmentEdge
 
 .vedg4
 
  ASL A                  \ Set A = pixelMaskVerge + A * 4
  ASL A                  \
  CLC                    \ This also clears the C flag, so the call to
- ADC pixelMaskVerge     \ DrawVergeEdge draws the verge edge
+ ADC pixelMaskVerge     \ DrawSegmentEdge draws the verge edge
 
 .vedg5
 
- JSR DrawVergeEdge      \ Draw the verge edge for this entry in the verge buffer
+ JSR DrawSegmentEdge    \ Draw the verge edge for this entry (i.e. this segment)
+                        \ in the verge buffer
 
  STY prevPitchIndex     \ Update the value of prevPitchIndex to point to the
                         \ entry we just processed, which is now the previous
@@ -9731,13 +9736,14 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw the track into the screen buffer
+\  Deep Dive: Drawing the track verges
 \
 \ ******************************************************************************
 
 .DrawTrack
 
  LDA #&80               \ Set P = &80, to use as the low byte of (Q P) in the
- STA P                  \ DrawVergeEdges that we call below
+ STA P                  \ DrawVergeEdge that we call below
 
  LDA horizonListIndex   \ Set A = X = horizonListIndex + 40
  CLC                    \
@@ -9783,7 +9789,7 @@ ENDIF
                         \ lines on-screen to the verge buffer for the left side
                         \ of the track
 
- LDY #0                 \ Set Y = 0, so the call to DrawVergeEdges draws the
+ LDY #0                 \ Set Y = 0, so the call to DrawVergeEdge draws the
                         \ leftVergeStart verge (the left edge of the left verge)
 
  STY pixelMaskVerge     \ Set pixelMaskVerge = 0
@@ -9792,7 +9798,7 @@ ENDIF
                         \ verge for segments that are within the verge depth of
                         \ field
 
- JSR DrawVergeEdges     \ Draw the left edge of the left verge (leftVergeStart)
+ JSR DrawVergeEdge      \ Draw the left edge of the left verge (leftVergeStart)
 
  LDA #8                 \ Set pixelMaskVerge = 8
  STA pixelMaskVerge
@@ -9800,7 +9806,7 @@ ENDIF
  LDY #0                 \ Set pixelMaskNoVerge = 0
  STY pixelMaskNoVerge
 
- INY                    \ Set Y = 1, so the call to DrawVergeEdges draws the
+ INY                    \ Set Y = 1, so the call to DrawVergeEdge draws the
                         \ leftTrackStart verge (the right edge of the left
                         \ verge)
 
@@ -9808,7 +9814,7 @@ ENDIF
  CLC                    \ verge all the way from the horizon to the player
  ADC #40
 
- JSR DrawVergeEdges     \ Draw the right edge of the left verge (leftTrackStart)
+ JSR DrawVergeEdge      \ Draw the right edge of the left verge (leftTrackStart)
 
  LDA vergeDepthOfField  \ Set A = vergeDepthOfField to pass to the
                         \ SetVergeBackground routine
@@ -9865,20 +9871,20 @@ ENDIF
  LDA #16                \ Set pixelMaskVerge = 16
  STA pixelMaskVerge
 
- LDY #2                 \ Set Y = 2, so the call to DrawVergeEdges draws the
+ LDY #2                 \ Set Y = 2, so the call to DrawVergeEdge draws the
                         \ rightVergeStart verge (the left edge of the right
                         \ verge)
 
  LDA horizonListIndex   \ Set A = horizonListIndex so we draw the next verge all
                         \ the way from the horizon to the player
 
- JSR DrawVergeEdges     \ Draw the left edge of the right verge
+ JSR DrawVergeEdge      \ Draw the left edge of the right verge
                         \ (rightVergeStart)
 
  LDA #28                \ Set pixelMaskVerge = 28
  STA pixelMaskVerge
 
- LDY #3                 \ Set Y = 3, so the call to DrawVergeEdges draws the
+ LDY #3                 \ Set Y = 3, so the call to DrawVergeEdge draws the
                         \ rightGrassStart verge (the right edge of the right
                         \ verge)
 
@@ -9886,7 +9892,7 @@ ENDIF
                         \ verge for segments that are within the verge depth of
                         \ field
 
- JSR DrawVergeEdges     \ Draw the right edge of the right verge
+ JSR DrawVergeEdge      \ Draw the right edge of the right verge
                         \ (rightGrassStart)
 
  LDA vergeDepthOfField  \ Set A = vergeDepthOfField to pass to the
@@ -9913,6 +9919,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Update the background colour table for any verges that overlap the
 \             left edge of the screen
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -19634,10 +19641,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 1 of 7)
+\       Name: DrawSegmentEdge (Part 1 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a single segment's edge as part of a whole track verge edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -19669,9 +19677,9 @@ ENDIF
 \                         * Set = do not draw this edge, but do set up the
 \                                 variables to pass to the next call
 \
-\   M                   Yaw angle from the previous call to DrawVergeEdge
+\   M                   Yaw angle from the previous call to DrawSegmentEdge
 \
-\   N                   Pitch angle from the previous call to DrawVergeEdge
+\   N                   Pitch angle from the previous call to DrawSegmentEdge
 \
 \   prevYawIndex        Same as X for the first call, or the yaw angle index of
 \                       the previous call (i.e. the previous segment) if this is
@@ -19684,14 +19692,14 @@ ENDIF
 \   Y                   Y is unchanged
 \
 \   M                   Set to 128 + edge's yaw angle * 4, to carry through to
-\                       the next call to DrawVergeEdge
+\                       the next call to DrawSegmentEdge
 \
 \   N                   Set to the edge's pitch angle to carry through to the
-\                       next call to DrawVergeEdge
+\                       next call to DrawSegmentEdge
 \
 \ ******************************************************************************
 
-.DrawVergeEdge
+.DrawSegmentEdge
 
  PHP                    \ Store the C flag on the stack so we can retrieve it
                         \ later
@@ -19734,7 +19742,7 @@ ENDIF
  ROR GG                 \ Rotate the C flag into bit 7 of RR, so bit 7 is set if
                         \ the edge is off-screen, or clear if it is on-screen
                         \
-                        \ If this is not the first call to DrawVergeEdge, then
+                        \ If this is not the first call to DrawSegmentEdge, then
                         \ bit 6 will now contain the on-screen/off-screen bit
                         \ for the previous segment's verge edge
 
@@ -19776,11 +19784,11 @@ ENDIF
                         \ the subroutine
 
  BIT GG                 \ If bit 6 of GG is clear, then the previous segment's
- BVC dver3              \ verge edge from the last call to DrawVergeEdge was
+ BVC dver3              \ verge edge from the last call to DrawSegmentEdge was
                         \ on-screen, so jump to dver3
 
                         \ If we get here then previous segment's verge edge from
-                        \ the last call to DrawVergeEdge was off-screen
+                        \ the last call to DrawSegmentEdge was off-screen
 
  BMI dver8              \ If bit 7 of GG is set, then this segment's verge edge,
                         \ which we are now drawing, is also off-screen, so jump
@@ -19824,15 +19832,16 @@ ENDIF
                         \   * N = the pitch angle of the previous edge
                         \
                         \ We only get to this point if this is not the first
-                        \ call to DrawVergeEdge for this verge edge, so we know
-                        \ that M and N are defined
+                        \ call to DrawSegmentEdge for this verge edge, so we
+                        \ know that M and N are defined
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 2 of 7)
+\       Name: DrawSegmentEdge (Part 2 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Set up the edge's gradient
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20051,10 +20060,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 3 of 7)
+\       Name: DrawSegmentEdge (Part 3 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Modify the drawing routines according to the edge gradient
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20218,10 +20228,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 4 of 7)
+\       Name: DrawSegmentEdge (Part 4 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Set variables to use when updating the background colour
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20383,10 +20394,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 5 of 7)
+\       Name: DrawSegmentEdge (Part 5 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Calculate the dash data block and screen addresses for the edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20487,10 +20499,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 6 of 7)
+\       Name: DrawSegmentEdge (Part 6 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Calculate the dash data block for the edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20657,15 +20670,16 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: DrawVergeEdge (Part 7 of 7)
+\       Name: DrawSegmentEdge (Part 7 of 7)
 \       Type: Subroutine
 \   Category: Drawing the track
-\    Summary: Save the angles for the next call to DrawVergeEdge and return from
-\             the subroutine
+\    Summary: Save the angles for the next call to DrawSegmentEdge and return
+\             from the subroutine
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part gets things ready for the next call to DrawVergeEdge, when we draw
+\ This part gets things ready for the next call to DrawSegmentEdge, when we draw
 \ the next segment's verge edge, and returns from the subroutine.
 \
 \ ******************************************************************************
@@ -20678,7 +20692,7 @@ ENDIF
 
                         \ If we get here then the edge we are drawing is wholly
                         \ on-screen, so we can store the edge's angles in M and
-                        \ N to be picked up in the next call to DrawVergeEdge
+                        \ N to be picked up in the next call to DrawSegmentEdge
 
  LDA W                  \ Set M = W, so we pass on 128 + yaw angle * 4
  STA M
@@ -20708,6 +20722,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a shallow gradient from left to right
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20833,7 +20848,7 @@ ENDIF
                         \ segment, then we have reached the end of the edge to
                         \ draw, in which case DrawVergeByteLeft will jump to
                         \ StopDrawingEdge to abort this edge and return us two
-                        \ routines up the call stack, to DrawVergeEdge
+                        \ routines up the call stack, to DrawSegmentEdge
 
 .shlr5
 
@@ -20846,7 +20861,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
  JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shlr7
 
@@ -20859,7 +20874,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
  JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shlr9
 
@@ -20872,8 +20887,8 @@ ENDIF
  LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
  JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
                         \ second dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
 .shlr11
 
@@ -20896,7 +20911,7 @@ ENDIF
  LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
  JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shlr14
 
@@ -20909,7 +20924,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
  JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shlr16
 
@@ -20922,7 +20937,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
  JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shlr18
 
@@ -20935,8 +20950,8 @@ ENDIF
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
                         \ third dash dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
 .shlr20
 
@@ -20969,6 +20984,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a shallow gradient from right to left
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21094,7 +21110,7 @@ ENDIF
                         \ segment, then we have reached the end of the edge to
                         \ draw, in which case DrawVergeByteRight will jump to
                         \ StopDrawingEdge to abort this edge and return us two
-                        \ routines up the call stack, to DrawVergeEdge
+                        \ routines up the call stack, to DrawSegmentEdge
 
 .shrl5
 
@@ -21107,7 +21123,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
  JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shrl7
 
@@ -21120,7 +21136,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
  JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shrl9
 
@@ -21133,7 +21149,7 @@ ENDIF
  LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
  JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shrl11
 
@@ -21156,8 +21172,8 @@ ENDIF
  LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
  JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
                         \ second dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
 .shrl14
 
@@ -21170,7 +21186,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
  JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shrl16
 
@@ -21183,7 +21199,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
  JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
 .shrl18
 
@@ -21196,8 +21212,8 @@ ENDIF
  LDX #0                 \ Draw the edge in pixel 0 of the first dash data block
  JSR DrawVergeByteLeft  \ (the leftmost pixel) and draw a fill byte in the
                         \ second dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
 .shrl20
 
@@ -21234,6 +21250,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a steep gradient from left to right
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21307,7 +21324,7 @@ ENDIF
                         \ segment, then we have reached the end of the edge to
                         \ draw, in which case DrawVergeByteLeft will jump to
                         \ StopDrawingEdge to abort this edge and return us two
-                        \ routines up the call stack, to DrawVergeEdge
+                        \ routines up the call stack, to DrawSegmentEdge
 
                         \ We now do the slope error calculation for pixel 0 of
                         \ the first dash data block
@@ -21333,7 +21350,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
  JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 1
  BCC stlr3              \ of the first dash data block
@@ -21344,7 +21361,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
  JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 2
  BCC stlr4              \ of the first dash data block
@@ -21355,8 +21372,8 @@ ENDIF
  LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
  JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
                         \ second dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 3
  BCC stlr5              \ of the first dash data block
@@ -21371,7 +21388,7 @@ ENDIF
  LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
  JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 0
  BCC stlr6              \ of the second dash data block
@@ -21382,7 +21399,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
  JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 1
  BCC stlr7              \ of the second dash data block
@@ -21393,7 +21410,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
  JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 2
  BCC stlr8              \ of the second dash data block
@@ -21404,8 +21421,8 @@ ENDIF
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
                         \ third dash dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 2
  BCC stlr9              \ of the second dash data block
@@ -21436,6 +21453,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a steep gradient from right to left
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21509,7 +21527,7 @@ ENDIF
                         \ segment, then we have reached the end of the edge to
                         \ draw, in which case DrawVergeByteRight will jump to
                         \ StopDrawingEdge to abort this edge and return us two
-                        \ routines up the call stack, to DrawVergeEdge
+                        \ routines up the call stack, to DrawSegmentEdge
 
                         \ We now do the slope error calculation for pixel 3 of
                         \ the second dash data block
@@ -21535,7 +21553,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the second dash data block
  JSR DrawVergeByteRight \ (the third pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 2
  BCC strl3              \ of the second dash data block
@@ -21546,7 +21564,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the second dash data block
  JSR DrawVergeByteRight \ (the second pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 1
  BCC strl4              \ of the second dash data block
@@ -21557,7 +21575,7 @@ ENDIF
  LDX #0                 \ Draw the edge in pixel 0 of the second dash data block
  JSR DrawVergeByteRight \ (the leftmost pixel) and draw a fill byte in the third
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 0
  BCC strl5              \ of the second dash data block
@@ -21572,8 +21590,8 @@ ENDIF
  LDX #3                 \ Draw the edge in pixel 3 of the first dash data block
  JSR DrawVergeByteLeft  \ (the rightmost pixel) and draw a fill byte in the
                         \ second dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 3
  BCC strl6              \ of the first dash data block
@@ -21584,7 +21602,7 @@ ENDIF
  LDX #2                 \ Draw the edge in pixel 2 of the first dash data block
  JSR DrawVergeByteLeft  \ (the third pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 2
  BCC strl7              \ of the first dash data block
@@ -21595,7 +21613,7 @@ ENDIF
  LDX #1                 \ Draw the edge in pixel 1 of the first dash data block
  JSR DrawVergeByteLeft  \ (the second pixel) and draw a fill byte in the second
                         \ dash data block, or abort the drawing and return to
-                        \ DrawVergeEdge if we've finished drawing the edge
+                        \ DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 1
  BCC strl8              \ of the first dash data block
@@ -21606,8 +21624,8 @@ ENDIF
  LDX #0                 \ Draw the edge in pixel 0 of the first dash data block
  JSR DrawVergeByteLeft  \ (the leftmost pixel) and draw a fill byte in the
                         \ second dash data block, or abort the drawing and
-                        \ return to DrawVergeEdge if we've finished drawing the
-                        \ edge
+                        \ return to DrawSegmentEdge if we've finished drawing
+                        \ the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 0
  BCC strl9              \ of the first dash data block
@@ -21772,11 +21790,12 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw two bytes into the screen buffer in the first and second dash
 \             data blocks for the edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
 \ This routine draws a single byte of a verge edge in the first dash data block
-\ of the three that we set up in DrawVergeEdge. It also draws a second byte to
+\ of the three that we set up in DrawSegmentEdge. It also draws a second byte to
 \ the right, in the second dash data block, using the fill colour so the screen
 \ gets filled to the right of the verge edge.
 \
@@ -21820,7 +21839,7 @@ ENDIF
 
 .verl1
 
- NOP                    \ This instruction is modified by the DrawVergeEdge
+ NOP                    \ This instruction is modified by the DrawSegmentEdge
                         \ routine, to be NOP, INY or DEY, to move on to the next
                         \ track line as appropriate
 
@@ -21833,7 +21852,7 @@ ENDIF
 
 .verl2
 
- STA &7000,Y            \ This instruction is modified by the DrawVergeEdges
+ STA &7000,Y            \ This instruction is modified by the DrawVergeEdge
                         \ routine to point to the relevant table for the edge
                         \ we are drawing:
                         \
@@ -21877,7 +21896,7 @@ ENDIF
 
 .verl5
 
- INY                    \ This instruction is modified by the DrawVergeEdge
+ INY                    \ This instruction is modified by the DrawSegmentEdge
                         \ routine, to be NOP, INY or DEY, to move on to the next
                         \ track line as appropriate
 
@@ -21967,8 +21986,8 @@ ENDIF
                         \ DrawVergeByteRight routines. These are only called
                         \ from the DrawShallowToLeft, DrawShallowToRight,
                         \ DrawSteepToLeft or DrawSteepToRight routines, which in
-                        \ turn are only called from DrawVergeEdge, so this
-                        \ returns us to DrawVergeEdge to stop drawing the
+                        \ turn are only called from DrawSegmentEdge, so this
+                        \ returns us to DrawSegmentEdge to stop drawing the
                         \ current segment's verge edge and move on to the next
                         \ segment
 
@@ -21987,11 +22006,12 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw two bytes into the screen buffer in the second and third dash
 \             data blocks for the edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
 \ This routine draws a single byte of a verge edge in the second dash data block
-\ of the three that we set up in DrawVergeEdge. It also draws a second byte to
+\ of the three that we set up in DrawSegmentEdge. It also draws a second byte to
 \ the right, in the third dash data block, using the fill colour so the screen
 \ gets filled to the right of the verge edge.
 \
@@ -22035,7 +22055,7 @@ ENDIF
 
 .verb1
 
- NOP                    \ This instruction is modified by the DrawVergeEdge
+ NOP                    \ This instruction is modified by the DrawSegmentEdge
                         \ routine, to be NOP, INY or DEY, to move on to the next
                         \ track line as appropriate
 
@@ -22048,7 +22068,7 @@ ENDIF
 
 .verb2
 
- STA &7000,Y            \ This instruction is modified by the DrawVergeEdges
+ STA &7000,Y            \ This instruction is modified by the DrawVergeEdge
                         \ routine to point to the relevant table for the edge
                         \ we are drawing:
                         \
@@ -22092,7 +22112,7 @@ ENDIF
 
 .verb5
 
- INY                    \ This instruction is modified by the DrawVergeEdge
+ INY                    \ This instruction is modified by the DrawSegmentEdge
                         \ routine, to be NOP, INY or DEY, to move on to the next
                         \ track line as appropriate
 
@@ -22164,6 +22184,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw a green byte into the screen buffer in the second dash data
 \             block for the edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22230,6 +22251,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw a green byte into the screen buffer in the first dash data
 \             block for the edge
+\  Deep Dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -27362,6 +27384,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawShallowToRight
 \             routine
+\  Deep Dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -27507,6 +27530,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawSteepToRight
 \             routine
+\  Deep Dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -27528,6 +27552,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawSteepToLeft
 \             routine
+\  Deep Dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -27895,6 +27920,7 @@ NEXT
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawShallowToLeft
 \             routine
+\  Deep Dive: Drawing the track verges
 \
 \ ******************************************************************************
 

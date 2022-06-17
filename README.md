@@ -55,7 +55,7 @@ My hope is that this repository will be useful for those who want to learn more 
 
 Revs was written by Geoffrey J Crammond and is copyright &copy; Acornsoft 1985.
 
-The code on this site has been disassembled from the version released on the [Complete BBC Micro Games Archive at bbcmicro.co.uk](http://bbcmicro.co.uk/game.php?id=267).
+The code on this site has been reconstructed from a disassembly of the version released on the [Complete BBC Micro Games Archive at bbcmicro.co.uk](http://bbcmicro.co.uk/game.php?id=267).
 
 The commentary is copyright &copy; Mark Moxon. Any misunderstandings or mistakes in the documentation are entirely my fault.
 
