@@ -29686,7 +29686,9 @@ NEXT
                         \ 2.13
                         \
                         \ carSpeedHi is now the speed of the car in terms of
-                        \ 1/256-ths of a segment
+                        \ 1/256-ths of a segment, with 120 mph in playerSpeedHi
+                        \ corresponding to a whole segment in carSpeedHi (as
+                        \ 120 * 2.13 = 255)
 
  RTS                    \ Return from the subroutine
 
@@ -30210,13 +30212,13 @@ ENDIF
                         \
                         \   zTyreForceRear = zTyreForceRear >> 2
                         \
-                        \   xPlayerDelta = (xTyreForceRear * 1.5
+                        \   xPlayerAccel = (xTyreForceRear * 1.5
                         \                   + xTyreForceNose) * 410
                         \
-                        \   zPlayerDelta = (zTyreForceRear * 1.5
+                        \   zPlayerAccel = (zTyreForceRear * 1.5
                         \                   + zTyreForceNose) * 410
                         \
-                        \   zTyreForceBoth = zPlayerDeltaHi
+                        \   zTyreForceBoth = zPlayerAccelHi
 
  LDA heightAboveTrack   \ If heightAboveTrack < 2, jump to dmod3
  CMP #2
@@ -30225,7 +30227,7 @@ ENDIF
                         \ If we get here then heightAboveTrack >= 2
 
  LDX #2                 \ We now zero the three 16-bit bytes at spinYawDelta,
-                        \ xPlayerDelta and zPlayerDelta, so set a counter in X
+                        \ xPlayerAccel and zPlayerAccel, so set a counter in X
                         \ for the three variables
 
  LDA #0                 \ Set A = 0 to use as the zero value
@@ -30244,36 +30246,36 @@ ENDIF
 
  JSR ApplyWingBalance   \ Calculate the following:
                         \
-                        \   xPlayerDelta =   xPlayerDelta
+                        \   xPlayerAccel =   xPlayerAccel
                         \                  - scaledSpeed * xPrevVelocityHi
                         \
-                        \   zPlayerDelta =   zPlayerDelta
+                        \   zPlayerAccel =   zPlayerAccel
                         \                 - scaledSpeed
                         \                 * (wingBalance * playerSpeedHi + 2048)
                         \                 * abs(zVelocity)
 
  JSR RotateCarToCoord   \ Rotate this vector:
                         \
-                        \   [ xPlayerDelta ]
+                        \   [ xPlayerAccel ]
                         \   [       -      ]
-                        \   [ zPlayerDelta ]
+                        \   [ zPlayerAccel ]
                         \
                         \ from the frame of reference of the player's car into
                         \ the 3D world coordinate system, putting the result
                         \ into:
                         \
-                        \   [ xVelocityDelta ]
-                        \   [        -       ]
-                        \   [ zVelocityDelta ]
+                        \   [ xAcceleration ]
+                        \   [       -       ]
+                        \   [ zAcceleration ]
                         \
                         \ We ignore the y-coordinate as the calculations are
                         \ all done along the ground
 
  JSR UpdateVelocity     \ Calculate the following:
                         \
-                        \   xPlayerSpeed = xPlayerSpeed + xVelocityDelta << 5
+                        \   xPlayerSpeed = xPlayerSpeed + xAcceleration << 5
                         \
-                        \   zPlayerSpeed = zPlayerSpeed + zVelocityDelta << 3
+                        \   zPlayerSpeed = zPlayerSpeed + zAcceleration << 3
                         \
                         \   spinYawAngle = spinYawAngle + spinYawDelta << 3
 
@@ -30739,11 +30741,11 @@ ENDIF
 \
 \   zTyreForceRear = zTyreForceRear >> 2
 \
-\   xPlayerDelta = (xTyreForceRear * 1.5 + xTyreForceNose) * 410
+\   xPlayerAccel = (xTyreForceRear * 1.5 + xTyreForceNose) * 410
 \
-\   zPlayerDelta = (zTyreForceRear * 1.5 + zTyreForceNose) * 410
+\   zPlayerAccel = (zTyreForceRear * 1.5 + zTyreForceNose) * 410
 \
-\   zTyreForceBoth = zPlayerDeltaHi
+\   zTyreForceBoth = zPlayerAccelHi
 \
 \ ******************************************************************************
 
@@ -30863,21 +30865,21 @@ ENDIF
  ROL A                  \           = (zTyreForceRear * 1.5 + zTyreForceNose)
                         \              * 410
 
- LDY G                  \ Set zPlayerDelta = (A T)
- STA xPlayerDeltaHi,Y   \           = (zTyreForceRear * 1.5 + zTyreForceNose)
+ LDY G                  \ Set zPlayerAccel = (A T)
+ STA xPlayerAccelHi,Y   \           = (zTyreForceRear * 1.5 + zTyreForceNose)
  LDA T                  \              * 410
- STA xPlayerDeltaLo,Y
+ STA xPlayerAccelLo,Y
 
  DEC G                  \ Decrement G so the next iteration stores the result in
-                        \ xPlayerDelta
+                        \ xPlayerAccel
 
  DEX                    \ Decrement X twice so the next iteration calculates
  DEX                    \ (xTyreForceRear * 1.5 + xTyreForceNose) * 410
 
- BPL forc4              \ Loop back until we have calculated both zPlayerDelta
-                        \ and xPlayerDelta
+ BPL forc4              \ Loop back until we have calculated both zPlayerAccel
+                        \ and xPlayerAccel
 
- LDA zPlayerDeltaHi     \ Set zTyreForceBoth = zPlayerDeltaHi
+ LDA zPlayerAccelHi     \ Set zTyreForceBoth = zPlayerAccelHi
  STA zTyreForceBoth
 
  RTS                    \ Return from the subroutine
@@ -30927,9 +30929,9 @@ ENDIF
 \
 \                         * 1 = zPlayerSpeed
 \
-\                         * 6 = xPlayerDelta
+\                         * 6 = xPlayerAccel
 \
-\                         * 7 = zPlayerDelta
+\                         * 7 = zPlayerAccel
 \
 \                         * 8 = xVelocity
 \
@@ -30949,9 +30951,9 @@ ENDIF
 \
 \   K                   Offset of the variable to store the result in:
 \
-\                         * 3 = xVelocityDelta
+\                         * 3 = xAcceleration
 \
-\                         * 4 = zVelocityDelta
+\                         * 4 = zAcceleration
 \
 \                         * 8 = xVelocity
 \
@@ -31103,11 +31105,11 @@ ENDIF
 \
 \   Y                   Offset of the variable to update:
 \
-\                         * 3 = xVelocityDelta
+\                         * 3 = xAcceleration
 \
-\                         * 4 = zVelocityDelta
+\                         * 4 = zAcceleration
 \
-\                         * 6 = xPlayerDelta
+\                         * 6 = xPlayerAccel
 \
 \                         * 9 = zVelocity
 \
@@ -31190,11 +31192,11 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   [ xVelocityDelta ]   [  cosYawAngle   0   sinYawAngle ]   [ xPlayerDelta ]
-\   [        -       ] = [       0        1        0      ] . [       -      ]
-\   [ zVelocityDelta ]   [ -sinYawAngle   0   cosYawAngle ]   [ zPlayerDelta ]
+\   [ xAcceleration ]   [  cosYawAngle   0   sinYawAngle ]   [ xPlayerAccel ]
+\   [       -       ] = [       0        1        0      ] . [       -      ]
+\   [ zAcceleration ]   [ -sinYawAngle   0   cosYawAngle ]   [ zPlayerAccel ]
 \
-\ This rotates the xPlayerDelta vector from the frame of reference of the
+\ This rotates the xPlayerAccel vector from the frame of reference of the
 \ player's car into the 3D world coordinate system.
 \
 \ The rotation matrix is the transpose of the matrix from RotateCoordToCar,
@@ -31203,19 +31205,19 @@ ENDIF
 \
 \ The individual calculations are as follows:
 \
-\   xVelocityDelta = xPlayerDelta * cosYawAngle + zPlayerDelta * sinYawAngle
+\   xAcceleration = xPlayerAccel * cosYawAngle + zPlayerAccel * sinYawAngle
 \
-\   zVelocityDelta = zPlayerDelta * cosYawAngle - xPlayerDelta * sinYawAngle
+\   zAcceleration = zPlayerAccel * cosYawAngle - xPlayerAccel * sinYawAngle
 \
 \ ******************************************************************************
 
 .RotateCarToCoord
 
  LDY #6                 \ Set Y = 6, so in the call to RotateVector, variableY
-                        \ is xPlayerDelta and variableY+1 is zPlayerDelta
+                        \ is xPlayerAccel and variableY+1 is zPlayerAccel
 
  LDA #3                 \ Set A = 3, so in the call to RotateVector, we store
-                        \ the result in xVelocityDelta and zVelocityDelta
+                        \ the result in xAcceleration and zAcceleration
 
  LDX #%01000000         \ Set bit 6 and clear bit 7 of X, to set the polarity in
                         \ the call to RotateVector
@@ -31223,11 +31225,11 @@ ENDIF
                         \ Fall through into RotateVector to calculate the
                         \ following:
                         \
-                        \   xVelocityDelta =   xPlayerDelta * cosYawAngle
-                        \                    + zPlayerDelta * sinYawAngle
+                        \   xAcceleration =   xPlayerAccel * cosYawAngle
+                        \                   + zPlayerAccel * sinYawAngle
                         \
-                        \   zVelocityDelta =   zPlayerDelta * cosYawAngle
-                        \                    - xPlayerDelta * sinYawAngle
+                        \   zAcceleration =   zPlayerAccel * cosYawAngle
+                        \                   - xPlayerAccel * sinYawAngle
 
 \ ******************************************************************************
 \
@@ -31270,11 +31272,11 @@ ENDIF
 \
 \                         * 0 = xPlayerSpeed and zPlayerSpeed
 \
-\                         * 6 = xPlayerDelta and zPlayerDelta
+\                         * 6 = xPlayerAccel and zPlayerAccel
 \
 \   A                   Offset of the variable to store the result in:
 \
-\                         * 3 = xVelocityDelta and zVelocityDelta
+\                         * 3 = xAcceleration and zAcceleration
 \
 \                         * 8 = xVelocity and zVelocity
 \
@@ -31482,9 +31484,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   xPlayerSpeed = xPlayerSpeed + xVelocityDelta << 5
+\   xPlayerSpeed = xPlayerSpeed + xAcceleration << 5
 \
-\   zPlayerSpeed = zPlayerSpeed + zVelocityDelta << 3
+\   zPlayerSpeed = zPlayerSpeed + zAcceleration << 3
 \
 \   spinYawAngle = spinYawAngle + spinYawDelta << 3
 \
@@ -31500,9 +31502,9 @@ ENDIF
  LDA #0                 \ Set V = 0, to use as the sign bit for (V A T)
  STA V
 
- LDA xVelocityDeltaLo,X \ Set (A T) = xVelocityDelta for axis X
+ LDA xAccelerationLo,X  \ Set (A T) = xAcceleration for axis X
  STA T
- LDA xVelocityDeltaHi,X
+ LDA xAccelerationHi,X
 
  BPL delf2              \ If A is positive, jump to delf2 to skip the following
                         \ instruction
@@ -33142,9 +33144,9 @@ ENDIF
 \
 \ This routine calcvulates the following:
 \
-\   xPlayerDelta = xPlayerDelta - scaledSpeed * xPrevVelocityHi
+\   xPlayerAccel = xPlayerAccel - scaledSpeed * xPrevVelocityHi
 \
-\   zPlayerDelta = zPlayerDelta
+\   zPlayerAccel = zPlayerAccel
 \                     - scaledSpeed * (wingBalance * playerSpeedHi + 2048)
 \                                   * abs(zVelocity)
 \
@@ -33194,7 +33196,7 @@ ENDIF
                         \           = scaledSpeed * |xPrevVelocityHi|
 
  LDY #6                 \ Set Y = 6, so the call to SubtractCoords uses
-                        \ xPlayerDelta
+                        \ xPlayerAccel
 
  LDA xPrevVelocityHi    \ Set A = xPrevVelocityHi so the call to SubtractCoords
                         \ sets the sign to abs(xPrevVelocity)
@@ -33205,11 +33207,11 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   xPlayerDelta = xPlayerDelta
+                        \   xPlayerAccel = xPlayerAccel
                         \                  - scaledSpeed * |xPrevVelocityHi|
                         \                                * abs(xPrevVelocity)
                         \
-                        \       = xPlayerDelta - scaledSpeed * xPrevVelocityHi
+                        \       = xPlayerAccel - scaledSpeed * xPrevVelocityHi
 
  LDA playerSpeedHi      \ Set U = playerSpeedHi
  STA U
@@ -33236,7 +33238,7 @@ ENDIF
                         \           * (wingBalance * playerSpeedHi + 2048)
 
  LDY #7                 \ Set Y = 6, so the call to SubtractCoords uses
-                        \ zPlayerDelta
+                        \ zPlayerAccel
 
  LDA zVelocityHi        \ Set A = zVelocityHi so the call to SubtractCoords sets
                         \ the sign to abs(zVelocity)
@@ -33247,7 +33249,7 @@ ENDIF
                         \
                         \ so that's:
                         \
-                        \   zPlayerDelta = zPlayerDelta - scaledSpeed
+                        \   zPlayerAccel = zPlayerAccel - scaledSpeed
                         \                 * (wingBalance * playerSpeedHi + 2048)
                         \                 * abs(zVelocity)
 
@@ -38093,7 +38095,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xVelocityDeltaLo
+\       Name: xAccelerationLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the x-coordinate of the change in velocity of the
@@ -38101,13 +38103,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.xVelocityDeltaLo
+.xAccelerationLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zVelocityDeltaLo
+\       Name: zAccelerationLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the z-coordinate of the change in velocity of the
@@ -38115,7 +38117,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.zVelocityDeltaLo
+.zAccelerationLo
 
  EQUB 0
 
@@ -38134,7 +38136,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaLo
+\       Name: xPlayerAccelLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the x-coordinate of the change in velocity of the
@@ -38142,13 +38144,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.xPlayerDeltaLo
+.xPlayerAccelLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaLo
+\       Name: zPlayerAccelLo
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the z-coordinate of the change in velocity of the
@@ -38156,7 +38158,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.zPlayerDeltaLo
+.zPlayerAccelLo
 
  EQUB 0
 
@@ -38334,7 +38336,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xVelocityDeltaHi
+\       Name: xAccelerationHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the x-coordinate of the change in velocity of the
@@ -38342,13 +38344,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.xVelocityDeltaHi
+.xAccelerationHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zVelocityDeltaHi
+\       Name: zAccelerationHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the z-coordinate of the change in velocity of the
@@ -38356,7 +38358,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.zVelocityDeltaHi
+.zAccelerationHi
 
  EQUB 0
 
@@ -38375,7 +38377,7 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: xPlayerDeltaHi
+\       Name: xPlayerAccelHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the x-coordinate of the change in velocity of the
@@ -38383,13 +38385,13 @@ ENDIF
 \
 \ ******************************************************************************
 
-.xPlayerDeltaHi
+.xPlayerAccelHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: zPlayerDeltaHi
+\       Name: zPlayerAccelHi
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the z-coordinate of the change in velocity of the
@@ -38397,7 +38399,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.zPlayerDeltaHi
+.zPlayerAccelHi
 
  EQUB 0
 
