@@ -30585,11 +30585,11 @@ ENDIF
                         \
                         \   xSteeringForce = -zVelocity * steering
 
- LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
+ LDX #2                 \ Set X = 2, so in the call to MultiplyCoords+7 we use
                         \ (steeringHi steeringLo) as the 16-bit sign-magnitude
                         \ value to multiply
 
- LDY #8                 \ Set Y = 8, so in the call to MultiplyCoords we use
+ LDY #8                 \ Set Y = 8, so in the call to MultiplyCoords+7 we use
                         \ xVelocity as the 16-bit signed number
 
  LDA #%01000000         \ Set bit 6 and clear bit 7 of H, to add the result
@@ -32151,13 +32151,10 @@ ENDIF
 \
 \           zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
 \
-\       * If |xTyreForceNoseHi| < |zTyreForceNoseHi| (for tyre X):
+\       * Set the following (as appropriate for tyre X):
 \
-\           A = |xTyreForceNoseHi| / 2 + |zTyreForceNoseHi|
-\
-\         or if |xTyreForceNoseHi| >= |zTyreForceNoseHi| (for tyre X)
-\
-\           A = |xTyreForceNoseHi| + |zTyreForceNoseHi| / 2
+\           A =   max(|xTyreForceNoseHi|, |zTyreForceNoseHi|)
+\               + min(|xTyreForceNoseHi|, |zTyreForceNoseHi|) / 2
 \
 \   * Rotate a new bit 7 into tyreSqueal for tyre X as follows:
 \
@@ -32313,13 +32310,18 @@ ENDIF
 
  CLC                    \ Set A = A + T
  ADC T                  \
-                        \ So if |xTyreForceNoseHi| < |zTyreForceNoseHi|:
+                        \ So if |zTyreForceNoseHi| > |xTyreForceNoseHi|:
                         \
-                        \   A = |xTyreForceNoseHi| / 2 + |zTyreForceNoseHi|
+                        \   A = |zTyreForceNoseHi| + |xTyreForceNoseHi| / 2
                         \
                         \ or if |xTyreForceNoseHi| >= |zTyreForceNoseHi|:
                         \
                         \   A = |xTyreForceNoseHi| + |zTyreForceNoseHi| / 2
+                        \
+                        \ In other words:
+                        \
+                        \   A =   max(|xTyreForceNoseHi|, |zTyreForceNoseHi|)
+                        \       + min(|xTyreForceNoseHi|, |zTyreForceNoseHi|) / 2
 
 .tfor6
 
