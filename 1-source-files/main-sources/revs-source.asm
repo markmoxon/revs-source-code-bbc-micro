@@ -5328,8 +5328,8 @@ ORG &0B00
 
  STA engineStatus       \ Set engineStatus = 0 to turn off the engine
 
- STA yGravityDelta      \ Set yGravityDelta = to cancel the effect of gravity on
-                        \ the car
+ STA yGravityDelta      \ Set yGravityDelta = 0 to cancel the effect of gravity
+                        \ on the car
 
  STA soundRevCount      \ Set soundRevCount = 0 to stop the engine sound
 
@@ -29048,7 +29048,26 @@ NEXT
 \ Calculate the following:
 \
 \   * liftFromTorque = the lift of the front of the car caused by accelerating
-\     or braking
+\     or braking, in the range -5 to +3
+\
+\ A positive value of liftFromTorque means the horizon is drawn lower on the
+\ screen, which means the nose is being pulled up.
+\
+\ The value of liftFromTorque is only changed if the car is on the ground. The
+\ logic is as follows:
+\
+\   * Horizon goes down when we are not in reverse, we are applying the throttle
+\     and engine torque is non-zero (i.e. we pull the nose of the car up by
+\     by incrementing liftFromTorque, to a maximum of 3)
+\
+\   * Horizon goes up when we are not in reverse, we are applying the brakes and
+\     we are moving (i.e. we push the nose of the car down by decrementing
+\     liftFromTorque, to a minimum of -5)
+\
+\   * Otherwise, gradually bring the nose back to the normal level of zero, with
+\     the value incrementing towards zero at twice the rate that it decrements
+\     towards zero (so the nose rises at twice the speed that it falls, as the
+\     suspension springs are more powerful than gravity)
 \
 \ ******************************************************************************
 
@@ -29082,9 +29101,12 @@ NEXT
  BEQ elev2              \ If throttleBrakeState = 0, then the brakes are being
                         \ applied, so jump to elev2
 
+                        \ If we get here then the throttle is being applied
+
  LDA engineTorque       \ Set A to the engine torque
 
- BNE elev4              \ If the engine torque is non-zero, jump to elev4
+ BNE elev4              \ If the engine torque is non-zero, jump to elev4 to
+                        \ increment the lift in Y
 
  BEQ elev3              \ Jump to elev3 (this BEQ is effectively a JMP as A is
                         \ always zero)
@@ -29097,19 +29119,37 @@ NEXT
  LDA playerSpeedHi      \ Set A = playerSpeedHi
 
  BNE elev5              \ If A is non-zero, then we are moving, so jump to elev5
+                        \ to decrement the lift in Y
 
 .elev3
 
-                        \ If we get here then we are:
+                        \ This part of the routine brings the car nose back
+                        \ towards the normal level, if it isn't there already
                         \
-                        \   * Not in reverse, brakes are being applied, we are
-                        \     not moving
+                        \ We get here when any of the following are true:
                         \
                         \   * In reverse
                         \
                         \   * Not in reverse, no brake or throttle key press
                         \
-                        \   * Not in reverse, no brakes, engine torque is zero
+                        \   * Not in reverse, brakes are being applied, we are
+                        \     not moving
+                        \
+                        \   * Not in reverse, no brakes, throttle is being
+                        \     applied, engine torque is zero
+                        \
+                        \ In other words, we are not accelerating or braking, so
+                        \ we slowly cancel any rise or fall of the car nose that
+                        \ we may have applied previously, as follows:
+                        \
+                        \   * If the lift in Y is positive, we decrement it
+                        \     towards zero via elev5
+                        \
+                        \   * If the lift in Y is negative, we increment it
+                        \     towards zero and then increment it again via elev4
+                        \
+                        \ This means the list increments towards zero at twice
+                        \ the rate that it decrements towards zero
 
  TYA                    \ Set A = Y
                         \       = liftFromTorque
@@ -29117,17 +29157,27 @@ NEXT
  BEQ elev7              \ If liftFromTorque = 0, jump to elev7 to move on to
                         \ part 2 without updating liftFromTorque
 
- BPL elev5              \ If liftFromTorque > 0, jump to elev5
+ BPL elev5              \ If liftFromTorque > 0, jump to elev5 to decrement the
+                        \ lift in Y
 
-                        \ If we get here then liftFromTorque < 0
+                        \ If we get here then liftFromTorque < 0, so the nose of
+                        \ the car is already being pushed up and the horizon is
+                        \ lower than it would normally be
 
  INY                    \ Set Y = Y + 1
                         \       = liftFromTorque + 1
+                        \
+                        \ So this pushes the nose of the car down, making the
+                        \ horizon rise back towards the normal level
 
 .elev4
 
-                        \ We jump here if we are not in reverse, we are not
-                        \ applying the brakes, and engine torque is non-zero
+                        \ This part of the routine pulls the nose of the car up
+                        \ by incrementing Y (to a maximum of 3), making the
+                        \ horizon fall
+                        \
+                        \ We jump here if we are not in reverse, we are applying
+                        \ the throttle, and engine torque is non-zero
 
  INY                    \ Set Y = Y + 1
                         \       = liftFromTorque + 1   if we jumped here
@@ -29146,7 +29196,14 @@ NEXT
 
 .elev5
 
- DEY                    \ Set Y = Y -1
+                        \ This part of the routine pushes the nose of the car
+                        \ down by decrementing Y (to a minimum of -5), making
+                        \ the horizon rise
+                        \
+                        \ We jump here if we are not in reverse, we are applying
+                        \ the brakes, and we are moving
+
+ DEY                    \ Set Y = Y - 1
 
  BPL elev6              \ If Y is positive, jump to elev6 to set liftFromTorque
                         \ to Y
@@ -32149,7 +32206,7 @@ ENDIF
 \
 \         otherwise set:
 \
-\           zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
+\           zTyreForceNose or zTyreForceRear = max((A T), (NN MM)) * abs(H)
 \
 \       * Set the following (as appropriate for tyre X):
 \
@@ -32372,7 +32429,7 @@ ENDIF
 \
 \       otherwise set:
 \
-\         zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
+\         zTyreForceNose or zTyreForceRear = max((A T), (NN MM)) * abs(H)
 \
 \   * If A >= wingForce95, then:
 \
@@ -32384,7 +32441,7 @@ ENDIF
 \
 \       otherwise set:
 \
-\         zTyreForceNose or zTyreForceRear = max((A T, (NN MM)) * abs(H)
+\         zTyreForceNose or zTyreForceRear = max((A T), (NN MM)) * abs(H)
 \
 \     * If the throttle is being applied and we are processing the rear tyres,
 \       set:
@@ -37854,7 +37911,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
-\ spinYawAngleHi).
+\ spinYawAngleLo).
 \
 \ ******************************************************************************
 
@@ -38087,7 +38144,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
-\ spinYawAngleHi).
+\ spinYawAngleLo).
 \
 \ ******************************************************************************
 
@@ -38328,7 +38385,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
-\ spinYawAngleHi).
+\ spinYawAngleLo).
 \
 \ ******************************************************************************
 
