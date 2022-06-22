@@ -3179,6 +3179,7 @@ ORG &0B00
 \   Category: Maths (Geometry)
 \    Summary: Calculate the rotation matrix for rotating the player's yaw angle
 \             into the global 3D coordinate system
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3315,6 +3316,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Maths (Geometry)
 \    Summary: Calculate sin(H G) for smaller angles
+\  Deep dive: The core driving model
 \
 \ ******************************************************************************
 
@@ -3391,6 +3393,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Maths (Geometry)
 \    Summary: Calculate sin(H G) for bigger angles
+\  Deep dive: The core driving model
 \
 \ ******************************************************************************
 
@@ -3450,6 +3453,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Maths (Geometry)
 \    Summary: Loop back to calculate cos instead of sin
+\  Deep dive: The core driving model
 \
 \ ******************************************************************************
 
@@ -3507,6 +3511,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Maths (Geometry)
 \    Summary: Apply the correct signs to the result
+\  Deep dive: The core driving model
 \
 \ ******************************************************************************
 
@@ -29042,6 +29047,8 @@ NEXT
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate changes in the car's elevation
+\  Deep dive: The core driving model
+\             Jumps and drops
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29223,6 +29230,8 @@ NEXT
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate the player's heading and sideways flag
+\  Deep dive: The core driving model
+\             Jumps and drops
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29394,6 +29403,8 @@ NEXT
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate player's elevation above the track
+\  Deep dive: The core driving model
+\             Jumps and drops
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29496,6 +29507,8 @@ NEXT
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate the height of the car above the track
+\  Deep dive: The core driving model
+\             Jumps and drops
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29514,9 +29527,11 @@ NEXT
 \
 \       * heightAboveTrack = 1
 \
-\     and make the crash/contact sound
+\     and make the crash/contact sound, otherwise set:
 \
-\   * Clip heightAboveTrack to the range 0 to 127
+\       heightAboveTrack = heightAboveTrack + yGravityDelta
+\
+\     and clip the result to the range 0 to 127
 \
 \ ******************************************************************************
 
@@ -29614,6 +29629,8 @@ NEXT
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate the player's 3D y-coordinate and progress speed
+\  Deep dive: The core driving model
+\             Jumps and drops
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30144,6 +30161,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply the driving model to the player's car
+\  Deep dive: An overview of the driving model
+\             The core driving model
 \
 \ ******************************************************************************
 
@@ -30354,6 +30373,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate variables based on the spin yaw angle
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30528,6 +30548,8 @@ ENDIF
 \   Category: Driving model
 \    Summary: Calculate the forces on the front or rear tyres and apply skid
 \             forces and sound effects where applicable
+\  Deep dive: The core driving model
+\             Skidding
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30607,6 +30629,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply steering to the car's speed in xVelocity and zVelocity
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30678,6 +30701,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply steering to xTyreForceNose and zTyreForceNose
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30783,6 +30807,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Scale the tyre forces and calculate the combined tyre force on the
 \             player
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31196,6 +31221,7 @@ ENDIF
 \   Category: Maths (Geometry)
 \    Summary: Rotate a vector from the 3D world coordinate system into the frame
 \             of reference of the player's car
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31244,6 +31270,7 @@ ENDIF
 \   Category: Maths (Geometry)
 \    Summary: Rotate a vector from the frame of reference of the player's car
 \             into the 3D world coordinate system
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31449,6 +31476,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Apply the deltas in the x-axis and z-axis to the player's
 \             coordinates
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31536,6 +31564,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Update the player's velocity and spin yaw angle
+\  Deep dive: The core driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31631,6 +31660,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Process the key press for starting the engine
+\  Deep dive: Modelling the engine
 \
 \ ******************************************************************************
 
@@ -31710,6 +31740,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Calculate the value of the rev counter according to the throttle
 \             being applied and zero the engine torque
+\  Deep dive: Modelling the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31768,6 +31799,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Set the rev counter after adding a random throb and zero the
 \             engine torque
+\  Deep dive: Modelling the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31806,6 +31838,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Set the rev counter and zero the engine torque
+\  Deep dive: Modelling the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31836,6 +31869,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Zero engineTorque
+\  Deep dive: Modelling the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31865,6 +31899,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply the effects of the engine
+\  Deep dive: The core driving model
+\             Modelling the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -31884,7 +31920,50 @@ ENDIF
 \
 \   * Otherwise, calculate the engine torque based on gear ratio, power and
 \     revs, setting the engineTorque, revCount and soundRevTarget variables
-\     accordingly, including stalling the engine
+\     as follows:
+\
+\       * Set (A T) = trackGearRatio * playerSpeed * 8
+\       
+\       * If clutch is not engaged:
+\       
+\         * If any of these are true:
+\       
+\             * Throttle is not being applied
+\             * playerSpeedHi >= 22
+\             * This is a race and we are not showing the blue lights
+\             * This is a race, we are showing the blue lights and still have 10
+\               iterations until the green
+\             * A >= revsOnGearChange, so the revs are higher than at the last
+\               gear change
+\       
+\           then engage the clutch, otherwise clutch stays disengaged and we do:
+\       
+\             A = revsOnGearChange
+\       
+\             If A >= 108, A = A - 2 and revsOnGearChange = revsOnGearChange - 2
+\       
+\       * Set revCount = A
+\       
+\       * We now calculate the power being generated by the engine at this rev
+\         count. First, we cap the rev count to a maximum of 170:
+\       
+\         max(170, revCount)
+\       
+\         so in the following revCount is this capped number.
+\       
+\       * If revCount < 3, turn the engine off, zero the torque and quit
+\       
+\       * If 3 <= revCount < 83, set A = A * 2 + 152
+\       
+\       * If 83 <= revCount < 87, set A = 186 - (revCount - 83)
+\       
+\       * If 87 <= revCount < 92, set A = 182 - ((revCount - 87) * 4)
+\       
+\       * If 92 <= revCount, set A = 162 - (revCount - 92) * 2
+\       
+\       * Set engineTorque = trackGearPower * A
+\       
+\       * Set soundRevTarget = revCount + 25
 \
 \ ******************************************************************************
 
@@ -31908,6 +31987,10 @@ ENDIF
  LDY gearNumber         \ If gearNumber = 1, then we are in neutral, so jump to
  DEY                    \ CalcRevsNoTorque, returning from the subroutine using
  BEQ CalcRevsNoTorque   \ a tail call
+
+                        \ If we get here then the engine is engaged and the car
+                        \ is on the track, so we need to calculate the engine
+                        \ torque and revs
 
  LDA playerSpeedLo      \ Set (A T) = (playerSpeedHi playerSpeedLo)
  STA T
@@ -31958,7 +32041,7 @@ ENDIF
                         \ which means we have the following result, calculated
                         \ in one of two ways to preserve accuracy:
                         \
-                        \   (A T) = trackGearRatio * speed * 8
+                        \   (A T) = trackGearRatio * playerSpeed * 8
 
 .engi2
 
@@ -31966,20 +32049,22 @@ ENDIF
  BPL engi6              \ engaged, so jump to engi6
 
  LDY throttleBrakeState \ If throttleBrakeState <> 1 then the throttle is not
- DEY                    \ being applied, so jump to engi4
+ DEY                    \ being applied, so jump to engi4 to engage the clutch
  BNE engi4
 
- LDY playerSpeedHi      \ If playerSpeedHi >= 22, jump to engi4
- CPY #22
+ LDY playerSpeedHi      \ If playerSpeedHi >= 22, jump to engi4 to engage the
+ CPY #22                \ clutch
  BCS engi4
 
  LDY raceStarting       \ Set Y = raceStarting
 
  BPL engi3              \ If bit 7 of raceStarting is clear, then we are not on
-                        \ the grid at the start of a race, so jump to engi3
+                        \ the grid at the start of a race, so jump to engi3 to
+                        \ check the revs to decide if the clutch has engaged
 
  CPY #160               \ If raceStarting <> 160, then we are not showing the
  BNE engi4              \ blue lights at the start of the race, so jump to engi4
+                        \ to engage the clutch
 
                         \ If we get here then we are showing the blue lights at
                         \ the start of the race, which we keep showing until the
@@ -31997,7 +32082,7 @@ ENDIF
  BCC engi4              \ If mainLoopCounterLo mod 64 < 53, then we have at
                         \ least 63 - 53 = 10 main loop iterations (including
                         \ this one) to go until the green lights appear, so jump
-                        \ to engi4
+                        \ to engi4 to engage the clutch
 
 .engi3
 
@@ -32008,13 +32093,16 @@ ENDIF
 
                         \ Above, we set (A T) = trackGearRatio * speed * 8
 
- CMP revsOnGearChange   \ If A < revsOnGearChange, jump to engi5
- BCC engi5
+ CMP revsOnGearChange   \ If A < revsOnGearChange, jump to engi5 to process the
+ BCC engi5              \ clutch being disengaged
+
+                        \ Otherwise A >= revsOnGearChange, so the revs are
+                        \ higher than at the last gear change, so fall through
+                        \ into engi4 to engage the clutch
 
 .engi4
 
-                        \ If we get here then A > revsOnGearChange, so the revs
-                        \ are higher than at the last gear change
+                        \ If we get here then we engage the clutch
 
  LDY #0                 \ Set clutchEngaged = 0 to indicate that the clutch is
  STY clutchEngaged      \ engaged
@@ -32024,16 +32112,14 @@ ENDIF
 
 .engi5
 
-                        \ If we get here then we are either not on the starting
-                        \ grid, or we are on the starting grid, the blue lights
-                        \ are showing and we have fewer than 10 main loop
-                        \ iterations to go until the lights turn green, and
-                        \ A < revsOnGearChange
+                        \ If we get here then the clutch is not engaged
 
  LDA revsOnGearChange   \ Set A = revsOnGearChange
 
- CMP #108               \ If A < 108, jump to engi6
- BCC engi6
+ CMP #108               \ If A < 108, i.e. revsOnGearChange < 108, jump to engi6
+ BCC engi6              \ to set the revs to this amount
+
+                        \ If we get here then revsOnGearChange >= 108
 
  SEC                    \ Set revsOnGearChange = revsOnGearChange - 2
  SBC #2                 \
@@ -32047,15 +32133,17 @@ ENDIF
  CMP #170               \ If A < 170, jump to engi7 to skip the following
  BCC engi7              \ instruction
 
- LDA #170               \ Set A = 170, so A has a maximum value of 170
+ LDA #170               \ Set A = 170, so A has a maximum value of 170:
+                        \
+                        \   A = max(170, revCount)
 
 .engi7
 
  CMP #3                 \ If A >= 3, jump to engi8
  BCS engi8
 
- INC engineStatus       \ Increment engineStatus from &FF to 0, which turns the
-                        \ engine off
+ INC engineStatus       \ The rev count has fallen below 3, so increment
+                        \ engineStatus from &FF to 0, which turns the engine off
 
  JMP ZeroEngineTorque   \ Jump to ZeroEngineTorque to set the engine torque to
                         \ zero, returning from the subroutine using a tail call
@@ -32063,7 +32151,7 @@ ENDIF
 .engi8
 
  SEC                    \ Set A = A - 66
- SBC #66
+ SBC #66                \       = revCount - 66
 
  BMI engi9              \ If A is negative (i.e. revCount < 66), jump to engi9
 
@@ -32071,6 +32159,9 @@ ENDIF
  BCS engi10
 
 .engi9
+
+                        \ If we get here then either A < 0 or A < 17, so
+                        \ 3 <= revCount < 83
 
  ASL A                  \ Set A = A * 2 + 152
  CLC
@@ -32080,13 +32171,18 @@ ENDIF
 
 .engi10
 
- SEC                    \ Set A = A - 17
- SBC #17
+                        \ If we get here then A >= 0 and A >= 17, so
+                        \ revCount >= 83
 
- CMP #4                 \ If A >= 4, jump to engi11
+ SEC                    \ Set A = A - 17
+ SBC #17                \       = revCount - 66 - 17
+                        \       = revCount - 83
+
+ CMP #4                 \ If A >= 4 (i.e. revCount >= 87), jump to engi11
  BCS engi11
 
-                        \ If we get here then A is in the range 0 to 3
+                        \ If we get here then A is in the range 0 to 3 and
+                        \ 83 <= revCount < 87
 
  EOR #&FF               \ Set A = ~A, so A is in the range 255 to 252
 
@@ -32094,21 +32190,25 @@ ENDIF
  ADC #187               \       = ~A + 187
                         \       = -A - 1 + 187
                         \       = 186 - A
+                        \       = 186 - (revCount - 83)
 
  BCS engi13             \ Jump to engi13 (the BCS is effectively a JMP as the
                         \ above addition will always overflow)
 
 .engi11
 
- SEC                    \ Set A = A - 4
- SBC #4
+                        \ If we get here then A >= 4, so revCount >= 87
 
- CMP #5                 \ If A >= 5, jump to engi12
+ SEC                    \ Set A = A - 4
+ SBC #4                 \       = revCount - 83 - 4
+                        \       = revCount - 87
+
+ CMP #5                 \ If A >= 5, (i.e. revCount >= 92), jump to engi12
  BCS engi12
 
                         \ If we get here then A is in the range 0 to 5
 
- ASL A                  \ A = ~(A * 4), so A is in the range 255 to 235
+ ASL A                  \ A = ~(A * 4)
  ASL A
  EOR #&FF
 
@@ -32116,11 +32216,14 @@ ENDIF
  ADC #183               \       = ~(A * 4) + 183
                         \       = -(A * 4) - 1 + 183
                         \       = 182 - (A * 4)
+                        \       = 182 - ((revCount - 87) * 4)
 
  BCS engi13             \ Jump to engi13 (the BCS is effectively a JMP as the
                         \ above addition will always overflow)
 
 .engi12
+
+                        \ If we get here then A >= 5, so revCount >= 92
 
  SEC                    \ Set A = ~((A - 5) * 2)
  SBC #5
@@ -32131,6 +32234,8 @@ ENDIF
  ADC #163               \       = ~((A - 5) * 2) + 163
                         \       = -((A - 5) * 2) - 1 + 163
                         \       = 162 - (A - 5) * 2
+                        \       = 162 - ((revCount - 87) - 5) * 2
+                        \       = 162 - (revCount - 92) * 2
 
 .engi13
 
@@ -32151,6 +32256,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Set engineTorque and soundRevTarget
+\  Deep dive: Modelling the engine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32179,6 +32285,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate the tyre forces on the car
+\  Deep dive: The core driving model
+\             Skidding
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32377,8 +32485,8 @@ ENDIF
                         \
                         \ In other words:
                         \
-                        \   A =   max(|xTyreForceNoseHi|, |zTyreForceNoseHi|)
-                        \       + min(|xTyreForceNoseHi|, |zTyreForceNoseHi|) / 2
+                        \   A =  max(|xTyreForceNoseHi|, |zTyreForceNoseHi|)
+                        \      + min(|xTyreForceNoseHi|, |zTyreForceNoseHi|) / 2
 
 .tfor6
 
@@ -32408,6 +32516,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate the tyre forces when the car is skidding
+\  Deep dive: Skidding
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32736,6 +32845,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Calculate the tyre forces due to the throttle or brakes
+\  Deep dive: The core driving model
+\             Skidding
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32743,7 +32854,7 @@ ENDIF
 \
 \   * If the throttle is not being applied:
 \
-\     * (NN MM) = scaled up zVelocity
+\     * (NN MM) = scaled up |zVelocity|
 \
 \     * H = zVelocityHi with the sign flipped
 \
@@ -32892,6 +33003,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply the effects of driving or braking on grass
+\  Deep dive: The core driving model
+\             Driving on grass
 \
 \ ------------------------------------------------------------------------------
 \
@@ -33167,6 +33280,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: The base downward force from the weight of the car when on the
 \             track, to which the downward force from the wings is added
+\  Deep dive: The core driving model
 \
 \ ******************************************************************************
 
@@ -33183,6 +33297,8 @@ ENDIF
 \   Category: Driving model
 \    Summary: The base downward force from the weight of the car when on grass,
 \             to which the downward force from the wings is added
+\  Deep dive: The core driving model
+\             Driving on grass
 \
 \ ******************************************************************************
 
@@ -33198,6 +33314,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Driving model
 \    Summary: Apply the effect of the wing settings
+\  Deep dive: The core driving model
+\             Driving on grass
 \
 \ ------------------------------------------------------------------------------
 \
