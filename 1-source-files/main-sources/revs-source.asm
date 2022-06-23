@@ -29174,8 +29174,8 @@ NEXT
  INY                    \ Set Y = Y + 1
                         \       = liftFromTorque + 1
                         \
-                        \ So this pushes the nose of the car down, making the
-                        \ horizon rise back towards the normal level
+                        \ So this pulls the nose of the car up, making the
+                        \ horizon fall back towards the normal level
 
 .elev4
 
@@ -29187,8 +29187,10 @@ NEXT
                         \ the throttle, and engine torque is non-zero
 
  INY                    \ Set Y = Y + 1
-                        \       = liftFromTorque + 1   if we jumped here
-                        \       = liftFromTorque + 2   if we came via elev3
+                        \       = liftFromTorque + 1
+                        \
+                        \ So this pulls the nose of the car up, making the
+                        \ horizon fall down
 
  BMI elev6              \ If Y is negative, jump to elev6 to set liftFromTorque
                         \ to Y
@@ -29211,6 +29213,9 @@ NEXT
                         \ the brakes, and we are moving
 
  DEY                    \ Set Y = Y - 1
+                        \
+                        \ So this pushes the nose of the car down, making the
+                        \ horizon rise up
 
  BPL elev6              \ If Y is positive, jump to elev6 to set liftFromTorque
                         \ to Y
