@@ -83,13 +83,13 @@ rightSurface = &7205    \ A point in the track view next to the right edge of
                         \ the dashboard, which we use to determine the surface
                         \ under the left right of the car
 
-mirror0 = &7540         \ Mirror 0 base address (left mirror, inner segment)
+mirror0 = &7540         \ Mirror 0 base address (left mirror, outer segment)
 mirror1 = &7548         \ Mirror 1 base address (left mirror, middle segment)
-mirror2 = &7418         \ Mirror 2 base address (left mirror, outer segment)
+mirror2 = &7418         \ Mirror 2 base address (left mirror, inner segment)
 
-mirror3 = &7530         \ Mirror 3 base address (right mirror, outer segment)
+mirror3 = &7530         \ Mirror 3 base address (right mirror, inner segment)
 mirror4 = &7670         \ Mirror 4 base address (right mirror, middle segment)
-mirror5 = &7678         \ Mirror 5 base address (right mirror, inner segment)
+mirror5 = &7678         \ Mirror 5 base address (right mirror, outer segment)
 
 assistLeft1 = &77DB     \ Centre-bottom of dashboard in screen memory for
 assistLeft2 = &77DC     \ showing the Computer Assisted Steering (CAS)
@@ -26398,22 +26398,22 @@ NEXT
 
 .mirrorSegment
 
- EQUB &90 / 8           \ Mirror segment 0 (left mirror, inner segment)
+ EQUB &90 / 8           \ Mirror segment 0 (left mirror, outer segment)
                         \ -112 div 8 (matches -112 to -105)
 
  EQUB &88 / 8           \ Mirror segment 1 (left mirror, middle segment)
                         \ -120 div 8 (matches -120 to -113)
 
- EQUB &80 / 8           \ Mirror segment 2 (left mirror, outer segment)
+ EQUB &80 / 8           \ Mirror segment 2 (left mirror, inner segment)
                         \ -128 div 8 (matches -128 to -121)
 
- EQUB 112 / 8           \ Mirror segment 3 (right mirror, outer segment)
+ EQUB 112 / 8           \ Mirror segment 3 (right mirror, inner segment)
                         \ 112 div 8 (matches 112 to 119)
 
  EQUB 104 / 8           \ Mirror segment 4 (right mirror, middle segment)
                         \ 104 div 8 (matches 104 to 111)
 
- EQUB 96 / 8            \ Mirror segment 5 (right mirror, inner segment)
+ EQUB 96 / 8            \ Mirror segment 5 (right mirror, outer segment)
                         \ 96 div 8 (matches 96 to 103)
 
  EQUB &81, &81          \ These bytes appear to be unused
@@ -27644,13 +27644,13 @@ ENDIF
 
 .startMirror
 
- EQUB &AA               \ Mirror segment 0 (left mirror, inner segment)
+ EQUB &AA               \ Mirror segment 0 (left mirror, outer segment)
  EQUB &AC               \ Mirror segment 1 (left mirror, middle segment)
- EQUB &B0               \ Mirror segment 2 (left mirror, outer segment)
+ EQUB &B0               \ Mirror segment 2 (left mirror, inner segment)
 
- EQUB &B0               \ Mirror segment 3 (right mirror, outer segment)
+ EQUB &B0               \ Mirror segment 3 (right mirror, inner segment)
  EQUB &AC               \ Mirror segment 4 (right mirror, middle segment)
- EQUB &AA               \ Mirror segment 5 (right mirror, inner segment)
+ EQUB &AA               \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -28032,13 +28032,13 @@ NEXT
 
 .endMirror
 
- EQUB &C2               \ Mirror segment 0 (left mirror, inner segment)
+ EQUB &C2               \ Mirror segment 0 (left mirror, outer segment)
  EQUB &C0               \ Mirror segment 1 (left mirror, middle segment)
- EQUB &BC               \ Mirror segment 2 (left mirror, outer segment)
+ EQUB &BC               \ Mirror segment 2 (left mirror, inner segment)
 
- EQUB &BC               \ Mirror segment 3 (right mirror, outer segment)
+ EQUB &BC               \ Mirror segment 3 (right mirror, inner segment)
  EQUB &C0               \ Mirror segment 4 (right mirror, middle segment)
- EQUB &C2               \ Mirror segment 5 (right mirror, inner segment)
+ EQUB &C2               \ Mirror segment 5 (right mirror, outer segment)
 
  EQUB &81, &81          \ These bytes appear to be unused
  EQUB &81
@@ -37797,13 +37797,13 @@ ENDIF
 
 .mirrorContents
 
- EQUB 0                 \ Mirror segment 0 (left mirror, inner segment)
+ EQUB 0                 \ Mirror segment 0 (left mirror, outer segment)
  EQUB 0                 \ Mirror segment 1 (left mirror, middle segment)
- EQUB 0                 \ Mirror segment 2 (left mirror, outer segment)
+ EQUB 0                 \ Mirror segment 2 (left mirror, inner segment)
 
- EQUB 0                 \ Mirror segment 3 (right mirror, outer segment)
+ EQUB 0                 \ Mirror segment 3 (right mirror, inner segment)
  EQUB 0                 \ Mirror segment 4 (right mirror, middle segment)
- EQUB 0                 \ Mirror segment 5 (right mirror, inner segment)
+ EQUB 0                 \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -40999,7 +40999,9 @@ ORG &7B00
                         \ We do this by taking the scale factor for the driver
                         \ behind (which is the same as the size of the car) and
                         \ dividing by 8 to give us half the number of pixel
-                        \ lines to draw, in T
+                        \ lines to draw, in T (so if T = 1, we draw a block
+                        \ that's two pixels high, and if T = 4, we draw a block
+                        \ that's eight pixels high)
                         \
                         \ We then calculate the upper and lower offsets within
                         \ the mirror segment, by taking the offset of the middle
@@ -42346,7 +42348,7 @@ ENDMACRO
 \
 \ The mirror segments have the following addresses and offsets, for reference:
 \
-\   Mirror 0 base address = &7540 (left mirror, inner segment)
+\   Mirror 0 base address = &7540 (left mirror, outer segment)
 \   Range = &7540 + &AA (&75EA) to &7540 + &C2 (&7602)
 \   Centre point = &7540 + &B6 (&75F6)
 \
@@ -42354,11 +42356,11 @@ ENDMACRO
 \   Range = &7548 + &AC (&75F4) to &7548 + &C0 (&7608)
 \   Centre point = &7548 + &B6 (&75FE)
 \
-\   Mirror 2 base address = &7418 (left mirror, outer segment)
+\   Mirror 2 base address = &7418 (left mirror, inner segment)
 \   Range = &7418 + &B0 (&74C8) to &7418 + &BC (&74D4)
 \   Centre point = &7418 + &B6 (&74CE)
 \
-\   Mirror 3 base address = &7530 (right mirror, outer segment)
+\   Mirror 3 base address = &7530 (right mirror, inner segment)
 \   Range = &7530 + &B0 (&75E0) to &7530 + &BC (&75EC)
 \   Centre point = &7530 + &B6 (&75E6)
 \
@@ -42366,7 +42368,7 @@ ENDMACRO
 \   Range = &7670 + &AC (&771C) to &7670 + &C0 (&7730)
 \   Centre point = &7670 + &B6 (&7726)
 \
-\   Mirror 5 base address = &7678 (right mirror, inner segment)
+\   Mirror 5 base address = &7678 (right mirror, outer segment)
 \   Range = &7678 + &AA (&7722) to &7678 + &C2 (&773A)
 \   Centre point = &7678 + &B6 (&772E)
 \
