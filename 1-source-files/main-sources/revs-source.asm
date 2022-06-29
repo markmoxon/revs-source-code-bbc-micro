@@ -29791,7 +29791,7 @@ NEXT
 \
 \   * (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
 \                                        + carProgress * yTrackSegmentI
-\                                        + heightAboveTrack / 4
+\                                        + heightAboveTrack * 4
 \                                        + 172
 \
 \   * carSpeedHi for the player's car = playerSpeedHi * 2.13
@@ -29878,7 +29878,7 @@ NEXT
                         \
                         \    =   carProgress * yTrackSegmentI
                         \      + 172
-                        \      + heightAboveTrack / 4
+                        \      + heightAboveTrack * 4
                         \      + (ySegmentCoordIHi ySegmentCoordILo)
                         \
                         \ with all the correct carry bits included
