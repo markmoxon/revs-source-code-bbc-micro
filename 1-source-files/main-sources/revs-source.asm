@@ -2514,7 +2514,7 @@ ENDIF
 \ For the channel/flush parameter, the top nibble of the low byte is the flush
 \ control (where a flush control of 0 queues the sound, and a flush control of
 \ 1 makes the sound instantly), while the bottom nibble of the low byte is the
-\ channel number . When written in hexadecimal, the first figure gives the flush
+\ channel number. When written in hexadecimal, the first figure gives the flush
 \ control, while the second is the channel (so &13 indicates flush control = 1
 \ and channel = 3).
 \
@@ -3427,11 +3427,11 @@ ORG &0B00
                         \ capping process in the GetAngleInRadians routine
 
  CMP #122               \ If A < 122, i.e. U < 122 and H < 122, jump to rotm2
- BCC rotm2              \ to calculate sin(H G) for higher values of (H G), as
-                        \ the calculation at rotm3 only works for smaller angles
+ BCC rotm2              \ to calculate sin(H G) for smaller angles
 
- BCS rotm3              \ Jump to rotm3 (this BCS is effectively a JMP as we
-                        \ just passed through a BCS)
+ BCS rotm3              \ Jump to rotm3 to calculate sin(H G) for larger angles
+                        \ (this BCS is effectively a JMP as we just passed
+                        \ through a BCS)
 
  LDA G                  \ It doesn't look like this code is ever reached, so
  CMP #240               \ presumably it's left over from development
@@ -3529,6 +3529,10 @@ ORG &0B00
                         \ If we get here then (H G) = yawRadians / 2 and
                         \ H >= 122
 
+                        \ PI is represented by 804, as 804 / 256 = 3.14, so 201
+                        \ represents PI/4, which we use in the following
+                        \ subtraction
+
  LDA #0                 \ Set (U T) = (201 0) - (H G)
  SEC                    \           = PI/4 - yawRadians / 2
  SBC G                  \
@@ -3542,14 +3546,77 @@ ORG &0B00
                         \           = PI/4 - yawRadians / 2
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
-                        \           = (PI/4 - yawRadians / 2) ^ 2
+                        \           = U * (PI/4 - yawRadians / 2)
+                        \
+                        \ U is the high byte of (U T), which also contains
+                        \ PI/4 - yawRadians / 2, so this approximation holds
+                        \ true:
+                        \
+                        \   (U T) = U * (PI/4 - yawRadians / 2)
+                        \         =~ (PI/4 - yawRadians / 2) ^ 2
 
  ASL T                  \ Set (U T) = (U T) * 2
  ROL U                  \           = (PI/4 - yawRadians / 2) ^ 2 * 2
 
+                        \ By this point we have the following:
+                        \
+                        \   (U T) = (PI/4 - yawRadians / 2) ^ 2 * 2
+                        \         = ((PI/2 - yawRadians) / 2) ^ 2 * 2
+                        \
+                        \ If we define x = PI/2 − yawRadians, then we have:
+                        \
+                        \   (U T) = (x / 2) ^ 2 * 2
+                        \         = ((x ^ 2) / (2 ^ 2)) * 2
+                        \         = (x ^ 2) / 2
+                        \
+                        \ The small angle approximation states that for small
+                        \ values of x, the following approximation holds true:
+                        \
+                        \   cos(x) =~ 1 - (x ^ 2) / 2!
+                        \
+                        \ As yawRadians is large, this means x is small, so we
+                        \ can use this approximation
+                        \
+                        \ In terms of 16-bit arithmetic, 1 = (256 0), so this is
+                        \ the same as:
+                        \
+                        \   cos(x) =~ (256 0) - (x ^ 2) / 2!
+                        \
+                        \ which is the same as the following if we truncate the
+                        \ overflow:
+                        \
+                        \   cos(x) =~ 0 - (x ^ 2) / 2!
+                        \
+                        \ So substituting the value of (U T) above, we get:
+                        \
+                        \   cos(x) =~ 0 - (x ^ 2) / 2!
+                        \          =  0 - (U T)
+                        \          =  -(U T)
+                        \
+                        \ It's a trigonometric identity that:
+                        \
+                        \   cos(PI/2 − x) = sin(x)
+                        \
+                        \ so we have:
+                        \
+                        \   cos(x) = cos(PI/2 − yawRadians)
+                        \          = sin(yawRadians)
+                        \
+                        \ and we already calculated that:
+                        \
+                        \   cos(x) =~ -(U T)
+                        \
+                        \ so that means that:
+                        \
+                        \   sin(yawRadians) = cos(x)
+                        \                   =~ -(U T)
+                        \
+                        \ So we just need to negate (U T) to get our result
+
  LDA #0                 \ Set A = -(U T)
- SEC                    \
- SBC T                  \ starting with the low bytes
+ SEC                    \       = sin(yawRadians)
+ SBC T                  \
+                        \ starting with the low bytes
 
  AND #%11111110         \ Which we store in sinYawAngleLo, with bit 0 cleared to
  STA sinYawAngleLo,X    \ denote a positive result (as it's a sign-magnitude
