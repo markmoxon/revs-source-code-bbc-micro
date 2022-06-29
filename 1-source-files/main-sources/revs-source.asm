@@ -192,12 +192,18 @@ ORG &0000
  SKIP 1                 \ Low byte of the player's yaw angle
                         \
                         \ This is the left-right rotation of the player's car
+                        \
+                        \ Stored as a 16-bit value (playerYawAngleHi
+                        \ playerYawAngleLo)
 
 .playerYawAngleHi
 
  SKIP 1                 \ High byte of the player's yaw angle
                         \
                         \ This is the left-right rotation of the player's car
+                        \
+                        \ Stored as a 16-bit value (playerYawAngleHi
+                        \ playerYawAngleLo)
 
 .vectorNumber
 
@@ -234,11 +240,17 @@ ORG &0000
 
  SKIP 1                 \ Low byte of the distance between the player's car and
                         \ the nearest track edge
+                        \
+                        \ Stored as a 16-bit value (edgeDistanceHi
+                        \ edgeDistanceLo)
 
 .edgeDistanceHi
 
  SKIP 1                 \ High byte of the distance between the player's car and
                         \ the nearest track edge
+                        \
+                        \ Stored as a 16-bit value (edgeDistanceHi
+                        \ edgeDistanceLo)
 
 .segmentListPointer
 
@@ -466,6 +478,9 @@ ORG &0000
                         \ This appears to be in mph, with the high byte
                         \ containing the miles per hour, and the low byte
                         \ containing a fraction
+                        \
+                        \ Stored as a 16-bit value (playerSpeedHi
+                        \ playerSpeedLo)
 
 .positionChangeBCD
 
@@ -555,6 +570,9 @@ ORG &0000
                         \ player's previous velocity vector during the driving
                         \ model calculations (i.e. the velocity from the last
                         \ iteration of the main loop)
+                        \
+                        \ Stored as a 16-bit value (xPrevVelocityHi
+                        \ xPrevVelocityLo)
 
 .xPrevVelocityHi
 
@@ -562,16 +580,25 @@ ORG &0000
                         \ player's previous velocity vector during the driving
                         \ model calculations (i.e. the velocity from the last
                         \ iteration of the main loop)
+                        \
+                        \ Stored as a 16-bit value (xPrevVelocityHi
+                        \ xPrevVelocityLo)
 
 .xSpinVelocityLo
 
  SKIP 1                 \ Used to store the low byte of the scaled spin yaw
                         \ angle during the driving model calculations
+                        \
+                        \ Stored as a 16-bit value (xSpinVelocityHi
+                        \ xSpinVelocityLo)
 
 .xSpinVelocityHi
 
  SKIP 1                 \ Used to store the high byte of the scaled spin yaw
                         \ angle during the driving model calculations
+                        \
+                        \ Stored as a 16-bit value (xSpinVelocityHi
+                        \ xSpinVelocityLo)
 
 .revCount
 
@@ -610,6 +637,12 @@ ORG &0000
 .objectDistanceLo
 
  SKIP 1                 \ The low byte of the distance to the current object
+                        \
+                        \ If a car's objectDistanceHi is >= 5, then it is drawn
+                        \ as a distant car
+                        \
+                        \ Stored as a 16-bit value (objectDistanceHi
+                        \ objectDistanceLo)
 
 .colourScheme
 
@@ -808,6 +841,9 @@ ORG &0000
                         \
                         \ If a car's objectDistanceHi is >= 5, then it is drawn
                         \ as a distant car
+                        \
+                        \ Stored as a 16-bit value (objectDistanceHi
+                        \ objectDistanceLo)
 
 .markerNumber
 
@@ -902,6 +938,9 @@ ORG &0000
                         \ This appears to be in mph, with the high byte
                         \ containing the miles per hour, and the low byte
                         \ containing a fraction
+                        \
+                        \ Stored as a 16-bit value (playerSpeedHi
+                        \ playerSpeedLo)
 
 .printMode
 
@@ -1390,19 +1429,23 @@ ORG &0380
 .objYawAngleLo
 
  SKIP 24                \ Low byte of each object's yaw angle
+                        \
+                        \ Stored as a 16-bit value (objYawAngleHi objYawAngleLo)
 
 .objYawAngleHi
 
  SKIP 24                \ High byte of each object's yaw angle
+                        \
+                        \ Stored as a 16-bit value (objYawAngleHi objYawAngleLo)
 
 .objectPitchAngle
 
  SKIP 24                \ Each object's pitch angle
 
-.objectScaleUp
+.objectSize
 
- SKIP 24                \ The scaleUp factor for each of the objects (i.e. the
-                        \ object's size)
+ SKIP 24                \ The size of each of the objects (i.e. the scaled value
+                        \ of scaleUp for the object)
 
  SKIP 32                \ These bytes appear to be unused
 
@@ -1698,11 +1741,17 @@ ORG &0380
 
  SKIP 40                \ The low byte of the screen address of each pixel in
                         \ the line buffer
+                        \
+                        \ Stored as a 16-bit value (lineBufferAddrHi
+                        \ lineBufferAddrLo)
 
 .lineBufferAddrHi
 
  SKIP 40                \ The low byte of the screen address of each pixel in
                         \ the line buffer
+                        \
+                        \ Stored as a 16-bit value (lineBufferAddrHi
+                        \ lineBufferAddrLo)
 
 ORG &0880
 
@@ -1776,16 +1825,25 @@ ORG &0880
 
  SKIP 1                 \ The low byte of the 3D x-coordinate for an inner track
                         \ segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (xSegmentCoordIHi
+                        \ xSegmentCoordILo)
 
 .ySegmentCoordILo
 
  SKIP 1                 \ The low byte of the 3D y-coordinate for an inner track
                         \ segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (ySegmentCoordIHi
+                        \ ySegmentCoordILo)
 
 .zSegmentCoordILo
 
  SKIP 1                 \ The low byte of the 3D z-coordinate for an inner track
                         \ segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (zSegmentCoordIHi
+                        \ zSegmentCoordILo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1795,16 +1853,25 @@ ORG &0880
 
  SKIP 1                 \ The low byte of the 3D x-coordinate for an outer track
                         \ segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (xSegmentCoordOHi
+                        \ xSegmentCoordOLo)
 
 .ySegmentCoordOLo
 
  SKIP 1                 \ The low byte of the 3D y-coordinate for an outer track
                         \ segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (ySegmentCoordOHi
+                        \ ySegmentCoordOLo)
 
 .zSegmentCoordOLo
 
  SKIP 1                 \ The low byte of the 3D z-coordinate for an outer track
                         \ segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (zSegmentCoordOHi
+                        \ zSegmentCoordOLo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1816,16 +1883,25 @@ ORG &0880
 
  SKIP 1                 \ Low byte of the x-coordinate of the body/helmet object
                         \ in the four-object car
+                        \
+                        \ Stored as a 16-bit value (xHelmetCoordHi
+                        \ xHelmetCoordLo)
 
 .yHelmetCoordLo
 
  SKIP 1                 \ Low byte of the y-coordinate of the body/helmet object
                         \ in the four-object car
+                        \
+                        \ Stored as a 16-bit value (yHelmetCoordHi
+                        \ yHelmetCoordLo)
 
 .zHelmetCoordLo
 
  SKIP 1                 \ Low byte of the z-coordinate of the body/helmet object
                         \ in the four-object car
+                        \
+                        \ Stored as a 16-bit value (zHelmetCoordHi
+                        \ zHelmetCoordLo)
 
  SKIP 3                 \ These bytes appear to be unused
 
@@ -1833,46 +1909,67 @@ ORG &0880
 
  SKIP 1                 \ The low byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
+                        \
+                        \ Stored as a 16-bit value (xCoord1Hi xCoord1Lo)
 
 .yCoord1Lo
 
  SKIP 1                 \ The low byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
+                        \
+                        \ Stored as a 16-bit value (yCoord1Hi yCoord1Lo)
 
 .zCoord1Lo
 
  SKIP 1                 \ The low byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
+                        \
+                        \ Stored as a 16-bit value (zCoord1Hi zCoord1Lo)
 
 .xCoord2Lo
 
  SKIP 1                 \ The low byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
+                        \
+                        \ Stored as a 16-bit value (xCoord2Hi xCoord2Lo)
 
 .yCoord2Lo
 
  SKIP 1                 \ The low byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
+                        \
+                        \ Stored as a 16-bit value (yCoord2Hi yCoord2Lo)
 
 .zCoord2Lo
 
  SKIP 1                 \ The low byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
+                        \
+                        \ Stored as a 16-bit value (zCoord2Hi zCoord2Lo)
 
 .xSegmentCoordIHi
 
  SKIP 1                 \ The high byte of the 3D x-coordinate for an inner
                         \ track segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (xSegmentCoordIHi
+                        \ xSegmentCoordILo)
 
 .ySegmentCoordIHi
 
  SKIP 1                 \ The high byte of the 3D y-coordinate for an inner
                         \ track segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (ySegmentCoordIHi
+                        \ ySegmentCoordILo)
 
 .zSegmentCoordIHi
 
  SKIP 1                 \ The high byte of the 3D z-coordinate for an inner
                         \ track segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (zSegmentCoordIHi
+                        \ zSegmentCoordILo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1882,16 +1979,25 @@ ORG &0880
 
  SKIP 1                 \ The high byte of the 3D x-coordinate for an outer
                         \ track segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (xSegmentCoordOHi
+                        \ xSegmentCoordOLo)
 
 .ySegmentCoordOHi
 
  SKIP 1                 \ The high byte of the 3D y-coordinate for an outer
                         \ track segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (ySegmentCoordOHi
+                        \ ySegmentCoordOLo)
 
 .zSegmentCoordOHi
 
  SKIP 1                 \ The high byte of the 3D z-coordinate for an outer
                         \ track segment in the track segment buffer
+                        \
+                        \ Stored as a 16-bit value (zSegmentCoordOHi
+                        \ zSegmentCoordOLo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1903,16 +2009,25 @@ ORG &0880
 
  SKIP 1                 \ High byte of the x-coordinate of the body/helmet
                         \ object in the four-object car
+                        \
+                        \ Stored as a 16-bit value (xHelmetCoordHi
+                        \ xHelmetCoordLo)
 
 .yHelmetCoordHi
 
  SKIP 1                 \ High byte of the y-coordinate of the body/helmet
                         \ object in the four-object car
+                        \
+                        \ Stored as a 16-bit value (yHelmetCoordHi
+                        \ yHelmetCoordLo)
 
 .zHelmetCoordHi
 
  SKIP 1                 \ High byte of the z-coordinate of the body/helmet
                         \ object in the four-object car
+                        \
+                        \ Stored as a 16-bit value (yHelmetCoordHi
+                        \ yHelmetCoordLo)
 
  SKIP 3                 \ These bytes appear to be unused
 
@@ -1920,31 +2035,43 @@ ORG &0880
 
  SKIP 1                 \ The high byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
+                        \
+                        \ Stored as a 16-bit value (xCoord1Hi xCoord1Lo)
 
 .yCoord1Hi
 
  SKIP 1                 \ The high byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
+                        \
+                        \ Stored as a 16-bit value (yCoord1Hi yCoord1Lo)
 
 .zCoord1Hi
 
  SKIP 1                 \ The high byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
+                        \
+                        \ Stored as a 16-bit value (zCoord1Hi zCoord1Lo)
 
 .xCoord2Hi
 
  SKIP 1                 \ The high byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
+                        \
+                        \ Stored as a 16-bit value (xCoord2Hi xCoord2Lo)
 
 .yCoord2Hi
 
  SKIP 1                 \ The high byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
+                        \
+                        \ Stored as a 16-bit value (yCoord2Hi yCoord2Lo)
 
 .zCoord2Hi
 
  SKIP 1                 \ The high byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
+                        \
+                        \ Stored as a 16-bit value (zCoord2Hi zCoord2Lo)
 
 \ ******************************************************************************
 \
@@ -19284,7 +19411,7 @@ ENDIF
 
 .sobj3
 
- STA objectScaleUp,Y    \ Set the object's scaleUp (i.e. size) to A
+ STA objectSize,Y       \ Set the object's size to the scaled value of scaleUp
 
  LDA objectStatus,Y     \ Set A to the object's status byte
 
@@ -19536,8 +19663,8 @@ ENDIF
  LDA objectPitchAngle,X \ Set yPixelCoord to this object's pitch angle
  STA yPixelCoord
 
- LDA objectScaleUp,X    \ Set scaleUp to this object's scale factor (i.e. the
- STA scaleUp            \ size of the car
+ LDA objectSize,X       \ Set scaleUp to this object's size (i.e. the size of
+ STA scaleUp            \ the car)
 
  JSR DrawObject         \ Draw the object on-screen
 
@@ -25277,6 +25404,10 @@ ENDIF
 \    Summary: Used to store the low byte of the race points being awarded to
 \             the driver in race position X
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (racePointsHi racePointsLo).
+\
 \ ******************************************************************************
 
 .racePointsLo
@@ -25845,6 +25976,10 @@ ENDIF
 \   Category: Drivers
 \    Summary: High byte of race points calculated for each position
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (racePointsHi racePointsLo).
+\
 \ ******************************************************************************
 
 .racePointsHi
@@ -26214,17 +26349,18 @@ NEXT
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: The low byte of the base screen address of each mirror segment
+\  Deep dive: Wing mirrors
 \
 \ ******************************************************************************
 
 .mirrorAddressLo
 
- EQUB LO(mirror0)
- EQUB LO(mirror1)
- EQUB LO(mirror2)
- EQUB LO(mirror3)
- EQUB LO(mirror4)
- EQUB LO(mirror5)
+ EQUB LO(mirror0)       \ Mirror segment 0 (left mirror, outer segment)
+ EQUB LO(mirror1)       \ Mirror segment 1 (left mirror, middle segment)
+ EQUB LO(mirror2)       \ Mirror segment 2 (left mirror, inner segment)
+ EQUB LO(mirror3)       \ Mirror segment 3 (right mirror, inner segment)
+ EQUB LO(mirror4)       \ Mirror segment 4 (right mirror, middle segment)
+ EQUB LO(mirror5)       \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -26374,17 +26510,18 @@ NEXT
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: The high byte of the base screen address of each mirror segment
+\  Deep dive: Wing mirrors
 \
 \ ******************************************************************************
 
 .mirrorAddressHi
 
- EQUB HI(mirror0)
- EQUB HI(mirror1)
- EQUB HI(mirror2)
- EQUB HI(mirror3)
- EQUB HI(mirror4)
- EQUB HI(mirror5)
+ EQUB HI(mirror0)       \ Mirror segment 0 (left mirror, outer segment)
+ EQUB HI(mirror1)       \ Mirror segment 1 (left mirror, middle segment)
+ EQUB HI(mirror2)       \ Mirror segment 2 (left mirror, inner segment)
+ EQUB HI(mirror3)       \ Mirror segment 3 (right mirror, inner segment)
+ EQUB HI(mirror4)       \ Mirror segment 4 (right mirror, middle segment)
+ EQUB HI(mirror5)       \ Mirror segment 5 (right mirror, outer segment)
 
 \ ******************************************************************************
 \
@@ -26393,28 +26530,29 @@ NEXT
 \   Category: Dashboard
 \    Summary: Lookup table for working out which mirror segment a car should
 \             appear in
+\  Deep dive: Wing mirrors
 \
 \ ******************************************************************************
 
 .mirrorSegment
 
  EQUB &90 / 8           \ Mirror segment 0 (left mirror, outer segment)
-                        \ -112 div 8 (matches -112 to -105)
+                        \ So -14.5 <= yaw < -13.5 (as &90 / 8 = -112 / 8 = -14)
 
  EQUB &88 / 8           \ Mirror segment 1 (left mirror, middle segment)
-                        \ -120 div 8 (matches -120 to -113)
+                        \ So -15.5 <= yaw < -14.5 (as &88 / 8 = -120 / 8 = -15)
 
  EQUB &80 / 8           \ Mirror segment 2 (left mirror, inner segment)
-                        \ -128 div 8 (matches -128 to -121)
+                        \ So -16.5 <= yaw < -15.5 (as &80 / 8 = -128 / 8 = -16)
 
- EQUB 112 / 8           \ Mirror segment 3 (right mirror, inner segment)
-                        \ 112 div 8 (matches 112 to 119)
+ EQUB 14                \ Mirror segment 3 (right mirror, inner segment)
+                        \ So 14.5 <= yaw < 15.5
 
- EQUB 104 / 8           \ Mirror segment 4 (right mirror, middle segment)
-                        \ 104 div 8 (matches 104 to 111)
+ EQUB 13                \ Mirror segment 4 (right mirror, middle segment)
+                        \ So 13.5 <= yaw < 14.5
 
- EQUB 96 / 8            \ Mirror segment 5 (right mirror, outer segment)
-                        \ 96 div 8 (matches 96 to 103)
+ EQUB 12                \ Mirror segment 5 (right mirror, outer segment)
+                        \ So 12.5 <= yaw < 13.5
 
  EQUB &81, &81          \ These bytes appear to be unused
 
@@ -37014,6 +37152,10 @@ ORG &594A               \ moved to trackData after the game binary has loaded
 \    Summary: Low byte of segment yaw angles along the right track verge in
 \             front of the player (i.e. along the x-axis)
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xVergeRightHi xVergeRightLo).
+\
 \ ******************************************************************************
 
 ORG &5E40
@@ -37030,6 +37172,10 @@ ORG &5E40
 \    Summary: Low byte of segment yaw angles along the left track verge in front
 \             of the player (i.e. along the x-axis)
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xVergeLeftHi xVergeLeftLo).
+\
 \ ******************************************************************************
 
 .xVergeLeftLo
@@ -37044,6 +37190,10 @@ ORG &5E40
 \    Summary: High byte of segment yaw angles along the right track verge in
 \             front of the player (i.e. along the x-axis)
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xVergeRightHi xVergeRightLo).
+\
 \ ******************************************************************************
 
 .xVergeRightHi
@@ -37057,6 +37207,10 @@ ORG &5E40
 \   Category: Track geometry
 \    Summary: High byte of segment yaw angles along the left track verge in
 \             front of the player (i.e. along the x-axis)
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xVergeLeftHi xVergeLeftLo).
 \
 \ ******************************************************************************
 
@@ -37687,6 +37841,10 @@ ENDIF
 \   Category: 3D objects
 \    Summary: The low byte of the x-coordinate of the road sign's 3D coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xRoadSignCoordHi xRoadSignCoordLo).
+\
 \ ******************************************************************************
 
 .xRoadSignCoordLo
@@ -37700,6 +37858,10 @@ ENDIF
 \   Category: 3D objects
 \    Summary: The low byte of the y-coordinate of the road sign's 3D coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (yRoadSignCoordHi yRoadSignCoordLo).
+\
 \ ******************************************************************************
 
 .yRoadSignCoordLo
@@ -37712,6 +37874,10 @@ ENDIF
 \       Type: Variable
 \   Category: 3D objects
 \    Summary: The low byte of the z-coordinate of the road sign's 3D coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zRoadSignCoordHi zRoadSignCoordLo).
 \
 \ ******************************************************************************
 
@@ -37727,6 +37893,10 @@ ENDIF
 \    Summary: The high byte of the x-coordinate of the road sign's 3D
 \             coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xRoadSignCoordHi xRoadSignCoordLo).
+\
 \ ******************************************************************************
 
 .xRoadSignCoordHi
@@ -37741,6 +37911,10 @@ ENDIF
 \    Summary: The high byte of the y-coordinate of the road sign's 3D
 \             coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (yRoadSignCoordHi yRoadSignCoordLo).
+\
 \ ******************************************************************************
 
 .yRoadSignCoordHi
@@ -37754,6 +37928,10 @@ ENDIF
 \   Category: 3D objects
 \    Summary: The high byte of the z-coordinate of the road sign's 3D
 \             coordinates
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zRoadSignCoordHi zRoadSignCoordLo).
 \
 \ ******************************************************************************
 
@@ -37792,6 +37970,7 @@ ENDIF
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Contains the size of the car in each mirror segment
+\  Deep dive: Wing mirrors
 \
 \ ******************************************************************************
 
@@ -37844,6 +38023,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: Low byte of the sine of the player's yaw angle
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (sinYawAngleHi sinYawAngleLo).
+\
 \ ******************************************************************************
 
 .sinYawAngleLo
@@ -37856,6 +38039,10 @@ ENDIF
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the cosine of the player's yaw angle
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (cosYawAngleHi cosYawAngleLo).
 \
 \ ******************************************************************************
 
@@ -37891,6 +38078,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: High byte of the sine of the player's yaw angle
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (sinYawAngleHi sinYawAngleLo).
+\
 \ ******************************************************************************
 
 .sinYawAngleHi
@@ -37903,6 +38094,10 @@ ENDIF
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the cosine of the player's yaw angle
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (cosYawAngleHi cosYawAngleLo).
 \
 \ ******************************************************************************
 
@@ -38130,6 +38325,10 @@ ENDIF
 \    Summary: Low byte of the x-axis distance between the track edge and the
 \             three corner markers
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xMarkerHi xMarkerLo).
+\
 \ ******************************************************************************
 
 .xMarkerLo
@@ -38145,6 +38344,10 @@ ENDIF
 \   Category: Track geometry
 \    Summary: High byte of the x-axis distance between the track edge and the
 \             three corner markers
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xMarkerHi xMarkerLo).
 \
 \ ******************************************************************************
 
@@ -38293,6 +38496,10 @@ ENDIF
 \    Summary: Low byte of the x-coordinate of the change in velocity of the
 \             player's car in terms of 3D world coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xAccelerationHi xAccelerationLo).
+\
 \ ******************************************************************************
 
 .xAccelerationLo
@@ -38307,6 +38514,10 @@ ENDIF
 \    Summary: Low byte of the z-coordinate of the change in velocity of the
 \             player's car in terms of 3D world coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zAccelerationHi zAccelerationLo).
+\
 \ ******************************************************************************
 
 .zAccelerationLo
@@ -38319,6 +38530,10 @@ ENDIF
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the change in the spin yaw angle for the player's car
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (spinYawDeltaHi spinYawDeltaLo).
 \
 \ ******************************************************************************
 
@@ -38334,6 +38549,10 @@ ENDIF
 \    Summary: Low byte of the x-coordinate of the change in velocity of the
 \             player's car in the player's frame of reference
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xPlayerAccelHi xPlayerAccelLo).
+\
 \ ******************************************************************************
 
 .xPlayerAccelLo
@@ -38347,6 +38566,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: Low byte of the z-coordinate of the change in velocity of the
 \             player's car in the player's frame of reference
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zPlayerAccelHi zPlayerAccelLo).
 \
 \ ******************************************************************************
 
@@ -38362,6 +38585,10 @@ ENDIF
 \    Summary: Low byte of the x-coordinate of the player's velocity vector,
 \             from the player's frame of reference
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xVelocityHi xVelocityLo).
+\
 \ ******************************************************************************
 
 .xVelocityLo
@@ -38375,6 +38602,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: Low byte of the z-coordinate of the player's velocity vector,
 \             from the player's frame of reference
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zVelocityHi zVelocityLo).
 \
 \ ******************************************************************************
 
@@ -38390,6 +38621,10 @@ ENDIF
 \    Summary: Low byte of the x-coordinate of the force vector produced by the
 \             front tyres in the nose of the car
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xTyreForceNoseHi xTyreForceNoseLo).
+\
 \ ******************************************************************************
 
 .xTyreForceNoseLo
@@ -38404,6 +38639,10 @@ ENDIF
 \    Summary: Low byte of the x-coordinate of the force vector produced by the
 \             rear tyres of the car
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xTyreForceRearHi xTyreForceRearLo).
+\
 \ ******************************************************************************
 
 .xTyreForceRearLo
@@ -38417,7 +38656,11 @@ ENDIF
 \   Category: Driving model
 \    Summary: Low byte of the z-coordinate of the force vector produced by the
 \             front tyres in the nose of the car
-
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zTyreForceNoseHi zTyreForceNoseLo).
+\
 \ ******************************************************************************
 
 .zTyreForceNoseLo
@@ -38432,6 +38675,10 @@ ENDIF
 \    Summary: Low byte of the z-coordinate of the force vector produced by the
 \             rear tyres
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zTyreForceRearHi zTyreForceRearLo).
+\
 \ ******************************************************************************
 
 .zTyreForceRearLo
@@ -38444,6 +38691,10 @@ ENDIF
 \       Type: Variable
 \   Category: Driving model
 \    Summary: Low byte of the sideways force applied by steering
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xSteeringForceHi xSteeringForceLo).
 \
 \ ******************************************************************************
 
@@ -38534,6 +38785,10 @@ ENDIF
 \    Summary: High byte of the x-coordinate of the change in velocity of the
 \             player's car in terms of 3D world coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xAccelerationHi xAccelerationLo).
+\
 \ ******************************************************************************
 
 .xAccelerationHi
@@ -38548,6 +38803,10 @@ ENDIF
 \    Summary: High byte of the z-coordinate of the change in velocity of the
 \             player's car in terms of 3D world coordinates
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zAccelerationHi zAccelerationLo).
+\
 \ ******************************************************************************
 
 .zAccelerationHi
@@ -38560,6 +38819,10 @@ ENDIF
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the change in the spin yaw angle for the player's car
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (spinYawDeltaHi spinYawDeltaLo).
 \
 \ ******************************************************************************
 
@@ -38575,6 +38838,10 @@ ENDIF
 \    Summary: High byte of the x-coordinate of the change in velocity of the
 \             player's car in the player's frame of reference
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xPlayerAccelHi xPlayerAccelLo).
+\
 \ ******************************************************************************
 
 .xPlayerAccelHi
@@ -38588,6 +38855,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: High byte of the z-coordinate of the change in velocity of the
 \             player's car in the player's frame of reference
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zPlayerAccelHi zPlayerAccelLo).
 \
 \ ******************************************************************************
 
@@ -38603,6 +38874,10 @@ ENDIF
 \    Summary: High byte of the x-coordinate of the player's velocity vector,
 \             from the player's frame of reference
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xVelocityHi xVelocityLo).
+\
 \ ******************************************************************************
 
 .xVelocityHi
@@ -38616,6 +38891,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: High byte of the z-coordinate of the player's velocity vector,
 \             from the player's frame of reference
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zVelocityHi zVelocityLo).
 \
 \ ******************************************************************************
 
@@ -38631,6 +38910,10 @@ ENDIF
 \    Summary: High byte of the x-coordinate of the force vector produced by the
 \             front tyres in the nose of the car
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xTyreForceNoseHi xTyreForceNoseLo).
+\
 \ ******************************************************************************
 
 .xTyreForceNoseHi
@@ -38644,6 +38927,10 @@ ENDIF
 \   Category: Driving model
 \    Summary: High byte of the x-coordinate of the force vector produced by the
 \             rear tyres of the car
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xTyreForceRearHi xTyreForceRearLo).
 \
 \ ******************************************************************************
 
@@ -38659,6 +38946,10 @@ ENDIF
 \    Summary: High byte of the z-coordinate of the force vector produced by the
 \             front tyres in the nose of the car
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zTyreForceNoseHi zTyreForceNoseLo).
+\
 \ ******************************************************************************
 
 .zTyreForceNoseHi
@@ -38673,6 +38964,10 @@ ENDIF
 \    Summary: High byte of the z-coordinate of the force vector produced by the
 \             rear tyres
 \
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (zTyreForceRearHi zTyreForceRearLo).
+\
 \ ******************************************************************************
 
 .zTyreForceRearHi
@@ -38685,6 +38980,10 @@ ENDIF
 \       Type: Variable
 \   Category: Driving model
 \    Summary: High byte of the sideways force applied by steering
+\
+\ ------------------------------------------------------------------------------
+\
+\ Stored as a 16-bit value (xSteeringForceHi xSteeringForceLo).
 \
 \ ******************************************************************************
 
@@ -40974,6 +41273,7 @@ ORG &6C00
 \       Type: Subroutine
 \   Category: Dashboard
 \    Summary: Update the wing mirrors to show any cars behind us
+\  Deep dive: Wing mirrors
 \
 \ ******************************************************************************
 
@@ -41011,11 +41311,10 @@ ORG &7B00
                         \ We then pass N and TT (the latter via A) into the
                         \ DrawCarInMirror routine
 
- LDA objectScaleUp,X    \ Set A = the scale factor (i.e. size) for the driver
-                        \ behind
+ LDA objectSize,X       \ Set A = the size of the object for the driver behind
 
  LSR A                  \ Set T = A / 8
- LSR A                  \       = objectScaleUp / 8
+ LSR A                  \       = objectSize / 8
  LSR A
  STA T
 
@@ -41064,9 +41363,8 @@ ORG &7B00
                         \    we must have jumped here from the BMI at the start
                         \    of the routine)
                         \
-                        \  * Otherwise V is potentially a mirror segment number
-                        \    (and if it is, we draw the car in that segment
-                        \    below)
+                        \  * Otherwise V is a yaw angle that potentially maps to
+                        \    a mirror segment number
 
  LDY #5                 \ We now loop through the six mirror segments, either
                         \ clearing or drawing each of them, so we set up a loop
@@ -41121,6 +41419,7 @@ ORG &7B00
 \       Type: Subroutine
 \   Category: Dashboard
 \    Summary: Show the lights at the start of the race
+\  Deep dive: Starting lights
 \
 \ ------------------------------------------------------------------------------
 \
@@ -42322,66 +42621,20 @@ ENDMACRO
 \   Category: Dashboard
 \    Summary: Draw a car in a specified segment of one of the wing mirrors, or
 \             clear a specified segment
+\  Deep dive: Wing mirrors
 \
 \ ------------------------------------------------------------------------------
-\
-\ This routine draw white or black pixel lines in the specified mirror segment
-\ (the latter with randomly added distortion), depending on this calculation:
-\
-\   * If N <= offset < A              then draw a black line (draw a car)
-\
-\   * If N > offset or offset >= A    then draw a white line (clear the mirror)
-\
-\ where offset runs from the startMirror value for this segment to the endMirror
-\ value for this segment. In other words, when we draw a car, we draw it between
-\ offset N and offset A - 1.
-\
-\ If A = 0, then we end up clearing the mirror segment, as the offset is always
-\ greater or equal to zero.
-\
-\ So, for example, segment 2 has a startMirror of &B0 and endMirror of &BC, so
-\ the offset will run from &BC down to &B0, one for each line we draw. If this
-\ value is between A and N, as above, then we draw a black pixel line, otherwise
-\ we clear that pixel line in the mirror. In other words, we can restrict the
-\ size of the car that's drawn by setting A and N to values within the range for
-\ this segment.
-\
-\ The mirror segments have the following addresses and offsets, for reference:
-\
-\   Mirror 0 base address = &7540 (left mirror, outer segment)
-\   Range = &7540 + &AA (&75EA) to &7540 + &C2 (&7602)
-\   Centre point = &7540 + &B6 (&75F6)
-\
-\   Mirror 1 base address = &7548 (left mirror, middle segment)
-\   Range = &7548 + &AC (&75F4) to &7548 + &C0 (&7608)
-\   Centre point = &7548 + &B6 (&75FE)
-\
-\   Mirror 2 base address = &7418 (left mirror, inner segment)
-\   Range = &7418 + &B0 (&74C8) to &7418 + &BC (&74D4)
-\   Centre point = &7418 + &B6 (&74CE)
-\
-\   Mirror 3 base address = &7530 (right mirror, inner segment)
-\   Range = &7530 + &B0 (&75E0) to &7530 + &BC (&75EC)
-\   Centre point = &7530 + &B6 (&75E6)
-\
-\   Mirror 4 base address = &7670 (right mirror, middle segment)
-\   Range = &7670 + &AC (&771C) to &7670 + &C0 (&7730)
-\   Centre point = &7670 + &B6 (&7726)
-\
-\   Mirror 5 base address = &7678 (right mirror, outer segment)
-\   Range = &7678 + &AA (&7722) to &7678 + &C2 (&773A)
-\   Centre point = &7678 + &B6 (&772E)
 \
 \ Arguments:
 \
 \   Y                   Mirror segment (0 to 5)
 \
-\                         * 0 = left mirror, inner segment
+\                         * 0 = left mirror, outer segment
 \                         * 1 = left mirror, middle segment
-\                         * 2 = left mirror, outer segment
-\                         * 3 = right mirror, outer segment
+\                         * 2 = left mirror, inner segment
+\                         * 3 = right mirror, inner segment
 \                         * 4 = right mirror, middle segment
-\                         * 5 = right mirror, inner segment
+\                         * 5 = right mirror, outer segment
 \
 \   N                   Start offset within the segment for the car lines
 \
@@ -42454,17 +42707,25 @@ ENDMACRO
 
  DEY                    \ Decrement Y to point to the pixel byte above
 
- BPL mirr3              \ If Y is positive then jump to mirr3 to move on to the
-                        \ next pixel byte
+ BPL mirr3              \ If bit 7 of Y is clear, jump to mirr3 to move on to
+                        \ the next pixel byte
 
  TYA                    \ If Y mod 8 < 7 then jump to mirr3 to move on to the
  AND #7                 \ next pixel byte
  CMP #7
  BCC mirr3
 
-                        \ If we get here then we need to move up a character row
-                        \ as we just moved Y past of the top of the current
-                        \ character block
+                        \ If we get here then Y has bit 7 set and Y mod 8 = 7,
+                        \ so we have gone past the top of the current character
+                        \ row and need to move up to the last pixel row in the
+                        \ character block above row instead
+                        \
+                        \ There are &140 bytes per row, and we want to move from
+                        \ the top of the character block on this row to the
+                        \ bottom of the character block on the row above, so we
+                        \ subtract &140 to go up to the top of the character
+                        \ block on the row above, and then add 8 to jump down to
+                        \ the bottom row, i.e. we subtract &140 - 8 = &138
 
  LDA P                  \ Set (Q P) = (Q P) - &138
  SEC                    \
