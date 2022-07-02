@@ -2499,6 +2499,7 @@ ENDIF
 \       Type: Variable
 \   Category: Sound
 \    Summary: OSWORD blocks for making the various game sounds
+\  Deep dive: The engine sounds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2564,6 +2565,7 @@ ORG &0B00
 \       Type: Variable
 \   Category: Sound
 \    Summary: Data for the sound envelope for squealing tyres
+\  Deep dive: The engine sounds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2597,6 +2599,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Sound
 \    Summary: Make a sound
+\  Deep dive: The engine sounds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3192,7 +3195,7 @@ ORG &0B00
 \ This routine is called with the smaller yaw angle of the object, where 0 to
 \ 255 represents 0 to 45 degrees, so 103 = 18.2 degrees. The smaller viewing
 \ angle is taken from the arctan calculation for the yaw angle calculation in
-\ GetObjYawAngle, so that's the triangle whose hypoteneuse is the line between
+\ GetObjYawAngle, so that's the triangle whose hypotenuse is the line between
 \ the player and the object, and whose other sides are parallel to the x-axis
 \ and z-axis.
 \
@@ -3307,6 +3310,7 @@ ORG &0B00
 \    Summary: Calculate the rotation matrix for rotating the player's yaw angle
 \             into the global 3D coordinate system
 \  Deep dive: The core driving model
+\             Trigonometry
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3444,6 +3448,7 @@ ORG &0B00
 \   Category: Maths (Geometry)
 \    Summary: Calculate sin(H G) for smaller angles
 \  Deep dive: The core driving model
+\             Trigonometry
 \
 \ ******************************************************************************
 
@@ -3521,6 +3526,7 @@ ORG &0B00
 \   Category: Maths (Geometry)
 \    Summary: Calculate sin(H G) for bigger angles
 \  Deep dive: The core driving model
+\             Trigonometry
 \
 \ ******************************************************************************
 
@@ -3577,21 +3583,14 @@ ORG &0B00
                         \ As yawRadians is large, this means x is small, so we
                         \ can use this approximation
                         \
-                        \ In terms of 16-bit arithmetic, 1 = (256 0), so this is
-                        \ the same as:
+                        \ We are storing the cosine, which is in the range 0 to
+                        \ 1, in the 16-bit variable (U T), so in terms of 16-bit
+                        \ arithmetic, the 1 in the above equation is (1 0 0)
                         \
-                        \   cos(x) =~ (256 0) - (x ^ 2) / 2!
+                        \ So this is the same as:
                         \
-                        \ which is the same as the following if we truncate the
-                        \ overflow:
-                        \
-                        \   cos(x) =~ 0 - (x ^ 2) / 2!
-                        \
-                        \ So substituting the value of (U T) above, we get:
-                        \
-                        \   cos(x) =~ 0 - (x ^ 2) / 2!
-                        \          =  0 - (U T)
-                        \          =  -(U T)
+                        \   cos(x) =~ (1 0 0) - (x ^ 2) / 2!
+                        \          =  (1 0 0) - (U T)
                         \
                         \ It's a trigonometric identity that:
                         \
@@ -3604,19 +3603,19 @@ ORG &0B00
                         \
                         \ and we already calculated that:
                         \
-                        \   cos(x) =~ -(U T)
+                        \   cos(x) =~ (1 0 0) - (U T)
                         \
                         \ so that means that:
                         \
                         \   sin(yawRadians) = cos(x)
-                        \                   =~ -(U T)
+                        \                   =~ (1 0 0) - (U T)
                         \
-                        \ So we just need to negate (U T) to get our result
+                        \ So we just need to calculate (1 0 0) - (U T) to get
+                        \ our result
 
- LDA #0                 \ Set A = -(U T)
- SEC                    \       = sin(yawRadians)
- SBC T                  \
-                        \ starting with the low bytes
+ LDA #0                 \ Set A = (1 0 0) - (U T)
+ SEC                    \
+ SBC T                  \ starting with the low bytes
 
  AND #%11111110         \ Which we store in sinYawAngleLo, with bit 0 cleared to
  STA sinYawAngleLo,X    \ denote a positive result (as it's a sign-magnitude
@@ -3625,17 +3624,37 @@ ORG &0B00
  LDA #0                 \ And then the high bytes
  SBC U
 
- BCC rotm4              \ If the subtraction underflowed, then jump to rotm4 to
-                        \ store the result in sinYawAngleHi
-
-                        \ Otherwise the subtraction didn't underflow, so we
-                        \ store the highest possible angle in sinYawAngle
+ BCC rotm4              \ We now need to subtract the top bytes, i.e. the 1 in
+                        \ (1 0 0) and the 0 in (0 U T), while including the
+                        \ carry from the high byte subtraction
+                        \
+                        \ So the top byte should be:
+                        \
+                        \   A = 1 - 0 - (1 - C)
+                        \     = 1 - (1 - C)
+                        \     = C
+                        \
+                        \ If the C flag is clear, then that means the top byte
+                        \ is zero, so we already have a valid result from the
+                        \ high and low bytes, so we jump to rotm4 to store the
+                        \ high byte of the result in sinYawAngleHi
+                        \
+                        \ If the C flag is set, then the result is (1 A T), but
+                        \ the highest possible value for sin or cos is 1, so
+                        \ that's what we return
+                        \
+                        \ Because sinYawAngle is a sign-magnitude number with
+                        \ the sign bit in bit 0, we return the following value
+                        \ to represent the closest value to 1 that we can fit
+                        \ into 16 bits:
+                        \
+                        \   (11111111 11111110)
 
  LDA #%11111110         \ Set sinYawAngleLo to the highest possible positive
  STA sinYawAngleLo,X    \ value (i.e. all ones except for the sign in bit 0)
 
  LDA #%11111111         \ Set A to the highest possible value of sinYawAngleHi,
-                        \ so we can store it next
+                        \ so we can store it in the next instruction
 
 .rotm4
 
@@ -3648,6 +3667,7 @@ ORG &0B00
 \   Category: Maths (Geometry)
 \    Summary: Loop back to calculate cos instead of sin
 \  Deep dive: The core driving model
+\             Trigonometry
 \
 \ ******************************************************************************
 
@@ -3794,8 +3814,9 @@ ORG &0B00
 \       Name: GetAngleInRadians
 \       Type: Subroutine
 \   Category: Maths (Geometry)
-\    Summary: Convert a 16-bit angle into radians, restricted to the range 0 to
-\             PI/2
+\    Summary: Convert a 16-bit angle into radians, restricted to a quarter
+\             circle
+\  Deep dive: Trigonometry
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4214,6 +4235,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Sound
 \    Summary: Flush the specified sound buffer
+\  Deep dive: The engine sounds
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4271,69 +4293,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Sound
 \    Summary: Make the relevant sounds for the engine and tyres
-\
-\ ------------------------------------------------------------------------------
-\
-\ The engine sound is made up of three parts:
-\
-\   * Engine exhaust on sound channel 0
-\   * Engine tone 1 on sound channel 1
-\   * Engine tone 2 on sound channel 2
-\
-\ The exhaust is a kind of "putter-putter" white-noise sound, while the tones
-\ get higher with higher rev counts, with tone 2 sounding for the whole range of
-\ engine speeds from idling and up, and tone 1 only kicking in at higher revs.
-\ The exhaust sound dies off at higher revs, when the engine is working at high
-\ efficiency. The two tones are separated by a pitch of 28, with tone 1 lower
-\ than tone 2.
-\
-\ The engine sounds depend on the value of soundRevTarget, which is set to
-\ revCount + 25 (where revCount is the current rev count, as shown on the rev
-\ counter). The soundRevCount variable moves towards the value of soundRevTarget
-\ in steps of 1 on each call of this routine, so the engine sound is constantly
-\ pitching up or down, trying to match the target in soundRevTarget.
-\
-\ This is how the engine sounds work with the various ranges of soundRevCount:
-\
-\   * If soundRevCount < 28:
-\
-\     * The engine is effectively off (revCount < 3)
-\     * Rev counter hand is resting on the pin at 8 o'clock (i.e. the minimum)
-\     * Stop all engine-related sounds
-\
-\   * If 28 <= soundRevCount < 64:
-\
-\     * The engine is idling (3 <= revCount < 39)
-\     * When the engine is idling, soundRevCountdrops below 28 every now and
-\       then, so the engine sound cuts out as if it is misfiring, but generally
-\       it stays just above 28
-\     * Rev counter hand is between 8 o'clock and 9 o'clock
-\     * Make the sound of the engine exhaust
-\     * Silence engine tone 1
-\     * Silence engine tone 2
-\
-\   * If 64 <= soundRevCount < 92:
-\
-\     * The engine is revving up (39 <= revCount < 67)
-\     * Rev counter hand is between 9 o'clock and 11 o'clock
-\     * Make the sound of the engine exhaust
-\     * Silence engine tone 1
-\     * Set the pitch of engine tone 2 to soundRevCount - 64 (0 to 27)
-\     * Make the sound of engine tone 2
-\
-\   * If soundRevCount >= 92:
-\
-\     * The engine is revved up (revCount >= 67)
-\     * Rev counter hand is past 11 o'clock
-\     * Do not make the sound of the engine exhaust
-\     * Set the pitch of engine tone 1 to soundRevCount - 92 (0 and up)
-\     * Make the sound of engine tone 1
-\     * Set the pitch of engine tone 2 to soundRevCount - 64 (28 and up)
-\     * Make the sound of engine tone 2
-\
-\ Note that in the above, the clock-face times are rounded to the nearest hour,
-\ to keep things simple (for example, both tones kick in when the rev counter
-\ passes 3.5 minutes to 12, which is a little way after 11 o'clock).
+\  Deep dive: The engine sounds
 \
 \ ******************************************************************************
 
@@ -22922,6 +22882,7 @@ ENDIF
 \   Category: Dashboard
 \    Summary: The number of pixels in the longest axis for the rev counter hand
 \             at various points in a half-quadrant
+\  Deep dive: Trigonometry
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22933,11 +22894,11 @@ ENDIF
 \ but not quite a perfect match, so I haven't got this exactly right):
 \
 \ FOR I%, 0, 21
-\  EQUB INT(0.5 + 28 * COS((PI / 4) * I% / 21))
+\  EQUB INT(0.5 + 28 * COS((PI/4) * I% / 21))
 \ NEXT
 \
 \ This gives the length of the adjacent side of a right-angled triangle, with a
-\ hypoteneuse of length 28, and an angle ranging from 0 to PI/4 (i.e. one
+\ hypotenuse of length 28, and an angle ranging from 0 to PI/4 (i.e. one
 \ eighth of a circle), split up into 21 points per eighth of a circle.
 \
 \ In other words, if we have a clock whose centre is at the origin, then this
@@ -25823,6 +25784,7 @@ ENDIF
 \   Category: Dashboard
 \    Summary: The number of pixels in the longest axis for the steering wheel
 \             line at various points in a quadrant
+\  Deep dive: Trigonometry
 \
 \ ------------------------------------------------------------------------------
 \
@@ -25834,16 +25796,16 @@ ENDIF
 \ but not quite a perfect match, so I haven't got this exactly right):
 \
 \ FOR I%, 0, 37
-\  EQUB INT(0.5 + 53 * COS((PI / 8) * I% / 21))
+\  EQUB INT(0.5 + 53 * COS((PI/4) * I% / 42))
 \ NEXT
 \
 \ This gives the length of the adjacent side of a right-angled triangle, with a
-\ hypoteneuse of length 53, and an angle ranging from 0 to PI/4 (i.e. one
-\ eighth of a circle), split up into 21 points per eighth of a circle (so the
-\ table's 38 points cover almost a quarter of a circle).
+\ hypotenuse of length 53, and an angle ranging from 0 to PI/4 (i.e. one
+\ eighth of a circle), split up into 42 points per eighth of a circle (so the
+\ table's 38 points cover just less than an eighth of a circle).
 \
 \ In other words, if we have a clock whose centre is at the origin, then this
-\ table contains the x-coordinate of the end of a clock hand of length 28 as it
+\ table contains the x-coordinate of the end of a clock hand of length 53 as it
 \ moves from 3 o'clock to half past 4.
 \
 \ ******************************************************************************
@@ -28829,6 +28791,7 @@ NEXT
 \       Type: Subroutine
 \   Category: Sound
 \    Summary: Flush all four specified sound buffers
+\  Deep dive: The engine sounds
 \
 \ ******************************************************************************
 
@@ -37748,6 +37711,7 @@ ENDIF
 \       Type: Variable
 \   Category: Maths (Geometry)
 \    Summary: Table for arctan values when calculating yaw angles
+\  Deep dive: Trigonometry
 \
 \ ******************************************************************************
 
@@ -37763,6 +37727,7 @@ ENDIF
 \       Type: Variable
 \   Category: Maths (Geometry)
 \    Summary: Table for arctan values when calculating pitch angles
+\  Deep dive: Trigonometry
 \
 \ ------------------------------------------------------------------------------
 \
@@ -38430,6 +38395,7 @@ ENDIF
 \       Type: Variable
 \   Category: Sound
 \    Summary: Details of each sound channel's buffer status
+\  Deep dive: The engine sounds
 \
 \ ******************************************************************************
 
