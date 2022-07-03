@@ -30813,6 +30813,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Apply steering to the car's speed in xVelocity and zVelocity
 \  Deep dive: The core driving model
+\             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30885,6 +30886,7 @@ ENDIF
 \   Category: Driving model
 \    Summary: Apply steering to xTyreForceNose and zTyreForceNose
 \  Deep dive: The core driving model
+\             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30991,6 +30993,7 @@ ENDIF
 \    Summary: Scale the tyre forces and calculate the combined tyre force on the
 \             player
 \  Deep dive: The core driving model
+\             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32084,6 +32087,7 @@ ENDIF
 \    Summary: Apply the effects of the engine
 \  Deep dive: The core driving model
 \             Modelling the engine
+\             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
 \
@@ -32470,13 +32474,18 @@ ENDIF
 \    Summary: Calculate the tyre forces on the car
 \  Deep dive: The core driving model
 \             Skidding
+\             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
 \
 \ Calculate the following:
 \
 \   * If xVelocity is non-zero and xVelocity and xTyreForceNose for tyre X have
-\     the same sign, rotate a 1 into bit 7 of tyreSqueal for tyre X and finish
+\     the same sign:
+\
+\     * Set the high byte of xTyreForceNose = -xVelocity * 2^5
+\
+\     * Rotate a 1 into bit 7 of tyreSqueal for tyre X and finish
 \
 \   * xTyreForceNose = -xVelocity * 2^5
 \
@@ -33188,6 +33197,7 @@ ENDIF
 \    Summary: Apply the effects of driving or braking on grass
 \  Deep dive: The core driving model
 \             Driving on grass
+\             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
 \
