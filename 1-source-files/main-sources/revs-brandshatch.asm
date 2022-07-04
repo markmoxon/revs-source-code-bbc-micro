@@ -70,6 +70,7 @@ yTrackSegmentI = &5500
 zTrackSegmentI = &5600
 xTrackSegmentO = &5700
 zTrackSegmentO = &5800
+trackSectionFrom = &5905
 xVergeRightLo = &5E40
 xVergeLeftLo = &5E68
 xVergeRightHi = &5E90
@@ -160,7 +161,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L53F8
+\       Name: thisSectionDataIdx
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -171,7 +172,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L53F8
+.thisSectionDataIdx
 
  EQUB &00
 
@@ -194,7 +195,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L53FA
+\       Name: thisSectionData1Lo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -205,13 +206,13 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L53FA
+.thisSectionData1Lo
 
  EQUB &00
 
 \ ******************************************************************************
 \
-\       Name: L53FB
+\       Name: thisSectionData1Hi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -222,13 +223,13 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L53FB
+.thisSectionData1Hi
 
  EQUB &00
 
 \ ******************************************************************************
 \
-\       Name: L53FC
+\       Name: yThisSectionData
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -239,7 +240,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L53FC
+.yThisSectionData
 
  EQUB &00
 
@@ -325,7 +326,7 @@ ORG CODE%
  EQUB &2C               \ !&462C
  EQUB &43               \ !&2543
 
- EQUB &00
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -362,11 +363,11 @@ ORG CODE%
  EQUB &46               \ !&462C
  EQUB &25               \ !&2543
 
- EQUB &00
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
-\       Name: L5428
+\       Name: data1Hi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -377,7 +378,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5428
+.data1Hi
 
  EQUB &00, &00, &00, &01, &05, &01, &00, &02
  EQUB &00, &00, &00, &06, &00, &FC, &FD, &FC
@@ -422,10 +423,10 @@ ORG CODE%
 
 .sub_C5472
 
- LDA L53FA
+ LDA thisSectionData1Lo
  ASL A
 
- LDA L53FB
+ LDA thisSectionData1Hi
  ROL A
 
  PHA
@@ -528,7 +529,7 @@ ORG CODE%
  ADC #1
  STA xTrackSegmentO,Y
 
- LDA L53FC
+ LDA yThisSectionData
  STA yTrackSegmentI,Y
 
  RTS
@@ -647,7 +648,7 @@ ORG CODE%
  EQUB LO(HookFlipAbsolute)
  EQUB LO(Hook80Percent)
 
- EQUB &00
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -684,11 +685,11 @@ ORG CODE%
  EQUB HI(HookFlipAbsolute)
  EQUB HI(Hook80Percent)
 
- EQUB &00
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
-\       Name: L5528
+\       Name: data1Lo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -699,7 +700,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5528
+.data1Lo
 
  EQUB &23, &48, &CB, &AC, &5C, &9D, &00, &AB
  EQUB &00, &00, &00, &3D, &00, &0A, &DE, &17
@@ -794,7 +795,7 @@ ORG CODE%
 
 .sub_C5582
 
- LDY L53F8
+ LDY thisSectionDataIdx
 
  LDA L53FD
 
@@ -846,7 +847,7 @@ ORG CODE%
 
  STA L53FD
 
- STY L53F8
+ STY thisSectionDataIdx
 
  RTS
 
@@ -890,14 +891,14 @@ ORG CODE%
 
  STX xStore
 
- LDY L53F8
+ LDY thisSectionDataIdx
 
  BMI L55FA
 
- LDA L5528,Y
+ LDA data1Lo,Y
  STA T
 
- LDA L5428,Y
+ LDA data1Hi,Y
 
  BIT directionFacing
 
@@ -907,12 +908,12 @@ ORG CODE%
 
  LDA T
  CLC
- ADC L53FA
- STA L53FA
+ ADC thisSectionData1Lo
+ STA thisSectionData1Lo
 
  LDA U
- ADC L53FB
- STA L53FB
+ ADC thisSectionData1Hi
+ STA thisSectionData1Hi
 
  LDA L5628,Y
 
@@ -921,8 +922,8 @@ ORG CODE%
  JSR Absolute8Bit
 
  CLC
- ADC L53FC
- STA L53FC
+ ADC yThisSectionData
+ STA yThisSectionData
 
 .L55FA
 
@@ -1034,8 +1035,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ Read the number of the first segment vector in each section from
-\ extraSectionFrom instead of trackSectionFrom, and do some extra processing
+\ Do some extra processing when reading trackSectionFrom.
 \
 \ Arguments:
 \
@@ -1049,28 +1049,29 @@ ORG CODE%
  STY yStore             \ Store the section number in yStore, so we can retrieve
                         \ it at the end of the hook routine
 
- LDA extraSectionFrom,Y \ Set thisVectorNumber = the Y-th extraSectionFrom
- STA thisVectorNumber
+ LDA trackSectionFrom,Y \ Set thisVectorNumber = the Y-th trackSectionFrom, just
+ STA thisVectorNumber   \ like the code that we overwrote with the call to the
+                        \ hook routine
 
- TYA
- LSR A
- LSR A
- LSR A
+ TYA                    \ Set Y = Y / 8
+ LSR A                  \
+ LSR A                  \ So Y now contains the number of the track section (as
+ LSR A                  \ trackSectionFrom contains the track section * 8)
  TAY
 
- LDA L5846,Y
- STA L53FA
+ LDA sectionData1Lo,Y
+ STA thisSectionData1Lo
 
- LDA L5864,Y
- STA L53FB
+ LDA sectionData1Hi,Y
+ STA thisSectionData1Hi
 
- LDA L5828,Y
- STA L53FC
+ LDA ySectionData,Y
+ STA yThisSectionData
 
- LDA L5882,Y
+ LDA sectionDataIndex,Y
  LSR A
  ROR A
- STA L53F8
+ STA thisSectionDataIdx
 
  LDA #14
  ROR A
@@ -1088,7 +1089,7 @@ ORG CODE%
 
  LDY yStore             \ Retrieve the section number from yStore
 
- LDA thisVectorNumber   \ Set A to the Y-th extraSectionFrom that we set above,
+ LDA thisVectorNumber   \ Set A to the Y-th trackSectionFrom that we set above,
                         \ so the routine sets A to the segment vector number,
                         \ just like the code that we overwrote with the call to
                         \ the hook routine
@@ -1367,8 +1368,7 @@ ORG CODE%
 \ !&1249 = HookSectionFrom in GetSectionCoords (instruction #10)
 \ Also needs ?&1248 = &20 from part 2
 \ 1248   B9 05 59   LDA trackSectionFrom,Y          -> JSR HookSectionFrom
-\ Read the number of the first segment vector in each section from
-\ extraSectionFrom instead of trackSectionFrom, and do some extra processing
+\ Do some extra processing when reading trackSectionFrom
 \
 \ !&128A = HookFirstSegment in GetFirstSegment (getf2 instruction #3)
 \ 1289   20 E0 13   JSR UpdateVectorNumber          -> JSR HookFirstSegment
@@ -1579,7 +1579,7 @@ ORG CODE%
 
  JMP mods2
 
- EQUB &00
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -1875,7 +1875,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5828
+\       Name: ySectionData
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1886,7 +1886,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5828
+.ySectionData
 
  EQUB &FF, &E4, &CC, &32, &DE, &D0, &D0, &00
  EQUB &00, &00, &00, &41, &FF, &FF, &FF, &3B
@@ -1895,7 +1895,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5846
+\       Name: sectionData1Lo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1906,7 +1906,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5846
+.sectionData1Lo
 
  EQUB &00, &2F
  EQUB &8A, &E0, &E0, &A4, &A4, &52, &52, &47
@@ -1916,7 +1916,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5864
+\       Name: sectionData1Hi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1927,7 +1927,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5864
+.sectionData1Hi
 
  EQUB &00, &12, &50, &55
  EQUB &55, &D2, &D2, &9D, &9D, &87, &76, &1D
@@ -1937,7 +1937,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5882
+\       Name: sectionDataIndex
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1948,7 +1948,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5882
+.sectionDataIndex
 
  EQUB &02, &0E, &1A, &22, &2A, &32
  EQUB &36, &3F, &3E, &46, &52, &62, &6A, &76
@@ -2009,30 +2009,13 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ L5900 = trackSectionFlag (track section block 2)
 \
 \ ******************************************************************************
 
 .L5900
 
- EQUB &70, &20, &00, &A0, &21
-
-\ ******************************************************************************
-\
-\       Name: extraSectionFrom
-\       Type: Variable
-\   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.extraSectionFrom
-
- EQUB &00, &A0, &3A
+ EQUB &70, &20, &00, &A0, &21, &00, &A0, &3A
  EQUB &ED, &DC, &87, &5C, &F6, &12, &C8, &1D
  EQUB &42, &52, &2B, &E3, &B5, &07, &CC, &17
  EQUB &70, &2B, &DE, &96, &AA, &1E, &73, &18
