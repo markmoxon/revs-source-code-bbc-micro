@@ -16349,8 +16349,8 @@ ENDIF
 
  JMP gseg4              \ If we get here then the current segment is outside the
                         \ 20-degree field of view, but the previous one wasn't,
-                        \ so we jump to gseg4 to process this segment as being
-                        \ not visible
+                        \ so we jump to gseg4 to try processing a segment that's
+                        \ one-quarter of the size, in case that fits
 
 .gseg13
 
@@ -16743,7 +16743,7 @@ ENDIF
                         \ GetTrackAndMarkers
 
  LDA horizonLine        \ If horizonLine < 79, then the horizon line is a valid
- CMP #79                \ number, so  jump to gtrm2 to skip the following two
+ CMP #79                \ number, so jump to gtrm2 to skip the following two
  BCC gtrm2              \ instructions
 
  LDA #78                \ Set horizonLine = 78, so the maximum value for the
@@ -16767,7 +16767,7 @@ ENDIF
                         \ the horizon (i.e. the track width on the section or
                         \ segment at the horizon) in terms of the high bytes
 
- LSR A                  \ Set horizonTrackWidth = A / 2
+ LSR A                  \ Set horizonTrackWidth = |A| / 2
  STA horizonTrackWidth  \
                         \ So horizonTrackWidth contains half the width of the
                         \ track on the horizon, in terms of the high bytes
@@ -17876,6 +17876,8 @@ ENDIF
 
  CMP #80                \ If A >= 80, then the cars are slightly closer, so jump
  BCS tact16             \ to tact16 to set bit 4 of driver X's car status byte
+                        \ (so driver X does not follow the segment's steering
+                        \ line in segmentSteering)
 
  CMP #60                \ If A >= 60, then the cars are even closer, so jump to
  BCS tact15             \ tact15 to steer driver X in the direction in T, which
@@ -17904,7 +17906,8 @@ ENDIF
 .tact16
 
  LDA N                  \ Set bit 4 of the car status flag byte we are building
- ORA #%00010000         \ in N
+ ORA #%00010000         \ in N, so the car does not follow the segment's
+                        \ steering line in segmentSteering
 
 .tact17
 
@@ -29829,12 +29832,12 @@ NEXT
 \ ******************************************************************************
 
  ASL A                  \ Set (W A) = (0 A) << 2
- ROL W                  \           = heightAboveTrack << 2
- ASL A
- ROL W
+ ROL W                  \           = (W A) << 2
+ ASL A                  \           = heightAboveTrack << 2
+ ROL W                  \           = heightAboveTrack * 4
 
  STA V                  \ Set (W V) = (W A)
-                        \           = heightAboveTrack << 2
+                        \           = heightAboveTrack * 4
 
  LDX currentPlayer      \ Set X to the driver number of the current player
 
@@ -29901,7 +29904,7 @@ NEXT
                         \
                         \    =   carProgress * yTrackSegmentI + ySegmentCoordILo
                         \      + 172
-                        \      + heightAboveTrack << 2
+                        \      + heightAboveTrack * 4
                         \      + (ySegmentCoordIHi 0)
                         \      + C flag from the first addition
                         \      + C flag from the second addition

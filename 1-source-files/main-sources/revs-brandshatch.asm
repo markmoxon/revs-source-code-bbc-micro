@@ -135,26 +135,28 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C53F0
+\       Name: Hook80Percent
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Calculate (A T) = 0.8 * A
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Calculate (A T) = 205 / 256 * A
+\                 = 0.8 * A
 \
 \ ******************************************************************************
 
-.sub_C53F0
+.Hook80Percent
 
- STA U
+ STA U                  \ Set U = A
 
- LDA #205
+ LDA #205               \ Set A = 205
 
- JMP Multiply8x8
+ JMP Multiply8x8        \ Set (A T) = A * U
+                        \           = 205 * A
 
- EQUB &00
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -508,14 +510,18 @@ ORG CODE%
  LDA V
  STA xTrackSegmentI,Y
 
- JSR sub_C57BB
+ JSR Multiply8x8Signed  \ Set (A T) = A * U
+                        \
+                        \ retaining the sign in A
 
  STA zTrackSegmentO,Y
 
  LDA W
  STA zTrackSegmentI,Y
 
- JSR sub_C57BB
+ JSR Multiply8x8Signed  \ Set (A T) = A * U
+                        \
+                        \ retaining the sign in A
 
  EOR #&FF
  CLC
@@ -529,53 +535,82 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C54EB
+\       Name: HookFlipAbsolute
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If we are facing forwards along the track, set A = |A|.
+\
+\ If we are facing backwards along the track, set A = -|A|.
 \
 \ ******************************************************************************
 
-.sub_C54EB
+.HookFlipAbsolute
 
- EOR directionFacing
+ EOR directionFacing    \ Flip the sign bit of A if we are facing backwards
+                        \ along the track
+                        \
+                        \ The Absolute8Bit routine does the following:
+                        \
+                        \   * If A is positive leave it alone
+                        \
+                        \   * If A is negative, set A = -A
+                        \
+                        \ So if bit 7 of directionFacing is set (i.e. we are
+                        \ facing backwards along the track), this flips bit 7 of
+                        \ A, which changes the Absolute8Bit routine to the
+                        \ following (if we consider the original value of A):
+                        \
+                        \   * If A is negative leave it alone
+                        \
+                        \   * If A is positive, set A = -A
+                        \
+                        \ So this sets set A = -|A| instead  of A = |A|
 
- JSR Absolute8Bit
+ JSR Absolute8Bit       \ Set A = |A|, unless we are facing backwards along the
+                        \ track, in which case set A = -|A|
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C54F1
+\       Name: HookSectionFlag6b
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Implement bit 6 of the track section flags
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If bit 6 of the current section's flags is set, call sub_C5582 (this bit is
+\ unused in the original track data file).
 \
 \ ******************************************************************************
 
-.sub_C54F1
+.HookSectionFlag6b
 
- LDA thisSectionFlags
- AND #%01000000
- BEQ L54FA
+ LDA thisSectionFlags   \ If bit 6 of the current section's flags is clear, jump
+ AND #%01000000         \ to flab1 to implement the same code as in the original
+ BEQ flab1
 
- JSR sub_C5582
+ JSR sub_C5582          \ Bit 6 of the current section's flags is set, so call
+                        \ sub_C5582 before continuing with the same code as in
+                        \ the original
 
-.L54FA
+.flab1
 
- LDA frontSegmentIndex
- CLC
- ADC #3
+ LDA frontSegmentIndex  \ Set A to the index * 3 of the front track segment in
+                        \ the track segment buffer
 
- RTS
+ CLC                    \ Set A = frontSegmentIndex + 3
+ ADC #3                 \
+                        \ to move on to the next track segment ahead of the
+                        \ current front segment in the track segment buffer,
+                        \ which will become the new front segment
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -592,25 +627,25 @@ ORG CODE%
 
 .newContentLo
 
- EQUB LO(sub_C5672)
- EQUB LO(sub_C5A1B)
- EQUB LO(sub_C5572)
- EQUB LO(sub_C5572)
- EQUB LO(sub_C54F1)
- EQUB LO(sub_C56AF)
- EQUB LO(sub_C56BC)
- EQUB LO(sub_C5772)
- EQUB LO(sub_C57A1)
+ EQUB LO(HookSectionFrom)
+ EQUB LO(HookFirstSegment)
+ EQUB LO(HookSectionFlag6a)
+ EQUB LO(HookSectionFlag6a)
+ EQUB LO(HookSectionFlag6b)
+ EQUB LO(HookUpdateHorizon)
+ EQUB LO(HookFieldOfView)
+ EQUB LO(HookCollapseTrack)
+ EQUB LO(HookSection4Steer)
  EQUB LO(xExtraSignVector)
  EQUB LO(yExtraSignVector)
  EQUB LO(zExtraSignVector)
  EQUB LO(extraRacingLine)
  EQUB LO(extraSignData)
  EQUB LO(extraSignData)
- EQUB LO(sub_C56C8)
- EQUB LO(sub_C55BD)
- EQUB LO(sub_C54EB)
- EQUB LO(sub_C53F0)
+ EQUB LO(HookFlattenHills)
+ EQUB LO(HookMoveBack)
+ EQUB LO(HookFlipAbsolute)
+ EQUB LO(Hook80Percent)
 
  EQUB &00
 
@@ -629,25 +664,25 @@ ORG CODE%
 
 .newContentHi
 
- EQUB HI(sub_C5672)
- EQUB HI(sub_C5A1B)
- EQUB HI(sub_C5572)
- EQUB HI(sub_C5572)
- EQUB HI(sub_C54F1)
- EQUB HI(sub_C56AF)
- EQUB HI(sub_C56BC)
- EQUB HI(sub_C5772)
- EQUB HI(sub_C57A1)
+ EQUB HI(HookSectionFrom)
+ EQUB HI(HookFirstSegment)
+ EQUB HI(HookSectionFlag6a)
+ EQUB HI(HookSectionFlag6a)
+ EQUB HI(HookSectionFlag6b)
+ EQUB HI(HookUpdateHorizon)
+ EQUB HI(HookFieldOfView)
+ EQUB HI(HookCollapseTrack)
+ EQUB HI(HookSection4Steer)
  EQUB HI(xExtraSignVector)
  EQUB HI(yExtraSignVector)
  EQUB HI(zExtraSignVector)
  EQUB HI(extraRacingLine)
  EQUB HI(extraSignData)
  EQUB HI(extraSignData)
- EQUB HI(sub_C56C8)
- EQUB HI(sub_C55BD)
- EQUB HI(sub_C54EB)
- EQUB HI(sub_C53F0)
+ EQUB HI(HookFlattenHills)
+ EQUB HI(HookMoveBack)
+ EQUB HI(HookFlipAbsolute)
+ EQUB HI(Hook80Percent)
 
  EQUB &00
 
@@ -696,30 +731,36 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C5572
+\       Name: HookSectionFlag6a
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If bit 6 of the current section's flags is set, call sub_C55C4 after moving to
+\ the nest vector along (this bit is unused in the original track data file).
 \
 \ ******************************************************************************
 
-.sub_C5572
+.HookSectionFlag6a
 
- LDA thisSectionFlags
- AND #%01000000
- BEQ L557E
+ LDA thisSectionFlags   \ If bit 6 of the current section's flags is clear, jump
+ AND #%01000000         \ to flag1 to return from the subroutine
+ BEQ flag1
 
- JSR UpdateVectorNumber
+ JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
+                        \ track in the direction we are facing (we replaced a
+                        \ call to UpdateCurveVector with the call to the hook,
+                        \ so this implements that call, knowing that this is a
+                        \ curve)
 
- JSR sub_C55C4
+ JSR sub_C55C4          \ Bit 6 of the current section's flags is set, so call
+                        \ sub_C55C4 before returning from the subroutine
 
-.L557E
+.flag1
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -811,23 +852,26 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C55BD
+\       Name: HookMoveBack
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Only move the player backwards if the player has not yet driven
+\             past the segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Only move the player backwards by one segment if bit 7 of playerPastSegment is
+\ clear (in other words, if the player has not yet driven past the segment).
 \
 \ ******************************************************************************
 
-.sub_C55BD
+.HookMoveBack
 
- BIT playerPastSegment
- BMI sub_C55BD-1
+ BIT playerPastSegment  \ If bit 7 of playerPastSegment is set, return from the
+ BMI HookMoveBack-1     \ subroutine (as HookMoveBack-1 contains an RTS)
 
- JMP MovePlayerBack
+ JMP MovePlayerBack     \ Move the player backwards by one segment, returning
+                        \ from the subroutine using a tail call
 
 \ ******************************************************************************
 \
@@ -983,22 +1027,29 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C5672
+\       Name: HookSectionFrom
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Read the number of the first segment vector in each section from
+\ extraSectionFrom instead of trackSectionFrom, and do some extra processing
+\
+\ Arguments:
+\
+\   Y                   The number of the track section * 8 whose coordinates we
+\                       want to fetch
 \
 \ ******************************************************************************
 
-.sub_C5672
+.HookSectionFrom
 
- STY yStore
+ STY yStore             \ Store the section number in yStore, so we can retrieve
+                        \ it at the end of the hook routine
 
- LDA L5905,Y
+ LDA extraSectionFrom,Y \ Set thisVectorNumber = the Y-th extraSectionFrom
  STA thisVectorNumber
 
  TYA
@@ -1035,141 +1086,241 @@ ORG CODE%
 
 .L56AA
 
- LDY yStore
+ LDY yStore             \ Retrieve the section number from yStore
 
- LDA thisVectorNumber
+ LDA thisVectorNumber   \ Set A to the Y-th extraSectionFrom that we set above,
+                        \ so the routine sets A to the segment vector number,
+                        \ just like the code that we overwrote with the call to
+                        \ the hook routine
 
- RTS
+ RTS                    \ Return from the subrouting
 
 \ ******************************************************************************
 \
-\       Name: sub_C56AF
+\       Name: HookUpdateHorizon
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Only update the horizon if we have found fewer than 12 visible
+\             segments
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Only store horizonLine and horizonListIndex if segmentCounter < 12.
 \
 \ ******************************************************************************
 
-.sub_C56AF
+.HookUpdateHorizon
 
- PHA
+ PHA                    \ Store A on the stack so we can retrueve it below
 
- LDA segmentCounter
+ LDA segmentCounter     \ Set the C flag if segmentCounter >= 12
  CMP #12
 
- PLA
+ PLA                    \ Retrieve the value of A from the stack
 
- BCS L56BB
+ BCS L56BB              \ If segmentCounter >= 12, jump to L56BB to skip the
+                        \ following two instructions
 
- STA horizonLine
+                        \ Otherwise we set the horizon line and index using the
+                        \ same code that we overwrote with the call to the hook
+                        \ routine
 
- STY horizonListIndex
+ STA horizonLine        \ This track segment is higher than the current horizon
+                        \ pitch angle, so the track obscures the horizon and we
+                        \ need to update horizonLine to this new pitch angle
+
+ STY horizonListIndex   \ Set horizonListIndex to the track segment number in Y
 
 .L56BB
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C56BC
+\       Name: HookFieldOfView
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: When populating the verge buffer in GetSegmentAngles, don't give
+\             up so easily when we get segments outside the field of view
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Changes logic in gseg12, which is applied when a segment is out of the field
+\ of view, so we fetch details of the previous segment (i.e. the one further
+\ away).
+\
+\ In the original code:
+\
+\   * If previous segment's yaw angle >= 20 then the previous segment was also
+\     outside the field of view, so return from the subroutine
+\
+\   * Otherwise go to gseg4 to try reducing the size of the segment before
+\     returning
+\
+\ In the new code:
+\
+\   * If previous segment's yaw angle >= 20 and segmentCounter >= 10, then the
+\     previous segment was also outside the field of view AND we have already
+\     marked at least 10 segments as being visible, so return from the
+\     subroutine
+\
+\   * Otherwise go to gseg13 to mark this segment as visible and keep checking
+\     segments
+\
+\ So we keep checking segments until we have reached at least 10.
+\
+\ Arguments:
+\
+\   A                   Yaw angle for the previous segment's right verge
+\
+\   C flag              Set according to CMP #20
 \
 \ ******************************************************************************
 
-.sub_C56BC
+.HookFieldOfView
 
- BCC L56C5
+ BCC fovw1              \ If A < 20, then this segment is within the 20-degree
+                        \ field of view,jump to gseg13 via fovw1
 
- LDA segmentCounter
+ LDA segmentCounter     \ If segmentCounter < 10, jump to gseg13 via fovw1
  CMP #10
+ BCC fovw1
 
- BCC L56C5
+ RTS                    \ Return from the subroutine
 
- RTS
+.fovw1
 
-.L56C5
-
- JMP gseg13
+ JMP gseg13             \ Jump to gseg13
 
 \******************************************************************************
 \
-\       Name: sub_C56C8
+\       Name: HookFlattenHills
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Flatten any hills in the verge buffer, calculate the hill height
+\             and track width, cut objects off at the hill height
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Flatten the height of the verge entries in the verge buffer that are hidden by
+\ the nearest hill to the player, so that the ground behind the nearest hill is
+\ effectively levelled off, and set horizonTrackWidth to 80% of the track width
+\ at the hill crest
+\
+\ Arguments:
+\
+\   Y                   Index of the last entry in the track verge buffer - 1:
+\
+\                         * segmentListRight - 1 for the right verge
+\
+\                         * segmentListPointer - 1 for the left verge
 \
 \ ******************************************************************************
 
-.sub_C56C8
+.HookFlattenHills
 
- TYA
- AND #%00100000
- STA blockOffset
+ TYA                    \ Set bit 5 of blockOffset to bit 5 of Y, so blockOffset
+ AND #%00100000         \ is non-zero if Y >= 32 (i.e. Y is pointing to the
+ STA blockOffset        \ verge buffer for the outer verge edges)
 
- LDA #0
+ LDA #0                 \ Set A = 0, so the track line starts at the bottom of
+                        \ the screen
 
-.L56CF
+                        \ We now work our way backwards through the verge buffer
+                        \ from index Y - 1, starting with the closest segments,
+                        \ checking the pitch angles and maintaining a maximum
+                        \ value in topTrackLine
 
- STA topTrackLine
+.hill1
 
-.L56D1
+ STA topTrackLine       \ Set topTrackLine = A
 
- DEY
+.hill2
 
- LDA yVergeRight,Y
+ DEY                    \ Decrement Y to point to the next entry in the verge
+                        \ buffer, so we are moving away from the player
 
- CMP horizonLine
- BCS L56F7
+ LDA yVergeRight,Y      \ Set A to the pitch angle of the current entry in the
+                        \ verge buffer
 
- CMP topTrackLine
- BCS L56CF
+ CMP horizonLine        \ If A >= horizonLine, then the verge is on or higher
+ BCS hill3              \ than the horizon line, so jump to hill3 to exit the
+                        \ hook routine and rejoin the original game code, as
+                        \ everything beyond this segment in the verge buffer
+                        \ will be hidden
 
- LDA topTrackLine
- ADC #0
- STA yVergeRight,Y
+ CMP topTrackLine       \ If A >= topTrackLine, jump back to hill1 to set
+ BCS hill1              \ topTrackLine to A and move on to the next segment,
+                        \ so topTrackLine maintains the maximum track line as
+                        \ we work through the verge buffer
 
- LDA blockOffset
+                        \ If we get here then A < horizonLine (so the verge is
+                        \ below the horizon) and A < topTrackLine (so the verge
+                        \ is lower than the highest segment already processed)
+                        \
+                        \ In other words, this segment is lower than the ones
+                        \ before it, so it is hidden by a hill
 
- BNE L56D1
+ LDA topTrackLine       \ Set the pitch angle of entry Y to topTrackLine (this
+ ADC #0                 \ ADC instruction has no effect, as we know the C flag
+ STA yVergeRight,Y      \ is clear, so I'm not sure what it's doing here - a
+                        \ bit of debug code, perhaps?)
 
- LDA topTrackLine
+ LDA blockOffset        \ If blockOffset is non-zero, loop back to hill2 to move
+ BNE hill2              \ on to the next segment
 
- STA &1FEA
+                        \ If we get here then blockOffset = 0, which will only
+                        \ be the case if we are working through the inner verge
+                        \ edges (rather than the outer edges), and we haven't
+                        \ done the following already
+                        \
+                        \ In other words, the following is only done once, for
+                        \ the closest segment whose pitch angle dips below the
+                        \ segment in front of it (i.e. the closest crest of a
+                        \ hill)
 
- INY
+ LDA topTrackLine       \ Modify the DrawObject routine at dobj3 instruction #6
+ STA &1FEA              \ so that objects get cut off at track line number
+                        \ topTrackLine instead of horizonLine when they are
+                        \ hidden behind a hill
 
- JSR gtrm2+6
+ INY                    \ Increment Y so the call to gtrm2+6 calculates the
+                        \ track width for the previous (i.e. closer) segment in
+                        \ the verge buffer
 
- DEY
+ JSR gtrm2+6            \ Call the following routine, which has already been
+                        \ modified by this point to calculate the following for
+                        \ track segment Y (i.e. the segment in front of the
+                        \ current one):
+                        \
+                        \   horizonTrackWidth
+                        \          = 0.8 * |xVergeRightHi - xVergeLeftHi|
+                        \
+                        \ So this sets horizonTrackWidth to 80% of the track
+                        \ width of the crest of the hill
 
- SEC
- ROR blockOffset
+ DEY                    \ Decrement Y back to the correct value for the current
+                        \ entry in the verge buffer
 
- BMI L56D1
+ SEC                    \ Rotate a 1 into bit 7 of blockOffset so it is now
+ ROR blockOffset        \ non-zero, so we only set horizonTrackWidth once as we
+                        \ work through the verge buffer
 
-.L56F7
+ BMI hill2              \ Jump back to hill2 (this BMI is effectively a JMP as
+                        \ we just set bit 7 of blockOffset)
 
- LDY vergeBufferEnd
- DEY
- STY U
+.hill3
 
- JMP CheckVergeOnScreen
+ LDY vergeBufferEnd     \ Set the values of Y and U so they are the same as they
+ DEY                    \ would be at this point in the original code, without
+ STY U                  \ the above code being run
 
- EQUB &00
+ JMP CheckVergeOnScreen \ Implement the call that we overwrote with the call to
+                        \ the hook routine, so we have effectively inserted the
+                        \ above code into the main game (the JMP ensures we
+                        \ return from the subroutine using a tail call)
+
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -1213,90 +1364,138 @@ ORG CODE%
 \ Modifications applied by ModifyGameCode (Part 1 of 3)
 \ -----------------------------------------------------
 \
-\ !&1249 = sub_C5672 in GetSectionCoords
-\ Also needs ?&1248 = &20 from ModifyGameCode (Part 2 of 3)
-\ 1248   B9 05 59   LDA trackSectionFrom,Y          -> JSR sub_C5672
+\ !&1249 = HookSectionFrom in GetSectionCoords (instruction #10)
+\ Also needs ?&1248 = &20 from part 2
+\ 1248   B9 05 59   LDA trackSectionFrom,Y          -> JSR HookSectionFrom
+\ Read the number of the first segment vector in each section from
+\ extraSectionFrom instead of trackSectionFrom, and do some extra processing
 \
-\ !&128A = sub_C5A1B in GetFirstSegment
-\ 1289   20 E0 13   JSR UpdateVectorNumber          -> JSR sub_C5A1B
+\ !&128A = HookFirstSegment in GetFirstSegment (getf2 instruction #3)
+\ 1289   20 E0 13   JSR UpdateVectorNumber          -> JSR HookFirstSegment
+\ Call sub_C5582 and sub_C5472 after UpdateVectorNumber
 \
-\ !&13CA = sub_C5572 in GetTrackSegment
-\ 13C9   20 DA 13   JSR UpdateCurveVector           -> JSR sub_C5572
+\ !&13CA = HookSectionFlag6a in GetTrackSegment (Part 3, gets12 instruction #11)
+\ 13C9   20 DA 13   JSR UpdateCurveVector           -> JSR HookSectionFlag6a
+\ If bit 6 of the current section's flags is set, call sub_C55C4 after moving to
+\ the next vector along (this bit is unused in the original track data file)
 \
-\ !&1427 = sub_C5572 in TurnPlayerAround
-\ 1426   20 DA 13   JSR UpdateCurveVector           -> JSR sub_C5572
+\ !&1427 = HookSectionFlag6a in TurnPlayerAround (instruction #4)
+\ 1426   20 DA 13   JSR UpdateCurveVector           -> JSR HookSectionFlag6a
+\ If bit 6 of the current section's flags is set, call sub_C55C4 after moving to
+\ the next vector along (this bit is unused in the original track data file)
 \
-\ !&12FC = sub_C54F1 in GetTrackSegment
-\ Also needs ?&12FB = &20 from ModifyGameCode (Part 2 of 3)
-\ 12FB   18         CLC                             -> JSR sub_C54F1
+\ !&12FC = HookSectionFlag6b in GetTrackSegment (Part 1, instructions #3 and #4)
+\ Also needs ?&12FB = &20 from part 2
+\ 12FB   18         CLC                             -> JSR HookSectionFlag6b
 \ 12FC   69 03      ADC #3
+\ If bit 6 of the current section's flags is set, call sub_C5582 before adding 3
+\ (this bit is unused in the original track data file)
 \
-\ !&261B = sub_C56AF and ?&261A = &4C in GetVergeAndMarkers
-\ 261A   85 1F      STA horizonLine                 -> JMP sub_C56AF
-\ 261C   84 51      STY horizonListIndex
+\ !&261B = HookUpdateHorizon and ?&261A = &4C in GetVergeAndMarkers (gmar11 instructions #9 & #10)
+\ 261A   85 1F      STA horizonLine                 -> JMP HookUpdateHorizon
+\ 261C   84 51      STY horizonListIndex               EQUB &51
+\ Only store horizonLine and horizonListIndex if segmentCounter < 12
 \
-\ !&248C = sub_C56BC and ?&248B = &4C in GetSegmentAngles
-\ 248B   B0 2B      BCS gseg16                      -> JMP sub_C56BC
-\ 248D   4C 03 24   JMP gseg4
+\ !&248C = HookFieldOfView and ?&248B = &4C in GetSegmentAngles (gseg12 instructions #2 & #3)
+\ 248B   B0 2B      BCS gseg16                      -> JMP HookFieldOfView
+\ 248D   4C 03 24   JMP gseg4                          EQUB &03, &24
+\ When populating the verge buffer in GetSegmentAngles, don't give up so easily
+\ when we get segments outside the field of view
 \
-\ !&2539 = sub_C5772 in GetTrackAndMarkers
-\ Also needs ?&2538 = &20 from ModifyGameCode (Part 2 of 3)
-\ 2538   99 48 5F   STA yVergeLeft,Y                -> JSR sub_C5772
+\ !&2539 = HookCollapseTrack in GetTrackAndMarkers (gtrm2 instruction #2)
+\ Also needs ?&2538 = &20 from part 2
+\ 2538   99 48 5F   STA yVergeLeft,Y                -> JSR HookCollapseTrack
+\ Squeeze the left verge of the track into the right verge, but only for a few
+\ entries just in front of the horizon section, i.e. for the track section list
+\ and the first three entries in the track segment list
 \
-\ !&1594 = sub_C57A1 in ProcessDrivingKeys
-\ 1593   20 00 0C   JSR Multiply8x8                 -> JSR sub_C57A1
+\ !&1594 = HookSection4Steer in ProcessDrivingKeys (part 1, instruction #13)
+\ 1593   20 00 0C   JSR Multiply8x8                 -> JSR HookSection4Steer
+\ If this is track section 4, increase the effect of the joystick's x-axis
+\ steering by a factor of 1.76
 \
-\ !&4CD1 = xExtraSignVector in BuildRoadSign
+\ !&4CD1 = xExtraSignVector in BuildRoadSign (sign1 instruction #10)
 \ 4CD0   BD D0 53   LDA xTrackSignVector,X          -> LDA xExtraSignVector,X
+\ Read sign vectors from xExtraSignVector instead of xTrackSignVector
 \
-\ !&4CC9 = yExtraSignVector in BuildRoadSign
+\ !&4CC9 = yExtraSignVector in BuildRoadSign (sign1 instruction #7)
 \ 4CC8   BD F0 53   LDA yTrackSignVector,X          -> LDA yExtraSignVector,X
+\ Read sign vectors from yExtraSignVector instead of yTrackSignVector
 \
-\ !&4CC1 = zExtraSignVector in BuildRoadSign
+\ !&4CC1 = zExtraSignVector in BuildRoadSign (sign1 instruction #4)
 \ 4CC0   BD E0 53   LDA zTrackSignVector,X          -> LDA zExtraSignVector,X
+\ Read sign vectors from zExtraSignVector instead of zTrackSignVector
 \
-\ !&44D6 = extraRacingLine in bestRacingLine
+\ !&44D6 = extraRacingLine in SetBestRacingLine (slin1 instruction #1)
 \ 44D5   B9 D0 59   LDA trackRacingLine,Y           -> LDA extraRacingLine,Y
+\ Read racing line data from extraRacingLine instead of trackRacingLine
 \
-\ !&4CD7 = extraSignData in BuildRoadSign
+\ !&4CD7 = extraSignData in BuildRoadSign (sign1 instruction #12)
 \ 4CD6   BD EA 59   LDA trackSignData,X             -> LDA extraSignData,X
+\ See next modification
 \
-\ !&4CE1 = extraSignData in BuildRoadSign
+\ !&4CE1 = extraSignData in BuildRoadSign (sign1 instruction #17)
 \ 4CE0   BD EA 59   LDA trackSignData,X             -> LDA extraSignData,X
+\ Read sign data from extraSignData instead of trackSignData
 \
-\ !&1947 = sub_C56C8 in MapSegmentsToLines
-\ 1946   20 33 19   JSR CheckVergeOnScreen          -> JSR sub_C56C8
+\ !&1947 = HookFlattenHills in MapSegmentsToLines (instruction #5)
+\ 1946   20 33 19   JSR CheckVergeOnScreen          -> JSR HookFlattenHills
+\ Insert extra code before the call to CheckVergeOnScreen to flatten the height
+\ of the verge entries in the verge buffer that are hidden by the nearest hill
+\ to the player, so that the ground behind the nearest hill is effectively
+\ levelled off, and set horizonTrackWidth to 80% of the track width at the hill
+\ crest
 \
-\ !&24F3 = sub_C55BD in MovePlayerSegment
-\ 24F2   20 0B 14   JSR MovePlayerBack              -> JSR sub_C55BD
+\ !&24F3 = HookMoveBack in MovePlayerSegment (mpla6 instruction #1)
+\ 24F2   20 0B 14   JSR MovePlayerBack              -> JSR HookMoveBack
+\ Move the player backwards, but only if they haven't driven past the segment
 \
-\ !&462C = sub_C54EB in MovePlayerOnTrack
-\ 462B   20 50 34   JSR Absolute8Bit                -> JSR sub_C54EB
+\ !&462C = HookFlipAbsolute in MovePlayerOnTrack (instruction #4)
+\ 462B   20 50 34   JSR Absolute8Bit                -> JSR HookFlipAbsolute
+\ If we are facing backwards along the track, set A = -|A|
 \
-\ !&2543 = sub_C53F0 in GetTrackAndMarkers
-\ 2542   20 50 34   JSR Absolute8Bit                -> JSR sub_C53F0
+\ !&2543 = Hook80Percent in GetTrackAndMarkers (gtrm2 instructions #6 & #7)
+\ Also needs ?&2545 = &EA from part 2
+\ 2542   20 50 34   JSR Absolute8Bit                -> JSR Hook80Percent
+\ 2545   4A         LSR A                           -> NOP
+\ Set horizonTrackWidth = 0.8 * |A|, so horizonTrackWidth contains 80% of the
+\ width of the track on the horizon, in terms of the high bytes
 \
 \ Modifications applied by ModifyGameCode (Part 2 of 3)
 \ -----------------------------------------------------
 \
-\ ?&1248 = &20 (see JSR sub_C5672 above)
-\ ?&12FB = &20 (see JSR sub_C54EB above)
-\ ?&2538 = &20 (see JSR sub_C5772 above)
-\ ?&45CB = &20 (see JSR L57AD above)
+\ ?&1248 = &20
+\ See JSR HookSectionFrom in part 1
 \
-\ ?&2545 = &EA in GetTrackAndMarkers
-\ 2545   4A         LSR A                           -> NOP
+\ ?&12FB = &20
+\ See JSR HookFlipAbsolute in part 1
 \
-\ ?&4F55 = 22 in MoveHorizon
+\ ?&2538 = &20
+\ See JSR HookCollapseTrack in part 1
+\
+\ ?&45CB = &20
+\ See JSR HookSlopeJump in part 3
+\
+\ ?&2545 = &EA
+\ See JSR Hook80Percent in part 1
+\
+\ ?&4F55 = 22 in MoveHorizon (hori1, instruction #1)
 \ 4F54   C9 12      CMP #18                         -> CMP #22
+\ See next modification
 \
-\ ?&4F59 = 22 in MoveHorizon
+\ ?&4F59 = 22 in MoveHorizon (hori1, instruction #3)
 \ 4F58   A9 12      LDA #18                         -> LDA #22
+\ Change maximum value of screenTimer1 (i.e. when we are on a hill) from
+\ &04D8 + 1152 = &0958 to &04D8 + 1408 = &0A58 (&100 more), so this allows the
+\ palette change to occur lower down the screen, to support higher hills
 \
-\ ?&24EA = 13 in MovePlayerSegment
+\ ?&24EA = 13 in MovePlayerSegment (mpla5, instruction #1)
 \ 24E9   C9 0E      CMP #14                         -> CMP #13
+\ Move player back a segment if edgeSegmentNumber = 13 (rather than 14), or back
+\ by two segments if edgeSegmentNumber > 13 (i.e. 14 or 15, rather than just 15)
 \
-\ ?&1FE9 = &A2 (see LDX #A above)
+\ ?&1FE9 = &A2
+\ See LDX #A in part 3
 \
 \ Modifications applied by ModifyGameCode (Part 3 of 3)
 \ -----------------------------------------------------
@@ -1305,35 +1504,46 @@ ORG CODE%
 \ ?&35F4 = 11 = 3 + 8  in objectBottom
 \ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)        -> (4, -3, 1, 0)
 \                    Coordinates: (10, 4, 9, 10)    -> (1, -4, 9, 10)
-\ Changes chicane sign into a u-turn
+\ Change chicane sign into a u-turn
 \
-\ !&45CC = sub_C59E9 in ApplyElevation
-\ Also needs ?&45CB = &20 from ModifyGameCode (Part 2 of 3)
-\ 45CB   0A         ASL A                           -> JSR sub_C59E9
+\ !&45CC = HookSlopeJump in ApplyElevation (Part 5, instruction #1)
+\ Also needs ?&45CB = &20 from part 2
+\ 45CB   0A         ASL A                           -> JSR HookSlopeJump
 \ 45CC   26 77      ROL W
+\ Insert extra code at the start of part 5, so when the car is on the ground,
+\ the "heightAboveTrack * 4" part of the elevation calculation gets replaced by
+\ playerSpeedHi * yTrackSegmentI * 4 (so driving fast over sloping segments can
+\ make the car jump)
 \
-\ ?&2772 = &4B in ApplyDriverTactics
+\ ?&2772 = &4B in ApplyDriverTactics (Part 2, tact14 instruction #5)
 \ 2771   C9 3C      CMP #60                         -> CMP #75
+\ Make cars apply the brakes when within a distance of 75, rather than 60
 \
-\ Modifications applied by sub_C5672
-\ ----------------------------------
+\ Live modifications applied by HookSectionFrom
+\ ---------------------------------------------
 \
-\ ?&23B3 = A in GetSectionAngles
+\ ?&23B3 = A in GetSectionAngles (gsec11 instruction #4)
 \ 23B2   A9 07      LDA #7                          -> LDA #A
+\ Change check from 7 to A, is this a change to the size of the track section
+\ list ???
 \
-\ Modifications applied by sub_C56C8
-\ ----------------------------------
+\ Live modifications applied by HookFlattenHills
+\ ----------------------------------------------
 \
-\ ?&1FEA = A in DrawObject
-\ Also needs ?&1FE9 = &A2 from ModifyGameCode (Part 2 of 3)
+\ ?&1FEA = A in DrawObject (dobj3 instruction #6)
+\ Also needs ?&1FE9 = &A2 from part 2
 \ 1FE9   A6 1F      LDX horizonLine                 -> LDX #A
+\ Cut off objects at track line number A instead of horizonLine when they are
+\ hidden behind a hill
 \
-\ Modifications applied by sub_C5772
-\ ----------------------------------
+\ Live modifications applied by HookCollapseTrack
+\ -----------------------------------------------
 \
-\ ?&1FEA = A in DrawObject
-\ Also needs ?&1FE9 = &A2 from ModifyGameCode (Part 2 of 3)
+\ ?&1FEA = A in DrawObject (dobj3 instruction #6)
+\ Also needs ?&1FE9 = &A2 from part 2
 \ 1FE9   A6 1F      LDX horizonLine                 -> LDX #A
+\ Cut off objects at track line number A instead of horizonLine when they are
+\ hidden behind a hill
 \
 \ ******************************************************************************
 
@@ -1416,113 +1626,191 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C5772
+\       Name: HookCollapseTrack
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Collapse the track for entries in the verge buffer that are just
+\             in front of the horizon section
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Squeeze the left verge of the track into the right verge, but only for a few
+\ entries just in front of the horizon section, i.e. for the track section list
+\ and the first three entries in the track segment list.
+\
+\ Arguments:
+\
+\   A                   The updated value of horizonLine
+\
+\   Y                   The horizon section index in the verge buffer from
+\                       horizonListIndex
 \
 \ ******************************************************************************
 
-.sub_C5772
+.HookCollapseTrack
 
- STA &1FEA
+ STA &1FEA              \ Modify the DrawObject routine at dobj3 instruction #6
+                        \ so that objects get cut off at the track line number
+                        \ in A instead of horizonLine when they are hidden
+                        \ behind a hill
 
- STA yVergeLeft,Y
+ STA yVergeLeft,Y       \ Set the pitch angle for the left side of the horizon
+                        \ line in the track verge buffer to the updated value of
+                        \ horizonLine (this is the instruction that we overwrote
+                        \ with the call to the hook routine, so this makes sure
+                        \ we still do this)
 
-.L5778
+                        \ We now work through the verge buffer from index Y up
+                        \ to index 8, and do the following for each entry:
+                        \
+                        \   * If xVergeRight < xVergeLeft, set
+                        \     xVergeRight = xVergeLeft
+                        \
+                        \   * Set yVergeRight = yVergeLeft
+                        \
+                        \ This appears to squeeze the left verge of the track
+                        \ into the right verge, but only for a few entries just
+                        \ in front of the horizon section, i.e. for the track
+                        \ section list and the first three entries in the track
+                        \ segment list
 
- LDA xVergeRightLo,Y
- SEC
- SBC xVergeLeftLo,Y
+.coll1
 
- LDA xVergeRightHi,Y
+ LDA xVergeRightLo,Y    \ Set A = xVergeRight - xVergeLeft for the horizon
+ SEC                    \
+ SBC xVergeLeftLo,Y     \ starting with the low bytes
+
+ LDA xVergeRightHi,Y    \ And then the high bytes
  SBC xVergeLeftHi,Y
 
- BPL L5793
+ BPL coll2              \ If the result is positive, jump to coll2 to skip the
+                        \ following
 
- LDA xVergeRightLo,Y
- STA xVergeLeftLo,Y
+                        \ If we get here then the result is negative, so
+                        \ xVergeRight < xVergeLeft
 
+ LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeLeft
+ STA xVergeLeftLo,Y     
  LDA xVergeRightHi,Y
  STA xVergeLeftHi,Y
 
-.L5793
+.coll2
 
- LDA yVergeRight,Y
+ LDA yVergeRight,Y      \ Set yVergeRight = yVergeLeft
  STA yVergeLeft,Y
 
- INY
+ INY                    \ Increment the verge buffer index
 
- CPY #9
- BCC L5778
+ CPY #9                 \ Loop back until we have processed up to index 8
+ BCC coll1
 
- LDY horizonListIndex
+ LDY horizonListIndex   \ Restore the value of Y that we had on entering the
+                        \ hook routine
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C57A1
+\       Name: HookSection4Steer
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: If this is track section 4, increase the effect of the joystick's
+\             x-axis steering by a factor of 1.76
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If this is track section 4, set:
+\
+\   (A T) = 1.76 * x-axis ^ 2
+\
+\ otherwise set:
+\
+\   (A T) = x-axis ^ 2
+\
+\ The latter is the same as the existing game code, so this hook only affects
+\ track section 4.
+\
+\ Arguments:
+\
+\   U                   The joystick x-axis high byte
 \
 \ ******************************************************************************
 
-.sub_C57A1
+.HookSection4Steer
 
- LDY currentPlayer
+ LDY currentPlayer      \ Set A to the track section number * 8 for the current
+ LDA objTrackSection,Y  \ player
 
- LDA objTrackSection,Y
+ LDY #181               \ Set Y = 181
 
- LDY #181
+ CMP #32                \ If the track section <> 32 (i.e. section 4), skip the
+ BNE secs1              \ following instruction
 
- CMP #32
- BNE L57AE
+ LDY #240               \ The player is in track section 4, so set Y = 240
 
- LDY #240
+.secs1
 
-.L57AE
+ TYA                    \ Set A = Y
+                        \
+                        \ So A is 181, or 240 if this is track section 4
 
- TYA
+ JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = A * x-axis
 
- JSR Multiply8x8
+ STA U                  \ Set U = A
+                        \       = high byte of A * x-axis
 
- STA U
+ JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = A * A
+                        \           = (A * x-axis) ^ 2
 
- JSR Multiply8x8
+ ASL T                  \ Set (A T) = (A T) * 2
+ ROL A                  \           = 2 * (A * x-axis) ^ 2
 
- ASL T
- ROL A
+                        \ So if A = 240 (for track section 4), we have:
+                        \
+                        \   (A T) = 2 * (240/256 * x-axis) ^ 2
+                        \         = 2 * (0.9375 * x-axis) ^ 2
+                        \         = 1.76 * x-axis ^ 2
+                        \
+                        \ otherwise we have:
+                        \
+                        \   (A T) = 2 * (181/256 * x-axis) ^ 2
+                        \         = 2 * (0.7070 * x-axis) ^ 2
+                        \         = 1.00 * x-axis ^ 2
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: sub_C57BB
+\       Name: Multiply8x8Signed
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Multiply two 8-bit numbers, one of which is signed
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If LDA V is the last LDA instruction before the call, and A is signed, set:
+\
+\   (A T) = |A| * U * abs(A)
+\         = A * U
+\
+\ So we retain the sign in A.
 \
 \ ******************************************************************************
 
-.sub_C57BB
+.Multiply8x8Signed
 
- PHP
+ PHP                    \ Store the N flag on the stack, as set by the LDA just
+                        \ before the call, so this equals abs(A)
 
- JMP MultiplyElevation+11
+ JMP MultiplyElevation+11   \ Jump into the MultiplyElevation routine:
+                        \
+                        \ JSR Absolute8Bit      \ Set A = |A|
+                        \ JSR Multiply8x8       \ Set (A T) = A * U = |A| * U
+                        \ PLP                   \ Retrieve sign in N
+                        \ JSR Absolute8Bit      \ Set A = |A| * U * abs(A)
+                        \ RTS                   \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -1731,7 +2019,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5905
+\       Name: extraSectionFrom
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1742,7 +2030,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5905
+.extraSectionFrom
 
  EQUB &00, &A0, &3A
  EQUB &ED, &DC, &87, &5C, &F6, &12, &C8, &1D
@@ -1793,35 +2081,64 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C59E9
+\       Name: HookSlopeJump
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Jump the car when driving fast over sloping segments
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ If the car is on the ground, replace the heightAboveTrack * 4 part of the
+\ car's y-coordinate calculation with playerSpeedHi * yTrackSegmentI * 4, to
+\ give:
+\
+\   * (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
+\                                        + carProgress * yTrackSegmentI
+\                                        + playerSpeedHi * yTrackSegmentI * 4
+\                                        + 172
+\
+\ So driving fast over sloping segments can make the car jump.
+\
+\ Arguments:
+\
+\   A                   Current value of heightAboveTrack
 \
 \ ******************************************************************************
 
-.sub_C59E9
+.HookSlopeJump
 
- BNE L59F4
+ BNE slop1              \ If A is non-zero, skip the following (so the hook has
+                        \ no effect when the car is off the ground)
 
- LDA playerSpeedHi
+                        \ If we get here then heightAboveTrack = 0, so the car
+                        \ is on the ground 
 
- JSR MultiplyElevation
+ LDA playerSpeedHi      \ Set A = the high byte of the current speed
 
- BPL L59F4
+ JSR MultiplyElevation  \ Set:
+                        \
+                        \   A = A * yTrackSegmentI
+                        \     = playerSpeedHi * yTrackSegmentI
+                        \
+                        \ The value given in yTrackSegmentI is the y-coordinate
+                        \ of the segment vector, i.e. the vector from this
+                        \ segment to the next, which is the same as the change
+                        \ in height as we move through the segment
+                        \
+                        \ So this value is higher with greater speed and on
+                        \ segments that have higher slopes
 
- DEC W
+ BPL slop1              \ If A is positive, skip the following instruction
 
-.L59F4
+ DEC W                  \ Decrement W to &FF, so (W A) has the correct sign
 
- ASL A
- ROL W
+.slop1
 
- RTS
+ ASL A                  \ Implement the shifts that we overwrote with the call
+ ROL W                  \ to the hook routine, so we have effectively inserted
+                        \ the above code into the main game
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2027,7 +2344,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C5A1B
+\       Name: HookFirstSegment
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
@@ -2038,7 +2355,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.sub_C5A1B
+.HookFirstSegment
 
  JSR sub_C557F
 
