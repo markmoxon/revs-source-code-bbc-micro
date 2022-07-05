@@ -64,7 +64,7 @@ CheckVergeOnScreen = &1933
 gseg13 = &2490
 gtrm2 = &2535
 Absolute8Bit = &3450
-MultiplyElevation = &4610
+MultiplyHeight = &4610
 xTrackSegmentI = &5400
 yTrackSegmentI = &5500
 zTrackSegmentI = &5600
@@ -88,20 +88,21 @@ yVergeLeft = &5F48
 
 ORG CODE%
 
+.trackData
+
 \ ******************************************************************************
 \
-\       Name: trackData
+\       Name: Track section data (Part 1 of 2)
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Data for the track sections
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ trackSectionData etc.
 \
 \ ******************************************************************************
-
-.trackData
 
  EQUB &01, &D1, &14, &0F, &D0, &34, &0F, &7F
  EQUB &13, &D4, &14, &2A, &D3, &29, &2A, &1C
@@ -174,7 +175,7 @@ ORG CODE%
 
 .thisSectionDataIdx
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -191,7 +192,7 @@ ORG CODE%
 
 .L53F9
 
- EQUB &3A
+ EQUB 58
 
 \ ******************************************************************************
 \
@@ -208,7 +209,7 @@ ORG CODE%
 
 .thisSectionData1Lo
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -225,7 +226,7 @@ ORG CODE%
 
 .thisSectionData1Hi
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -242,7 +243,7 @@ ORG CODE%
 
 .yThisSectionData
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -259,7 +260,7 @@ ORG CODE%
 
 .L53FD
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -276,7 +277,7 @@ ORG CODE%
 
 .L53FE
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -293,7 +294,7 @@ ORG CODE%
 
 .L53FF
 
- EQUB &00
+ EQUB 0
 
 \ ******************************************************************************
 \
@@ -391,7 +392,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: extraSignData
+\       Name: trackSignData
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -402,7 +403,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.extraSignData
+.trackSignData
 
  EQUB &0C, &10, &23, &20, &38, &4D
  EQUB &58, &60, &6C, &8C, &A4, &B5, &C0, &D4
@@ -423,116 +424,132 @@ ORG CODE%
 
 .sub_C5472
 
- LDA thisSectionData1Lo
- ASL A
-
- LDA thisSectionData1Hi
+ LDA thisSectionData1Lo \ Set A = (thisSectionData1Hi thisSectionData1Lo) << 1
+ ASL A                  \ keeping the high byte only and rotating bit 7 into
+ LDA thisSectionData1Hi \ the C flag
  ROL A
 
- PHA
+ PHA                    \ Push the high byte in A onto the stack
 
- ROL A
- ROL A
+ ROL A                  \ Set bits 0-2 of U to bits 5-7 of thisSectionData1Hi
+ ROL A                  \ (i.e. the top three bits)
  ROL A
  AND #%00000111
  STA U
 
- LSR A
+ LSR A                  \ Set the C flag to bit 0 of A, i.e. bit 5 of
+                        \ thisSectionData1Hi
 
- PLA
+ PLA                    \ Retrieve the high byte that we pushed onto the stack,
+                        \ i.e. the high byte of thisSectionData1 << 1
 
- AND #%00111111
+ AND #%00111111         \ Clear bits 6 and 7 of A, so A now contains two zeroes,
+                        \ then bits 4, 3, 2, 1 of thisSectionData1Hi, then bits
+                        \ 7 and 6 of thisSectionData1Lo
 
- BCC L548C
+ BCC L548C              \ If the C flag, i.e. bit 5 of thisSectionData1Hi, is
+                        \ clear, jump to L548C to skip the following
 
 .L5488
 
- EOR #%00111111
- ADC #0
+ EOR #%00111111         \ Negate A using two's complement (the ADC adds 1 as the
+ ADC #0                 \ C flag is set)
 
 .L548C
 
+ TAX                    \ Set X = A
+
+ LDY segmentCoord1,X    \ Set Y = X-th entry in segmentCoord1
+
+ LDA segmentCoord2,X    \ Set X = X-th entry in segmentCoord2
  TAX
 
- LDY L57BF,X
-
- LDA L58BF,X
- TAX
-
- LDA U
- CLC
- ADC #1
-
+ LDA U                  \ If bit 1 of U + 1 is set, i.e. U ends in %01 or %10,
+ CLC                    \ i.e. bits 5 and 6 of thisSectionData1Hi are different,
+ ADC #1                 \ then jump to L54A3 to set V and W the other way round
  AND #%00000010
  BNE L54A3
 
- STY V
+ STY V                  \ Set V = Y
 
- STX W
+ STX W                  \ Set W = X
 
- BEQ L54A7
+ BEQ L54A7              \ Jump to L54A7 (this BEQ is effectively a JMP as we
+                        \ passed through a BNE above)
 
 .L54A3
 
- STX V
+ STX V                  \ Set V = X
 
- STY W
+ STY W                  \ Set W = Y
 
 .L54A7
 
- LDA U
- CMP #4
- BCC L54B3
+ LDA U                  \ If U < 4, i.e. bit 3 of U is clear, i.e. bit 7 of
+ CMP #4                 \ thisSectionData1Hi is clear, jump to L54B3 to skip the
+ BCC L54B3              \ following
 
- LDA #0
+                        \ If we get here then bit 3 of U is set, i.e. bit 7 of
+                        \ thisSectionData1Hi is set
+
+ LDA #0                 \ Set V = -V
  SBC V
  STA V
 
 .L54B3
 
- LDA U
- CMP #6
- BCS L54C3
+ LDA U                  \ If U >= 6, i.e. bits 1 and 2 of U are set, i.e. bits
+ CMP #6                 \ 6 and 7 of thisSectionData1Hi are set, jump to L54C3
+ BCS L54C3              \ to skip the following
 
- CMP #2
- BCC L54C3
+ CMP #2                 \ If U < 2, i.e. bits 1 and 2 of U are clear, i.e. bits
+ BCC L54C3              \ 6 and 7 of thisSectionData1Hi are clear, jump to L54C3
+                        \ to skip the following
 
- LDA #0
+                        \ If we get here then bits 1 and 2 of U are different,
+                        \ i.e. bits 6 and 7 of thisSectionData1Hi are different
+
+ LDA #0                 \ Set W = -W
  SBC W
  STA W
 
 .L54C3
 
- LDY thisVectorNumber
+ LDY thisVectorNumber   \ Set Y to thisVectorNumber, which contains the value of
+                        \ trackSectionFrom for this track section (i.e. the
+                        \ number of the first segment vector in the section)
 
- LDA #%10001000
+ LDA #136               \ Set U = 136
  STA U
 
- LDA V
- STA xTrackSegmentI,Y
+ LDA V                  \ Set the x-coordinate of the Y-th inner track segment
+ STA xTrackSegmentI,Y   \ vector to V
 
- JSR Multiply8x8Signed  \ Set (A T) = A * U
-                        \
-                        \ retaining the sign in A
+ JSR Multiply8x8Signed  \ Set A = A * U / 256
+                        \       = V * 136 / 256
+                        \       = V * 0.53
 
- STA zTrackSegmentO,Y
+ STA zTrackSegmentO,Y   \ Set the z-coordinate of the Y-th outer track segment
+                        \ vector to V * 0.53
 
- LDA W
- STA zTrackSegmentI,Y
+ LDA W                  \ Set the z-coordinate of the Y-th inner track segment
+ STA zTrackSegmentI,Y   \ vector to W
 
- JSR Multiply8x8Signed  \ Set (A T) = A * U
-                        \
-                        \ retaining the sign in A
+ JSR Multiply8x8Signed  \ Set A = A * U / 256
+                        \       = W * 136 / 256
+                        \       = W * 0.53
 
- EOR #&FF
- CLC
- ADC #1
- STA xTrackSegmentO,Y
+ EOR #&FF               \ Negate A using two's complement, so:
+ CLC                    \
+ ADC #1                 \   A = -W * 0.53
 
- LDA yThisSectionData
- STA yTrackSegmentI,Y
+ STA xTrackSegmentO,Y   \ Set the x-coordinate of the Y-th outer track segment
+                        \ vector to -W * 0.53
 
- RTS
+ LDA yThisSectionData   \ Set the y-coordinate of the Y-th track segment vector
+ STA yTrackSegmentI,Y   \ to yThisSectionData
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -637,12 +654,12 @@ ORG CODE%
  EQUB LO(HookFieldOfView)
  EQUB LO(HookCollapseTrack)
  EQUB LO(HookSection4Steer)
- EQUB LO(xExtraSignVector)
- EQUB LO(yExtraSignVector)
- EQUB LO(zExtraSignVector)
- EQUB LO(extraRacingLine)
- EQUB LO(extraSignData)
- EQUB LO(extraSignData)
+ EQUB LO(xTrackSignVector)
+ EQUB LO(yTrackSignVector)
+ EQUB LO(zTrackSignVector)
+ EQUB LO(trackRacingLine)
+ EQUB LO(trackSignData)
+ EQUB LO(trackSignData)
  EQUB LO(HookFlattenHills)
  EQUB LO(HookMoveBack)
  EQUB LO(HookFlipAbsolute)
@@ -674,12 +691,12 @@ ORG CODE%
  EQUB HI(HookFieldOfView)
  EQUB HI(HookCollapseTrack)
  EQUB HI(HookSection4Steer)
- EQUB HI(xExtraSignVector)
- EQUB HI(yExtraSignVector)
- EQUB HI(zExtraSignVector)
- EQUB HI(extraRacingLine)
- EQUB HI(extraSignData)
- EQUB HI(extraSignData)
+ EQUB HI(xTrackSignVector)
+ EQUB HI(yTrackSignVector)
+ EQUB HI(zTrackSignVector)
+ EQUB HI(trackRacingLine)
+ EQUB HI(trackSignData)
+ EQUB HI(trackSignData)
  EQUB HI(HookFlattenHills)
  EQUB HI(HookMoveBack)
  EQUB HI(HookFlipAbsolute)
@@ -713,18 +730,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xExtraSignVector
+\       Name: xTrackSignVector
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The x-coordinate of the track sign vector for each sign, to be
+\             scaled and added to the inner track section vector for the sign
 \
 \ ******************************************************************************
 
-.xExtraSignVector
+.xTrackSignVector
 
  EQUB &F0, &D6, &D8, &0C, &09, &FE
  EQUB &F6, &32, &1C, &DF, &F4, &F2, &F8, &33
@@ -889,49 +903,60 @@ ORG CODE%
 
 .sub_C55C4
 
- STX xStore
+ STX xStore             \ Store X in xStore so we can retrieve it at the end of
+                        \ the routine
 
- LDY thisSectionDataIdx
+ LDY thisSectionDataIdx \ Set Y = thisSectionDataIdx
 
- BMI L55FA
+ BMI L55FA              \ If bit 7 of Y is set, jump to L55FA to skip the
+                        \ following
 
- LDA data1Lo,Y
+ LDA data1Lo,Y          \ Set (A T) = (data1Hi data1Lo) for this section
  STA T
-
  LDA data1Hi,Y
 
- BIT directionFacing
+ BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
+                        \ call to Absolute16Bit sets the sign of (A T) to
+                        \ abs(directionFacing)
 
- JSR Absolute16Bit
+ JSR Absolute16Bit      \ Set the sign of (A T) to match the sign bit in
+                        \ directionFacing, so this negates (A T) if we are
+                        \ facing backwards along the track
 
- STA U
+ STA U                  \ Set (U T) = (A T)
+                        \           = signed (data1Hi data1Lo) for this section
 
- LDA T
- CLC
- ADC thisSectionData1Lo
- STA thisSectionData1Lo
+ LDA T                  \ Set thisSectionData1 = thisSectionData1 + (U T)
+ CLC                    \                      = thisSectionData1 + data1
+ ADC thisSectionData1Lo \
+ STA thisSectionData1Lo \ starting with the low bytes
 
- LDA U
+ LDA U                  \ And then the high bytes
  ADC thisSectionData1Hi
  STA thisSectionData1Hi
 
- LDA L5628,Y
+ LDA yData,Y            \ Set A = yData for this section
 
- BIT directionFacing
+ BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
+                        \ call to Absolute8Bit sets the sign of A to
+                        \ abs(directionFacing)
 
- JSR Absolute8Bit
+ JSR Absolute8Bit       \ Set the sign of A to match the sign bit in
+                        \ directionFacing, so this negates A if we are facing
+                        \ backwards along the track
 
- CLC
- ADC yThisSectionData
+ CLC                    \ Set yThisSectionData = yThisSectionData + A
+ ADC yThisSectionData   \                      = yThisSectionData + yData
  STA yThisSectionData
 
 .L55FA
 
- JSR sub_C5472
+ JSR sub_C5472          \ ???
 
- LDX xStore
+ LDX xStore             \ Retrieve the value of X we stores above, so we can
+                        \ return it unchanged by the routine
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -965,9 +990,17 @@ ORG CODE%
 
  RTS
 
+ EQUB &00, &00          \ These bytes appear to be unused
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+
 \ ******************************************************************************
 \
-\       Name: L561A
+\       Name: yData
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -978,25 +1011,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L561A
-
- EQUB &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
-
-\ ******************************************************************************
-\
-\       Name: L5628
-\       Type: Variable
-\   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5628
+.yData
 
  EQUB &01, &FE, &FF, &FE, &FF, &00, &04, &09
  EQUB &00, &F9, &F9, &00, &00, &00, &04, &00
@@ -1009,18 +1024,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: yExtraSignVector
+\       Name: yTrackSignVector
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The y-coordinate of the track sign vector for each sign, to be
+\             scaled and added to the inner track section vector for the sign
 \
 \ ******************************************************************************
 
-.yExtraSignVector
+.yTrackSignVector
 
  EQUB &1A, &4C, &D9, &E6, &0D, &08
  EQUB &EC, &06, &E0, &10, &12, &05, &1E, &01
@@ -1059,31 +1071,50 @@ ORG CODE%
  LSR A                  \ trackSectionFrom contains the track section * 8)
  TAY
 
- LDA sectionData1Lo,Y
- STA thisSectionData1Lo
-
+ LDA sectionData1Lo,Y   \ Set (thisSectionData1Hi thisSectionData1Lo) to this
+ STA thisSectionData1Lo \ section's entry from (sectionData1Hi sectionData1Lo)
  LDA sectionData1Hi,Y
  STA thisSectionData1Hi
 
- LDA ySectionData,Y
- STA yThisSectionData
+ LDA ySectionData,Y     \ Set ySectionData to this section's entry from
+ STA yThisSectionData   \ yThisSectionData
 
- LDA sectionDataIndex,Y
- LSR A
- ROR A
- STA thisSectionDataIdx
+ LDA sectionDataIndex,Y \ Set A to this section's entry from sectionDataIndex
 
- LDA #14
- ROR A
- STA &23B3
+ LSR A                  \ Set A = A >> 2, with bit 6 cleared, bit 7 set to the
+ ROR A                  \ bit 0 of the sectionDataIndex entry, and the C flag
+                        \ set to bit 1 of the sectionDataIndex entry
 
- LDA #0
+ STA thisSectionDataIdx \ Store A in thisSectionDataIdx, so it contains:
+                        \
+                        \  * sectionDataIndex / 4              if bit 0 is clear
+                        \
+                        \  * 128 + (sectionDataIndex / 4)      if bit 0 is set
+                        \
+                        \ where bit 0 is from the original sectionDataIndex
+                        \ entry
+
+ LDA #14                \ Set A = 7, with bit 7 set to the C flag (so if this
+ ROR A                  \ section's sectionDataIndex entry has bit 1 set, then A
+                        \ is 135, otherwise it is 7)
+
+ STA &23B3              \ Modify the GetSectionAngles routine, at instruction
+                        \ #4 after gsec11, to test prevHorizonIndex against the
+                        \ value we just calculated in A rather than 7
+                        \ 
+                        \ So if this section's sectionDataIndex entry has bit 1
+                        \ set, the test becomes prevHorizonIndex <= 135, which
+                        \ is always true, so this modification makes us never
+                        \ set the horizon line to 7 for sections that have bit 1
+                        \ of sectionDataIndex set
+
+ LDA #0                 \ Set L53FD = 0
  STA L53FD
 
- BIT directionFacing
- BMI L56AA
+ BIT directionFacing    \ If we are facing backwards along the track, jump to
+ BMI L56AA              \ L56AA to skip the following
 
- JSR sub_C55C4
+ JSR sub_C55C4          \ ???
 
 .L56AA
 
@@ -1119,7 +1150,7 @@ ORG CODE%
 
  PLA                    \ Retrieve the value of A from the stack
 
- BCS L56BB              \ If segmentCounter >= 12, jump to L56BB to skip the
+ BCS upho1              \ If segmentCounter >= 12, jump to upho1 to skip the
                         \ following two instructions
 
                         \ Otherwise we set the horizon line and index using the
@@ -1132,7 +1163,7 @@ ORG CODE%
 
  STY horizonListIndex   \ Set horizonListIndex to the track segment number in Y
 
-.L56BB
+.upho1
 
  RTS                    \ Return from the subroutine
 
@@ -1330,221 +1361,6 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: 
 \
-\ ------------------------------------------------------------------------------
-\
-\ This routine modifies the main game code. The routine is in three parts, which
-\ are run via the CallTrackHook routine once the track has been loaded.
-\
-\ There are two types of modification:
-\
-\   * 16-bit pokes take values from (newContentHi newContentLo) and poke them
-\     into the addresses given in (modifyAddressHi modifyAddressLo)
-\
-\   * 8-bit pokes are done with straightforward LDA and STA instructions
-\
-\ Using BBC BASIC terminology, 16-bit pokes are shown as:
-\
-\   !&xxxx = y
-\
-\ while 8-bit pokes are shown as:
-\
-\   ?&xxxx = y
-\
-\ Each of these pokes the value y into address &xxxx.
-\
-\ Modifications are shown in the following format:
-\
-\ !<address> = <new value> in <subroutine>
-\ Also needs <related pokes>
-\ <instructions before modification>                -> <after modification>
-\
-\ There are other routines in this file that modify the main game code, but
-\ these modifications are performed while the game is running. These are also
-\ listed below.
-\
-\ Modifications applied by ModifyGameCode (Part 1 of 3)
-\ -----------------------------------------------------
-\
-\ !&1249 = HookSectionFrom in GetSectionCoords (instruction #10)
-\ Also needs ?&1248 = &20 from part 2
-\ 1248   B9 05 59   LDA trackSectionFrom,Y          -> JSR HookSectionFrom
-\ Do some extra processing when reading trackSectionFrom
-\
-\ !&128A = HookFirstSegment in GetFirstSegment (getf2 instruction #3)
-\ 1289   20 E0 13   JSR UpdateVectorNumber          -> JSR HookFirstSegment
-\ Call sub_C5582 and sub_C5472 after UpdateVectorNumber
-\
-\ !&13CA = HookSectionFlag6a in GetTrackSegment (Part 3, gets12 instruction #11)
-\ 13C9   20 DA 13   JSR UpdateCurveVector           -> JSR HookSectionFlag6a
-\ If bit 6 of the current section's flags is set, call sub_C55C4 after moving to
-\ the next vector along (this bit is unused in the original track data file)
-\
-\ !&1427 = HookSectionFlag6a in TurnPlayerAround (instruction #4)
-\ 1426   20 DA 13   JSR UpdateCurveVector           -> JSR HookSectionFlag6a
-\ If bit 6 of the current section's flags is set, call sub_C55C4 after moving to
-\ the next vector along (this bit is unused in the original track data file)
-\
-\ !&12FC = HookSectionFlag6b in GetTrackSegment (Part 1, instructions #3 and #4)
-\ Also needs ?&12FB = &20 from part 2
-\ 12FB   18         CLC                             -> JSR HookSectionFlag6b
-\ 12FC   69 03      ADC #3
-\ If bit 6 of the current section's flags is set, call sub_C5582 before adding 3
-\ (this bit is unused in the original track data file)
-\
-\ !&261B = HookUpdateHorizon and ?&261A = &4C in GetVergeAndMarkers (gmar11 instructions #9 & #10)
-\ 261A   85 1F      STA horizonLine                 -> JMP HookUpdateHorizon
-\ 261C   84 51      STY horizonListIndex               EQUB &51
-\ Only store horizonLine and horizonListIndex if segmentCounter < 12
-\
-\ !&248C = HookFieldOfView and ?&248B = &4C in GetSegmentAngles (gseg12 instructions #2 & #3)
-\ 248B   B0 2B      BCS gseg16                      -> JMP HookFieldOfView
-\ 248D   4C 03 24   JMP gseg4                          EQUB &03, &24
-\ When populating the verge buffer in GetSegmentAngles, don't give up so easily
-\ when we get segments outside the field of view
-\
-\ !&2539 = HookCollapseTrack in GetTrackAndMarkers (gtrm2 instruction #2)
-\ Also needs ?&2538 = &20 from part 2
-\ 2538   99 48 5F   STA yVergeLeft,Y                -> JSR HookCollapseTrack
-\ Squeeze the left verge of the track into the right verge, but only for a few
-\ entries just in front of the horizon section, i.e. for the track section list
-\ and the first three entries in the track segment list
-\
-\ !&1594 = HookSection4Steer in ProcessDrivingKeys (part 1, instruction #13)
-\ 1593   20 00 0C   JSR Multiply8x8                 -> JSR HookSection4Steer
-\ If this is track section 4, increase the effect of the joystick's x-axis
-\ steering by a factor of 1.76
-\
-\ !&4CD1 = xExtraSignVector in BuildRoadSign (sign1 instruction #10)
-\ 4CD0   BD D0 53   LDA xTrackSignVector,X          -> LDA xExtraSignVector,X
-\ Read sign vectors from xExtraSignVector instead of xTrackSignVector
-\
-\ !&4CC9 = yExtraSignVector in BuildRoadSign (sign1 instruction #7)
-\ 4CC8   BD F0 53   LDA yTrackSignVector,X          -> LDA yExtraSignVector,X
-\ Read sign vectors from yExtraSignVector instead of yTrackSignVector
-\
-\ !&4CC1 = zExtraSignVector in BuildRoadSign (sign1 instruction #4)
-\ 4CC0   BD E0 53   LDA zTrackSignVector,X          -> LDA zExtraSignVector,X
-\ Read sign vectors from zExtraSignVector instead of zTrackSignVector
-\
-\ !&44D6 = extraRacingLine in SetBestRacingLine (slin1 instruction #1)
-\ 44D5   B9 D0 59   LDA trackRacingLine,Y           -> LDA extraRacingLine,Y
-\ Read racing line data from extraRacingLine instead of trackRacingLine
-\
-\ !&4CD7 = extraSignData in BuildRoadSign (sign1 instruction #12)
-\ 4CD6   BD EA 59   LDA trackSignData,X             -> LDA extraSignData,X
-\ See next modification
-\
-\ !&4CE1 = extraSignData in BuildRoadSign (sign1 instruction #17)
-\ 4CE0   BD EA 59   LDA trackSignData,X             -> LDA extraSignData,X
-\ Read sign data from extraSignData instead of trackSignData
-\
-\ !&1947 = HookFlattenHills in MapSegmentsToLines (instruction #5)
-\ 1946   20 33 19   JSR CheckVergeOnScreen          -> JSR HookFlattenHills
-\ Insert extra code before the call to CheckVergeOnScreen to flatten the height
-\ of the verge entries in the verge buffer that are hidden by the nearest hill
-\ to the player, so that the ground behind the nearest hill is effectively
-\ levelled off, and set horizonTrackWidth to 80% of the track width at the hill
-\ crest
-\
-\ !&24F3 = HookMoveBack in MovePlayerSegment (mpla6 instruction #1)
-\ 24F2   20 0B 14   JSR MovePlayerBack              -> JSR HookMoveBack
-\ Move the player backwards, but only if they haven't driven past the segment
-\
-\ !&462C = HookFlipAbsolute in MovePlayerOnTrack (instruction #4)
-\ 462B   20 50 34   JSR Absolute8Bit                -> JSR HookFlipAbsolute
-\ If we are facing backwards along the track, set A = -|A|
-\
-\ !&2543 = Hook80Percent in GetTrackAndMarkers (gtrm2 instructions #6 & #7)
-\ Also needs ?&2545 = &EA from part 2
-\ 2542   20 50 34   JSR Absolute8Bit                -> JSR Hook80Percent
-\ 2545   4A         LSR A                           -> NOP
-\ Set horizonTrackWidth = 0.8 * |A|, so horizonTrackWidth contains 80% of the
-\ width of the track on the horizon, in terms of the high bytes
-\
-\ Modifications applied by ModifyGameCode (Part 2 of 3)
-\ -----------------------------------------------------
-\
-\ ?&1248 = &20
-\ See JSR HookSectionFrom in part 1
-\
-\ ?&12FB = &20
-\ See JSR HookFlipAbsolute in part 1
-\
-\ ?&2538 = &20
-\ See JSR HookCollapseTrack in part 1
-\
-\ ?&45CB = &20
-\ See JSR HookSlopeJump in part 3
-\
-\ ?&2545 = &EA
-\ See JSR Hook80Percent in part 1
-\
-\ ?&4F55 = 22 in MoveHorizon (hori1, instruction #1)
-\ 4F54   C9 12      CMP #18                         -> CMP #22
-\ See next modification
-\
-\ ?&4F59 = 22 in MoveHorizon (hori1, instruction #3)
-\ 4F58   A9 12      LDA #18                         -> LDA #22
-\ Change maximum value of screenTimer1 (i.e. when we are on a hill) from
-\ &04D8 + 1152 = &0958 to &04D8 + 1408 = &0A58 (&100 more), so this allows the
-\ palette change to occur lower down the screen, to support higher hills
-\
-\ ?&24EA = 13 in MovePlayerSegment (mpla5, instruction #1)
-\ 24E9   C9 0E      CMP #14                         -> CMP #13
-\ Move player back a segment if edgeSegmentNumber = 13 (rather than 14), or back
-\ by two segments if edgeSegmentNumber > 13 (i.e. 14 or 15, rather than just 15)
-\
-\ ?&1FE9 = &A2
-\ See LDX #A in part 3
-\
-\ Modifications applied by ModifyGameCode (Part 3 of 3)
-\ -----------------------------------------------------
-\
-\ ?&3574 = 4 in objectTop
-\ ?&35F4 = 11 = 3 + 8  in objectBottom
-\ Object 10, Part 2: Scaffolds: (0, 3, 1, 0)        -> (4, -3, 1, 0)
-\                    Coordinates: (10, 4, 9, 10)    -> (1, -4, 9, 10)
-\ Change chicane sign into a u-turn
-\
-\ !&45CC = HookSlopeJump in ApplyElevation (Part 5, instruction #1)
-\ Also needs ?&45CB = &20 from part 2
-\ 45CB   0A         ASL A                           -> JSR HookSlopeJump
-\ 45CC   26 77      ROL W
-\ Insert extra code at the start of part 5, so when the car is on the ground,
-\ the "heightAboveTrack * 4" part of the elevation calculation gets replaced by
-\ playerSpeedHi * yTrackSegmentI * 4 (so driving fast over sloping segments can
-\ make the car jump)
-\
-\ ?&2772 = &4B in ApplyDriverTactics (Part 2, tact14 instruction #5)
-\ 2771   C9 3C      CMP #60                         -> CMP #75
-\ Make cars apply the brakes when within a distance of 75, rather than 60
-\
-\ Live modifications applied by HookSectionFrom
-\ ---------------------------------------------
-\
-\ ?&23B3 = A in GetSectionAngles (gsec11 instruction #4)
-\ 23B2   A9 07      LDA #7                          -> LDA #A
-\ Change check from 7 to A, is this a change to the size of the track section
-\ list ???
-\
-\ Live modifications applied by HookFlattenHills
-\ ----------------------------------------------
-\
-\ ?&1FEA = A in DrawObject (dobj3 instruction #6)
-\ Also needs ?&1FE9 = &A2 from part 2
-\ 1FE9   A6 1F      LDX horizonLine                 -> LDX #A
-\ Cut off objects at track line number A instead of horizonLine when they are
-\ hidden behind a hill
-\
-\ Live modifications applied by HookCollapseTrack
-\ -----------------------------------------------
-\
-\ ?&1FEA = A in DrawObject (dobj3 instruction #6)
-\ Also needs ?&1FE9 = &A2 from part 2
-\ 1FE9   A6 1F      LDX horizonLine                 -> LDX #A
-\ Cut off objects at track line number A instead of horizonLine when they are
-\ hidden behind a hill
-\
 \ ******************************************************************************
 
 .ModifyGameCode
@@ -1607,18 +1423,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: zExtraSignVector
+\       Name: zTrackSignVector
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The z-coordinate of the track sign vector for each sign, to be
+\             scaled and added to the inner track section vector for the sign
 \
 \ ******************************************************************************
 
-.zExtraSignVector
+.zTrackSignVector
 
  EQUB &D2, &04, &1C, &EC, &0A, &EB
  EQUB &F7, &2D, &1B, &2B, &F8, &10, &F2, &29
@@ -1792,10 +1605,10 @@ ORG CODE%
 \
 \ If LDA V is the last LDA instruction before the call, and A is signed, set:
 \
-\   (A T) = |A| * U * abs(A)
-\         = A * U
+\   A = |A| * U * abs(A)
+\     = A * U / 256
 \
-\ So we retain the sign in A.
+\ So this multiplies A and U, retaining the sign in A.
 \
 \ ******************************************************************************
 
@@ -1804,18 +1617,29 @@ ORG CODE%
  PHP                    \ Store the N flag on the stack, as set by the LDA just
                         \ before the call, so this equals abs(A)
 
- JMP MultiplyElevation+11   \ Jump into the MultiplyElevation routine:
+ JMP MultiplyHeight+11  \ Jump into the MultiplyHeight routine to do this:
                         \
-                        \ JSR Absolute8Bit      \ Set A = |A|
-                        \ JSR Multiply8x8       \ Set (A T) = A * U = |A| * U
-                        \ PLP                   \ Retrieve sign in N
-                        \ JSR Absolute8Bit      \ Set A = |A| * U * abs(A)
-                        \ RTS                   \ Return from the subroutine
+                        \   JSR Absolute8Bit      \ Set A = |A|
+                        \
+                        \   JSR Multiply8x8       \ Set (A T) = A * U
+                        \                         \           = |A| * U
+                        \                         \
+                        \                         \ So A = |A| * U / 256
+                        \
+                        \   PLP                   \ Retrieve sign in N, which we
+                        \                         \ set to abs(A) above
+                        \
+                        \   JSR Absolute8Bit      \ Set A = |A| * abs(A)
+                        \                         \       = A * U / 256
+                        \
+                        \   RTS                   \ Return from the subroutine
+                        \
+                        \ So this sets A = A * U while retaining the sign in A
 
 \ ******************************************************************************
 \
-\       Name: L57BF
-\       Type: Subroutine
+\       Name: segmentCoord1
+\       Type: Variable
 \   Category: Extra track data
 \    Summary: 
 \
@@ -1825,7 +1649,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L57BF
+.segmentCoord1
 
  EQUB &00
  EQUB &01, &03, &04, &06, &07, &09, &0A, &0C
@@ -1957,7 +1781,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: extraRacingLine
+\       Name: trackRacingLine
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1968,7 +1792,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.extraRacingLine
+.trackRacingLine
 
  EQUB &18, &33, &18, &00, &4F, &31, &68, &19
  EQUB &30, &19, &2E, &18, &18, &18, &18, &33
@@ -1977,7 +1801,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L58BF
+\       Name: segmentCoord2
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1988,7 +1812,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L58BF
+.segmentCoord2
 
  EQUB &78
  EQUB &78, &78, &78, &78, &78, &78, &78, &77
@@ -2002,18 +1826,17 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5900
+\       Name: Track section data (Part 2 of 2)
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Data for the track sections
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ L5900 = trackSectionFlag (track section block 2)
+\ trackSectionFlag etc.
 \
 \ ******************************************************************************
-
-.L5900
 
  EQUB &70, &20, &00, &A0, &21, &00, &A0, &3A
  EQUB &ED, &DC, &87, &5C, &F6, &12, &C8, &1D
@@ -2042,20 +1865,7 @@ ORG CODE%
  EQUB &44, &D0, &99, &0B, &7E, &00, &50, &24
  EQUB &70, &70, &23, &83, &1E, &25, &C8, &39
 
-\ ******************************************************************************
-\
-\       Name: L59D0
-\       Type: Variable
-\   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L59D0
+\ L59D0, normally trackRacingLine then trackSignData
 
  EQUB &ED, &D8, &3C, &41, &86, &0F, &86, &19
  EQUB &C2, &15, &E6, &CA, &64, &01, &11, &1B
@@ -2098,7 +1908,7 @@ ORG CODE%
 
  LDA playerSpeedHi      \ Set A = the high byte of the current speed
 
- JSR MultiplyElevation  \ Set:
+ JSR MultiplyHeight     \ Set:
                         \
                         \   A = A * yTrackSegmentI
                         \     = playerSpeedHi * yTrackSegmentI
@@ -2123,22 +1933,69 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
+ EQUB &00, &00          \ These bytes appear to be unused
+
 \ ******************************************************************************
 \
-\       Name: L5928
+\       Name: trackSectionCount
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
+\    Summary: The total number of track sections * 8
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 29 * 8
+
+\ ******************************************************************************
+\
+\       Name: trackVectorCount
+\       Type: Variable
+\   Category: Track data
+\    Summary: The total number of segment vectors in the segment vector tables
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 40
+
+\ ******************************************************************************
+\
+\       Name: trackLength
+\       Type: Variable
+\   Category: Track data
+\    Summary: The length of the full track in terms of segments
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The highest segment number is this value minus 1, as segment numbers start
+\ from zero.
 \
 \ ******************************************************************************
 
-.L5928
+ EQUW 914               \ Segments are numbered from 0 to 913
 
- EQUB &00, &00, &E8, &28, &92, &03, &00, &00
+\ ******************************************************************************
+\
+\       Name: trackStartLine
+\       Type: Variable
+\   Category: Track data
+\    Summary: The segment number of the starting line
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This is the segment number of the starting line, expressed as the number of
+\ segments from the starting line to the start of section 0, counting forwards
+\ around the track.
+\
+\ If the starting line is at segment n, this value is the track length minus n,
+\ which is 914 - 914 at Silverstone.
+\
+\ ******************************************************************************
+
+ EQUW 914 - 914         \ The starting line is at segment 0
 
 \ ******************************************************************************
 \

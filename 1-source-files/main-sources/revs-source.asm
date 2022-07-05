@@ -15838,17 +15838,17 @@ ENDIF
  JSR SetSectionPointers \ Update the section list pointers to move down through
                         \ the track section list
 
- LDA #7                 \ If prevHorizonIndex >= 7, then the previous call to
+ LDA #7                 \ If prevHorizonIndex <= 7, then the previous call to
  CMP prevHorizonIndex   \ GetTrackAndMarkers (on the last iteration of the main
- BCS gsec12             \ driving loop) had the horizon on one of the segments
-                        \ in the track segment list, but not the first one (as
-                        \ the list starts at index 6), so jump to gsec12 to skip
-                        \ the following
+ BCS gsec12             \ driving loop) had the horizon on one of the sections
+                        \ in the track section list, or the first entry in the
+                        \ track segment list (as the list starts at index 6), so
+                        \ jump to gsec12 to skip the following
 
  STA horizonLine        \ If we get here then the previous iteration around the
                         \ main loop had the horizon line on one of the track
-                        \ segments in the track segment list, so set horizonLine
-                        \ to 7
+                        \ segments in the track segment list (but not the first
+                        \ entry in the list), so set horizonLine to 7
 
 .gsec12
 
@@ -29643,7 +29643,7 @@ NEXT
                         \            |   48
                         \            94
 
- JSR MultiplyElevation  \ Set:
+ JSR MultiplyHeight     \ Set:
                         \
                         \   A = A * yTrackSegmentI
                         \
@@ -29844,7 +29844,7 @@ NEXT
  LDA carProgress,X      \ Set A to the lowest byte of the player's progress
                         \ through the current segment
 
- JSR MultiplyElevation  \ Set:
+ JSR MultiplyHeight     \ Set:
                         \
                         \   A = A * yTrackSegmentI
                         \     = carProgress * yTrackSegmentI
@@ -29954,10 +29954,10 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: MultiplyElevation
+\       Name: MultiplyHeight
 \       Type: Subroutine
 \   Category: Track geometry
-\    Summary: Multiply the track elevation of a specified track segment by A
+\    Summary: Multiply the elevation of a specified track segment by A
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29979,7 +29979,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.MultiplyElevation
+.MultiplyHeight
 
  STA U                  \ Set U to the multiplication factor in A
 
