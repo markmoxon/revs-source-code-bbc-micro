@@ -467,7 +467,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L53F9
+\       Name: dataIndexMax
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -478,13 +478,13 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L53F9
+.dataIndexMax
 
  EQUB 58
 
 \ ******************************************************************************
 \
-\       Name: thisSectionData1Lo
+\       Name: xThisSectionDataLo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -495,13 +495,13 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.thisSectionData1Lo
+.xThisSectionDataLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: thisSectionData1Hi
+\       Name: xThisSectionDataHi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -512,7 +512,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.thisSectionData1Hi
+.xThisSectionDataHi
 
  EQUB 0
 
@@ -539,7 +539,7 @@ ORG CODE%
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: The number of the data within the current data block, counting
-\             the start of the block
+\             from the start of the block
 \
 \ ******************************************************************************
 
@@ -547,39 +547,7 @@ ORG CODE%
 
  EQUB 0
 
-\ ******************************************************************************
-\
-\       Name: L53FE
-\       Type: Variable
-\   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L53FE
-
- EQUB 0
-
-\ ******************************************************************************
-\
-\       Name: L53FF
-\       Type: Variable
-\   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L53FF
-
- EQUB 0
+ EQUB &00, &00          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
@@ -599,9 +567,9 @@ ORG CODE%
 
  EQUB &49               \ !&1249 = HookSectionFrom
  EQUB &8A               \ !&128A = HookFirstSegment
- EQUB &CA               \ !&13CA = HookSectionFlag6a
- EQUB &27               \ !&1427 = HookSectionFlag6a
- EQUB &FC               \ !&12FC = HookSectionFlag6b
+ EQUB &CA               \ !&13CA = HookSegmentVector
+ EQUB &27               \ !&1427 = HookSegmentVector
+ EQUB &FC               \ !&12FC = HookDataPointers
  EQUB &1B               \ !&261B = HookUpdateHorizon
  EQUB &8C               \ !&248C = HookFieldOfView
  EQUB &39               \ !&2539 = HookCollapseTrack
@@ -633,9 +601,9 @@ ORG CODE%
 
  EQUB &12               \ !&1249 = HookSectionFrom
  EQUB &12               \ !&128A = HookFirstSegment
- EQUB &13               \ !&13CA = HookSectionFlag6a
- EQUB &14               \ !&1427 = HookSectionFlag6a
- EQUB &12               \ !&12FC = HookSectionFlag6b
+ EQUB &13               \ !&13CA = HookSegmentVector
+ EQUB &14               \ !&1427 = HookSegmentVector
+ EQUB &12               \ !&12FC = HookDataPointers
  EQUB &26               \ !&261B = HookUpdateHorizon
  EQUB &24               \ !&248C = HookFieldOfView
  EQUB &25               \ !&2539 = HookCollapseTrack
@@ -655,7 +623,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: data1Hi
+\       Name: xDataHi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -666,7 +634,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.data1Hi
+.xDataHi
 
  EQUB &00, &00, &00, &01, &05, &01, &00, &02
  EQUB &00, &00, &00, &06, &00, &FC, &FD, &FC
@@ -708,116 +676,110 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: SetSegmentVector
+\       Name: CalcSegmentVector
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: Calculate the segment vector for the current segment
 \
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
 \ ******************************************************************************
 
-.SetSegmentVector
+.CalcSegmentVector
 
- LDA thisSectionData1Lo \ Set A = (thisSectionData1Hi thisSectionData1Lo) << 1
+ LDA xThisSectionDataLo \ Set A = (xThisSectionDataHi xThisSectionDataLo) << 1
  ASL A                  \ keeping the high byte only and rotating bit 7 into
- LDA thisSectionData1Hi \ the C flag
+ LDA xThisSectionDataHi \ the C flag
  ROL A
 
  PHA                    \ Push the high byte in A onto the stack
 
- ROL A                  \ Set bits 0-2 of U to bits 5-7 of thisSectionData1Hi
+ ROL A                  \ Set bits 0-2 of U to bits 5-7 of xThisSectionDataHi
  ROL A                  \ (i.e. the top three bits)
  ROL A
  AND #%00000111
  STA U
 
  LSR A                  \ Set the C flag to bit 0 of A, i.e. bit 5 of
-                        \ thisSectionData1Hi
+                        \ xThisSectionDataHi
 
  PLA                    \ Retrieve the high byte that we pushed onto the stack,
-                        \ i.e. the high byte of thisSectionData1 << 1
+                        \ i.e. the high byte of xThisSectionData << 1
 
  AND #%00111111         \ Clear bits 6 and 7 of A, so A now contains two zeroes,
-                        \ then bits 4, 3, 2, 1 of thisSectionData1Hi, then bits
-                        \ 7 and 6 of thisSectionData1Lo
+                        \ then bits 4, 3, 2, 1 of xThisSectionDataHi, then bits
+                        \ 7 and 6 of xThisSectionDataLo
 
- BCC L548C              \ If the C flag, i.e. bit 5 of thisSectionData1Hi, is
-                        \ clear, jump to L548C to skip the following
-
-.L5488
+ BCC vect1              \ If the C flag, i.e. bit 5 of xThisSectionDataHi, is
+                        \ clear, jump to vect1 to skip the following
 
  EOR #%00111111         \ Negate A using two's complement (the ADC adds 1 as the
  ADC #0                 \ C flag is set)
 
-.L548C
+.vect1
 
  TAX                    \ Set X = A
 
- LDY segmentCoord1,X    \ Set Y = X-th entry in segmentCoord1
+ LDY xSegmentVector,X   \ Set Y = X-th entry in xSegmentVector
 
- LDA segmentCoord2,X    \ Set X = X-th entry in segmentCoord2
+ LDA zSegmentVector,X   \ Set X = X-th entry in zSegmentVector
  TAX
 
  LDA U                  \ If bit 1 of U + 1 is set, i.e. U ends in %01 or %10,
- CLC                    \ i.e. bits 5 and 6 of thisSectionData1Hi are different,
- ADC #1                 \ then jump to L54A3 to set V and W the other way round
+ CLC                    \ i.e. bits 5 and 6 of xThisSectionDataHi are different,
+ ADC #1                 \ then jump to vect2 to set V and W the other way round
  AND #%00000010
- BNE L54A3
+ BNE vect2
 
  STY V                  \ Set V = Y
 
  STX W                  \ Set W = X
 
- BEQ L54A7              \ Jump to L54A7 (this BEQ is effectively a JMP as we
+ BEQ vect3              \ Jump to vect3 (this BEQ is effectively a JMP as we
                         \ passed through a BNE above)
 
-.L54A3
+.vect2
 
  STX V                  \ Set V = X
 
  STY W                  \ Set W = Y
 
-.L54A7
+.vect3
 
  LDA U                  \ If U < 4, i.e. bit 3 of U is clear, i.e. bit 7 of
- CMP #4                 \ thisSectionData1Hi is clear, jump to L54B3 to skip the
- BCC L54B3              \ following
+ CMP #4                 \ xThisSectionDataHi is clear, jump to vect4 to skip the
+ BCC vect4              \ following
 
                         \ If we get here then bit 3 of U is set, i.e. bit 7 of
-                        \ thisSectionData1Hi is set
+                        \ xThisSectionDataHi is set
 
  LDA #0                 \ Set V = -V
  SBC V
  STA V
 
-.L54B3
+.vect4
 
  LDA U                  \ If U >= 6, i.e. bits 1 and 2 of U are set, i.e. bits
- CMP #6                 \ 6 and 7 of thisSectionData1Hi are set, jump to L54C3
- BCS L54C3              \ to skip the following
+ CMP #6                 \ 6 and 7 of xThisSectionDataHi are set, jump to vect5
+ BCS vect5              \ to skip the following
 
  CMP #2                 \ If U < 2, i.e. bits 1 and 2 of U are clear, i.e. bits
- BCC L54C3              \ 6 and 7 of thisSectionData1Hi are clear, jump to L54C3
+ BCC vect5              \ 6 and 7 of xThisSectionDataHi are clear, jump to vect5
                         \ to skip the following
 
                         \ If we get here then bits 1 and 2 of U are different,
-                        \ i.e. bits 6 and 7 of thisSectionData1Hi are different
+                        \ i.e. bits 6 and 7 of xThisSectionDataHi are different
 
  LDA #0                 \ Set W = -W
  SBC W
  STA W
 
-.L54C3
+.vect5
 
  LDY thisVectorNumber   \ Set Y to thisVectorNumber, which contains the value of
                         \ trackSectionFrom for this track section (i.e. the
                         \ number of the first segment vector in the section)
 
                         \ We now store the following for this vector, where V
-                        \ and W are based on segmentCoord1 and segmentCoord2:
+                        \ and W are based on xSegmentVector and zSegmentVector:
                         \
                         \   * xTrackSegmentI = V
                         \   * zTrackSegmentI = W
@@ -864,7 +826,8 @@ ORG CODE%
 \       Name: HookFlipAbsolute
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Set the sign of A according to the direction we are facing along
+\             the track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -903,10 +866,11 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSectionFlag6b
+\       Name: HookDataPointers
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: Implement bit 6 of the track section flags
+\    Summary: If bit 6 of the current section's flags is set, update the data
+\             pointers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -915,7 +879,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.HookSectionFlag6b
+.HookDataPointers
 
  LDA thisSectionFlags   \ If bit 6 of the current section's flags is clear, jump
  AND #%01000000         \ to flab1 to skip the following call, so we just
@@ -956,9 +920,9 @@ ORG CODE%
 
  EQUB LO(HookSectionFrom)
  EQUB LO(HookFirstSegment)
- EQUB LO(HookSectionFlag6a)
- EQUB LO(HookSectionFlag6a)
- EQUB LO(HookSectionFlag6b)
+ EQUB LO(HookSegmentVector)
+ EQUB LO(HookSegmentVector)
+ EQUB LO(HookDataPointers)
  EQUB LO(HookUpdateHorizon)
  EQUB LO(HookFieldOfView)
  EQUB LO(HookCollapseTrack)
@@ -990,9 +954,9 @@ ORG CODE%
 
  EQUB HI(HookSectionFrom)
  EQUB HI(HookFirstSegment)
- EQUB HI(HookSectionFlag6a)
- EQUB HI(HookSectionFlag6a)
- EQUB HI(HookSectionFlag6b)
+ EQUB HI(HookSegmentVector)
+ EQUB HI(HookSegmentVector)
+ EQUB HI(HookDataPointers)
  EQUB HI(HookUpdateHorizon)
  EQUB HI(HookFieldOfView)
  EQUB HI(HookCollapseTrack)
@@ -1012,7 +976,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: data1Lo
+\       Name: xDataLo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1023,7 +987,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.data1Lo
+.xDataLo
 
  EQUB &23, &48, &CB, &AC, &5C, &9D, &00, &AB
  EQUB &00, &00, &00, &3D, &00, &0A, &DE, &17
@@ -1065,32 +1029,34 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSectionFlag6a
+\       Name: HookSegmentVector
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: If bit 6 of the current section's flags is set, move to the next
+\             segment vector, calculate it and store it
 \
 \ ------------------------------------------------------------------------------
 \
-\ If bit 6 of the current section's flags is set, call sub_C55C4 after moving to
-\ the nest vector along (this bit is unused in the original track data file).
+\ If bit 6 of the current section's flags is set, call SetSegmentVector after
+\ moving to the next vector along.
 \
 \ ******************************************************************************
 
-.HookSectionFlag6a
+.HookSegmentVector
 
  LDA thisSectionFlags   \ If bit 6 of the current section's flags is clear, jump
  AND #%01000000         \ to flag1 to return from the subroutine
  BEQ flag1
 
- JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
-                        \ track in the direction we are facing (we replaced a
-                        \ call to UpdateCurveVector with the call to the hook,
-                        \ so this implements that call, knowing that this is a
-                        \ curve)
+ JSR UpdateVectorNumber \ Update thisVectorNumber to the next segment vector
+                        \ along the track in the direction we are facing (we
+                        \ replaced a call to UpdateCurveVector with the call to
+                        \ the hook, so this implements that call, knowing that
+                        \ this is a curve)
 
- JSR sub_C55C4          \ Bit 6 of the current section's flags is set, so call
-                        \ sub_C55C4 before returning from the subroutine
+ JSR SetSegmentVector   \ Bit 6 of the current section's flags is set, so call
+                        \ SetSegmentVector to calculate and store the next
+                        \ segment vector
 
 .flag1
 
@@ -1098,21 +1064,18 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C557F
+\       Name: MoveToNextVector
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Move to the next to the next segment vector along the track and
+\             update the pointers
 \
 \ ******************************************************************************
 
-.sub_C557F
+.MoveToNextVector
 
- JSR UpdateVectorNumber \ Update thisVectorNumber to the next vector along the
-                        \ track in the direction we are facing 
+ JSR UpdateVectorNumber \ Update thisVectorNumber to the next segment vector
+                        \ along the track in the direction we are facing 
 
 \ ******************************************************************************
 \
@@ -1134,7 +1097,7 @@ ORG CODE%
                         \ subtraction
 
  BIT directionFacing    \ If we are facing backwards along the track, jump to
- BMI L55A0              \ L55A0
+ BMI upda1              \ upda1
 
                         \ If we get here then we are facing forwards along the
                         \ track, so we increment dataCounter
@@ -1142,57 +1105,61 @@ ORG CODE%
                         \ If dataCounter reaches dataSize for this data block,
                         \ we wrap it round to zero and increment dataIndex
                         \
-                        \ If dataIndex reaches L53F9, we wrap it round to zero
+                        \ If dataIndex reaches dataIndexMax, we wrap it round to
+                        \ zero
 
  ADC #0                 \ Set A = A + 1
                         \       = dataCounter + 1
                         \
                         \ This works as the C flag is set
 
- CMP dataSize,Y         \ If A < dataSize for this index, jump to L55B6 to
- BCC L55B6              \ update the pointers and return from the subroutine
+ CMP dataSize,Y         \ If A < dataSize for this index, jump to upda3 to
+ BCC upda3              \ update the pointers and return from the subroutine
 
  LDA #0                 \ Set A = 0 to store as the new value of dataCounter
 
  INY                    \ Increment Y to point to the next data index
 
- CPY L53F9              \ If Y < L53F9, jump to L55B6 to update the pointers and
- BCC L55B6              \ return from the subroutine
+ CPY dataIndexMax       \ If Y < dataIndexMax, jump to upda3 to update the
+ BCC upda3              \ pointers and return from the subroutine
 
- LDY #0                 \ Set Y = 0, to set as the new value of dataIndex
+ LDY #0                 \ Set Y = 0, to set the new value of dataIndex to the
+                        \ start of the data
 
- BEQ L55B6              \ Jump to L55B6 to update the pointers and return from
+ BEQ upda3              \ Jump to upda3 to update the pointers and return from
                         \ the subroutine (this BEQ is effectively a JMP as Y is
                         \ always zero)
 
-.L55A0
+.upda1
 
                         \ If we get here then we are facing backwards along the
                         \ track, so we decrement dataCounter
                         \
-                        \ If dataCounter reaches 0, we wrap it round to ???
+                        \ If dataCounter goes past 0, we wrap it round to ???
                         \ and decrement dataIndex
                         \
-                        \ If ???
+                        \ If dataIndex reaches 0, we wrap it round to the end of
+                        \ the data
 
  SBC #1                 \ Set A = A - 1
                         \       = dataCounter - 1
                         \
                         \ This works as the C flag is set
 
- BCS L55B6              \ If the subtraction didn't underflow, jump to L55B6 to
+ BCS upda3              \ If the subtraction didn't underflow, jump to upda3 to
                         \ update the pointers and return from the subroutine
 
- TYA                    \ Clear bit 7 of Y
+ TYA                    \ Clear bit 7 of Y ???
  AND #%01111111
  TAY
 
- CPY #1                 \ If Y >= 1, jump to L55AF as we haven't reached the
- BCS L55AF              \ start of the data
+ CPY #1                 \ If Y >= 1, jump to upda2 as we haven't reached the
+ BCS upda2              \ start of the data
 
- LDY L53F9              \ Set Y = L53F9 to point to the start of the data
+ LDY dataIndexMax       \ Set Y = dataIndexMax, to set the new value of
+                        \ dataIndex to the end of the data
 
-.L55AF
+.upda2
 
  DEY                    \ Decrement Y to point to the previous data index
 
@@ -1200,7 +1167,7 @@ ORG CODE%
  SEC
  SBC #1
 
-.L55B6
+.upda3
 
  STA dataCounter        \ Store the updated value of A in the data counter
 
@@ -1233,7 +1200,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sub_C55C4
+\       Name: SetSegmentVector
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
@@ -1244,19 +1211,19 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.sub_C55C4
+.SetSegmentVector
 
  STX xStore             \ Store X in xStore so we can retrieve it at the end of
                         \ the routine
 
  LDY dataIndex          \ Set Y to the data index for this data block
 
- BMI L55FA              \ If bit 7 of Y is set, jump to L55FA to skip the
+ BMI sets1              \ If bit 7 of Y is set, jump to sets1 to skip the
                         \ following calculation
 
- LDA data1Lo,Y          \ Set (A T) = (data1Hi data1Lo) for this section
+ LDA xDataLo,Y          \ Set (A T) = (xDataHi xDataLo) for this section
  STA T
- LDA data1Hi,Y
+ LDA xDataHi,Y
 
  BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
                         \ call to Absolute16Bit sets the sign of (A T) to
@@ -1267,16 +1234,16 @@ ORG CODE%
                         \ facing backwards along the track
 
  STA U                  \ Set (U T) = (A T)
-                        \           = signed (data1Hi data1Lo) for this section
+                        \           = signed (xDataHi xDataLo) for this section
 
- LDA T                  \ Set thisSectionData1 = thisSectionData1 + (U T)
- CLC                    \                      = thisSectionData1 + data1
- ADC thisSectionData1Lo \
- STA thisSectionData1Lo \ starting with the low bytes
+ LDA T                  \ Set xThisSectionData = xThisSectionData + (U T)
+ CLC                    \                      = xThisSectionData + data1
+ ADC xThisSectionDataLo \
+ STA xThisSectionDataLo \ starting with the low bytes
 
  LDA U                  \ And then the high bytes
- ADC thisSectionData1Hi
- STA thisSectionData1Hi
+ ADC xThisSectionDataHi
+ STA xThisSectionDataHi
 
  LDA yData,Y            \ Set A = yData for this section
 
@@ -1292,9 +1259,9 @@ ORG CODE%
  ADC yThisSectionData   \                      = yThisSectionData + yData
  STA yThisSectionData
 
-.L55FA
+.sets1
 
- JSR SetSegmentVector   \ Calculate the segment vector for the current segment
+ JSR CalcSegmentVector  \ Calculate the segment vector for the current segment
                         \ and put it in the xSegmentVectorI, ySegmentVectorI,
                         \ zSegmentVectorI, xSegmentVectorO and zSegmentVectorO
                         \ tables
@@ -1434,10 +1401,10 @@ ORG CODE%
  LSR A                  \ trackSectionFrom contains the track section * 8)
  TAY
 
- LDA sectionData1Lo,Y   \ Set (thisSectionData1Hi thisSectionData1Lo) to this
- STA thisSectionData1Lo \ section's entry from (sectionData1Hi sectionData1Lo)
- LDA sectionData1Hi,Y
- STA thisSectionData1Hi
+ LDA xSectionDataLo,Y   \ Set (xThisSectionDataHi xThisSectionDataLo) to this
+ STA xThisSectionDataLo \ section's entry from (xSectionDataHi xSectionDataLo)
+ LDA xSectionDataHi,Y
+ STA xThisSectionDataHi
 
  LDA ySectionData,Y     \ Set ySectionData to this section's entry from
  STA yThisSectionData   \ yThisSectionData
@@ -1470,9 +1437,9 @@ ORG CODE%
  STA dataCounter
 
  BIT directionFacing    \ If we are facing backwards along the track, jump to
- BMI from1              \ from1 to skip the following call to sub_C55C4
+ BMI from1              \ from1 to skip the following call to SetSegmentVector
 
- JSR sub_C55C4          \ We are facing forwards along the track, so ???
+ JSR SetSegmentVector   \ We are facing forwards along the track, so ???
 
 .from1
 
@@ -2086,7 +2053,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: segmentCoord1
+\       Name: xSegmentVector
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2097,7 +2064,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.segmentCoord1
+.xSegmentVector
 
  EQUB 0                 \ Coordinate  0
  EQUB 1                 \ Coordinate  1
@@ -2231,7 +2198,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sectionData1Lo
+\       Name: xSectionDataLo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2242,7 +2209,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.sectionData1Lo
+.xSectionDataLo
 
  EQUB &00               \ Section  0 = &0000 (0)
  EQUB &2F               \ Section  1 = &122F (4655)
@@ -2278,7 +2245,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sectionData1Hi
+\       Name: xSectionDataHi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2289,7 +2256,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.sectionData1Hi
+.xSectionDataHi
 
  EQUB &00               \ Section  0 = &0000 (0)
  EQUB &12               \ Section  1 = &122F (4655)
@@ -2340,7 +2307,7 @@ ORG CODE%
 \             the setting of horizonLine to 7
 \
 \   * Bit 0 = if this is set, then bit 7 of dataIndex is set, which means
-\             we skip most of the sub_C55C4 routine
+\             we skip the first part of the SetSegmentVector routine
 \
 \ ******************************************************************************
 
@@ -2426,7 +2393,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: segmentCoord2
+\       Name: zSegmentVector
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2437,7 +2404,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.segmentCoord2
+.zSegmentVector
 
  EQUB 120               \ Coordinate  0
  EQUB 120               \ Coordinate  1
@@ -3161,9 +3128,10 @@ ORG CODE%
 
 .HookFirstSegment
 
- JSR sub_C557F
+ JSR MoveToNextVector   \ Move to the next to the next segment vector along the
+                        \ track and update the pointers
 
- JMP SetSegmentVector   \ Calculate the segment vector for the current segment
+ JMP CalcSegmentVector  \ Calculate the segment vector for the current segment
                         \ and put it in the xSegmentVectorI, ySegmentVectorI,
                         \ zSegmentVectorI, xSegmentVectorO and zSegmentVectorO
                         \ tables, returning from the subroutine using a tail
