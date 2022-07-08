@@ -470,11 +470,7 @@ ORG CODE%
 \       Name: dataIndexMax
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The maximum value for dataIndex
 \
 \ ******************************************************************************
 
@@ -636,14 +632,64 @@ ORG CODE%
 
 .xDataHi
 
- EQUB &00, &00, &00, &01, &05, &01, &00, &02
- EQUB &00, &00, &00, &06, &00, &FC, &FD, &FC
- EQUB &FE, &FF, &FF, &FF, &FD, &FE, &FD, &FB
- EQUB &00, &00, &00, &01, &00, &00, &00, &00
- EQUB &00, &01, &01, &01, &04, &01, &03, &01
- EQUB &00, &00, &02, &03, &05, &FC, &FB, &00
- EQUB &00, &00, &00, &05, &02, &02, &00, &01
- EQUB &00, &00
+ EQUB &00               \ Data block  0 = &0023 (   35)
+ EQUB &00               \ Data block  1 = &0048 (   72)
+ EQUB &00               \ Data block  2 = &00CB (  203)
+ EQUB &01               \ Data block  3 = &01AC (  428)
+ EQUB &05               \ Data block  4 = &055C ( 1372)
+ EQUB &01               \ Data block  5 = &019D (  413)
+ EQUB &00               \ Data block  6 = &0000 (    0)
+ EQUB &02               \ Data block  7 = &02AB (  683)
+ EQUB &00               \ Data block  8 = &0000 (    0)
+ EQUB &00               \ Data block  9 = &0000 (    0)
+ EQUB &00               \ Data block 10 = &0000 (    0)
+ EQUB &06               \ Data block 11 = &063D ( 1597)
+ EQUB &00               \ Data block 12 = &0000 (    0)
+ EQUB &FC               \ Data block 13 = &FC0A (-1014)
+ EQUB &FD               \ Data block 14 = &FDDE ( -546)
+ EQUB &FC               \ Data block 15 = &FC17 (-1001)
+ EQUB &FE               \ Data block 16 = &FEF8 ( -264)
+ EQUB &FF               \ Data block 17 = &FF4A ( -182)
+ EQUB &FF               \ Data block 18 = &FFE1 (  -31)
+ EQUB &FF               \ Data block 19 = &FF16 ( -234)
+ EQUB &FD               \ Data block 20 = &FD46 ( -698)
+ EQUB &FE               \ Data block 21 = &FE52 ( -430)
+ EQUB &FD               \ Data block 22 = &FD5C ( -676)
+ EQUB &FB               \ Data block 23 = &FBBC (-1092)
+ EQUB &00               \ Data block 24 = &0000 (    0)
+ EQUB &00               \ Data block 25 = &0000 (    0)
+ EQUB &00               \ Data block 26 = &0000 (    0)
+ EQUB &01               \ Data block 27 = &016C (  364)
+ EQUB &00               \ Data block 28 = &0000 (    0)
+ EQUB &00               \ Data block 29 = &0000 (    0)
+ EQUB &00               \ Data block 30 = &0000 (    0)
+ EQUB &00               \ Data block 31 = &0000 (    0)
+ EQUB &00               \ Data block 32 = &0000 (    0)
+ EQUB &01               \ Data block 33 = &0132 (  306)
+ EQUB &01               \ Data block 34 = &019A (  410)
+ EQUB &01               \ Data block 35 = &01FB (  507)
+ EQUB &04               \ Data block 36 = &0417 ( 1047)
+ EQUB &01               \ Data block 37 = &01A3 (  419)
+ EQUB &03               \ Data block 38 = &0311 (  785)
+ EQUB &01               \ Data block 39 = &015A (  346)
+ EQUB &00               \ Data block 40 = &0000 (    0)
+ EQUB &00               \ Data block 41 = &0000 (    0)
+ EQUB &02               \ Data block 42 = &0272 (  626)
+ EQUB &03               \ Data block 43 = &037C (  892)
+ EQUB &05               \ Data block 44 = &057A ( 1402)
+ EQUB &FC               \ Data block 45 = &FCBB ( -837)
+ EQUB &FB               \ Data block 46 = &FBF8 (-1032)
+ EQUB &00               \ Data block 47 = &0000 (    0)
+ EQUB &00               \ Data block 48 = &0000 (    0)
+ EQUB &00               \ Data block 49 = &0000 (    0)
+ EQUB &00               \ Data block 50 = &0000 (    0)
+ EQUB &05               \ Data block 51 = &0555 ( 1365)
+ EQUB &02               \ Data block 52 = &0211 (  529)
+ EQUB &02               \ Data block 53 = &0211 (  529)
+ EQUB &00               \ Data block 54 = &0060 (   96)
+ EQUB &01               \ Data block 55 = &01B0 (  432)
+ EQUB &00               \ Data block 56 = &0078 (  120)
+ EQUB &00               \ Data block 57 = &0020 (   32)
 
 \ ******************************************************************************
 \
@@ -690,7 +736,8 @@ ORG CODE%
  LDA xThisSectionDataHi \ the C flag
  ROL A
 
- PHA                    \ Push the high byte in A onto the stack
+ PHA                    \ Push the high byte in A onto the stack, so the stack
+                        \ contains the high byte of xThisSectionData << 1
 
  ROL A                  \ Set bits 0-2 of U to bits 5-7 of xThisSectionDataHi
  ROL A                  \ (i.e. the top three bits)
@@ -705,8 +752,8 @@ ORG CODE%
                         \ i.e. the high byte of xThisSectionData << 1
 
  AND #%00111111         \ Clear bits 6 and 7 of A, so A now contains two zeroes,
-                        \ then bits 4, 3, 2, 1 of xThisSectionDataHi, then bits
-                        \ 7 and 6 of xThisSectionDataLo
+                        \ then bits 4, 3, 2, 1, 0 of xThisSectionDataHi, then
+                        \ bit 7 of xThisSectionDataLo
 
  BCC vect1              \ If the C flag, i.e. bit 5 of xThisSectionDataHi, is
                         \ clear, jump to vect1 to skip the following
@@ -744,11 +791,11 @@ ORG CODE%
 
 .vect3
 
- LDA U                  \ If U < 4, i.e. bit 3 of U is clear, i.e. bit 7 of
+ LDA U                  \ If U < 4, i.e. bit 2 of U is clear, i.e. bit 7 of
  CMP #4                 \ xThisSectionDataHi is clear, jump to vect4 to skip the
  BCC vect4              \ following
 
-                        \ If we get here then bit 3 of U is set, i.e. bit 7 of
+                        \ If we get here then bit 2 of U is set, i.e. bit 7 of
                         \ xThisSectionDataHi is set
 
  LDA #0                 \ Set V = -V
@@ -989,14 +1036,64 @@ ORG CODE%
 
 .xDataLo
 
- EQUB &23, &48, &CB, &AC, &5C, &9D, &00, &AB
- EQUB &00, &00, &00, &3D, &00, &0A, &DE, &17
- EQUB &F8, &4A, &E1, &16, &46, &52, &5C, &BC
- EQUB &00, &00, &00, &6C, &00, &00, &00, &00
- EQUB &00, &32, &9A, &FB, &17, &A3, &11, &5A
- EQUB &00, &00, &72, &7C, &7A, &BB, &F8, &00
- EQUB &00, &00, &00, &55, &11, &11, &60, &B0
- EQUB &78, &20
+ EQUB &23               \ Data block  0 = &0023 (   35)
+ EQUB &48               \ Data block  1 = &0048 (   72)
+ EQUB &CB               \ Data block  2 = &00CB (  203)
+ EQUB &AC               \ Data block  3 = &01AC (  428)
+ EQUB &5C               \ Data block  4 = &055C ( 1372)
+ EQUB &9D               \ Data block  5 = &019D (  413)
+ EQUB &00               \ Data block  6 = &0000 (    0)
+ EQUB &AB               \ Data block  7 = &02AB (  683)
+ EQUB &00               \ Data block  8 = &0000 (    0)
+ EQUB &00               \ Data block  9 = &0000 (    0)
+ EQUB &00               \ Data block 10 = &0000 (    0)
+ EQUB &3D               \ Data block 11 = &063D ( 1597)
+ EQUB &00               \ Data block 12 = &0000 (    0)
+ EQUB &0A               \ Data block 13 = &FC0A (-1014)
+ EQUB &DE               \ Data block 14 = &FDDE ( -546)
+ EQUB &17               \ Data block 15 = &FC17 (-1001)
+ EQUB &F8               \ Data block 16 = &FEF8 ( -264)
+ EQUB &4A               \ Data block 17 = &FF4A ( -182)
+ EQUB &E1               \ Data block 18 = &FFE1 (  -31)
+ EQUB &16               \ Data block 19 = &FF16 ( -234)
+ EQUB &46               \ Data block 20 = &FD46 ( -698)
+ EQUB &52               \ Data block 21 = &FE52 ( -430)
+ EQUB &5C               \ Data block 22 = &FD5C ( -676)
+ EQUB &BC               \ Data block 23 = &FBBC (-1092)
+ EQUB &00               \ Data block 24 = &0000 (    0)
+ EQUB &00               \ Data block 25 = &0000 (    0)
+ EQUB &00               \ Data block 26 = &0000 (    0)
+ EQUB &6C               \ Data block 27 = &016C (  364)
+ EQUB &00               \ Data block 28 = &0000 (    0)
+ EQUB &00               \ Data block 29 = &0000 (    0)
+ EQUB &00               \ Data block 30 = &0000 (    0)
+ EQUB &00               \ Data block 31 = &0000 (    0)
+ EQUB &00               \ Data block 32 = &0000 (    0)
+ EQUB &32               \ Data block 33 = &0132 (  306)
+ EQUB &9A               \ Data block 34 = &019A (  410)
+ EQUB &FB               \ Data block 35 = &01FB (  507)
+ EQUB &17               \ Data block 36 = &0417 ( 1047)
+ EQUB &A3               \ Data block 37 = &01A3 (  419)
+ EQUB &11               \ Data block 38 = &0311 (  785)
+ EQUB &5A               \ Data block 39 = &015A (  346)
+ EQUB &00               \ Data block 40 = &0000 (    0)
+ EQUB &00               \ Data block 41 = &0000 (    0)
+ EQUB &72               \ Data block 42 = &0272 (  626)
+ EQUB &7C               \ Data block 43 = &037C (  892)
+ EQUB &7A               \ Data block 44 = &057A ( 1402)
+ EQUB &BB               \ Data block 45 = &FCBB ( -837)
+ EQUB &F8               \ Data block 46 = &FBF8 (-1032)
+ EQUB &00               \ Data block 47 = &0000 (    0)
+ EQUB &00               \ Data block 48 = &0000 (    0)
+ EQUB &00               \ Data block 49 = &0000 (    0)
+ EQUB &00               \ Data block 50 = &0000 (    0)
+ EQUB &55               \ Data block 51 = &0555 ( 1365)
+ EQUB &11               \ Data block 52 = &0211 (  529)
+ EQUB &11               \ Data block 53 = &0211 (  529)
+ EQUB &60               \ Data block 54 = &0060 (   96)
+ EQUB &B0               \ Data block 55 = &01B0 (  432)
+ EQUB &78               \ Data block 56 = &0078 (  120)
+ EQUB &20               \ Data block 57 = &0020 (   32)
 
 \ ******************************************************************************
 \
@@ -1330,14 +1427,64 @@ ORG CODE%
 
 .yData
 
- EQUB &01, &FE, &FF, &FE, &FF, &00, &04, &09
- EQUB &00, &F9, &F9, &00, &00, &00, &04, &00
- EQUB &00, &00, &00, &00, &03, &02, &02, &01
- EQUB &00, &FA, &00, &00, &00, &FD, &03, &04
- EQUB &01, &FF, &FE, &FE, &01, &00, &00, &00
- EQUB &FC, &02, &03, &FD, &FD, &01, &03, &00
- EQUB &FE, &00, &01, &FC, &FC, &03, &03, &FC
- EQUB &FE, &01
+ EQUB &01               \ Data block  0 =  1
+ EQUB &FE               \ Data block  1 = -2
+ EQUB &FF               \ Data block  2 = -1
+ EQUB &FE               \ Data block  3 = -2
+ EQUB &FF               \ Data block  4 = -1
+ EQUB &00               \ Data block  5 =  0
+ EQUB &04               \ Data block  6 =  4
+ EQUB &09               \ Data block  7 =  9
+ EQUB &00               \ Data block  8 =  0
+ EQUB &F9               \ Data block  9 = -7
+ EQUB &F9               \ Data block 10 = -7
+ EQUB &00               \ Data block 11 =  0
+ EQUB &00               \ Data block 12 =  0
+ EQUB &00               \ Data block 13 =  0
+ EQUB &04               \ Data block 14 =  4
+ EQUB &00               \ Data block 15 =  0
+ EQUB &00               \ Data block 16 =  0
+ EQUB &00               \ Data block 17 =  0
+ EQUB &00               \ Data block 18 =  0
+ EQUB &00               \ Data block 19 =  0
+ EQUB &03               \ Data block 20 =  3
+ EQUB &02               \ Data block 21 =  2
+ EQUB &02               \ Data block 22 =  2
+ EQUB &01               \ Data block 23 =  1
+ EQUB &00               \ Data block 24 =  0
+ EQUB &FA               \ Data block 25 = -6
+ EQUB &00               \ Data block 26 =  0
+ EQUB &00               \ Data block 27 =  0
+ EQUB &00               \ Data block 28 =  0
+ EQUB &FD               \ Data block 29 = -3
+ EQUB &03               \ Data block 30 =  3
+ EQUB &04               \ Data block 31 =  4
+ EQUB &01               \ Data block 32 =  1
+ EQUB &FF               \ Data block 33 = -1
+ EQUB &FE               \ Data block 34 = -2
+ EQUB &FE               \ Data block 35 = -2
+ EQUB &01               \ Data block 36 =  1
+ EQUB &00               \ Data block 37 =  0
+ EQUB &00               \ Data block 38 =  0
+ EQUB &00               \ Data block 39 =  0
+ EQUB &FC               \ Data block 40 = -4
+ EQUB &02               \ Data block 41 =  2
+ EQUB &03               \ Data block 42 =  3
+ EQUB &FD               \ Data block 43 = -3
+ EQUB &FD               \ Data block 44 = -3
+ EQUB &01               \ Data block 45 =  1
+ EQUB &03               \ Data block 46 =  3
+ EQUB &00               \ Data block 47 =  0
+ EQUB &FE               \ Data block 48 = -2
+ EQUB &00               \ Data block 49 =  0
+ EQUB &01               \ Data block 50 =  1
+ EQUB &FC               \ Data block 51 = -4
+ EQUB &FC               \ Data block 52 = -4
+ EQUB &03               \ Data block 53 =  3
+ EQUB &03               \ Data block 54 =  3
+ EQUB &FC               \ Data block 55 = -4
+ EQUB &FE               \ Data block 56 = -2
+ EQUB &01               \ Data block 57 =  1
 
 \ ******************************************************************************
 \
@@ -1373,11 +1520,9 @@ ORG CODE%
 \       Name: HookSectionFrom
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Initialise and calculate the current segment vector
 \
 \ ------------------------------------------------------------------------------
-\
-\ Do some extra processing when reading trackSectionFrom.
 \
 \ Arguments:
 \
@@ -1439,7 +1584,8 @@ ORG CODE%
  BIT directionFacing    \ If we are facing backwards along the track, jump to
  BMI from1              \ from1 to skip the following call to SetSegmentVector
 
- JSR SetSegmentVector   \ We are facing forwards along the track, so ???
+ JSR SetSegmentVector   \ We are facing forwards along the track, so calculate
+                        \ and store the current segment vector
 
 .from1
 
@@ -2066,71 +2212,71 @@ ORG CODE%
 
 .xSegmentVector
 
- EQUB 0                 \ Coordinate  0
- EQUB 1                 \ Coordinate  1
- EQUB 3                 \ Coordinate  2
- EQUB 4                 \ Coordinate  3
- EQUB 6                 \ Coordinate  4
- EQUB 7                 \ Coordinate  5
- EQUB 9                 \ Coordinate  6
- EQUB 10                \ Coordinate  7
- EQUB 12                \ Coordinate  8
- EQUB 13                \ Coordinate  9
- EQUB 15                \ Coordinate 10
- EQUB 16                \ Coordinate 11
- EQUB 18                \ Coordinate 12
- EQUB 19                \ Coordinate 13
- EQUB 21                \ Coordinate 14
- EQUB 22                \ Coordinate 15
- EQUB 23                \ Coordinate 16
- EQUB 25                \ Coordinate 17
- EQUB 26                \ Coordinate 18
- EQUB 28                \ Coordinate 19
- EQUB 29                \ Coordinate 20
- EQUB 31                \ Coordinate 21
- EQUB 32                \ Coordinate 22
- EQUB 33                \ Coordinate 23
- EQUB 35                \ Coordinate 24
- EQUB 36                \ Coordinate 25
- EQUB 38                \ Coordinate 26
- EQUB 39                \ Coordinate 27
- EQUB 40                \ Coordinate 28
- EQUB 42                \ Coordinate 29
- EQUB 43                \ Coordinate 30
- EQUB 45                \ Coordinate 31
- EQUB 46                \ Coordinate 32
- EQUB 47                \ Coordinate 33
- EQUB 49                \ Coordinate 34
- EQUB 50                \ Coordinate 35
- EQUB 51                \ Coordinate 36
- EQUB 53                \ Coordinate 37
- EQUB 54                \ Coordinate 38
- EQUB 55                \ Coordinate 39
- EQUB 57                \ Coordinate 40
- EQUB 58                \ Coordinate 41
- EQUB 59                \ Coordinate 42
- EQUB 60                \ Coordinate 43
- EQUB 62                \ Coordinate 44
- EQUB 63                \ Coordinate 45
- EQUB 64                \ Coordinate 46
- EQUB 65                \ Coordinate 47
- EQUB 67                \ Coordinate 48
- EQUB 68                \ Coordinate 49
- EQUB 69                \ Coordinate 50
- EQUB 70                \ Coordinate 51
- EQUB 71                \ Coordinate 52
- EQUB 73                \ Coordinate 53
- EQUB 74                \ Coordinate 54
- EQUB 75                \ Coordinate 55
- EQUB 76                \ Coordinate 56
- EQUB 77                \ Coordinate 57
- EQUB 78                \ Coordinate 58
- EQUB 79                \ Coordinate 59
- EQUB 81                \ Coordinate 60
- EQUB 82                \ Coordinate 61
- EQUB 83                \ Coordinate 62
- EQUB 84                \ Coordinate 63
- EQUB 85                \ Coordinate 64
+ EQUB 0                 \ Coordinate  0 = (0, 120)
+ EQUB 1                 \ Coordinate  1 = (1, 120)
+ EQUB 3                 \ Coordinate  2 = (3, 120)
+ EQUB 4                 \ Coordinate  3 = (4, 120)
+ EQUB 6                 \ Coordinate  4 = (6, 120)
+ EQUB 7                 \ Coordinate  5 = (7, 120)
+ EQUB 9                 \ Coordinate  6 = (9, 120)
+ EQUB 10                \ Coordinate  7 = (10, 120)
+ EQUB 12                \ Coordinate  8 = (12, 119)
+ EQUB 13                \ Coordinate  9 = (13, 119)
+ EQUB 15                \ Coordinate 10 = (15, 119)
+ EQUB 16                \ Coordinate 11 = (16, 119)
+ EQUB 18                \ Coordinate 12 = (18, 119)
+ EQUB 19                \ Coordinate 13 = (19, 118)
+ EQUB 21                \ Coordinate 14 = (21, 118)
+ EQUB 22                \ Coordinate 15 = (22, 118)
+ EQUB 23                \ Coordinate 16 = (23, 118)
+ EQUB 25                \ Coordinate 17 = (25, 117)
+ EQUB 26                \ Coordinate 18 = (26, 117)
+ EQUB 28                \ Coordinate 19 = (28, 117)
+ EQUB 29                \ Coordinate 20 = (29, 116)
+ EQUB 31                \ Coordinate 21 = (31, 116)
+ EQUB 32                \ Coordinate 22 = (32, 116)
+ EQUB 33                \ Coordinate 23 = (33, 115)
+ EQUB 35                \ Coordinate 24 = (35, 115)
+ EQUB 36                \ Coordinate 25 = (36, 114)
+ EQUB 38                \ Coordinate 26 = (38, 114)
+ EQUB 39                \ Coordinate 27 = (39, 113)
+ EQUB 40                \ Coordinate 28 = (40, 113)
+ EQUB 42                \ Coordinate 29 = (42, 112)
+ EQUB 43                \ Coordinate 30 = (43, 112)
+ EQUB 45                \ Coordinate 31 = (45, 111)
+ EQUB 46                \ Coordinate 32 = (46, 111)
+ EQUB 47                \ Coordinate 33 = (47, 110)
+ EQUB 49                \ Coordinate 34 = (49, 110)
+ EQUB 50                \ Coordinate 35 = (50, 109)
+ EQUB 51                \ Coordinate 36 = (51, 108)
+ EQUB 53                \ Coordinate 37 = (53, 108)
+ EQUB 54                \ Coordinate 38 = (54, 107)
+ EQUB 55                \ Coordinate 39 = (55, 107)
+ EQUB 57                \ Coordinate 40 = (57, 106)
+ EQUB 58                \ Coordinate 41 = (58, 105)
+ EQUB 59                \ Coordinate 42 = (59, 104)
+ EQUB 60                \ Coordinate 43 = (60, 104)
+ EQUB 62                \ Coordinate 44 = (62, 103)
+ EQUB 63                \ Coordinate 45 = (63, 102)
+ EQUB 64                \ Coordinate 46 = (64, 101)
+ EQUB 65                \ Coordinate 47 = (65, 101)
+ EQUB 67                \ Coordinate 48 = (67, 100)
+ EQUB 68                \ Coordinate 49 = (68, 99)
+ EQUB 69                \ Coordinate 50 = (69, 98)
+ EQUB 70                \ Coordinate 51 = (70, 97)
+ EQUB 71                \ Coordinate 52 = (71, 96)
+ EQUB 73                \ Coordinate 53 = (73, 96)
+ EQUB 74                \ Coordinate 54 = (74, 95)
+ EQUB 75                \ Coordinate 55 = (75, 94)
+ EQUB 76                \ Coordinate 56 = (76, 93)
+ EQUB 77                \ Coordinate 57 = (77, 92)
+ EQUB 78                \ Coordinate 58 = (78, 91)
+ EQUB 79                \ Coordinate 59 = (79, 90)
+ EQUB 81                \ Coordinate 60 = (81, 89)
+ EQUB 82                \ Coordinate 61 = (82, 88)
+ EQUB 83                \ Coordinate 62 = (83, 87)
+ EQUB 84                \ Coordinate 63 = (84, 86)
+ EQUB 85                \ Coordinate 64 = (85, 85)
 
 \ ******************************************************************************
 \
@@ -2191,10 +2337,37 @@ ORG CODE%
 
 .ySectionData
 
- EQUB &FF, &E4, &CC, &32, &DE, &D0, &D0, &00
- EQUB &00, &00, &00, &41, &FF, &FF, &FF, &3B
- EQUB &FB, &FB, &FF, &03, &1B, &1B, &FD, &FD
- EQUB &26, &FC, &12, &E6, &FF, &00
+ EQUB &FF               \ Section  0 =  -1
+ EQUB &E4               \ Section  1 = -28
+ EQUB &CC               \ Section  2 = -52
+ EQUB &32               \ Section  3 =  50
+ EQUB &DE               \ Section  4 = -34
+ EQUB &D0               \ Section  5 = -48
+ EQUB &D0               \ Section  6 = -48
+ EQUB &00               \ Section  7 =   0
+ EQUB &00               \ Section  8 =   0
+ EQUB &00               \ Section  9 =   0
+ EQUB &00               \ Section 10 =   0
+ EQUB &41               \ Section 11 =  65
+ EQUB &FF               \ Section 12 =  -1
+ EQUB &FF               \ Section 13 =  -1
+ EQUB &FF               \ Section 14 =  -1
+ EQUB &3B               \ Section 15 =  59
+ EQUB &FB               \ Section 16 =  -5
+ EQUB &FB               \ Section 17 =  -5
+ EQUB &FF               \ Section 18 =  -1
+ EQUB &03               \ Section 19 =   3
+ EQUB &1B               \ Section 20 =  27
+ EQUB &1B               \ Section 21 =  27
+ EQUB &FD               \ Section 22 =  -3
+ EQUB &FD               \ Section 23 =  -3
+ EQUB &26               \ Section 24 =  38
+ EQUB &FC               \ Section 25 =  -4
+ EQUB &12               \ Section 26 =  18
+ EQUB &E6               \ Section 27 = -26
+ EQUB &FF               \ Section 28 =  -1
+
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -2406,71 +2579,71 @@ ORG CODE%
 
 .zSegmentVector
 
- EQUB 120               \ Coordinate  0
- EQUB 120               \ Coordinate  1
- EQUB 120               \ Coordinate  2
- EQUB 120               \ Coordinate  3
- EQUB 120               \ Coordinate  4
- EQUB 120               \ Coordinate  5
- EQUB 120               \ Coordinate  6
- EQUB 120               \ Coordinate  7
- EQUB 119               \ Coordinate  8
- EQUB 119               \ Coordinate  9
- EQUB 119               \ Coordinate 10
- EQUB 119               \ Coordinate 11
- EQUB 119               \ Coordinate 12
- EQUB 118               \ Coordinate 13
- EQUB 118               \ Coordinate 14
- EQUB 118               \ Coordinate 15
- EQUB 118               \ Coordinate 16
- EQUB 117               \ Coordinate 17
- EQUB 117               \ Coordinate 18
- EQUB 117               \ Coordinate 19
- EQUB 116               \ Coordinate 20
- EQUB 116               \ Coordinate 21
- EQUB 116               \ Coordinate 22
- EQUB 115               \ Coordinate 23
- EQUB 115               \ Coordinate 24
- EQUB 114               \ Coordinate 25
- EQUB 114               \ Coordinate 26
- EQUB 113               \ Coordinate 27
- EQUB 113               \ Coordinate 28
- EQUB 112               \ Coordinate 29
- EQUB 112               \ Coordinate 30
- EQUB 111               \ Coordinate 31
- EQUB 111               \ Coordinate 32
- EQUB 110               \ Coordinate 33
- EQUB 110               \ Coordinate 34
- EQUB 109               \ Coordinate 35
- EQUB 108               \ Coordinate 36
- EQUB 108               \ Coordinate 37
- EQUB 107               \ Coordinate 38
- EQUB 107               \ Coordinate 39
- EQUB 106               \ Coordinate 40
- EQUB 105               \ Coordinate 41
- EQUB 104               \ Coordinate 42
- EQUB 104               \ Coordinate 43
- EQUB 103               \ Coordinate 44
- EQUB 102               \ Coordinate 45
- EQUB 101               \ Coordinate 46
- EQUB 101               \ Coordinate 47
- EQUB 100               \ Coordinate 48
- EQUB 99                \ Coordinate 49
- EQUB 98                \ Coordinate 50
- EQUB 97                \ Coordinate 51
- EQUB 96                \ Coordinate 52
- EQUB 96                \ Coordinate 53
- EQUB 95                \ Coordinate 54
- EQUB 94                \ Coordinate 55
- EQUB 93                \ Coordinate 56
- EQUB 92                \ Coordinate 57
- EQUB 91                \ Coordinate 58
- EQUB 90                \ Coordinate 59
- EQUB 89                \ Coordinate 60
- EQUB 88                \ Coordinate 61
- EQUB 87                \ Coordinate 62
- EQUB 86                \ Coordinate 63
- EQUB 85                \ Coordinate 64
+ EQUB 120               \ Coordinate  0 = (0, 120)
+ EQUB 120               \ Coordinate  1 = (1, 120)
+ EQUB 120               \ Coordinate  2 = (3, 120)
+ EQUB 120               \ Coordinate  3 = (4, 120)
+ EQUB 120               \ Coordinate  4 = (6, 120)
+ EQUB 120               \ Coordinate  5 = (7, 120)
+ EQUB 120               \ Coordinate  6 = (9, 120)
+ EQUB 120               \ Coordinate  7 = (10, 120)
+ EQUB 119               \ Coordinate  8 = (12, 119)
+ EQUB 119               \ Coordinate  9 = (13, 119)
+ EQUB 119               \ Coordinate 10 = (15, 119)
+ EQUB 119               \ Coordinate 11 = (16, 119)
+ EQUB 119               \ Coordinate 12 = (18, 119)
+ EQUB 118               \ Coordinate 13 = (19, 118)
+ EQUB 118               \ Coordinate 14 = (21, 118)
+ EQUB 118               \ Coordinate 15 = (22, 118)
+ EQUB 118               \ Coordinate 16 = (23, 118)
+ EQUB 117               \ Coordinate 17 = (25, 117)
+ EQUB 117               \ Coordinate 18 = (26, 117)
+ EQUB 117               \ Coordinate 19 = (28, 117)
+ EQUB 116               \ Coordinate 20 = (29, 116)
+ EQUB 116               \ Coordinate 21 = (31, 116)
+ EQUB 116               \ Coordinate 22 = (32, 116)
+ EQUB 115               \ Coordinate 23 = (33, 115)
+ EQUB 115               \ Coordinate 24 = (35, 115)
+ EQUB 114               \ Coordinate 25 = (36, 114)
+ EQUB 114               \ Coordinate 26 = (38, 114)
+ EQUB 113               \ Coordinate 27 = (39, 113)
+ EQUB 113               \ Coordinate 28 = (40, 113)
+ EQUB 112               \ Coordinate 29 = (42, 112)
+ EQUB 112               \ Coordinate 30 = (43, 112)
+ EQUB 111               \ Coordinate 31 = (45, 111)
+ EQUB 111               \ Coordinate 32 = (46, 111)
+ EQUB 110               \ Coordinate 33 = (47, 110)
+ EQUB 110               \ Coordinate 34 = (49, 110)
+ EQUB 109               \ Coordinate 35 = (50, 109)
+ EQUB 108               \ Coordinate 36 = (51, 108)
+ EQUB 108               \ Coordinate 37 = (53, 108)
+ EQUB 107               \ Coordinate 38 = (54, 107)
+ EQUB 107               \ Coordinate 39 = (55, 107)
+ EQUB 106               \ Coordinate 40 = (57, 106)
+ EQUB 105               \ Coordinate 41 = (58, 105)
+ EQUB 104               \ Coordinate 42 = (59, 104)
+ EQUB 104               \ Coordinate 43 = (60, 104)
+ EQUB 103               \ Coordinate 44 = (62, 103)
+ EQUB 102               \ Coordinate 45 = (63, 102)
+ EQUB 101               \ Coordinate 46 = (64, 101)
+ EQUB 101               \ Coordinate 47 = (65, 101)
+ EQUB 100               \ Coordinate 48 = (67, 100)
+ EQUB 99                \ Coordinate 49 = (68, 99)
+ EQUB 98                \ Coordinate 50 = (69, 98)
+ EQUB 97                \ Coordinate 51 = (70, 97)
+ EQUB 96                \ Coordinate 52 = (71, 96)
+ EQUB 96                \ Coordinate 53 = (73, 96)
+ EQUB 95                \ Coordinate 54 = (74, 95)
+ EQUB 94                \ Coordinate 55 = (75, 94)
+ EQUB 93                \ Coordinate 56 = (76, 93)
+ EQUB 92                \ Coordinate 57 = (77, 92)
+ EQUB 91                \ Coordinate 58 = (78, 91)
+ EQUB 90                \ Coordinate 59 = (79, 90)
+ EQUB 89                \ Coordinate 60 = (81, 89)
+ EQUB 88                \ Coordinate 61 = (82, 88)
+ EQUB 87                \ Coordinate 62 = (83, 87)
+ EQUB 86                \ Coordinate 63 = (84, 86)
+ EQUB 85                \ Coordinate 64 = (85, 85)
 
 \ ******************************************************************************
 \
@@ -2816,10 +2989,10 @@ ORG CODE%
 \ car's y-coordinate calculation with playerSpeedHi * yTrackSegmentI * 4, to
 \ give:
 \
-\   * (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
-\                                        + carProgress * yTrackSegmentI
-\                                        + playerSpeedHi * yTrackSegmentI * 4
-\                                        + 172
+\   (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
+\                                      + carProgress * yTrackSegmentI
+\                                      + playerSpeedHi * yTrackSegmentI * 4
+\                                      + 172
 \
 \ So driving fast over sloping segments can make the car jump.
 \
@@ -3118,11 +3291,8 @@ ORG CODE%
 \       Name: HookFirstSegment
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Move to the next to the next segment vector along the track and
+\             calculate the segment vector
 \
 \ ******************************************************************************
 
@@ -3208,28 +3378,84 @@ ORG CODE%
 
 .trackName
 
- EQUS "Brands Hatch"     \ Track name
+ EQUS "Brands Hatch"    \ Track name
  EQUB 13
 
- EQUB &DC, &20, &22, &20, &42, &52
- EQUB &41, &4E, &44, &53, &20, &48, &41, &54
- EQUB &43, &48, &22, &2C, &22, &20, &44, &4F
- EQUB &4E, &49, &4E, &47, &54, &4F, &4E, &20
- EQUB &50, &41, &52, &4B, &22, &2C, &22, &20
- EQUB &4F, &55, &4C, &54, &4F, &4E, &20, &50
- EQUB &41, &52, &4B, &20, &20, &20, &22, &2C
- EQUB &22, &20, &53, &4E, &45, &54, &54, &45
- EQUB &52, &54, &4F, &4E, &20, &20, &20, &20
- EQUB &22, &0D, &04, &06, &0A, &20, &DC, &22
- EQUB &22, &20, &20, &0D, &04, &10, &24, &20
- EQUB &F4, &20, &50, &72, &6F, &67, &72, &61
- EQUB &6D, &73, &20, &6F, &6E, &20, &74, &68
- EQUB &65, &20, &64, &69, &73, &63, &20, &6F
- EQUB &72, &20, &74, &61, &70, &65, &20, &0D
- EQUB &04, &1A, &11, &20, &DC, &42, &20, &2C
- EQUB &44, &20, &2C, &4F, &20, &2C, &53, &20
- EQUB &0D, &04, &24, &0E, &20, &DC, &22, &22
- EQUB &20, &20, &20, &20, &20, &20, &0D, &FF
+ EQUB &DC, &20          \ These bytes appear to be unused
+ EQUB &22, &20
+ EQUB &42, &52
+ EQUB &41, &4E
+ EQUB &44, &53
+ EQUB &20, &48
+ EQUB &41, &54
+ EQUB &43, &48
+ EQUB &22, &2C
+ EQUB &22, &20
+ EQUB &44, &4F
+ EQUB &4E, &49
+ EQUB &4E, &47
+ EQUB &54, &4F
+ EQUB &4E, &20
+ EQUB &50, &41
+ EQUB &52, &4B
+ EQUB &22, &2C
+ EQUB &22, &20
+ EQUB &4F, &55
+ EQUB &4C, &54
+ EQUB &4F, &4E
+ EQUB &20, &50
+ EQUB &41, &52
+ EQUB &4B, &20
+ EQUB &20, &20
+ EQUB &22, &2C
+ EQUB &22, &20
+ EQUB &53, &4E
+ EQUB &45, &54
+ EQUB &54, &45
+ EQUB &52, &54
+ EQUB &4F, &4E
+ EQUB &20, &20
+ EQUB &20, &20
+ EQUB &22, &0D
+ EQUB &04, &06
+ EQUB &0A, &20
+ EQUB &DC, &22
+ EQUB &22, &20
+ EQUB &20, &0D
+ EQUB &04, &10
+ EQUB &24, &20
+ EQUB &F4, &20
+ EQUB &50, &72
+ EQUB &6F, &67
+ EQUB &72, &61
+ EQUB &6D, &73
+ EQUB &20, &6F
+ EQUB &6E, &20
+ EQUB &74, &68
+ EQUB &65, &20
+ EQUB &64, &69
+ EQUB &73, &63
+ EQUB &20, &6F
+ EQUB &72, &20
+ EQUB &74, &61
+ EQUB &70, &65
+ EQUB &20, &0D
+ EQUB &04, &1A
+ EQUB &11, &20
+ EQUB &DC, &42
+ EQUB &20, &2C
+ EQUB &44, &20
+ EQUB &2C, &4F
+ EQUB &20, &2C
+ EQUB &53, &20
+ EQUB &0D, &04
+ EQUB &24, &0E
+ EQUB &20, &DC
+ EQUB &22, &22
+ EQUB &20, &20
+ EQUB &20, &20
+ EQUB &20, &20
+ EQUB &0D, &FF
 
 \ ******************************************************************************
 \
