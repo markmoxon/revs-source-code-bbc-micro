@@ -29957,7 +29957,7 @@ NEXT
 \       Name: MultiplyHeight
 \       Type: Subroutine
 \   Category: Track geometry
-\    Summary: Multiply the elevation of a specified track segment by A
+\    Summary: Multiply the height above ground of a specified track segment by A
 \
 \ ------------------------------------------------------------------------------
 \

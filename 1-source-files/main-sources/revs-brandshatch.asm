@@ -454,33 +454,33 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: dataIndex
+\       Name: subSection
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: The data index for the current section
+\    Summary: The number of the current sub-section
 \
 \ ******************************************************************************
 
-.dataIndex
+.subSection
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: dataIndexMax
+\       Name: trackSubCount
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: The maximum value for dataIndex
+\    Summary: The number of sub-sections
 \
 \ ******************************************************************************
 
-.dataIndexMax
+.trackSubCount
 
  EQUB 58
 
 \ ******************************************************************************
 \
-\       Name: xThisSectionDataLo
+\       Name: yawAngleLo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -491,13 +491,13 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xThisSectionDataLo
+.yawAngleLo
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: xThisSectionDataHi
+\       Name: yawAngleHi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -508,13 +508,13 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xThisSectionDataHi
+.yawAngleHi
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: yThisSectionData
+\       Name: heightOfTrack
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -525,21 +525,21 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.yThisSectionData
+.heightOfTrack
 
  EQUB 0
 
 \ ******************************************************************************
 \
-\       Name: dataCounter
+\       Name: subSectionSegment
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: The number of the data within the current data block, counting
-\             from the start of the block
+\    Summary: The number of the segment within the current sub-section, counting
+\             from the start of the sub-section
 \
 \ ******************************************************************************
 
-.dataCounter
+.subSectionSegment
 
  EQUB 0
 
@@ -619,7 +619,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xDataHi
+\       Name: trackYawDeltaHi
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -630,7 +630,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xDataHi
+.trackYawDeltaHi
 
  EQUB &00               \ Data block  0 = &0023 (   35)
  EQUB &00               \ Data block  1 = &0048 (   72)
@@ -731,32 +731,31 @@ ORG CODE%
 
 .CalcSegmentVector
 
- LDA xThisSectionDataLo \ Set A = (xThisSectionDataHi xThisSectionDataLo) << 1
- ASL A                  \ keeping the high byte only and rotating bit 7 into
- LDA xThisSectionDataHi \ the C flag
- ROL A
+ LDA yawAngleLo         \ Set A = (yawAngleHi yawAngleLo) << 1
+ ASL A                  \
+ LDA yawAngleHi         \ Keeping the high byte only and rotating bit 7 into
+ ROL A                  \ the C flag
 
  PHA                    \ Push the high byte in A onto the stack, so the stack
-                        \ contains the high byte of xThisSectionData << 1
+                        \ contains the high byte of yawAngle << 1
 
- ROL A                  \ Set bits 0-2 of U to bits 5-7 of xThisSectionDataHi
- ROL A                  \ (i.e. the top three bits)
+ ROL A                  \ Set bits 0-2 of U to bits 5-7 of yawAngleHi (i.e. the
+ ROL A                  \ top three bits)
  ROL A
  AND #%00000111
  STA U
 
- LSR A                  \ Set the C flag to bit 0 of A, i.e. bit 5 of
-                        \ xThisSectionDataHi
+ LSR A                  \ Set the C flag to bit 0 of A, i.e. bit 5 of yawAngleHi
 
  PLA                    \ Retrieve the high byte that we pushed onto the stack,
-                        \ i.e. the high byte of xThisSectionData << 1
+                        \ i.e. the high byte of yawAngle << 1
 
  AND #%00111111         \ Clear bits 6 and 7 of A, so A now contains two zeroes,
-                        \ then bits 4, 3, 2, 1, 0 of xThisSectionDataHi, then
-                        \ bit 7 of xThisSectionDataLo
+                        \ then bits 4, 3, 2, 1, 0 of yawAngleHi, then bit 7 of
+                        \ yawAngleLo
 
- BCC vect1              \ If the C flag, i.e. bit 5 of xThisSectionDataHi, is
-                        \ clear, jump to vect1 to skip the following
+ BCC vect1              \ If the C flag, i.e. bit 5 of yawAngleHi, is clear,
+                        \ jump to vect1 to skip the following
 
  EOR #%00111111         \ Negate A using two's complement (the ADC adds 1 as the
  ADC #0                 \ C flag is set)
@@ -765,14 +764,14 @@ ORG CODE%
 
  TAX                    \ Set X = A
 
- LDY xSegmentVector,X   \ Set Y = X-th entry in xSegmentVector
+ LDY xTrackCurve,X      \ Set Y = X-th entry in xTrackCurve
 
- LDA zSegmentVector,X   \ Set X = X-th entry in zSegmentVector
+ LDA zTrackCurve,X      \ Set X = X-th entry in zTrackCurve
  TAX
 
  LDA U                  \ If bit 1 of U + 1 is set, i.e. U ends in %01 or %10,
- CLC                    \ i.e. bits 5 and 6 of xThisSectionDataHi are different,
- ADC #1                 \ then jump to vect2 to set V and W the other way round
+ CLC                    \ i.e. bits 5 and 6 of yawAngleHi are different, then
+ ADC #1                 \ jump to vect2 to set V and W the other way round
  AND #%00000010
  BNE vect2
 
@@ -792,11 +791,11 @@ ORG CODE%
 .vect3
 
  LDA U                  \ If U < 4, i.e. bit 2 of U is clear, i.e. bit 7 of
- CMP #4                 \ xThisSectionDataHi is clear, jump to vect4 to skip the
+ CMP #4                 \ yawAngleHi is clear, jump to vect4 to skip the
  BCC vect4              \ following
 
                         \ If we get here then bit 2 of U is set, i.e. bit 7 of
-                        \ xThisSectionDataHi is set
+                        \ yawAngleHi is set
 
  LDA #0                 \ Set V = -V
  SBC V
@@ -805,15 +804,15 @@ ORG CODE%
 .vect4
 
  LDA U                  \ If U >= 6, i.e. bits 1 and 2 of U are set, i.e. bits
- CMP #6                 \ 6 and 7 of xThisSectionDataHi are set, jump to vect5
- BCS vect5              \ to skip the following
+ CMP #6                 \ 6 and 7 of yawAngleHi are set, jump to vect5 to skip
+ BCS vect5              \ the following
 
  CMP #2                 \ If U < 2, i.e. bits 1 and 2 of U are clear, i.e. bits
- BCC vect5              \ 6 and 7 of xThisSectionDataHi are clear, jump to vect5
-                        \ to skip the following
+ BCC vect5              \ 6 and 7 of yawAngleHi are clear, jump to vect5 to skip
+                        \ the following
 
                         \ If we get here then bits 1 and 2 of U are different,
-                        \ i.e. bits 6 and 7 of xThisSectionDataHi are different
+                        \ i.e. bits 6 and 7 of yawAngleHi are different
 
  LDA #0                 \ Set W = -W
  SBC W
@@ -826,7 +825,7 @@ ORG CODE%
                         \ number of the first segment vector in the section)
 
                         \ We now store the following for this vector, where V
-                        \ and W are based on xSegmentVector and zSegmentVector:
+                        \ and W are based on xTrackCurve and zTrackCurve:
                         \
                         \   * xTrackSegmentI = V
                         \   * zTrackSegmentI = W
@@ -834,7 +833,7 @@ ORG CODE%
                         \   * zTrackSegmentO = V * 0.53
                         \   * xTrackSegmentO = -W * 0.53
                         \
-                        \   * yTrackSegmentI = yThisSectionData
+                        \   * yTrackSegmentI = heightOfTrack
 
  LDA #136               \ Set U = 136
  STA U
@@ -863,8 +862,8 @@ ORG CODE%
  STA xTrackSegmentO,Y   \ Set the x-coordinate of the Y-th outer track segment
                         \ vector to -W * 0.53
 
- LDA yThisSectionData   \ Set the y-coordinate of the Y-th track segment vector
- STA yTrackSegmentI,Y   \ to yThisSectionData
+ LDA heightOfTrack      \ Set the y-coordinate of the Y-th track segment vector
+ STA yTrackSegmentI,Y   \ to the height of the track
 
  RTS                    \ Return from the subroutine
 
@@ -1023,7 +1022,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xDataLo
+\       Name: trackYawDeltaLo
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1034,7 +1033,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xDataLo
+.trackYawDeltaLo
 
  EQUB &23               \ Data block  0 = &0023 (   35)
  EQUB &48               \ Data block  1 = &0048 (   72)
@@ -1186,9 +1185,11 @@ ORG CODE%
 
 .UpdateDataPointers
 
- LDY dataIndex          \ Set Y to the data index for this data block
+ LDY subSection         \ Set Y to the number of the current sub-section within
+                        \ the current track section
 
- LDA dataCounter        \ Set A to the number of the data index within the block
+ LDA subSectionSegment  \ Set A to the number of the current segment within the
+                        \ current sub-section
 
  SEC                    \ Set the C flag for use in the following addition or
                         \ subtraction
@@ -1197,30 +1198,32 @@ ORG CODE%
  BMI upda1              \ upda1
 
                         \ If we get here then we are facing forwards along the
-                        \ track, so we increment dataCounter
+                        \ track, so we increment subSectionSegment
                         \
-                        \ If dataCounter reaches dataSize for this data block,
-                        \ we wrap it round to zero and increment dataIndex
+                        \ If subSectionSegment reaches trackSubSize for this
+                        \ sub-section, we wrap it round to zero and increment
+                        \ subSection to move on to the next sub-section
                         \
-                        \ If dataIndex reaches dataIndexMax, we wrap it round to
-                        \ zero
+                        \ If subSection reaches trackSubCount, we wrap it
+                        \ round to zero
 
  ADC #0                 \ Set A = A + 1
-                        \       = dataCounter + 1
+                        \       = subSectionSegment + 1
                         \
                         \ This works as the C flag is set
 
- CMP dataSize,Y         \ If A < dataSize for this index, jump to upda3 to
+ CMP trackSubSize,Y     \ If A < trackSubSize for this index, jump to upda3 to
  BCC upda3              \ update the pointers and return from the subroutine
 
- LDA #0                 \ Set A = 0 to store as the new value of dataCounter
+ LDA #0                 \ Set A = 0, to set as the new segment number in
+                        \ subSectionSegment within the next sub-section
 
- INY                    \ Increment Y to point to the next data index
+ INY                    \ Increment Y to point to the next sub-section
 
- CPY dataIndexMax       \ If Y < dataIndexMax, jump to upda3 to update the
+ CPY trackSubCount      \ If Y < trackSubCount, jump to upda3 to update the
  BCC upda3              \ pointers and return from the subroutine
 
- LDY #0                 \ Set Y = 0, to set the new value of dataIndex to the
+ LDY #0                 \ Set Y = 0, to set the new value of subSection to the
                         \ start of the data
 
  BEQ upda3              \ Jump to upda3 to update the pointers and return from
@@ -1230,16 +1233,16 @@ ORG CODE%
 .upda1
 
                         \ If we get here then we are facing backwards along the
-                        \ track, so we decrement dataCounter
+                        \ track, so we decrement subSectionSegment
                         \
-                        \ If dataCounter goes past 0, we wrap it round to ???
-                        \ and decrement dataIndex
+                        \ If subSectionSegment goes past 0, we wrap it round
+                        \ to ??? and decrement subSection
                         \
-                        \ If dataIndex reaches 0, we wrap it round to the end of
-                        \ the data
+                        \ If subSection reaches 0, we wrap it round to the end
+                        \ of the data
 
  SBC #1                 \ Set A = A - 1
-                        \       = dataCounter - 1
+                        \       = subSectionSegment - 1
                         \
                         \ This works as the C flag is set
 
@@ -1251,24 +1254,25 @@ ORG CODE%
  TAY
 
  CPY #1                 \ If Y >= 1, jump to upda2 as we haven't reached the
- BCS upda2              \ start of the data
+ BCS upda2              \ start of the sub-section
 
- LDY dataIndexMax       \ Set Y = dataIndexMax, to set the new value of
-                        \ dataIndex to the end of the data
+ LDY trackSubCount      \ Set Y = trackSubCount, to set the new value of
+                        \ subSection to the last sub-section
 
 .upda2
 
- DEY                    \ Decrement Y to point to the previous data index
+ DEY                    \ Decrement Y to point to the previous sub-section
 
- LDA dataSize,Y         \ Set A to dataSize - 1 for this index
+ LDA trackSubSize,Y     \ Set A to trackSubSize - 1 for this index
  SEC
  SBC #1
 
 .upda3
 
- STA dataCounter        \ Store the updated value of A in the data counter
+ STA subSectionSegment  \ Update the segment n7mber within the sub-section to
+                        \ the value of A
 
- STY dataIndex          \ Store the updated value of Y in the data index
+ STY subSection         \ Update the sub-section to the updated value of Y
 
  RTS                    \ Return from the subroutine
 
@@ -1313,14 +1317,15 @@ ORG CODE%
  STX xStore             \ Store X in xStore so we can retrieve it at the end of
                         \ the routine
 
- LDY dataIndex          \ Set Y to the data index for this data block
+ LDY subSection         \ Set Y to the number of the current sub-section within
+                        \ the current track section
 
  BMI sets1              \ If bit 7 of Y is set, jump to sets1 to skip the
                         \ following calculation
 
- LDA xDataLo,Y          \ Set (A T) = (xDataHi xDataLo) for this section
- STA T
- LDA xDataHi,Y
+ LDA trackYawDeltaLo,Y  \ Set (A T) = (trackYawDeltaHi trackYawDeltaLo) for this
+ STA T                  \ sub-section
+ LDA trackYawDeltaHi,Y
 
  BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
                         \ call to Absolute16Bit sets the sign of (A T) to
@@ -1331,18 +1336,21 @@ ORG CODE%
                         \ facing backwards along the track
 
  STA U                  \ Set (U T) = (A T)
-                        \           = signed (xDataHi xDataLo) for this section
+                        \           = signed (trackYawDeltaHi trackYawDeltaLo)
+                        \             for this sub-section
 
- LDA T                  \ Set xThisSectionData = xThisSectionData + (U T)
- CLC                    \                      = xThisSectionData + data1
- ADC xThisSectionDataLo \
- STA xThisSectionDataLo \ starting with the low bytes
+ LDA T                  \ Set yawAngle = yawAngle + (U T)
+ CLC                    \              = yawAngle + trackYawDelta
+ ADC yawAngleLo         \
+ STA yawAngleLo         \ starting with the low bytes
 
  LDA U                  \ And then the high bytes
- ADC xThisSectionDataHi
- STA xThisSectionDataHi
+ ADC yawAngleHi
+ STA yawAngleHi
 
- LDA yData,Y            \ Set A = yData for this section
+ LDA trackGradient,Y    \ Set A to the gradient of this sub-section (i.e. the
+                        \ change of track height over the course of the
+                        \ sub-section)
 
  BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
                         \ call to Absolute8Bit sets the sign of A to
@@ -1352,9 +1360,9 @@ ORG CODE%
                         \ directionFacing, so this negates A if we are facing
                         \ backwards along the track
 
- CLC                    \ Set yThisSectionData = yThisSectionData + A
- ADC yThisSectionData   \                      = yThisSectionData + yData
- STA yThisSectionData
+ CLC                    \ Set heightOfTrack = heightOfTrack + A
+ ADC heightOfTrack      \                   = heightOfTrack + trackGradient
+ STA heightOfTrack
 
 .sets1
 
@@ -1414,7 +1422,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: yData
+\       Name: trackGradient
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -1425,7 +1433,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.yData
+.trackGradient
 
  EQUB &01               \ Data block  0 =  1
  EQUB &FE               \ Data block  1 = -2
@@ -1546,40 +1554,40 @@ ORG CODE%
  LSR A                  \ trackSectionFrom contains the track section * 8)
  TAY
 
- LDA xSectionDataLo,Y   \ Set (xThisSectionDataHi xThisSectionDataLo) to this
- STA xThisSectionDataLo \ section's entry from (xSectionDataHi xSectionDataLo)
- LDA xSectionDataHi,Y
- STA xThisSectionDataHi
+ LDA trackYawAngleLo,Y  \ Set (yawAngleHi yawAngleLo) to this section's entry
+ STA yawAngleLo         \ from (trackYawAngleHi trackYawAngleLo)
+ LDA trackYawAngleHi,Y
+ STA yawAngleHi
 
- LDA ySectionData,Y     \ Set ySectionData to this section's entry from
- STA yThisSectionData   \ yThisSectionData
+ LDA trackHeight,Y      \ Set heightOfTrack to this section's entry from
+ STA heightOfTrack      \ trackHeight
 
- LDA sectionIndex,Y     \ Set A to this section's entry from sectionIndex
+ LDA trackSubConfig,Y   \ Set A to this section's configuration byte
 
  LSR A                  \ Set A = A >> 2, with bit 6 cleared, bit 7 set to the
- ROR A                  \ bit 0 of the sectionIndex entry, and the C flag set to
-                        \ bit 1 of the sectionIndex entry
+ ROR A                  \ bit 0 of the trackSubConfig entry, and the C flag set
+                        \ to bit 1 of the trackSubConfig entry
 
- STA dataIndex          \ Store A in dataIndex, so it contains the index
-                        \ from bits 2-7 of sectionIndex, and bit 7 is set if
-                        \ bit 0 of sectionIndex is set
+ STA subSection         \ Store A in subSection, so it contains the index
+                        \ from bits 2-7 of trackSubConfig, and bit 7 is set if
+                        \ bit 0 of trackSubConfig is set
 
  LDA #14                \ Set A = 7, with bit 7 set to the C flag (so if this
- ROR A                  \ section's sectionIndex has bit 1 set, then A is 135,
+ ROR A                  \ section's trackSubConfig has bit 1 set, then A is 135,
                         \ otherwise it is 7)
 
  STA &23B3              \ Modify the GetSectionAngles routine, at instruction
                         \ #4 after gsec11, to test prevHorizonIndex against the
                         \ value we just calculated in A rather than 7
                         \ 
-                        \ So if this section's sectionIndex has bit 1 set, the
+                        \ So if this section's trackSubConfig has bit 1 set, the
                         \ test becomes prevHorizonIndex <= 135, which is always
                         \ true, so this modification makes us never set the
                         \ horizon line to 7 for sections that have bit 1 of
-                        \ sectionIndex set
+                        \ trackSubConfig set
 
- LDA #0                 \ Set dataCounter = 0
- STA dataCounter
+ LDA #0                 \ Set subSectionSegment = 0, so we start counting from
+ STA subSectionSegment  \ the first segment in the sub-section
 
  BIT directionFacing    \ If we are facing backwards along the track, jump to
  BMI from1              \ from1 to skip the following call to SetSegmentVector
@@ -1897,10 +1905,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: dataSize
+\       Name: trackSubSize
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: The number of data points within each section data block
+\    Summary: The size of each sub-section in terms of segments
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1908,7 +1916,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.dataSize
+.trackSubSize
 
  EQUB 26                \ Data block  0
  EQUB 21                \ Data block  1
@@ -2199,7 +2207,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xSegmentVector
+\       Name: xTrackCurve
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2210,7 +2218,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xSegmentVector
+.xTrackCurve
 
  EQUB 0                 \ Coordinate  0 = (0, 120)
  EQUB 1                 \ Coordinate  1 = (1, 120)
@@ -2324,7 +2332,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: ySectionData
+\       Name: trackHeight
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2335,7 +2343,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.ySectionData
+.trackHeight
 
  EQUB &FF               \ Section  0 =  -1
  EQUB &E4               \ Section  1 = -28
@@ -2371,10 +2379,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xSectionDataLo
+\       Name: trackYawAngleLo
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
+\    Summary: The low byte of the yaw angle of the start of each track section
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2382,7 +2390,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xSectionDataLo
+.trackYawAngleLo
 
  EQUB &00               \ Section  0 = &0000 (0)
  EQUB &2F               \ Section  1 = &122F (4655)
@@ -2418,10 +2426,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: xSectionDataHi
+\       Name: trackYawAngleHi
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
+\    Summary: The high byte of the yaw angle of the start of each track section
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2429,7 +2437,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.xSectionDataHi
+.trackYawAngleHi
 
  EQUB &00               \ Section  0 = &0000 (0)
  EQUB &12               \ Section  1 = &122F (4655)
@@ -2465,26 +2473,29 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: sectionIndex
+\       Name: trackSubConfig
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Configuration data for each section, relating to sub-sections and
+\             horizon calculations
 \
 \ ------------------------------------------------------------------------------
 \
-\ Each section has a sectionIndex value that contains the following data:
+\ Each section has a trackSubConfig value that contains the following data:
 \
-\   * Bits 2 to 7 = the index number
+\   * Bits 2 to 7 = the number of the first sub-section in this section
 \
 \   * Bit 1 = if this is set, then in the horizon calculations, we always skip
 \             the setting of horizonLine to 7
 \
-\   * Bit 0 = if this is set, then bit 7 of dataIndex is set, which means
-\             we skip the first part of the SetSegmentVector routine
+\   * Bit 0 = if this is set, then bit 7 of subSection gets set, which means
+\             we skip the first part of the SetSegmentVector routine, so we
+\             keep using the track yaw angle from the end of the previous
+\             sub-section, to use as the yaw angle for a straight section
 \
 \ ******************************************************************************
 
-.sectionIndex
+.trackSubConfig
 
  EQUB %00000010         \ 000000 1 0    0        Skip    Track section  0
  EQUB %00001110         \ 000011 1 0    3        Skip    Track section  1
@@ -2566,7 +2577,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: zSegmentVector
+\       Name: zTrackCurve
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: 
@@ -2577,7 +2588,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.zSegmentVector
+.zTrackCurve
 
  EQUB 120               \ Coordinate  0 = (0, 120)
  EQUB 120               \ Coordinate  1 = (1, 120)
