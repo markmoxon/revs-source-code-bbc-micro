@@ -2405,30 +2405,30 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section  0
- EQUB %00110011         \ 001100 1 1    -12                Track section  1
- EQUB %01110010         \ 011100 1 0    +28                Track section  2
- EQUB %00111011         \ 001110 1 1    -14                Track section  3
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section  4
- EQUB %00110011         \ 001100 1 1    -12                Track section  5
- EQUB %00010101         \ 000101 0 1     -5 * baseSpeed    Track section  6
- EQUB %00010101         \ 000101 0 1     -5 * baseSpeed    Track section  7
- EQUB %00010101         \ 000101 0 1     -5 * baseSpeed    Track section  8
- EQUB %00111100         \ 001111 0 0    +15 * baseSpeed    Track section  9
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 10
- EQUB %00110000         \ 001100 0 0    +12 * baseSpeed    Track section 11
- EQUB %00110011         \ 001100 1 1    -12                Track section 12
- EQUB %00111001         \ 001110 0 1    -14 * baseSpeed    Track section 13
- EQUB %00111000         \ 001110 0 0    +14 * baseSpeed    Track section 14
- EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 15
- EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 16
- EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 17
- EQUB %00110111         \ 001101 1 1    -13                Track section 18
- EQUB %00100000         \ 001000 0 0     +8 * baseSpeed    Track section 19
- EQUB %01011001         \ 010110 0 1    -22 * baseSpeed    Track section 20
- EQUB %00101011         \ 001010 1 1    -10                Track section 21
- EQUB %01010100         \ 010101 0 0    +21 * baseSpeed    Track section 22
- EQUB %00010100         \ 000101 0 0     +5 * baseSpeed    Track section 23
+ EQUB %00010100         \ Section  0 = 000101 0 0 =  +5 * baseSpeed
+ EQUB %00110011         \ Section  1 = 001100 1 1 = -12            
+ EQUB %01110010         \ Section  2 = 011100 1 0 = +28            
+ EQUB %00111011         \ Section  3 = 001110 1 1 = -14            
+ EQUB %00011000         \ Section  4 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00110011         \ Section  5 = 001100 1 1 = -12            
+ EQUB %00010101         \ Section  6 = 000101 0 1 =  -5 * baseSpeed
+ EQUB %00010101         \ Section  7 = 000101 0 1 =  -5 * baseSpeed
+ EQUB %00010101         \ Section  8 = 000101 0 1 =  -5 * baseSpeed
+ EQUB %00111100         \ Section  9 = 001111 0 0 = +15 * baseSpeed
+ EQUB %00011000         \ Section 10 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00110000         \ Section 11 = 001100 0 0 = +12 * baseSpeed
+ EQUB %00110011         \ Section 12 = 001100 1 1 = -12            
+ EQUB %00111001         \ Section 13 = 001110 0 1 = -14 * baseSpeed
+ EQUB %00111000         \ Section 14 = 001110 0 0 = +14 * baseSpeed
+ EQUB %00010100         \ Section 15 = 000101 0 0 =  +5 * baseSpeed
+ EQUB %00010100         \ Section 16 = 000101 0 0 =  +5 * baseSpeed
+ EQUB %00010100         \ Section 17 = 000101 0 0 =  +5 * baseSpeed
+ EQUB %00110111         \ Section 18 = 001101 1 1 = -13            
+ EQUB %00100000         \ Section 19 = 001000 0 0 =  +8 * baseSpeed
+ EQUB %01011001         \ Section 20 = 010110 0 1 = -22 * baseSpeed
+ EQUB %00101011         \ Section 21 = 001010 1 1 = -10            
+ EQUB %01010100         \ Section 22 = 010101 0 0 = +21 * baseSpeed
+ EQUB %00010100         \ Section 23 = 000101 0 0 =  +5 * baseSpeed
  
  EQUB &14, &67          \ These bytes appear to be unused (Silverstone only uses
                         \ sections 0 to 23)

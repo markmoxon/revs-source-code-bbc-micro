@@ -36,6 +36,12 @@ LOAD% = &70DB           \ The load address of the track binary
 
 CODE% = &5300           \ The assembly address of the track data
 
+\ ******************************************************************************
+\
+\ Addresses in the main game code
+\
+\ ******************************************************************************
+
 thisSectionFlags = &0001
 thisVectorNumber = &0002
 yStore = &001B
@@ -97,6 +103,57 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part defines the following aspects of these track sections:
+\
+\ trackSectionData      Various data for the track section:
+\
+\                         * Bits 0-2: Size of the track section list
+\
+\                           Defines the number of entries that we store in the
+\                           track section list for this section, which is used
+\                           to calculate the coordinates of the track verges
+\                           (higher numbers mean more sections are calculated,
+\                           so higher numbers are used for more complex parts
+\                           of the track)
+\
+\                           This value is given in the bottom nibble of the
+\                           track section data byte (bit 3 is ignored), i.e. the
+\                           second digit in the hexadecimal value
+\
+\                         * Bits 4-7: Sign number
+\
+\                           The number of the road sign (0 to 15) to show when
+\                           we enter this section, but only if the sign number
+\                           is different to the number in the previous section
+\
+\                           This value is given in the top nibble of the track
+\                           section data byte, i.e. the first digit in the
+\                           hexadecimal value
+\
+\ xTrackSectionIHi      High byte of the x-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ yTrackSectionIHi      High byte of the y-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ zTrackSectionIHi      High byte of the z-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ xTrackSectionOHi      High byte of the x-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackSectionTurn      The number of the segment towards the end of the section
+\                       where non-player cars should start turning in
+\                       preparation for the next section
+\
+\ zTrackSectionOHi      High byte of the z-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackDriverSpeed      The maximum speed for non-player drivers on this section
+\                       of the track
 \
 \ ******************************************************************************
 
@@ -429,7 +486,7 @@ ORG CODE%
 \       Name: Hook80Percent
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: Calculate (A T) = 0.8 * A
+\    Summary: Calculate (A T) = 0.80 * A
 \
 \ ******************************************************************************
 
@@ -470,7 +527,7 @@ ORG CODE%
 \       Name: trackSubCount
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: The number of sub-sections
+\    Summary: The total number of sub-sections in the track
 \
 \ ******************************************************************************
 
@@ -483,11 +540,8 @@ ORG CODE%
 \       Name: yawAngleLo
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the current yaw angle of the track, i.e. the angle at
+\             which the track is pointing along the ground
 \
 \ ******************************************************************************
 
@@ -500,11 +554,8 @@ ORG CODE%
 \       Name: yawAngleHi
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the current yaw angle of the track, i.e. the angle at
+\             which the track is pointing along the ground
 \
 \ ******************************************************************************
 
@@ -517,11 +568,7 @@ ORG CODE%
 \       Name: heightOfTrack
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The height above ground of the current track sub-section
 \
 \ ******************************************************************************
 
@@ -555,7 +602,10 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This is where the xTrackSegmentI table is built.
+\ This is also where the xTrackSegmentI table is built, once the modifications
+\ have been done. The block is padded out to be exactly 20 bytes long, so along
+\ with the modifyAddressHi block, there's one byte for each inner segment
+\ x-coordinate.
 \
 \ ******************************************************************************
 
@@ -581,7 +631,7 @@ ORG CODE%
  EQUB &2C               \ !&462C = HookFlipAbsolute
  EQUB &43               \ !&2543 = Hook80Percent
 
- EQUB &00               \ This byte appears to be unused
+ EQUB &00               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
@@ -590,6 +640,13 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: High byte of the location in the main game code where we modify a
 \             two-byte address
+\
+\ ------------------------------------------------------------------------------
+\
+\ This is also where the xTrackSegmentI table is built, once the modifications
+\ have been done. The block is padded out to be exactly 20 bytes long, so along
+\ with the modifyAddressLo block, there's one byte for each inner segment
+\ x-coordinate.
 \
 \ ******************************************************************************
 
@@ -615,81 +672,78 @@ ORG CODE%
  EQUB &46               \ !&462C = HookFlipAbsolute
  EQUB &25               \ !&2543 = Hook80Percent
 
- EQUB &00               \ This byte appears to be unused
+ EQUB &00               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
 \       Name: trackYawDeltaHi
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: High byte of the change in yaw angle that we apply to each segment
+\             in the specified sub-section when building the track
 \
 \ ******************************************************************************
 
 .trackYawDeltaHi
 
- EQUB &00               \ Data block  0 = &0023 (   35)
- EQUB &00               \ Data block  1 = &0048 (   72)
- EQUB &00               \ Data block  2 = &00CB (  203)
- EQUB &01               \ Data block  3 = &01AC (  428)
- EQUB &05               \ Data block  4 = &055C ( 1372)
- EQUB &01               \ Data block  5 = &019D (  413)
- EQUB &00               \ Data block  6 = &0000 (    0)
- EQUB &02               \ Data block  7 = &02AB (  683)
- EQUB &00               \ Data block  8 = &0000 (    0)
- EQUB &00               \ Data block  9 = &0000 (    0)
- EQUB &00               \ Data block 10 = &0000 (    0)
- EQUB &06               \ Data block 11 = &063D ( 1597)
- EQUB &00               \ Data block 12 = &0000 (    0)
- EQUB &FC               \ Data block 13 = &FC0A (-1014)
- EQUB &FD               \ Data block 14 = &FDDE ( -546)
- EQUB &FC               \ Data block 15 = &FC17 (-1001)
- EQUB &FE               \ Data block 16 = &FEF8 ( -264)
- EQUB &FF               \ Data block 17 = &FF4A ( -182)
- EQUB &FF               \ Data block 18 = &FFE1 (  -31)
- EQUB &FF               \ Data block 19 = &FF16 ( -234)
- EQUB &FD               \ Data block 20 = &FD46 ( -698)
- EQUB &FE               \ Data block 21 = &FE52 ( -430)
- EQUB &FD               \ Data block 22 = &FD5C ( -676)
- EQUB &FB               \ Data block 23 = &FBBC (-1092)
- EQUB &00               \ Data block 24 = &0000 (    0)
- EQUB &00               \ Data block 25 = &0000 (    0)
- EQUB &00               \ Data block 26 = &0000 (    0)
- EQUB &01               \ Data block 27 = &016C (  364)
- EQUB &00               \ Data block 28 = &0000 (    0)
- EQUB &00               \ Data block 29 = &0000 (    0)
- EQUB &00               \ Data block 30 = &0000 (    0)
- EQUB &00               \ Data block 31 = &0000 (    0)
- EQUB &00               \ Data block 32 = &0000 (    0)
- EQUB &01               \ Data block 33 = &0132 (  306)
- EQUB &01               \ Data block 34 = &019A (  410)
- EQUB &01               \ Data block 35 = &01FB (  507)
- EQUB &04               \ Data block 36 = &0417 ( 1047)
- EQUB &01               \ Data block 37 = &01A3 (  419)
- EQUB &03               \ Data block 38 = &0311 (  785)
- EQUB &01               \ Data block 39 = &015A (  346)
- EQUB &00               \ Data block 40 = &0000 (    0)
- EQUB &00               \ Data block 41 = &0000 (    0)
- EQUB &02               \ Data block 42 = &0272 (  626)
- EQUB &03               \ Data block 43 = &037C (  892)
- EQUB &05               \ Data block 44 = &057A ( 1402)
- EQUB &FC               \ Data block 45 = &FCBB ( -837)
- EQUB &FB               \ Data block 46 = &FBF8 (-1032)
- EQUB &00               \ Data block 47 = &0000 (    0)
- EQUB &00               \ Data block 48 = &0000 (    0)
- EQUB &00               \ Data block 49 = &0000 (    0)
- EQUB &00               \ Data block 50 = &0000 (    0)
- EQUB &05               \ Data block 51 = &0555 ( 1365)
- EQUB &02               \ Data block 52 = &0211 (  529)
- EQUB &02               \ Data block 53 = &0211 (  529)
- EQUB &00               \ Data block 54 = &0060 (   96)
- EQUB &01               \ Data block 55 = &01B0 (  432)
- EQUB &00               \ Data block 56 = &0078 (  120)
- EQUB &00               \ Data block 57 = &0020 (   32)
+ EQUB &00               \ Sub-section  0 = &0023 (   35)
+ EQUB &00               \ Sub-section  1 = &0048 (   72)
+ EQUB &00               \ Sub-section  2 = &00CB (  203)
+ EQUB &01               \ Sub-section  3 = &01AC (  428)
+ EQUB &05               \ Sub-section  4 = &055C ( 1372)
+ EQUB &01               \ Sub-section  5 = &019D (  413)
+ EQUB &00               \ Sub-section  6 = &0000 (    0)
+ EQUB &02               \ Sub-section  7 = &02AB (  683)
+ EQUB &00               \ Sub-section  8 = &0000 (    0)
+ EQUB &00               \ Sub-section  9 = &0000 (    0)
+ EQUB &00               \ Sub-section 10 = &0000 (    0)
+ EQUB &06               \ Sub-section 11 = &063D ( 1597)
+ EQUB &00               \ Sub-section 12 = &0000 (    0)
+ EQUB &FC               \ Sub-section 13 = &FC0A (-1014)
+ EQUB &FD               \ Sub-section 14 = &FDDE ( -546)
+ EQUB &FC               \ Sub-section 15 = &FC17 (-1001)
+ EQUB &FE               \ Sub-section 16 = &FEF8 ( -264)
+ EQUB &FF               \ Sub-section 17 = &FF4A ( -182)
+ EQUB &FF               \ Sub-section 18 = &FFE1 (  -31)
+ EQUB &FF               \ Sub-section 19 = &FF16 ( -234)
+ EQUB &FD               \ Sub-section 20 = &FD46 ( -698)
+ EQUB &FE               \ Sub-section 21 = &FE52 ( -430)
+ EQUB &FD               \ Sub-section 22 = &FD5C ( -676)
+ EQUB &FB               \ Sub-section 23 = &FBBC (-1092)
+ EQUB &00               \ Sub-section 24 = &0000 (    0)
+ EQUB &00               \ Sub-section 25 = &0000 (    0)
+ EQUB &00               \ Sub-section 26 = &0000 (    0)
+ EQUB &01               \ Sub-section 27 = &016C (  364)
+ EQUB &00               \ Sub-section 28 = &0000 (    0)
+ EQUB &00               \ Sub-section 29 = &0000 (    0)
+ EQUB &00               \ Sub-section 30 = &0000 (    0)
+ EQUB &00               \ Sub-section 31 = &0000 (    0)
+ EQUB &00               \ Sub-section 32 = &0000 (    0)
+ EQUB &01               \ Sub-section 33 = &0132 (  306)
+ EQUB &01               \ Sub-section 34 = &019A (  410)
+ EQUB &01               \ Sub-section 35 = &01FB (  507)
+ EQUB &04               \ Sub-section 36 = &0417 ( 1047)
+ EQUB &01               \ Sub-section 37 = &01A3 (  419)
+ EQUB &03               \ Sub-section 38 = &0311 (  785)
+ EQUB &01               \ Sub-section 39 = &015A (  346)
+ EQUB &00               \ Sub-section 40 = &0000 (    0)
+ EQUB &00               \ Sub-section 41 = &0000 (    0)
+ EQUB &02               \ Sub-section 42 = &0272 (  626)
+ EQUB &03               \ Sub-section 43 = &037C (  892)
+ EQUB &05               \ Sub-section 44 = &057A ( 1402)
+ EQUB &FC               \ Sub-section 45 = &FCBB ( -837)
+ EQUB &FB               \ Sub-section 46 = &FBF8 (-1032)
+ EQUB &00               \ Sub-section 47 = &0000 (    0)
+ EQUB &00               \ Sub-section 48 = &0000 (    0)
+ EQUB &00               \ Sub-section 49 = &0000 (    0)
+ EQUB &00               \ Sub-section 50 = &0000 (    0)
+ EQUB &05               \ Sub-section 51 = &0555 ( 1365)
+ EQUB &02               \ Sub-section 52 = &0211 (  529)
+ EQUB &02               \ Sub-section 53 = &0211 (  529)
+ EQUB &00               \ Sub-section 54 = &0060 (   96)
+ EQUB &01               \ Sub-section 55 = &01B0 (  432)
+ EQUB &00               \ Sub-section 56 = &0078 (  120)
+ EQUB &00               \ Sub-section 57 = &0020 (   32)
 
 \ ******************************************************************************
 \
@@ -727,9 +781,44 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: Calculate the segment vector for the current segment
 \
+\ ------------------------------------------------------------------------------
+\
+\ This routine calculates the segment vector for the current segment, by
+\ converting the direction of the track at this point, which is stored in the
+\ yaw angle in (yawAngleHi yawAngleLo), into a direction vector to store in the
+\ (xTrackSegmentI yTrackSegmentI zTrackSegmentI) tables in the track data file.
+\
+\ We also calculate the outer track segment vector (i.e. the vector across the
+\ track) and store it in the (xTrackSegmentO yTrackSegmentI zTrackSegmentO)
+\ tables in the track data file.
+\
+\ Note that the track segment vector tables overwrite the modification routines,
+\ as those are no longer used, and the main game code still thinks that's where
+\ the segment vector tables are stored as part of the track data file (which
+\ they are, it's just that they are dynamically generated in the extra track
+\ files, rather than being full of static data).
+\
 \ ******************************************************************************
 
 .CalcSegmentVector
+
+                        \ This routine calculates the segment vector for the
+                        \ current segment within the current sub-section
+                        \
+                        \ The segment vector contains two vectors:
+                        \
+                        \   * (xTrackSegmentI yTrackSegmentI zTrackSegmentI) is
+                        \     the vector along the inside of the track from the
+                        \     previous segment to the current segment
+                        \
+                        \   * (xTrackSegmentO yTrackSegmentI zTrackSegmentO) is
+                        \     the vector from the inner edge of the track to the
+                        \     outer edge of the track for the current segment
+                        \
+                        \ We start by analysing the track's yaw angle to see in
+                        \ which direction the track that we're building is
+                        \ currently pointing, so we can set the correct signs
+                        \ and axes for the segment vector
 
  LDA yawAngleLo         \ Set A = (yawAngleHi yawAngleLo) << 1
  ASL A                  \
@@ -740,10 +829,29 @@ ORG CODE%
                         \ contains the high byte of yawAngle << 1
 
  ROL A                  \ Set bits 0-2 of U to bits 5-7 of yawAngleHi (i.e. the
- ROL A                  \ top three bits)
- ROL A
- AND #%00000111
- STA U
+ ROL A                  \ top three bits), so this is equivalent to:
+ ROL A                  \
+ AND #%00000111         \   U = (yawAngleHi yawAngleLo) DIV 8192
+ STA U                  \
+                        \ We will use U to work out the direction of the track
+                        \ that we are building
+
+                        \ We now work out the index into the xTrackCurve and
+                        \ zTrackCurve tables for the curve that matches the
+                        \ direction of the track, putting the result in X
+                        \
+                        \ The curve tables contain coordinates for a curve that
+                        \ covers one-eighth of a circle, or 45 degrees, so we
+                        \ first reduce the yaw angle into that range by reducing
+                        \ our 32-bit angle into this range
+                        \
+                        \ The 32-bit angle in (yawAngleHi yawAngleLo) cover a
+                        \ whole circle, so 0 to 65536 represents 0 to 360
+                        \ degrees, so one-eighth of a circle, or 45 degrees, is
+                        \ represented by 65536 / 8 = 8192
+                        \
+                        \ So we reduce the 32-bit value into the range 0 to 8192
+                        \ so we can map it to the curve in the curve tables
 
  LSR A                  \ Set the C flag to bit 0 of A, i.e. bit 5 of yawAngleHi
 
@@ -754,6 +862,22 @@ ORG CODE%
                         \ then bits 4, 3, 2, 1, 0 of yawAngleHi, then bit 7 of
                         \ yawAngleLo
 
+                        \ By this point, we have:
+                        \
+                        \   X = (yawAngleHi yawAngleLo) MOD 8192
+                        \
+                        \ This is the corresponding point in the curve tables
+                        \ for the track direction, reduced to one-eighth of a
+                        \ circle, or 0 to 45 degrees
+                        \
+                        \ The next eighth of the circle (i.e. from 45 to 90
+                        \ degrees) will map to the curve tables, but in reverse,
+                        \ so we can extend our calculation to quarter circle by
+                        \ flipping the index in X for this range of yaw angle
+                        \ (i.e. if we are in the second eighth of the circle,
+                        \ from 45 to 90 degrees, which is when bit 5 of the high
+                        \ byte is clear)
+
  BCC vect1              \ If the C flag, i.e. bit 5 of yawAngleHi, is clear,
                         \ jump to vect1 to skip the following
 
@@ -762,12 +886,32 @@ ORG CODE%
 
 .vect1
 
+                        \ By this point, A contains the index of the curve
+                        \ within the curve tables that corresponds to the angle
+                        \ in which the track is pointing, reduced to the first
+                        \ quarter of a circle (0 to 90 degrees)
+                        \
+                        \ We can now fetch the vector for that point on the
+                        \ curve, which will give us the vector of the curve at
+                        \ that point (i.e. the direction of the curve for the
+                        \ track segment we are building)
+
  TAX                    \ Set X = A
 
  LDY xTrackCurve,X      \ Set Y = X-th entry in xTrackCurve
 
  LDA zTrackCurve,X      \ Set X = X-th entry in zTrackCurve
  TAX
+
+                        \ The vector in X and Y now contains the correct values
+                        \ for the curve vector, but because we reduced it to the
+                        \ first quarter in the circle, the signs may not be
+                        \ correct, and we may need to swap the x-coordinate and
+                        \ z-coordinate
+                        \
+                        \ We now use the value of U to set the vector properly,
+                        \ as the value of U determines which eighth of the
+                        \ circle corresponds to the track direction
 
  LDA U                  \ If bit 1 of U + 1 is set, i.e. U ends in %01 or %10,
  CLC                    \ i.e. bits 5 and 6 of yawAngleHi are different, then
@@ -820,20 +964,50 @@ ORG CODE%
 
 .vect5
 
+                        \ By this point we have the x- and z-coordinates of the
+                        \ vector for the track direction in the segment that we
+                        \ want to build, and we already know the height of the
+                        \ track at this point (it's in heightOfTrack)
+                        \
+                        \ The inner track segment vector at this point is
+                        \ therefore:
+                        \
+                        \   [       V       ]
+                        \   [ heightOfTrack ]
+                        \   [       W       ]
+                        \
+                        \ And we can now store the vector in the track data file
+                        \ as follows:
+                        \
+                        \   * xTrackSegmentI = V
+                        \   * yTrackSegmentI = heightOfTrack
+                        \   * zTrackSegmentI = W
+                        \
+                        \ We can also calculate the vector from the inner verge
+                        \ to the outer verge as follows:
+                        \
+                        \   * xTrackSegmentO = -W * 0.53
+                        \   * zTrackSegmentO = V * 0.53
+                        \
+                        \ This works because given a 2D vector [V W], the vector
+                        \ [-W V] is the vector's normal, i.e. the same vector,
+                        \ but perpendicular to the original
+                        \
+                        \ If we take the original inner vector in [V W], then
+                        \ its normal vector is a vector that's perpendicular to
+                        \ the original, so instead of being a vector pointing
+                        \ along the inner edge, it's a vector pointing at 90
+                        \ degrees across the track, which is the vector that we
+                        \ want to calculate
+                        \
+                        \ Multiplying the normal vector by 0.53 sets the track
+                        \ width to 53% of the length of the track segment vector
+                        \ (so we could make the track wider by changing this
+                        \ value)
+
  LDY thisVectorNumber   \ Set Y to thisVectorNumber, which contains the value of
                         \ trackSectionFrom for this track section (i.e. the
                         \ number of the first segment vector in the section)
-
-                        \ We now store the following for this vector, where V
-                        \ and W are based on xTrackCurve and zTrackCurve:
-                        \
-                        \   * xTrackSegmentI = V
-                        \   * zTrackSegmentI = W
-                        \
-                        \   * zTrackSegmentO = V * 0.53
-                        \   * xTrackSegmentO = -W * 0.53
-                        \
-                        \   * yTrackSegmentI = heightOfTrack
 
  LDA #136               \ Set U = 136
  STA U
@@ -920,8 +1094,11 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ If bit 6 of the current section's flags is set, call UpdateDataPointers (this
-\ bit is unused in the original track data file).
+\ If bit 6 of the current section's flags is set, then the track segment vectors
+\ for this section need to be generated from the curve tables (as opposed to
+\ being calculated as a straight section). When this is the case, this routine
+\ calls UpdateDataPointers to update the pointers to the next sub-section and
+\ segment along the track.
 \
 \ ******************************************************************************
 
@@ -931,9 +1108,12 @@ ORG CODE%
  AND #%01000000         \ to flab1 to skip the following call, so we just
  BEQ flab1              \ implement the same code as in the original
 
- JSR UpdateDataPointers \ Bit 6 of the current section's flags is set, so call
-                        \ UpdateDataPointers before continuing with the same
-                        \ code as in the original
+ JSR UpdateDataPointers \ Bit 6 of the current section's flags is set, so we are
+                        \ generating this section's segment vectors using the
+                        \ curve tables, so call UpdateDataPointers to update
+                        \ the pointers to the next sub-section and segment along
+                        \ the track, before continuing with the same code as in
+                        \ the original
 
 .flab1
 
@@ -958,7 +1138,10 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This is where the zTrackSegmentI table is built.
+\ This is also where the zTrackSegmentI table is built, once the modifications
+\ have been done. The block is padded out to be exactly 20 bytes long, so along
+\ with the newContentHi block, there's one byte for each inner segment
+\ z-coordinate.
 \
 \ ******************************************************************************
 
@@ -984,7 +1167,7 @@ ORG CODE%
  EQUB LO(HookFlipAbsolute)
  EQUB LO(Hook80Percent)
 
- EQUB &00               \ This byte appears to be unused
+ EQUB &00               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
@@ -993,6 +1176,13 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: High byte of the two-byte address that we want to poke into the
 \             main game code at the modify location
+\
+\ ------------------------------------------------------------------------------
+\
+\ This is also where the zTrackSegmentI table is built, once the modifications
+\ have been done. The block is padded out to be exactly 20 bytes long, so along
+\ with the newContentLo block, there's one byte for each inner segment
+\ z-coordinate.
 \
 \ ******************************************************************************
 
@@ -1018,81 +1208,78 @@ ORG CODE%
  EQUB HI(HookFlipAbsolute)
  EQUB HI(Hook80Percent)
 
- EQUB &00               \ This byte appears to be unused
+ EQUB &00               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
 \       Name: trackYawDeltaLo
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: Low byte of the change in yaw angle that we apply to each segment
+\             in the specified sub-section when building the track
 \
 \ ******************************************************************************
 
 .trackYawDeltaLo
 
- EQUB &23               \ Data block  0 = &0023 (   35)
- EQUB &48               \ Data block  1 = &0048 (   72)
- EQUB &CB               \ Data block  2 = &00CB (  203)
- EQUB &AC               \ Data block  3 = &01AC (  428)
- EQUB &5C               \ Data block  4 = &055C ( 1372)
- EQUB &9D               \ Data block  5 = &019D (  413)
- EQUB &00               \ Data block  6 = &0000 (    0)
- EQUB &AB               \ Data block  7 = &02AB (  683)
- EQUB &00               \ Data block  8 = &0000 (    0)
- EQUB &00               \ Data block  9 = &0000 (    0)
- EQUB &00               \ Data block 10 = &0000 (    0)
- EQUB &3D               \ Data block 11 = &063D ( 1597)
- EQUB &00               \ Data block 12 = &0000 (    0)
- EQUB &0A               \ Data block 13 = &FC0A (-1014)
- EQUB &DE               \ Data block 14 = &FDDE ( -546)
- EQUB &17               \ Data block 15 = &FC17 (-1001)
- EQUB &F8               \ Data block 16 = &FEF8 ( -264)
- EQUB &4A               \ Data block 17 = &FF4A ( -182)
- EQUB &E1               \ Data block 18 = &FFE1 (  -31)
- EQUB &16               \ Data block 19 = &FF16 ( -234)
- EQUB &46               \ Data block 20 = &FD46 ( -698)
- EQUB &52               \ Data block 21 = &FE52 ( -430)
- EQUB &5C               \ Data block 22 = &FD5C ( -676)
- EQUB &BC               \ Data block 23 = &FBBC (-1092)
- EQUB &00               \ Data block 24 = &0000 (    0)
- EQUB &00               \ Data block 25 = &0000 (    0)
- EQUB &00               \ Data block 26 = &0000 (    0)
- EQUB &6C               \ Data block 27 = &016C (  364)
- EQUB &00               \ Data block 28 = &0000 (    0)
- EQUB &00               \ Data block 29 = &0000 (    0)
- EQUB &00               \ Data block 30 = &0000 (    0)
- EQUB &00               \ Data block 31 = &0000 (    0)
- EQUB &00               \ Data block 32 = &0000 (    0)
- EQUB &32               \ Data block 33 = &0132 (  306)
- EQUB &9A               \ Data block 34 = &019A (  410)
- EQUB &FB               \ Data block 35 = &01FB (  507)
- EQUB &17               \ Data block 36 = &0417 ( 1047)
- EQUB &A3               \ Data block 37 = &01A3 (  419)
- EQUB &11               \ Data block 38 = &0311 (  785)
- EQUB &5A               \ Data block 39 = &015A (  346)
- EQUB &00               \ Data block 40 = &0000 (    0)
- EQUB &00               \ Data block 41 = &0000 (    0)
- EQUB &72               \ Data block 42 = &0272 (  626)
- EQUB &7C               \ Data block 43 = &037C (  892)
- EQUB &7A               \ Data block 44 = &057A ( 1402)
- EQUB &BB               \ Data block 45 = &FCBB ( -837)
- EQUB &F8               \ Data block 46 = &FBF8 (-1032)
- EQUB &00               \ Data block 47 = &0000 (    0)
- EQUB &00               \ Data block 48 = &0000 (    0)
- EQUB &00               \ Data block 49 = &0000 (    0)
- EQUB &00               \ Data block 50 = &0000 (    0)
- EQUB &55               \ Data block 51 = &0555 ( 1365)
- EQUB &11               \ Data block 52 = &0211 (  529)
- EQUB &11               \ Data block 53 = &0211 (  529)
- EQUB &60               \ Data block 54 = &0060 (   96)
- EQUB &B0               \ Data block 55 = &01B0 (  432)
- EQUB &78               \ Data block 56 = &0078 (  120)
- EQUB &20               \ Data block 57 = &0020 (   32)
+ EQUB &23               \ Sub-section  0 = &0023 (   35)
+ EQUB &48               \ Sub-section  1 = &0048 (   72)
+ EQUB &CB               \ Sub-section  2 = &00CB (  203)
+ EQUB &AC               \ Sub-section  3 = &01AC (  428)
+ EQUB &5C               \ Sub-section  4 = &055C ( 1372)
+ EQUB &9D               \ Sub-section  5 = &019D (  413)
+ EQUB &00               \ Sub-section  6 = &0000 (    0)
+ EQUB &AB               \ Sub-section  7 = &02AB (  683)
+ EQUB &00               \ Sub-section  8 = &0000 (    0)
+ EQUB &00               \ Sub-section  9 = &0000 (    0)
+ EQUB &00               \ Sub-section 10 = &0000 (    0)
+ EQUB &3D               \ Sub-section 11 = &063D ( 1597)
+ EQUB &00               \ Sub-section 12 = &0000 (    0)
+ EQUB &0A               \ Sub-section 13 = &FC0A (-1014)
+ EQUB &DE               \ Sub-section 14 = &FDDE ( -546)
+ EQUB &17               \ Sub-section 15 = &FC17 (-1001)
+ EQUB &F8               \ Sub-section 16 = &FEF8 ( -264)
+ EQUB &4A               \ Sub-section 17 = &FF4A ( -182)
+ EQUB &E1               \ Sub-section 18 = &FFE1 (  -31)
+ EQUB &16               \ Sub-section 19 = &FF16 ( -234)
+ EQUB &46               \ Sub-section 20 = &FD46 ( -698)
+ EQUB &52               \ Sub-section 21 = &FE52 ( -430)
+ EQUB &5C               \ Sub-section 22 = &FD5C ( -676)
+ EQUB &BC               \ Sub-section 23 = &FBBC (-1092)
+ EQUB &00               \ Sub-section 24 = &0000 (    0)
+ EQUB &00               \ Sub-section 25 = &0000 (    0)
+ EQUB &00               \ Sub-section 26 = &0000 (    0)
+ EQUB &6C               \ Sub-section 27 = &016C (  364)
+ EQUB &00               \ Sub-section 28 = &0000 (    0)
+ EQUB &00               \ Sub-section 29 = &0000 (    0)
+ EQUB &00               \ Sub-section 30 = &0000 (    0)
+ EQUB &00               \ Sub-section 31 = &0000 (    0)
+ EQUB &00               \ Sub-section 32 = &0000 (    0)
+ EQUB &32               \ Sub-section 33 = &0132 (  306)
+ EQUB &9A               \ Sub-section 34 = &019A (  410)
+ EQUB &FB               \ Sub-section 35 = &01FB (  507)
+ EQUB &17               \ Sub-section 36 = &0417 ( 1047)
+ EQUB &A3               \ Sub-section 37 = &01A3 (  419)
+ EQUB &11               \ Sub-section 38 = &0311 (  785)
+ EQUB &5A               \ Sub-section 39 = &015A (  346)
+ EQUB &00               \ Sub-section 40 = &0000 (    0)
+ EQUB &00               \ Sub-section 41 = &0000 (    0)
+ EQUB &72               \ Sub-section 42 = &0272 (  626)
+ EQUB &7C               \ Sub-section 43 = &037C (  892)
+ EQUB &7A               \ Sub-section 44 = &057A ( 1402)
+ EQUB &BB               \ Sub-section 45 = &FCBB ( -837)
+ EQUB &F8               \ Sub-section 46 = &FBF8 (-1032)
+ EQUB &00               \ Sub-section 47 = &0000 (    0)
+ EQUB &00               \ Sub-section 48 = &0000 (    0)
+ EQUB &00               \ Sub-section 49 = &0000 (    0)
+ EQUB &00               \ Sub-section 50 = &0000 (    0)
+ EQUB &55               \ Sub-section 51 = &0555 ( 1365)
+ EQUB &11               \ Sub-section 52 = &0211 (  529)
+ EQUB &11               \ Sub-section 53 = &0211 (  529)
+ EQUB &60               \ Sub-section 54 = &0060 (   96)
+ EQUB &B0               \ Sub-section 55 = &01B0 (  432)
+ EQUB &78               \ Sub-section 56 = &0078 (  120)
+ EQUB &20               \ Sub-section 57 = &0020 (   32)
 
 \ ******************************************************************************
 \
@@ -1133,8 +1320,12 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ If bit 6 of the current section's flags is set, call SetSegmentVector after
-\ moving to the next vector along.
+\ If bit 6 of the current section's flags is set, then the track segment vectors
+\ for this section need to be generated from the curve tables (as opposed to
+\ being calculated as a straight section). When this is the case, this routine
+\ calls UpdateVectorNumber and SetSegmentVector to calculate and store the next
+\ track segment vector, which can then be read by the main game code as if it
+\ were a static piece of data from a normal track data file.
 \
 \ ******************************************************************************
 
@@ -1144,15 +1335,19 @@ ORG CODE%
  AND #%01000000         \ to flag1 to return from the subroutine
  BEQ flag1
 
+                        \ Bit 6 of the current section's flags is set, so we are
+                        \ generating this section's segment vectors using the
+                        \ curve tables
+
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next segment vector
                         \ along the track in the direction we are facing (we
                         \ replaced a call to UpdateCurveVector with the call to
                         \ the hook, so this implements that call, knowing that
                         \ this is a curve)
 
- JSR SetSegmentVector   \ Bit 6 of the current section's flags is set, so call
-                        \ SetSegmentVector to calculate and store the next
-                        \ segment vector
+ JSR SetSegmentVector   \ Calculate and store the next segment vector, so it can
+                        \ be read by the main game code as if it were a static
+                        \ piece of data from a normal track data file
 
 .flag1
 
@@ -1178,8 +1373,8 @@ ORG CODE%
 \       Name: UpdateDataPointers
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: Increment or decrement the data index and counter to point to the
-\             next bit of data along the track
+\    Summary: Update the sub-section and segment numbers to point to the next
+\             segment along the track in the correct direction
 \
 \ ******************************************************************************
 
@@ -1195,17 +1390,23 @@ ORG CODE%
                         \ subtraction
 
  BIT directionFacing    \ If we are facing backwards along the track, jump to
- BMI upda1              \ upda1
+ BMI upda1              \ upda1 to move to the nect segment in that direction
 
                         \ If we get here then we are facing forwards along the
-                        \ track, so we increment subSectionSegment
+                        \ track, so we increment subSectionSegment to point to
+                        \ the next segment
                         \
                         \ If subSectionSegment reaches trackSubSize for this
-                        \ sub-section, we wrap it round to zero and increment
-                        \ subSection to move on to the next sub-section
+                        \ sub-section, then we have reached the end of that
+                        \ sub-section and need to start the next sub-section,
+                        \ so we wrap the segment number within the sub-section
+                        \ round to zero and increment subSection to move on to
+                        \ the next sub-section
                         \
-                        \ If subSection reaches trackSubCount, we wrap it
-                        \ round to zero
+                        \ If subSection then reaches trackSubCount, which is the
+                        \ total number of sub-sections in the track, then we
+                        \ have reached the end of the last sub-section, so we
+                        \ wrap subSection round to zero
 
  ADC #0                 \ Set A = A + 1
                         \       = subSectionSegment + 1
@@ -1233,13 +1434,21 @@ ORG CODE%
 .upda1
 
                         \ If we get here then we are facing backwards along the
-                        \ track, so we decrement subSectionSegment
+                        \ track, so we decrement subSectionSegment to point to
+                        \ the previous segment, i.e. backwards along the track
                         \
-                        \ If subSectionSegment goes past 0, we wrap it round
-                        \ to ??? and decrement subSection
+                        \ If subSectionSegment goes past 0, then we have gone
+                        \ past the start of that sub-section and need to jump to
+                        \ the end of the previous sub-section, so we wrap the
+                        \ segment number within the sub-section to the last
+                        \ segment number in the previous sub-section and
+                        \ decrement subSection to move back to the previous
+                        \ sub-section
                         \
-                        \ If subSection reaches 0, we wrap it round to the end
-                        \ of the data
+                        \ If subSection reaches 0, which is the start of the
+                        \ track, then we wrap it round to the last sub-section
+                        \ to go backwards past the start to reach the end of the
+                        \ track
 
  SBC #1                 \ Set A = A - 1
                         \       = subSectionSegment - 1
@@ -1249,28 +1458,37 @@ ORG CODE%
  BCS upda3              \ If the subtraction didn't underflow, jump to upda3 to
                         \ update the pointers and return from the subroutine
 
- TYA                    \ Clear bit 7 of Y ???
+                        \ If we get here, then subSectionSegment has just gone
+                        \ past 0, so we need to jump to the end of the previous
+                        \ sub-section
+
+ TYA                    \ Clear bit 7 of Y to ensure that Y is positive
  AND #%01111111
  TAY
 
- CPY #1                 \ If Y >= 1, jump to upda2 as we haven't reached the
- BCS upda2              \ start of the sub-section
+ CPY #1                 \ If Y >= 1, jump to upda2 as we aren't about to go past
+ BCS upda2              \ the start of the first sub-section
 
- LDY trackSubCount      \ Set Y = trackSubCount, to set the new value of
-                        \ subSection to the last sub-section
+                        \ If we get here then Y = 0, so we are in the first
+                        \ segment of the first sub-section, so we need to wrap
+                        \ the sub-section around to the end of the track
+
+ LDY trackSubCount      \ Set Y = trackSubCount, so we set the new value of
+                        \ subSection to trackSubCount - 1, i.e. the last
+                        \ sub-section in the track
 
 .upda2
 
  DEY                    \ Decrement Y to point to the previous sub-section
 
- LDA trackSubSize,Y     \ Set A to trackSubSize - 1 for this index
- SEC
+ LDA trackSubSize,Y     \ Set A to trackSubSize - 1 for this index, which points
+ SEC                    \ to the last entry in the new sub-section
  SBC #1
 
 .upda3
 
- STA subSectionSegment  \ Update the segment n7mber within the sub-section to
-                        \ the value of A
+ STA subSectionSegment  \ Update the segment number within the sub-section to
+                        \ the updated value of A
 
  STY subSection         \ Update the sub-section to the updated value of Y
 
@@ -1308,7 +1526,17 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine adds the yaw angle and height deltas to the track yaw angle and
+\ height, to get the coordinates for the next segment along. It then calls the
+\ CalcSegmentVector routine to calculate the segment vectors and store them in
+\ the correct tables for the main game code to read.
+\
+\ If the current sub-section number has bit 7 set, then this section isn't being
+\ generated using the curve tables, but is instead being generated as a straight
+\ part of the track. In this case we don't update the yaw angle or track height
+\ before calculating the segment vector, as the main game code draws straight
+\ segments by simply adding the same track segment vector for each segment in
+\ the straight.
 \
 \ ******************************************************************************
 
@@ -1320,8 +1548,14 @@ ORG CODE%
  LDY subSection         \ Set Y to the number of the current sub-section within
                         \ the current track section
 
- BMI sets1              \ If bit 7 of Y is set, jump to sets1 to skip the
-                        \ following calculation
+ BMI sets1              \ If bit 7 of Y is set, then this part of the track is a
+                        \ straight section that doesn't use the curve vectors to
+                        \ generate the track, so jump to sets1 to skip updating
+                        \ the yaw angle and track height, as we simply reuse the
+                        \ same track segment vector for each segment within the
+                        \ straight
+
+                        \ We start by adding the yaw delta to the yaw angle
 
  LDA trackYawDeltaLo,Y  \ Set (A T) = (trackYawDeltaHi trackYawDeltaLo) for this
  STA T                  \ sub-section
@@ -1347,6 +1581,9 @@ ORG CODE%
  LDA U                  \ And then the high bytes
  ADC yawAngleHi
  STA yawAngleHi
+
+                        \ And now we add the track gradient (i.e. the height
+                        \ delta) to the track height
 
  LDA trackGradient,Y    \ Set A to the gradient of this sub-section (i.e. the
                         \ change of track height over the course of the
@@ -1385,11 +1622,12 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts.
+\ The code modifications are done in three parts. This part performs five
+\ single-byte modifications.
 \
-\ This part performs five single-byte modifications.
-\
-\ This is where the zTrackSegmentI table is built.
+\ This is also where the zTrackSegmentI table is built, once the modifications
+\ have been done. The routine is padded out to be exactly 40 bytes long, so
+\ there's one byte for each inner segment z-coordinate.
 \
 \ ******************************************************************************
 
@@ -1412,7 +1650,7 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &00, &00          \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes pad the routine out to exactly 40 bytes
  EQUB &00, &00
  EQUB &00, &00
  EQUB &00, &00
@@ -1425,74 +1663,71 @@ ORG CODE%
 \       Name: trackGradient
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The change in height (i.e. the gradient) for each sub-section of
+\             the track
 \
 \ ******************************************************************************
 
 .trackGradient
 
- EQUB &01               \ Data block  0 =  1
- EQUB &FE               \ Data block  1 = -2
- EQUB &FF               \ Data block  2 = -1
- EQUB &FE               \ Data block  3 = -2
- EQUB &FF               \ Data block  4 = -1
- EQUB &00               \ Data block  5 =  0
- EQUB &04               \ Data block  6 =  4
- EQUB &09               \ Data block  7 =  9
- EQUB &00               \ Data block  8 =  0
- EQUB &F9               \ Data block  9 = -7
- EQUB &F9               \ Data block 10 = -7
- EQUB &00               \ Data block 11 =  0
- EQUB &00               \ Data block 12 =  0
- EQUB &00               \ Data block 13 =  0
- EQUB &04               \ Data block 14 =  4
- EQUB &00               \ Data block 15 =  0
- EQUB &00               \ Data block 16 =  0
- EQUB &00               \ Data block 17 =  0
- EQUB &00               \ Data block 18 =  0
- EQUB &00               \ Data block 19 =  0
- EQUB &03               \ Data block 20 =  3
- EQUB &02               \ Data block 21 =  2
- EQUB &02               \ Data block 22 =  2
- EQUB &01               \ Data block 23 =  1
- EQUB &00               \ Data block 24 =  0
- EQUB &FA               \ Data block 25 = -6
- EQUB &00               \ Data block 26 =  0
- EQUB &00               \ Data block 27 =  0
- EQUB &00               \ Data block 28 =  0
- EQUB &FD               \ Data block 29 = -3
- EQUB &03               \ Data block 30 =  3
- EQUB &04               \ Data block 31 =  4
- EQUB &01               \ Data block 32 =  1
- EQUB &FF               \ Data block 33 = -1
- EQUB &FE               \ Data block 34 = -2
- EQUB &FE               \ Data block 35 = -2
- EQUB &01               \ Data block 36 =  1
- EQUB &00               \ Data block 37 =  0
- EQUB &00               \ Data block 38 =  0
- EQUB &00               \ Data block 39 =  0
- EQUB &FC               \ Data block 40 = -4
- EQUB &02               \ Data block 41 =  2
- EQUB &03               \ Data block 42 =  3
- EQUB &FD               \ Data block 43 = -3
- EQUB &FD               \ Data block 44 = -3
- EQUB &01               \ Data block 45 =  1
- EQUB &03               \ Data block 46 =  3
- EQUB &00               \ Data block 47 =  0
- EQUB &FE               \ Data block 48 = -2
- EQUB &00               \ Data block 49 =  0
- EQUB &01               \ Data block 50 =  1
- EQUB &FC               \ Data block 51 = -4
- EQUB &FC               \ Data block 52 = -4
- EQUB &03               \ Data block 53 =  3
- EQUB &03               \ Data block 54 =  3
- EQUB &FC               \ Data block 55 = -4
- EQUB &FE               \ Data block 56 = -2
- EQUB &01               \ Data block 57 =  1
+ EQUB &01               \ Sub-section  0 =  1
+ EQUB &FE               \ Sub-section  1 = -2
+ EQUB &FF               \ Sub-section  2 = -1
+ EQUB &FE               \ Sub-section  3 = -2
+ EQUB &FF               \ Sub-section  4 = -1
+ EQUB &00               \ Sub-section  5 =  0
+ EQUB &04               \ Sub-section  6 =  4
+ EQUB &09               \ Sub-section  7 =  9
+ EQUB &00               \ Sub-section  8 =  0
+ EQUB &F9               \ Sub-section  9 = -7
+ EQUB &F9               \ Sub-section 10 = -7
+ EQUB &00               \ Sub-section 11 =  0
+ EQUB &00               \ Sub-section 12 =  0
+ EQUB &00               \ Sub-section 13 =  0
+ EQUB &04               \ Sub-section 14 =  4
+ EQUB &00               \ Sub-section 15 =  0
+ EQUB &00               \ Sub-section 16 =  0
+ EQUB &00               \ Sub-section 17 =  0
+ EQUB &00               \ Sub-section 18 =  0
+ EQUB &00               \ Sub-section 19 =  0
+ EQUB &03               \ Sub-section 20 =  3
+ EQUB &02               \ Sub-section 21 =  2
+ EQUB &02               \ Sub-section 22 =  2
+ EQUB &01               \ Sub-section 23 =  1
+ EQUB &00               \ Sub-section 24 =  0
+ EQUB &FA               \ Sub-section 25 = -6
+ EQUB &00               \ Sub-section 26 =  0
+ EQUB &00               \ Sub-section 27 =  0
+ EQUB &00               \ Sub-section 28 =  0
+ EQUB &FD               \ Sub-section 29 = -3
+ EQUB &03               \ Sub-section 30 =  3
+ EQUB &04               \ Sub-section 31 =  4
+ EQUB &01               \ Sub-section 32 =  1
+ EQUB &FF               \ Sub-section 33 = -1
+ EQUB &FE               \ Sub-section 34 = -2
+ EQUB &FE               \ Sub-section 35 = -2
+ EQUB &01               \ Sub-section 36 =  1
+ EQUB &00               \ Sub-section 37 =  0
+ EQUB &00               \ Sub-section 38 =  0
+ EQUB &00               \ Sub-section 39 =  0
+ EQUB &FC               \ Sub-section 40 = -4
+ EQUB &02               \ Sub-section 41 =  2
+ EQUB &03               \ Sub-section 42 =  3
+ EQUB &FD               \ Sub-section 43 = -3
+ EQUB &FD               \ Sub-section 44 = -3
+ EQUB &01               \ Sub-section 45 =  1
+ EQUB &03               \ Sub-section 46 =  3
+ EQUB &00               \ Sub-section 47 =  0
+ EQUB &FE               \ Sub-section 48 = -2
+ EQUB &00               \ Sub-section 49 =  0
+ EQUB &01               \ Sub-section 50 =  1
+ EQUB &FC               \ Sub-section 51 = -4
+ EQUB &FC               \ Sub-section 52 = -4
+ EQUB &03               \ Sub-section 53 =  3
+ EQUB &03               \ Sub-section 54 =  3
+ EQUB &FC               \ Sub-section 55 = -4
+ EQUB &FE               \ Sub-section 56 = -2
+ EQUB &01               \ Sub-section 57 =  1
 
 \ ******************************************************************************
 \
@@ -1531,6 +1766,22 @@ ORG CODE%
 \    Summary: Initialise and calculate the current segment vector
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine is called from GetSectionCoords when fetching the coordinates for
+\ a track section. It initialises the segment vector calculation process by
+\ doing the following:
+\
+\   * Fetch the section's yaw angle from the trackYawAngle tables
+\
+\   * Fetch the section's height from the trackHeight table
+\
+\   * Initialise the sub-section and sub-section segment variables
+\
+\   * Modify the GetSectionAngles routine so the horizon level check is skipped
+\     if the section's trackSubConfig has bit 1 set
+\
+\   * If we are facing forwards along the track, calculate and store the current
+\     segment vector
 \
 \ Arguments:
 \
@@ -1616,7 +1867,8 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ Only store horizonLine and horizonListIndex if segmentCounter < 12.
+\ This routine is called from GetVergeAndMarkers so that we only store
+\ horizonLine and horizonListIndex when segmentCounter < 12.
 \
 \ ******************************************************************************
 
@@ -1656,29 +1908,30 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ Changes logic in gseg12, which is applied when a segment is out of the field
-\ of view, so we fetch details of the previous segment (i.e. the one further
-\ away).
+\ This routine changes the logic in GetSegmentAngles at label gseg12, which is
+\ applied when a segment is outside the field of view. Note that in the
+\ following, the previous segment is further away than the current one.
 \
 \ In the original code:
 \
 \   * If previous segment's yaw angle >= 20 then the previous segment was also
-\     outside the field of view, so return from the subroutine
+\     outside the field of view, so return from the subroutine.
 \
 \   * Otherwise go to gseg4 to try reducing the size of the segment before
-\     returning
+\     returning.
 \
 \ In the new code:
 \
 \   * If previous segment's yaw angle >= 20 and segmentCounter >= 10, then the
 \     previous segment was also outside the field of view AND we have already
 \     marked at least 10 segments as being visible, so return from the
-\     subroutine
+\     subroutine.
 \
 \   * Otherwise go to gseg13 to mark this segment as visible and keep checking
-\     segments
+\     segments.
 \
-\ So we keep checking segments until we have reached at least 10.
+\ So in the modified version, we keep checking segments until we have reached at
+\ least 10.
 \
 \ Arguments:
 \
@@ -1713,10 +1966,12 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ Flatten the height of the verge entries in the verge buffer that are hidden by
-\ the nearest hill to the player, so that the ground behind the nearest hill is
-\ effectively levelled off, and set horizonTrackWidth to 80% of the track width
-\ at the hill crest
+\ This routine is called by MapSegmentsToLines to flatten the height of the
+\ verge entries in the verge buffer that are hidden by the nearest hill to the
+\ player, so that the ground behind the nearest hill is effectively levelled
+\ off.
+\
+\ It also sets horizonTrackWidth to 80% of the track width at the hill crest.
 \
 \ Arguments:
 \
@@ -1842,9 +2097,8 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts.
-\
-\ This part modifies a set of two-byte addresses in the main game code.
+\ The code modifications are done in three parts. This part modifies a set of
+\ two-byte addresses in the main game code.
 \
 \ The (modifyAddressHi modifyAddressLo) table contains the locations in the main
 \ game code that we want to modify.
@@ -1854,7 +2108,9 @@ ORG CODE%
 \
 \ This part also does a couple of single-byte modifications.
 \
-\ This is where the xTrackSegmentO table is built.
+\ This is also where the xTrackSegmentO table is built, once the modifications
+\ have been done. The routine is padded out to be exactly 40 bytes long, so
+\ there's one byte for each inner segment x-coordinate.
 \
 \ ******************************************************************************
 
@@ -1901,81 +2157,78 @@ ORG CODE%
 
  JMP mods2              \ Jump to part 2
 
- EQUB &00               \ This byte appears to be unused
+ EQUB &00               \ This byte pads the routine out to exactly 40 bytes
 
 \ ******************************************************************************
 \
 \       Name: trackSubSize
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: The size of each sub-section in terms of segments
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The size of each sub-section, i.e. the number of segments in each
+\             sub-section
 \
 \ ******************************************************************************
 
 .trackSubSize
 
- EQUB 26                \ Data block  0
- EQUB 21                \ Data block  1
- EQUB 11                \ Data block  2
- EQUB 10                \ Data block  3
- EQUB 4                 \ Data block  4
- EQUB 15                \ Data block  5
- EQUB 21                \ Data block  6
- EQUB 2                 \ Data block  7
- EQUB 12                \ Data block  8
- EQUB 12                \ Data block  9
- EQUB 2                 \ Data block 10
- EQUB 20                \ Data block 11
- EQUB 27                \ Data block 12
- EQUB 7                 \ Data block 13
- EQUB 12                \ Data block 14
- EQUB 3                 \ Data block 15
- EQUB 10                \ Data block 16
- EQUB 10                \ Data block 17
- EQUB 29                \ Data block 18
- EQUB 7                 \ Data block 19
- EQUB 3                 \ Data block 20
- EQUB 11                \ Data block 21
- EQUB 14                \ Data block 22
- EQUB 6                 \ Data block 23
- EQUB 21                \ Data block 24
- EQUB 11                \ Data block 25
- EQUB 13                \ Data block 26
- EQUB 6                 \ Data block 27
- EQUB 46                \ Data block 28
- EQUB 16                \ Data block 29
- EQUB 16                \ Data block 30
- EQUB 12                \ Data block 31
- EQUB 12                \ Data block 32
- EQUB 8                 \ Data block 33
- EQUB 12                \ Data block 34
- EQUB 16                \ Data block 35
- EQUB 4                 \ Data block 36
- EQUB 10                \ Data block 37
- EQUB 8                 \ Data block 38
- EQUB 5                 \ Data block 39
- EQUB 12                \ Data block 40
- EQUB 26                \ Data block 41
- EQUB 8                 \ Data block 42
- EQUB 5                 \ Data block 43
- EQUB 5                 \ Data block 44
- EQUB 5                 \ Data block 45
- EQUB 12                \ Data block 46
- EQUB 15                \ Data block 47
- EQUB 21                \ Data block 48
- EQUB 35                \ Data block 49
- EQUB 22                \ Data block 50
- EQUB 3                 \ Data block 51
- EQUB 14                \ Data block 52
- EQUB 8                 \ Data block 53
- EQUB 19                \ Data block 54
- EQUB 8                 \ Data block 55
- EQUB 17                \ Data block 56
- EQUB 34                \ Data block 57
+ EQUB 26                \ Sub-section  0
+ EQUB 21                \ Sub-section  1
+ EQUB 11                \ Sub-section  2
+ EQUB 10                \ Sub-section  3
+ EQUB 4                 \ Sub-section  4
+ EQUB 15                \ Sub-section  5
+ EQUB 21                \ Sub-section  6
+ EQUB 2                 \ Sub-section  7
+ EQUB 12                \ Sub-section  8
+ EQUB 12                \ Sub-section  9
+ EQUB 2                 \ Sub-section 10
+ EQUB 20                \ Sub-section 11
+ EQUB 27                \ Sub-section 12
+ EQUB 7                 \ Sub-section 13
+ EQUB 12                \ Sub-section 14
+ EQUB 3                 \ Sub-section 15
+ EQUB 10                \ Sub-section 16
+ EQUB 10                \ Sub-section 17
+ EQUB 29                \ Sub-section 18
+ EQUB 7                 \ Sub-section 19
+ EQUB 3                 \ Sub-section 20
+ EQUB 11                \ Sub-section 21
+ EQUB 14                \ Sub-section 22
+ EQUB 6                 \ Sub-section 23
+ EQUB 21                \ Sub-section 24
+ EQUB 11                \ Sub-section 25
+ EQUB 13                \ Sub-section 26
+ EQUB 6                 \ Sub-section 27
+ EQUB 46                \ Sub-section 28
+ EQUB 16                \ Sub-section 29
+ EQUB 16                \ Sub-section 30
+ EQUB 12                \ Sub-section 31
+ EQUB 12                \ Sub-section 32
+ EQUB 8                 \ Sub-section 33
+ EQUB 12                \ Sub-section 34
+ EQUB 16                \ Sub-section 35
+ EQUB 4                 \ Sub-section 36
+ EQUB 10                \ Sub-section 37
+ EQUB 8                 \ Sub-section 38
+ EQUB 5                 \ Sub-section 39
+ EQUB 12                \ Sub-section 40
+ EQUB 26                \ Sub-section 41
+ EQUB 8                 \ Sub-section 42
+ EQUB 5                 \ Sub-section 43
+ EQUB 5                 \ Sub-section 44
+ EQUB 5                 \ Sub-section 45
+ EQUB 12                \ Sub-section 46
+ EQUB 15                \ Sub-section 47
+ EQUB 21                \ Sub-section 48
+ EQUB 35                \ Sub-section 49
+ EQUB 22                \ Sub-section 50
+ EQUB 3                 \ Sub-section 51
+ EQUB 14                \ Sub-section 52
+ EQUB 8                 \ Sub-section 53
+ EQUB 19                \ Sub-section 54
+ EQUB 8                 \ Sub-section 55
+ EQUB 17                \ Sub-section 56
+ EQUB 34                \ Sub-section 57
 
 \ ******************************************************************************
 \
@@ -2016,9 +2269,10 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ Squeeze the left verge of the track into the right verge, but only for a few
-\ entries just in front of the horizon section, i.e. for the track section list
-\ and the first three entries in the track segment list.
+\ This routine is called by GetTrackAndMarkers to collapse the left verge of the
+\ track into the right verge, but only for a few entries just in front of the
+\ horizon section, i.e. for the track section list and the first three entries
+\ in the track segment list.
 \
 \ Arguments:
 \
@@ -2101,6 +2355,9 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine is called by ProcessDrivingKeys to make it easier to steer round
+\ the Druids hairpin bend when using a joystick.
+\
 \ If this is track section 4, set:
 \
 \   (A T) = 1.76 * x-axis ^ 2
@@ -2172,7 +2429,12 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ If LDA V is the last LDA instruction before the call, and A is signed, set:
+\ This routine calculates the following, retaining the sign in A.
+\
+\   A = A * U / 256
+\
+\ Specifically, if the last instruction to affect the N flag before the call is
+\ an LDA instruction, and A is signed, then set:
 \
 \   A = |A| * U * abs(A)
 \     = A * U / 256
@@ -2210,11 +2472,8 @@ ORG CODE%
 \       Name: xTrackCurve
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The x-coordinate of the tangent vector (i.e. the curve direction)
+\             at 64 points on a one-eighth circle covering 0 to 45 degrees
 \
 \ ******************************************************************************
 
@@ -2295,11 +2554,12 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts.
+\ The code modifications are done in three parts. This part performs nine
+\ single-byte modifications.
 \
-\ This part performs nine single-byte modifications.
-\
-\ This is where the zTrackSegmentO table is built.
+\ This is also where the zTrackSegmentO table is built, once the modifications
+\ have been done. The routine is exactly 40 bytes long, so there's one byte for
+\ each outer segment z-coordinate.
 \
 \ ******************************************************************************
 
@@ -2335,11 +2595,7 @@ ORG CODE%
 \       Name: trackHeight
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The height of the track above ground level for each track section
 \
 \ ******************************************************************************
 
@@ -2383,44 +2639,41 @@ ORG CODE%
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: The low byte of the yaw angle of the start of each track section
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\             (i.e. the direction of the track at that point)
 \
 \ ******************************************************************************
 
 .trackYawAngleLo
 
- EQUB &00               \ Section  0 = &0000 (0)
- EQUB &2F               \ Section  1 = &122F (4655)
- EQUB &8A               \ Section  2 = &508A (20618)
- EQUB &E0               \ Section  3 = &55E0 (21984)
- EQUB &E0               \ Section  4 = &55E0 (21984)
- EQUB &A4               \ Section  5 = &D2A4 (-11612)
- EQUB &A4               \ Section  6 = &D2A4 (-11612)
- EQUB &52               \ Section  7 = &9D52 (-25262)
- EQUB &52               \ Section  8 = &9D52 (-25262)
- EQUB &47               \ Section  9 = &8747 (-30905)
- EQUB &42               \ Section 10 = &7642 (30274)
- EQUB &0A               \ Section 11 = &1D0A (7434)
- EQUB &0A               \ Section 12 = &1D0A (7434)
- EQUB &92               \ Section 13 = &2592 (9618)
- EQUB &92               \ Section 14 = &2592 (9618)
- EQUB &92               \ Section 15 = &2592 (9618)
- EQUB &0A               \ Section 16 = &620A (25098)
- EQUB &0A               \ Section 17 = &620A (25098)
- EQUB &0E               \ Section 18 = &A20E (-24050)
- EQUB &0E               \ Section 19 = &A20E (-24050)
- EQUB &9E               \ Section 20 = &B59E (-19042)
- EQUB &9E               \ Section 21 = &B59E (-19042)
- EQUB &6C               \ Section 22 = &E26C (-7572)
- EQUB &6C               \ Section 23 = &E26C (-7572)
- EQUB &B3               \ Section 24 = &A1B3 (-24141)
- EQUB &B3               \ Section 25 = &A1B3 (-24141)
- EQUB &B3               \ Section 26 = &A1B3 (-24141)
- EQUB &28               \ Section 27 = &DF28 (-8408)
- EQUB &C8               \ Section 28 = &F3C8 (-3128)
+ EQUB &00               \ Section  0 = &0000 =     0 =   0.0 degrees
+ EQUB &2F               \ Section  1 = &122F =  4655 =  25.6 degrees
+ EQUB &8A               \ Section  2 = &508A = 20618 = 113.3 degrees
+ EQUB &E0               \ Section  3 = &55E0 = 21984 = 120.8 degrees
+ EQUB &E0               \ Section  4 = &55E0 = 21984 = 120.8 degrees
+ EQUB &A4               \ Section  5 = &D2A4 = 53924 = 296.2 degrees
+ EQUB &A4               \ Section  6 = &D2A4 = 53924 = 296.2 degrees
+ EQUB &52               \ Section  7 = &9D52 = 40274 = 221.2 degrees
+ EQUB &52               \ Section  8 = &9D52 = 40274 = 221.2 degrees
+ EQUB &47               \ Section  9 = &8747 = 34631 = 190.2 degrees
+ EQUB &42               \ Section 10 = &7642 = 30274 = 166.3 degrees
+ EQUB &0A               \ Section 11 = &1D0A =  7434 =  40.8 degrees
+ EQUB &0A               \ Section 12 = &1D0A =  7434 =  40.8 degrees
+ EQUB &92               \ Section 13 = &2592 =  9618 =  52.8 degrees
+ EQUB &92               \ Section 14 = &2592 =  9618 =  52.8 degrees
+ EQUB &92               \ Section 15 = &2592 =  9618 =  52.8 degrees
+ EQUB &0A               \ Section 16 = &620A = 25098 = 137.9 degrees
+ EQUB &0A               \ Section 17 = &620A = 25098 = 137.9 degrees
+ EQUB &0E               \ Section 18 = &A20E = 41486 = 227.9 degrees
+ EQUB &0E               \ Section 19 = &A20E = 41486 = 227.9 degrees
+ EQUB &9E               \ Section 20 = &B59E = 46494 = 255.4 degrees
+ EQUB &9E               \ Section 21 = &B59E = 46494 = 255.4 degrees
+ EQUB &6C               \ Section 22 = &E26C = 57964 = 318.4 degrees
+ EQUB &6C               \ Section 23 = &E26C = 57964 = 318.4 degrees
+ EQUB &B3               \ Section 24 = &A1B3 = 41395 = 227.4 degrees
+ EQUB &B3               \ Section 25 = &A1B3 = 41395 = 227.4 degrees
+ EQUB &B3               \ Section 26 = &A1B3 = 41395 = 227.4 degrees
+ EQUB &28               \ Section 27 = &DF28 = 57128 = 313.8 degrees
+ EQUB &C8               \ Section 28 = &F3C8 = 62408 = 342.8 degrees
 
  EQUB &00               \ This byte appears to be unused
 
@@ -2430,44 +2683,41 @@ ORG CODE%
 \       Type: Variable
 \   Category: Extra track data
 \    Summary: The high byte of the yaw angle of the start of each track section
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\             (i.e. the direction of the track at that point)
 \
 \ ******************************************************************************
 
 .trackYawAngleHi
 
- EQUB &00               \ Section  0 = &0000 (0)
- EQUB &12               \ Section  1 = &122F (4655)
- EQUB &50               \ Section  2 = &508A (20618)
- EQUB &55               \ Section  3 = &55E0 (21984)
- EQUB &55               \ Section  4 = &55E0 (21984)
- EQUB &D2               \ Section  5 = &D2A4 (-11612)
- EQUB &D2               \ Section  6 = &D2A4 (-11612)
- EQUB &9D               \ Section  7 = &9D52 (-25262)
- EQUB &9D               \ Section  8 = &9D52 (-25262)
- EQUB &87               \ Section  9 = &8747 (-30905)
- EQUB &76               \ Section 10 = &7642 (30274)
- EQUB &1D               \ Section 11 = &1D0A (7434)
- EQUB &1D               \ Section 12 = &1D0A (7434)
- EQUB &25               \ Section 13 = &2592 (9618)
- EQUB &25               \ Section 14 = &2592 (9618)
- EQUB &25               \ Section 15 = &2592 (9618)
- EQUB &62               \ Section 16 = &620A (25098)
- EQUB &62               \ Section 17 = &620A (25098)
- EQUB &A2               \ Section 18 = &A20E (-24050)
- EQUB &A2               \ Section 19 = &A20E (-24050)
- EQUB &B5               \ Section 20 = &B59E (-19042)
- EQUB &B5               \ Section 21 = &B59E (-19042)
- EQUB &E2               \ Section 22 = &E26C (-7572)
- EQUB &E2               \ Section 23 = &E26C (-7572)
- EQUB &A1               \ Section 24 = &A1B3 (-24141)
- EQUB &A1               \ Section 25 = &A1B3 (-24141)
- EQUB &A1               \ Section 26 = &A1B3 (-24141)
- EQUB &DF               \ Section 27 = &DF28 (-8408)
- EQUB &F3               \ Section 28 = &F3C8 (-3128)
+ EQUB &00               \ Section  0 = &0000 =     0 =   0.0 degrees
+ EQUB &12               \ Section  1 = &122F =  4655 =  25.6 degrees
+ EQUB &50               \ Section  2 = &508A = 20618 = 113.3 degrees
+ EQUB &55               \ Section  3 = &55E0 = 21984 = 120.8 degrees
+ EQUB &55               \ Section  4 = &55E0 = 21984 = 120.8 degrees
+ EQUB &D2               \ Section  5 = &D2A4 = 53924 = 296.2 degrees
+ EQUB &D2               \ Section  6 = &D2A4 = 53924 = 296.2 degrees
+ EQUB &9D               \ Section  7 = &9D52 = 40274 = 221.2 degrees
+ EQUB &9D               \ Section  8 = &9D52 = 40274 = 221.2 degrees
+ EQUB &87               \ Section  9 = &8747 = 34631 = 190.2 degrees
+ EQUB &76               \ Section 10 = &7642 = 30274 = 166.3 degrees
+ EQUB &1D               \ Section 11 = &1D0A =  7434 =  40.8 degrees
+ EQUB &1D               \ Section 12 = &1D0A =  7434 =  40.8 degrees
+ EQUB &25               \ Section 13 = &2592 =  9618 =  52.8 degrees
+ EQUB &25               \ Section 14 = &2592 =  9618 =  52.8 degrees
+ EQUB &25               \ Section 15 = &2592 =  9618 =  52.8 degrees
+ EQUB &62               \ Section 16 = &620A = 25098 = 137.9 degrees
+ EQUB &62               \ Section 17 = &620A = 25098 = 137.9 degrees
+ EQUB &A2               \ Section 18 = &A20E = 41486 = 227.9 degrees
+ EQUB &A2               \ Section 19 = &A20E = 41486 = 227.9 degrees
+ EQUB &B5               \ Section 20 = &B59E = 46494 = 255.4 degrees
+ EQUB &B5               \ Section 21 = &B59E = 46494 = 255.4 degrees
+ EQUB &E2               \ Section 22 = &E26C = 57964 = 318.4 degrees
+ EQUB &E2               \ Section 23 = &E26C = 57964 = 318.4 degrees
+ EQUB &A1               \ Section 24 = &A1B3 = 41395 = 227.4 degrees
+ EQUB &A1               \ Section 25 = &A1B3 = 41395 = 227.4 degrees
+ EQUB &A1               \ Section 26 = &A1B3 = 41395 = 227.4 degrees
+ EQUB &DF               \ Section 27 = &DF28 = 57128 = 313.8 degrees
+ EQUB &F3               \ Section 28 = &F3C8 = 62408 = 342.8 degrees
 
  EQUB &00               \ This byte appears to be unused
 
@@ -2476,8 +2726,8 @@ ORG CODE%
 \       Name: trackSubConfig
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: Configuration data for each section, relating to sub-sections and
-\             horizon calculations
+\    Summary: Configuration data for each section that defines the sub-section
+\             numbers, and horizon calculations
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2488,44 +2738,53 @@ ORG CODE%
 \   * Bit 1 = if this is set, then in the horizon calculations, we always skip
 \             the setting of horizonLine to 7
 \
-\   * Bit 0 = if this is set, then bit 7 of subSection gets set, which means
-\             we skip the first part of the SetSegmentVector routine, so we
-\             keep using the track yaw angle from the end of the previous
-\             sub-section, to use as the yaw angle for a straight section
+\   * Bit 0 = if this is set, then the segment vectors for this section are
+\             generated as a straight track rather than using the curve tables
+\             (this bit is only set for straight sections)
+\
+\ In the last one, is bit 0 is set then bit 7 of subSection gets set. This makes
+\ us skip the first part of the SetSegmentVector routine, which means we do not
+\ update the yaw angle or track height before calculating the segment vector.
+\ This means we reuse the segment vector from the end of the previous section
+\ for generating this track section. This is only done for straight sections,
+\ and the main game code draws straight sections by simply adding the same track
+\ segment vector for each segment in the straight, so setting bit 0 of a
+\ section's trackSubConfig ensures that it heads off in a straight line in the
+\ exact same direction as the tail end of the preceding section.
 \
 \ ******************************************************************************
 
 .trackSubConfig
 
- EQUB %00000010         \ 000000 1 0    0        Skip    Track section  0
- EQUB %00001110         \ 000011 1 0    3        Skip    Track section  1
- EQUB %00011010         \ 000110 1 0    6        Skip    Track section  2
- EQUB %00100010         \ 001000 1 0    8        Skip    Track section  3
- EQUB %00101010         \ 001010 1 0    10       Skip    Track section  4
- EQUB %00110010         \ 001100 1 0    12       Skip    Track section  5
- EQUB %00110110         \ 001101 1 0    13       Skip    Track section  6
- EQUB %00111111         \ 001111 1 1    15+128   Skip    Track section  7
- EQUB %00111110         \ 001111 1 0    15       Skip    Track section  8
- EQUB %01000110         \ 010001 1 0    17       Skip    Track section  9
- EQUB %01010010         \ 010100 1 0    20       Skip    Track section 10
- EQUB %01100010         \ 011000 1 0    24       Skip    Track section 11
- EQUB %01101010         \ 011010 1 0    26       Skip    Track section 12
- EQUB %01110110         \ 011101 1 0    29       Skip    Track section 13
- EQUB %01111110         \ 011111 1 0    31       Skip    Track section 14
- EQUB %10000100         \ 100001 0 0    33               Track section 15
- EQUB %10010001         \ 100100 0 1    36+128           Track section 16
- EQUB %10010010         \ 100100 1 0    36       Skip    Track section 17
- EQUB %10100010         \ 101000 1 0    40       Skip    Track section 18
- EQUB %10101010         \ 101010 1 0    42       Skip    Track section 19
- EQUB %10101111         \ 101011 1 1    43+128   Skip    Track section 20
- EQUB %10101110         \ 101011 1 0    43       Skip    Track section 21
- EQUB %10110101         \ 101101 0 1    45+128           Track section 22
- EQUB %10110100         \ 101101 0 0    45               Track section 23
- EQUB %10111100         \ 101111 0 0    47               Track section 24
- EQUB %11000100         \ 110001 0 0    49               Track section 25
- EQUB %11001110         \ 110011 1 0    51       Skip    Track section 26
- EQUB %11011010         \ 110110 1 0    54       Skip    Track section 27
- EQUB %11100010         \ 111000 1 0    56       Skip    Track section 28
+ EQUB %00000010         \ Section  0 = 000000 1 0    From  0  no check  curve
+ EQUB %00001110         \ Section  1 = 000011 1 0    From  3  no check  curve
+ EQUB %00011010         \ Section  2 = 000110 1 0    From  6  no check  curve
+ EQUB %00100010         \ Section  3 = 001000 1 0    From  8  no check  curve
+ EQUB %00101010         \ Section  4 = 001010 1 0    From 10  no check  curve
+ EQUB %00110010         \ Section  5 = 001100 1 0    From 12  no check  curve
+ EQUB %00110110         \ Section  6 = 001101 1 0    From 13  no check  curve
+ EQUB %00111111         \ Section  7 = 001111 1 1    From 15  no check  straight
+ EQUB %00111110         \ Section  8 = 001111 1 0    From 15  no check  curve
+ EQUB %01000110         \ Section  9 = 010001 1 0    From 17  no check  curve
+ EQUB %01010010         \ Section 10 = 010100 1 0    From 20  no check  curve
+ EQUB %01100010         \ Section 11 = 011000 1 0    From 24  no check  curve
+ EQUB %01101010         \ Section 12 = 011010 1 0    From 26  no check  curve
+ EQUB %01110110         \ Section 13 = 011101 1 0    From 29  no check  curve
+ EQUB %01111110         \ Section 14 = 011111 1 0    From 31  no check  curve
+ EQUB %10000100         \ Section 15 = 100001 0 0    From 33            curve
+ EQUB %10010001         \ Section 16 = 100100 0 1    From 36            straight
+ EQUB %10010010         \ Section 17 = 100100 1 0    From 36  no check  curve
+ EQUB %10100010         \ Section 18 = 101000 1 0    From 40  no check  curve
+ EQUB %10101010         \ Section 19 = 101010 1 0    From 42  no check  curve
+ EQUB %10101111         \ Section 20 = 101011 1 1    From 43  no check  straight
+ EQUB %10101110         \ Section 21 = 101011 1 0    From 43  no check  curve
+ EQUB %10110101         \ Section 22 = 101101 0 1    From 45            straight
+ EQUB %10110100         \ Section 23 = 101101 0 0    From 45            curve
+ EQUB %10111100         \ Section 24 = 101111 0 0    From 47            curve
+ EQUB %11000100         \ Section 25 = 110001 0 0    From 49            curve
+ EQUB %11001110         \ Section 26 = 110011 1 0    From 51  no check  curve
+ EQUB %11011010         \ Section 27 = 110110 1 0    From 54  no check  curve
+ EQUB %11100010         \ Section 28 = 111000 1 0    From 56  no check  curve
 
  EQUB &00               \ This byte appears to be unused
 
@@ -2542,49 +2801,45 @@ ORG CODE%
 
 .trackRacingLine
 
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section  0
- EQUB %00110011         \ 001100 1 1    -12                Track section  1
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section  2
- EQUB %00000000         \ 000000 0 0     +0 * baseSpeed    Track section  3
- EQUB %01001111         \ 010011 1 1    -19                Track section  4
- EQUB %00110001         \ 001100 0 1    -12 * baseSpeed    Track section  5
- EQUB %01101000         \ 011010 0 0    +26 * baseSpeed    Track section  6
- EQUB %00011001         \ 000110 0 1     -6 * baseSpeed    Track section  7
- EQUB %00110000         \ 001100 0 0    +12 * baseSpeed    Track section  8
- EQUB %00011001         \ 000110 0 1     -6 * baseSpeed    Track section  9
- EQUB %00101110         \ 001011 1 0    +11                Track section 10
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 11
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 12
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 13
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 14
- EQUB %00110011         \ 001100 1 1    -12                Track section 15
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 16
- EQUB %00111111         \ 001111 1 1    -15                Track section 17
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 18
- EQUB %01010101         \ 010101 0 1    -21 * baseSpeed    Track section 19
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 20
- EQUB %01011011         \ 010110 1 1    -22                Track section 21
- EQUB %00110101         \ 001101 0 1    -13 * baseSpeed    Track section 22
- EQUB %01000010         \ 010000 1 0    +16                Track section 23
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 24
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 25
- EQUB %01001011         \ 010010 1 1    -18                Track section 26
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 27
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 28
- EQUB %00011000         \ 000110 0 0     +6 * baseSpeed    Track section 29
+ EQUB %00011000         \ Section  0 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00110011         \ Section  1 = 001100 1 1 = -12            
+ EQUB %00011000         \ Section  2 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00000000         \ Section  3 = 000000 0 0 =  +0 * baseSpeed
+ EQUB %01001111         \ Section  4 = 010011 1 1 = -19            
+ EQUB %00110001         \ Section  5 = 001100 0 1 = -12 * baseSpeed
+ EQUB %01101000         \ Section  6 = 011010 0 0 = +26 * baseSpeed
+ EQUB %00011001         \ Section  7 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %00110000         \ Section  8 = 001100 0 0 = +12 * baseSpeed
+ EQUB %00011001         \ Section  9 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %00101110         \ Section 10 = 001011 1 0 = +11            
+ EQUB %00011000         \ Section 11 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 12 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 13 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 14 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00110011         \ Section 15 = 001100 1 1 = -12            
+ EQUB %00011000         \ Section 16 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00111111         \ Section 17 = 001111 1 1 = -15            
+ EQUB %00011000         \ Section 18 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %01010101         \ Section 19 = 010101 0 1 = -21 * baseSpeed
+ EQUB %00011000         \ Section 20 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %01011011         \ Section 21 = 010110 1 1 = -22            
+ EQUB %00110101         \ Section 22 = 001101 0 1 = -13 * baseSpeed
+ EQUB %01000010         \ Section 23 = 010000 1 0 = +16            
+ EQUB %00011000         \ Section 24 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 25 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %01001011         \ Section 26 = 010010 1 1 = -18            
+ EQUB %00011000         \ Section 27 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 28 = 000110 0 0 =  +6 * baseSpeed
 
- EQUB &00               \ This byte appears to be unused
+ EQUB &18, &00          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
 \       Name: zTrackCurve
 \       Type: Variable
 \   Category: Extra track data
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\    Summary: The z-coordinate of the tangent vector (i.e. the curve direction)
+\             at 64 points on a one-eighth circle covering 0 to 45 degrees
 \
 \ ******************************************************************************
 
@@ -2664,11 +2919,92 @@ ORG CODE%
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
 \
+\ ------------------------------------------------------------------------------
+\
+\ This part defines the following aspects of these track sections:
+\
+\ trackSectionFlag      Various flags for the track section
+\
+\                       The abbreviations in brackets are used to show the
+\                       values of section's flags in the comments below
+\
+\                         * Bit 0: Section shape (Sh)
+\
+\                           * 0 = straight section (only one segment vector)
+\
+\                           * 1 = curved section (multiple segment vectors)
+\
+\                         * Bit 1: Colour of left verge marks (Vc)
+\
+\                           * 0 = black-and-white verge marks
+\
+\                           * 1 = red-and-white verge marks
+\
+\                         * Bit 2: Colour of right verge marks (Vc)
+\
+\                           * 0 = black-and-white verge marks
+\
+\                           * 1 = red-and-white verge marks
+\
+\                         * Bit 3: Show corner markers on right (Mlr)
+\
+\                           * 0 = do not show corner markers to the right of the
+\                                 track
+\
+\                           * 1 = show corner markers to the right of the track
+\
+\                         * Bit 4: Show corner markers on left (Mlr)
+\
+\                           * 0 = do not show corner markers to the left of the
+\                                 track
+\
+\                           * 1 = show corner markers to the left of the track
+\
+\                         * Bit 5: Corner marker colours (Mc)
+\
+\                           * 0 = show all corner markers in white
+\
+\                           * 1 = show corner markers in red or white, as
+\                                 appropriate
+\
+\                         * Bit 6: Generate track segment vectors on-the-fly (G)
+\
+\                           * 0 = do not generate on-the-fly
+\
+\                           * 1 = generate on-the-fly
+\
+\                         * Bit 7: Maximum approach speed for next section (Sp)
+\
+\                           * 0 = the next section has no maximum approach speed
+\
+\                           * 1 = the next section has a maximum approach speed
+\
+\ xTrackSectionILo      Low byte of the x-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ yTrackSectionILo      Low byte of the y-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ zTrackSectionILo      Low byte of the z-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ xTrackSectionOLo      Low byte of the x-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackSectionFrom      The number of the first segment vector in each section,
+\                       which enables us to fetch the segment vectors for a
+\                       given track section
+\
+\ zTrackSectionOLo      Low byte of the z-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackSectionSize      The length of each track section in terms of segments
+\
 \ ******************************************************************************
 
                         \ Track section 0
 
- EQUB %01110000         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
  EQUB &20               \ xTrackSectionILo       xTrackSectionI = &D120 = -12000
  EQUB &00               \ yTrackSectionILo       yTrackSectionI = &1400 =   5120
  EQUB &A0               \ zTrackSectionILo       zTrackSectionI = &0FA0 =   4000
@@ -2679,7 +3015,7 @@ ORG CODE%
 
                         \ Track section 1
 
- EQUB %11101101         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &DC               \ xTrackSectionILo       xTrackSectionI = &D4DC = -11044
  EQUB &87               \ yTrackSectionILo       yTrackSectionI = &1487 =   5255
  EQUB &5C               \ zTrackSectionILo       zTrackSectionI = &2A5C =  10844
@@ -2690,7 +3026,7 @@ ORG CODE%
 
                         \ Track section 2
 
- EQUB %01000010         \ trackSectionFlag       Sp=0 H=1 Mc=0 Mlr=00 Vc=01 Sh=0
+ EQUB %01000010         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=01 Sh=0
  EQUB &52               \ xTrackSectionILo       xTrackSectionI = &E052 =  -8110
  EQUB &2B               \ yTrackSectionILo       yTrackSectionI = &0F2B =   3883
  EQUB &E3               \ zTrackSectionILo       zTrackSectionI = &2DE3 =  11747
@@ -2701,7 +3037,7 @@ ORG CODE%
 
                         \ Track section 3
 
- EQUB %01110000         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
  EQUB &2B               \ xTrackSectionILo       xTrackSectionI = &EA2B =  -5589
  EQUB &DE               \ yTrackSectionILo       yTrackSectionI = &0EDE =   3806
  EQUB &96               \ zTrackSectionILo       zTrackSectionI = &2996 =  10646
@@ -2712,7 +3048,7 @@ ORG CODE%
 
                         \ Track section 4
 
- EQUB %11101101         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &EB               \ xTrackSectionILo       xTrackSectionI = &F3EB =  -3093
  EQUB &6C               \ yTrackSectionILo       yTrackSectionI = &116C =   4460
  EQUB &F6               \ zTrackSectionILo       zTrackSectionI = &23F6 =   9206
@@ -2723,7 +3059,7 @@ ORG CODE%
 
                         \ Track section 5
 
- EQUB %01101010         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=01 Vc=01 Sh=0
+ EQUB %01101010         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=01 Vc=01 Sh=0
  EQUB &71               \ xTrackSectionILo       xTrackSectionI = &F171 =  -3727
  EQUB &53               \ yTrackSectionILo       yTrackSectionI = &0D53 =   3411
  EQUB &53               \ zTrackSectionILo       zTrackSectionI = &1E53 =   7763
@@ -2734,7 +3070,7 @@ ORG CODE%
 
                         \ Track section 6
 
- EQUB %01110011         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=10 Vc=01 Sh=1
+ EQUB %01110011         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=01 Sh=1
  EQUB &0D               \ xTrackSectionILo       xTrackSectionI = &E60D =  -6643
  EQUB &43               \ yTrackSectionILo       yTrackSectionI = &0843 =   2115
  EQUB &EA               \ zTrackSectionILo       zTrackSectionI = &23EA =   9194
@@ -2745,7 +3081,7 @@ ORG CODE%
 
                         \ Track section 7
 
- EQUB %00000100         \ trackSectionFlag       Sp=0 H=0 Mc=0 Mlr=00 Vc=10 Sh=0
+ EQUB %00000100         \ trackSectionFlag       Sp=0 G=0 Mc=0 Mlr=00 Vc=10 Sh=0
  EQUB &2F               \ xTrackSectionILo       xTrackSectionI = &DE2F =  -8657
  EQUB &EB               \ yTrackSectionILo       yTrackSectionI = &05EB =   1515
  EQUB &20               \ zTrackSectionILo       zTrackSectionI = &2120 =   8480
@@ -2756,7 +3092,7 @@ ORG CODE%
 
                         \ Track section 8
 
- EQUB %01000001         \ trackSectionFlag       Sp=0 H=1 Mc=0 Mlr=00 Vc=00 Sh=1
+ EQUB %01000001         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=1
  EQUB &39               \ xTrackSectionILo       xTrackSectionI = &DA39 =  -9671
  EQUB &EB               \ yTrackSectionILo       yTrackSectionI = &05EB =   1515
  EQUB &81               \ zTrackSectionILo       zTrackSectionI = &1C81 =   7297
@@ -2767,7 +3103,7 @@ ORG CODE%
 
                         \ Track section 9
 
- EQUB %01101000         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=01 Vc=00 Sh=0
+ EQUB %01101000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=01 Vc=00 Sh=0
  EQUB &36               \ xTrackSectionILo       xTrackSectionI = &D836 = -10186
  EQUB &EB               \ yTrackSectionILo       yTrackSectionI = &05EB =   1515
  EQUB &CE               \ zTrackSectionILo       zTrackSectionI = &16CE =   5838
@@ -2778,7 +3114,7 @@ ORG CODE%
 
                         \ Track section 10
 
- EQUB %11110011         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=10 Vc=01 Sh=1
+ EQUB %11110011         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=10 Vc=01 Sh=1
  EQUB &0A               \ xTrackSectionILo       xTrackSectionI = &D90A =  -9974
  EQUB &EB               \ yTrackSectionILo       yTrackSectionI = &05EB =   1515
  EQUB &52               \ zTrackSectionILo       zTrackSectionI = &0152 =    338
@@ -2789,7 +3125,7 @@ ORG CODE%
 
                         \ Track section 11
 
- EQUB %11000100         \ trackSectionFlag       Sp=1 H=1 Mc=0 Mlr=00 Vc=10 Sh=0
+ EQUB %11000100         \ trackSectionFlag       Sp=1 G=1 Mc=0 Mlr=00 Vc=10 Sh=0
  EQUB &58               \ xTrackSectionILo       xTrackSectionI = &E558 =  -6824
  EQUB &DF               \ yTrackSectionILo       yTrackSectionI = &0ADF =   2783
  EQUB &7C               \ zTrackSectionILo       zTrackSectionI = &FC7C =   -900
@@ -2800,7 +3136,7 @@ ORG CODE%
 
                         \ Track section 12
 
- EQUB %01000000         \ trackSectionFlag       Sp=0 H=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
  EQUB &18               \ xTrackSectionILo       xTrackSectionI = &EF18 =  -4328
  EQUB &73               \ yTrackSectionILo       yTrackSectionI = &1173 =   4467
  EQUB &DC               \ zTrackSectionILo       zTrackSectionI = &07DC =   2012
@@ -2811,7 +3147,7 @@ ORG CODE%
 
                         \ Track section 13
 
- EQUB %01000000         \ trackSectionFlag       Sp=0 H=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
  EQUB &61               \ xTrackSectionILo       xTrackSectionI = &0661 =   1633
  EQUB &32               \ yTrackSectionILo       yTrackSectionI = &1132 =   4402
  EQUB &7F               \ zTrackSectionILo       zTrackSectionI = &1B7F =   7039
@@ -2822,7 +3158,7 @@ ORG CODE%
 
                         \ Track section 14
 
- EQUB %01110000         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
  EQUB &61               \ xTrackSectionILo       xTrackSectionI = &1261 =   4705
  EQUB &12               \ yTrackSectionILo       yTrackSectionI = &0E12 =   3602
  EQUB &9F               \ zTrackSectionILo       zTrackSectionI = &249F =   9375
@@ -2833,7 +3169,7 @@ ORG CODE%
 
                         \ Track section 15
 
- EQUB %11101101         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &61               \ xTrackSectionILo       xTrackSectionI = &1B61 =   7009
  EQUB &C0               \ yTrackSectionILo       yTrackSectionI = &11C0 =   4544
  EQUB &77               \ zTrackSectionILo       zTrackSectionI = &2B77 =  11127
@@ -2844,7 +3180,7 @@ ORG CODE%
 
                         \ Track section 16
 
- EQUB %00110010         \ trackSectionFlag       Sp=0 H=0 Mc=1 Mlr=10 Vc=01 Sh=0
+ EQUB %00110010         \ trackSectionFlag       Sp=0 G=0 Mc=1 Mlr=10 Vc=01 Sh=0
  EQUB &A6               \ xTrackSectionILo       xTrackSectionI = &2AA6 =  10918
  EQUB &DC               \ yTrackSectionILo       yTrackSectionI = &15DC =   5596
  EQUB &F6               \ zTrackSectionILo       zTrackSectionI = &2AF6 =  10998
@@ -2855,7 +3191,7 @@ ORG CODE%
 
                         \ Track section 17
 
- EQUB %11101101         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &0D               \ xTrackSectionILo       xTrackSectionI = &3C0D =  15373
  EQUB &C9               \ yTrackSectionILo       yTrackSectionI = &14C9 =   5321
  EQUB &D7               \ zTrackSectionILo       zTrackSectionI = &17D7 =   6103
@@ -2866,7 +3202,7 @@ ORG CODE%
 
                         \ Track section 18
 
- EQUB %01110010         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=10 Vc=01 Sh=0
+ EQUB %01110010         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=01 Sh=0
  EQUB &6B               \ xTrackSectionILo       xTrackSectionI = &3A6B =  14955
  EQUB &A8               \ yTrackSectionILo       yTrackSectionI = &14A8 =   5288
  EQUB &7C               \ zTrackSectionILo       zTrackSectionI = &0C7C =   3196
@@ -2877,7 +3213,7 @@ ORG CODE%
 
                         \ Track section 19
 
- EQUB %01101101         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %01101101         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &35               \ xTrackSectionILo       xTrackSectionI = &2D35 =  11573
  EQUB &28               \ yTrackSectionILo       yTrackSectionI = &1128 =   4392
  EQUB &76               \ zTrackSectionILo       zTrackSectionI = &0076 =    118
@@ -2888,7 +3224,7 @@ ORG CODE%
 
                         \ Track section 20
 
- EQUB %00110000         \ trackSectionFlag       Sp=0 H=0 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB %00110000         \ trackSectionFlag       Sp=0 G=0 Mc=1 Mlr=10 Vc=00 Sh=0
  EQUB &E7               \ xTrackSectionILo       xTrackSectionI = &29E7 =  10727
  EQUB &AC               \ yTrackSectionILo       yTrackSectionI = &11AC =   4524
  EQUB &C6               \ zTrackSectionILo       zTrackSectionI = &FEC6 =   -314
@@ -2899,7 +3235,7 @@ ORG CODE%
 
                         \ Track section 21
 
- EQUB %11101101         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &37               \ xTrackSectionILo       xTrackSectionI = &1D37 =   7479
  EQUB &A0               \ yTrackSectionILo       yTrackSectionI = &14A0 =   5280
  EQUB &62               \ zTrackSectionILo       zTrackSectionI = &FB62 =  -1182
@@ -2910,7 +3246,7 @@ ORG CODE%
 
                         \ Track section 22
 
- EQUB %00101010         \ trackSectionFlag       Sp=0 H=0 Mc=1 Mlr=01 Vc=01 Sh=0
+ EQUB %00101010         \ trackSectionFlag       Sp=0 G=0 Mc=1 Mlr=01 Vc=01 Sh=0
  EQUB &F2               \ xTrackSectionILo       xTrackSectionI = &18F2 =   6386
  EQUB &09               \ yTrackSectionILo       yTrackSectionI = &1509 =   5385
  EQUB &9E               \ zTrackSectionILo       zTrackSectionI = &FC9E =   -866
@@ -2921,7 +3257,7 @@ ORG CODE%
 
                         \ Track section 23
 
- EQUB %11110011         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=10 Vc=01 Sh=1
+ EQUB %11110011         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=10 Vc=01 Sh=1
  EQUB &EC               \ xTrackSectionILo       xTrackSectionI = &0CEC =   3308
  EQUB &97               \ yTrackSectionILo       yTrackSectionI = &1497 =   5271
  EQUB &D4               \ zTrackSectionILo       zTrackSectionI = &09D4 =   2516
@@ -2932,7 +3268,7 @@ ORG CODE%
 
                         \ Track section 24
 
- EQUB %01000100         \ trackSectionFlag       Sp=0 H=1 Mc=0 Mlr=00 Vc=10 Sh=0
+ EQUB %01000100         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=10 Sh=0
  EQUB &D0               \ xTrackSectionILo       xTrackSectionI = &05D0 =   1488
  EQUB &99               \ yTrackSectionILo       yTrackSectionI = &1599 =   5529
  EQUB &0B               \ zTrackSectionILo       zTrackSectionI = &0A0B =   2571
@@ -2943,7 +3279,7 @@ ORG CODE%
 
                         \ Track section 25
 
- EQUB %01110000         \ trackSectionFlag       Sp=0 H=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
  EQUB &70               \ xTrackSectionILo       xTrackSectionI = &F970 =  -1680
  EQUB &23               \ yTrackSectionILo       yTrackSectionI = &1923 =   6435
  EQUB &83               \ zTrackSectionILo       zTrackSectionI = &FE83 =   -381
@@ -2954,7 +3290,7 @@ ORG CODE%
 
                         \ Track section 26
 
- EQUB %11101101         \ trackSectionFlag       Sp=1 H=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
  EQUB &D8               \ xTrackSectionILo       xTrackSectionI = &E5D8 =  -6696
  EQUB &3C               \ yTrackSectionILo       yTrackSectionI = &193C =   6460
  EQUB &41               \ zTrackSectionILo       zTrackSectionI = &EC41 =  -5055
@@ -2965,7 +3301,7 @@ ORG CODE%
 
                         \ Track section 27
 
- EQUB %11000010         \ trackSectionFlag       Sp=1 H=1 Mc=0 Mlr=00 Vc=01 Sh=0
+ EQUB %11000010         \ trackSectionFlag       Sp=1 G=1 Mc=0 Mlr=00 Vc=01 Sh=0
  EQUB &15               \ xTrackSectionILo       xTrackSectionI = &DB15 =  -9451
  EQUB &E6               \ yTrackSectionILo       yTrackSectionI = &16E6 =   5862
  EQUB &CA               \ zTrackSectionILo       zTrackSectionI = &EDCA =  -4662
@@ -2976,7 +3312,7 @@ ORG CODE%
 
                         \ Track section 28
 
- EQUB %01000000         \ trackSectionFlag       Sp=0 H=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
  EQUB &98               \ xTrackSectionILo       xTrackSectionI = &D398 = -11368
  EQUB &9A               \ yTrackSectionILo       yTrackSectionI = &179A =   6042
  EQUB &D9               \ zTrackSectionILo       zTrackSectionI = &F7D9 =  -2087
