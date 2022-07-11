@@ -40,7 +40,7 @@ See the [introduction](#introduction) for more information.
 
 This repository contains source code for Revs on the BBC Micro, with every single line documented and (for the most part) explained.
 
-You can build the fully functioning game from this source. Three variants are currently supported: the original 1985 Acornsoft release, the 1985 Revs 4 Tracks release, and the 1986 Superior Software release, which includes CAS (Computer Assisted Steering).
+You can build the fully functioning game from this source. [Three variants](#building-different-variants-of-revs) are currently supported: the original 1985 Acornsoft release, the 1985 Revs 4 Tracks release, and the 1986 Superior Software release, which includes CAS (Computer Assisted Steering).
 
 It is a companion to the [revs.bbcelite.com website](https://revs.bbcelite.com), which contains all the code from this repository, but laid out in a much more human-friendly fashion.
 
