@@ -32,6 +32,7 @@ See the [introduction](#introduction) for more information.
 * [Building different variants of Revs](#building-different-variants-of-revs)
 
   * [Building the Acornsoft variant](#building-the-acornsoft-variant)
+  * [Building the Revs 4 Tracks variant](#building-the-revs-4-tracks-variant)
   * [Building the Superior Software variant](#building-the-superior-software-variant)
   * [Differences between the variants](#differences-between-the-variants)
 
@@ -39,7 +40,7 @@ See the [introduction](#introduction) for more information.
 
 This repository contains source code for Revs on the BBC Micro, with every single line documented and (for the most part) explained.
 
-You can build the fully functioning game from this source. Two variants are currently supported: the original 1985 Acornsoft release, and the 1986 Superior Software release, which includes CAS (Computer Assisted Steering).
+You can build the fully functioning game from this source. Three variants are currently supported: the original 1985 Acornsoft release, the 1985 Revs 4 Tracks release, and the 1986 Superior Software release, which includes CAS (Computer Assisted Steering).
 
 It is a companion to the [revs.bbcelite.com website](https://revs.bbcelite.com), which contains all the code from this repository, but laid out in a much more human-friendly fashion.
 
@@ -193,8 +194,8 @@ Checksum   Size  Checksum   Size  Match  Filename
 b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
 18d57479   2000  18d57479   2000   Yes   DoningtonPark.bin
 0f2aa17c   2000  0f2aa17c   2000   Yes   OultonPark.bin
-e22a0a93  24064  e22a0a93  24064   Yes   Revs.bin
-d37f9cba   1455  d37f9cba   1455   Yes   Revs1.bin
+9ab958e9   1455  9ab958e9   1455   Yes   Revs1.bin
+e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
 0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
 9dcd008c   2000  9dcd008c   2000   Yes   Snetterton.bin
 -             -  75798a13   2000    -    Nurburgring.bin
@@ -210,9 +211,11 @@ During compilation, details of every step are output in a file called `compile.t
 
 This repository contains the source code for two different variants of Revs:
 
-* The Acornsoft variant, which is the original release
+* The Acornsoft variant, which is the original release with the Silverstone track
 
-* The Superior Software variant, which includes CAS (Computer Assisted Steering)
+* The Acornsoft Revs 4 Tracks variant, which adds four more tracks (Brands Hatch, Donington Park, Oulton Park and Snetterton)
+
+* The Superior Software variant, which includes all five tracks and CAS (Computer Assisted Steering)
 
 By default the build process builds the Acornsoft variant, but you can build a specified variant using the `variant=` build parameter.
 
@@ -221,6 +224,39 @@ By default the build process builds the Acornsoft variant, but you can build a s
 You can add `variant=acornsoft` to produce the `revs-acornsoft.ssd` file containing the Acornsoft variant, though that's the default value so it isn't necessary.
 
 The verification checksums for this version are shown above.
+
+### Building the Revs 4 Tracks variant
+
+You can build the Revs 4 Tracks variant by appending `variant=4tracks` to the `make` command, like this on Windows:
+
+```
+make.bat build verify variant=4tracks
+```
+
+or this on a Mac or Linux:
+
+```
+make build verify variant=4tracks
+```
+
+This will produce a file called `revs-4tracks.ssd` in the `5-compiled-game-discs` folder that contains the Revs 4 Tracks variant.
+
+The verification checksums for this version are as follows:
+
+```
+Results for release: 4tracks
+[--originals--]  [---output----]
+Checksum   Size  Checksum   Size  Match  Filename
+-----------------------------------------------------------
+b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
+18d57479   2000  18d57479   2000   Yes   DoningtonPark.bin
+0f2aa17c   2000  0f2aa17c   2000   Yes   OultonPark.bin
+9ab958e9   1455  9ab958e9   1455   Yes   Revs1.bin
+e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
+0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
+9dcd008c   2000  9dcd008c   2000   Yes   Snetterton.bin
+-             -  75798a13   2000    -    Nurburgring.bin
+```
 
 ### Building the Superior Software variant
 
@@ -248,8 +284,8 @@ Checksum   Size  Checksum   Size  Match  Filename
 b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
 18d57479   2000  18d57479   2000   Yes   DoningtonPark.bin
 0f2aa17c   2000  0f2aa17c   2000   Yes   OultonPark.bin
-83e95a44  24064  83e95a44  24064   Yes   Revs.bin
-d37f9cba   1455  d37f9cba   1455   Yes   Revs1.bin
+9ab958e9   1455  9ab958e9   1455   Yes   Revs1.bin
+83e95a44  24064  83e95a44  24064   Yes   Revs2.bin
 0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
 9dcd008c   2000  9dcd008c   2000   Yes   Snetterton.bin
 -             -  75798a13   2000    -    Nurburgring.bin
@@ -257,9 +293,11 @@ d37f9cba   1455  d37f9cba   1455   Yes   Revs1.bin
 
 ### Differences between the variants
 
-The main difference between the two variants is that the Superior Software release contains a new feature: CAS (Computer Assisted Steering).
+The game code is identical in both of the Acornsoft variants, but Revs 4 Tracks contains the four extra tracks and a load menu from which you can choose from the four new tracks.
 
-The only other difference is in the recording of player drift, which governs when the player loses traction when sliding sideways. In the Superior Software variant, drifting is ignored if it occurs in the first three segments of a track section. This is implemented in the SetPlayerDriftS routine, which is not present in the original Acornsoft variant.
+The main difference between the Acornsoft and Superior Software variants is that the Superior Software release contains a new feature: CAS (Computer Assisted Steering). It also contains a load menu from which you can choose from all five tracks.
+
+The only other difference is in the recording of player drift, which governs when the player loses traction when sliding sideways. In the Superior Software variant, drifting is ignored if it occurs in the first three segments of a track section. This is implemented in the SetPlayerDriftS routine, which is not present in the original Acornsoft variants.
 
 ---
 

@@ -28,13 +28,43 @@
 \
 \ ******************************************************************************
 
-PUTFILE "1-source-files/boot-files/$.!BOOT.bin", "!BOOT", &FFFFFF, &FFFFFF
-PUTFILE "1-source-files/basic-programs/$.REVS.bin", "REVS", &FF1900, &FF8023
-PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
+INCLUDE "1-source-files/main-sources/revs-header.h.asm"
+
+_ACORNSOFT              = (_VARIANT = 1)
+_SUPERIOR               = (_VARIANT = 2)
+_4TRACKS                = (_VARIANT = 3)
+
+IF _ACORNSOFT
+
+ PUTFILE "1-source-files/boot-files/$.!BOOT.bin", "!BOOT", &FFFFFF, &FFFFFF
+ PUTFILE "1-source-files/basic-programs/$.REVS.bin", "REVS", &FF1900, &FF8023
+ PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
+ PUTFILE "3-assembled-output/Silverstone.bin", "Silvers", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Revs2.bin", "Revs2", &001200, &001200
+
+ELIF _4TRACKS
+
+ PUTFILE "1-source-files/boot-files/$.!BOOT4.bin", "!BOOT", &FFFFFF, &FFFFFF
+ PUTFILE "1-source-files/basic-programs/$.MENU.bin", "MENU", &FF1900, &FF8023
+ PUTFILE "3-assembled-output/Revs1.bin", "Revs1", &002000, &002000
+ PUTFILE "3-assembled-output/BrandsHatch.bin", "B", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/DoningtonPark.bin", "D", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/OultonPark.bin", "O", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Snetterton.bin", "S", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Revs2.bin", "Revs2", &001200, &001200
+
+ELIF _SUPERIOR
+
+ PUTFILE "1-source-files/boot-files/$.!BOOTS.bin", "!BOOT", &FFFFFF, &FFFFFF
+ PUTFILE "1-source-files/basic-programs/$.REVSMEN.bin", "REVSMEN", &FF1900, &FF8023
+ PUTFILE "1-source-files/images/$.5TRSCRN.bin", "5TRSCRN", &007C00, &007C00
+ PUTFILE "3-assembled-output/BrandsHatch.bin", "BRANDS", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/DoningtonPark.bin", "DONING", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/OultonPark.bin", "OULTON", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Snetterton.bin", "SNETTER", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Silverstone.bin", "SILVER", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Revs2.bin", "REVS2", &001200, &001200
+
+ENDIF
+
 \PUTFILE "3-assembled-output/Nurburgring.bin", "Silvers", &0070DB, &0070DB
-\PUTFILE "3-assembled-output/BrandsHatch.bin", "Silvers", &0070DB, &0070DB
-\PUTFILE "3-assembled-output/DoningtonPark.bin", "Silvers", &0070DB, &0070DB
-\PUTFILE "3-assembled-output/OultonPark.bin", "Silvers", &0070DB, &0070DB
-\PUTFILE "3-assembled-output/Snetterton.bin", "Silvers", &0070DB, &0070DB
-PUTFILE "3-assembled-output/Silverstone.bin", "Silvers", &0070DB, &0070DB
-PUTFILE "3-assembled-output/Revs.bin", "Revs?", &001200, &001200

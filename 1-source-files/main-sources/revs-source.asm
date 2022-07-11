@@ -20,7 +20,7 @@
 \
 \ This source file produces the following binary file:
 \
-\   * Revs.bin
+\   * Revs2.bin
 \
 \ ******************************************************************************
 
@@ -28,6 +28,7 @@ INCLUDE "1-source-files/main-sources/revs-header.h.asm"
 
 _ACORNSOFT              = (_VARIANT = 1)
 _SUPERIOR               = (_VARIANT = 2)
+_4TRACKS                = (_VARIANT = 3)
 
 GUARD &8000             \ Guard against assembling over sideways ROMs
 
@@ -2353,7 +2354,7 @@ ORG &790E
 
 .move5
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  JMP SetupGame          \ If we get here we have processed all the blocks in the
                         \ block tables, so jump to SetupGame to continue setting
@@ -7656,7 +7657,7 @@ ORG &0B00
                         \ that no gear changes are being applied, which we may
                         \ change later)
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  BIT configJoystick     \ If bit 7 of configJoystick is clear then the joystick
  BPL keys2              \ is not configured, so jump to keys2 to check for key
@@ -7704,7 +7705,7 @@ ENDIF
 
 .keys1
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  PHA                    \ Store A on the stack so we can retrieve it later
 
@@ -7722,7 +7723,7 @@ ENDIF
  ORA T                  \ 0 = right), so this sets (A T) to the correct sign
  STA T                  \ for a steering measurement
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  PLA                    \ Retrieve the value of A that we stored on the stack
 
@@ -7801,7 +7802,7 @@ ENDIF
                         \ So (U T) = (3 0) = 768, which is the value we use for
                         \ steering when the SPACE key is held down
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
@@ -7885,7 +7886,7 @@ ENDIF
  LSR A                  \           = (|xTyreForceNose| AND %11110000) / 4
  ROR T
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  CMP #12                \ If A < 12, skip the following instruction
  BCC keys8
@@ -7912,7 +7913,7 @@ ENDIF
 
 .keys9
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  LDA steeringLo         \ Set A = steeringLo
 
@@ -8524,7 +8525,7 @@ ENDIF
 
 .main10
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  LDY #9                 \ Check for all the shifted keys (i.e. those that need
  JSR ProcessShiftedKeys \ SHIFT holding down to trigger) and process them
@@ -11101,7 +11102,7 @@ ENDIF
                         \ because the dash data blocks occur every &80 bytes
                         \ from dashData
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  STA draw27+2           \ Modify the following instruction at draw27:
  LDA P                  \
@@ -11536,7 +11537,7 @@ ENDIF
 
  STA I                  \ Set I to the pixel byte for the edge we want to draw
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  BNE draw20             \ If the pixel byte is non-zero, jump to draw20 to skip
                         \ the following instruction
@@ -11968,7 +11969,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
 .GetTyreDashEdge
 
@@ -12017,7 +12018,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
 .FillAfterObject
 
@@ -12555,7 +12556,7 @@ ENDIF
                         \ FillAfterObject routine to draw to (S R) instead of
                         \ (Q P)
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  LDY #&DF               \ Set Y = &DF so the call to GetTyreDashEdge modifies
                         \ the FillAfterObject routine at edge11 to BNE edge1,
@@ -12973,7 +12974,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
 .GetColour
 
@@ -13319,7 +13320,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
 .SetMarker
 
@@ -22807,7 +22808,7 @@ ENDIF
 
 .ldaDrawByte
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &1C               \ Line 0 is unused and contains workspace noise
 
@@ -25370,7 +25371,7 @@ ENDIF
 
 .carSpeedLo
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &FF, &88          \ These values are workspace noise and have no meaning
  EQUB &88, &CC
@@ -25408,7 +25409,7 @@ ENDIF
 
 .totalPointsLo
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &CC, &CC          \ These values are workspace noise and have no meaning
  EQUB &EE, &FF
@@ -25443,7 +25444,7 @@ ENDIF
 
 .racePointsLo
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &FF, &FF          \ These values are workspace noise and have no meaning
  EQUB &FF, &FF
@@ -25940,7 +25941,7 @@ ENDIF
  EQUB &43               \ DELETE        Set bit 6         configPause        &40
  EQUB &20               \ f7            Set bit 5         configStop         &20
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &77, &BB          \ These values are workspace noise and have no meaning
 
@@ -25961,7 +25962,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &DD, &EE          \ These values are workspace noise and have no meaning
  EQUB &77, &BB
@@ -27430,7 +27431,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
 .menuKeys
 
@@ -30154,7 +30155,7 @@ NEXT
  CMP #22                \ If A < 22, clear the C flag, if A >= 22, set the C
                         \ flag
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  ROR playerDrift        \ Store the C flag in bit 7 of playerDrift, so this will
                         \ be set if A >= 22
@@ -37685,7 +37686,7 @@ ORG &5E40
 
 .scaleRange
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  EQUB &6F, &6E
  EQUB &32, &00
@@ -39918,7 +39919,7 @@ ENDIF
  JSR CallTrackHook      \ Call the hook code in the track file (for Silverstone
                         \ the hook routine is just an RTS, so this does nothing)
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
                         \ Fall through into the main game loop to start the game
 
@@ -40590,7 +40591,7 @@ ENDIF
  STY V                  \ Store the loop counter in V so we can retrieve it
                         \ below
 
-IF _ACORNSOFT
+IF _ACORNSOFT OR _4TRACKS
 
  LDX menuKeys,Y         \ Fetch the key number for menu option Y
 
@@ -42898,4 +42899,4 @@ CLEAR &15DB, &16DC
  EQUB &E0, &90, &1E, &B0, &04, &C9, &20, &B0, &18, &06, &74, &2A
  EQUB &06, &74, &2A, &18, &69
 
-SAVE "3-assembled-output/Revs.bin", LOAD%, LOAD_END%
+SAVE "3-assembled-output/Revs2.bin", LOAD%, LOAD_END%

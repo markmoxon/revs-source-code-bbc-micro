@@ -247,7 +247,7 @@ ORG CODE%
 
 .runRevs
 
-    EQUS "*R.Revs?"
+    EQUS "*R.Revs2"
     EQUB 13
 
     EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00

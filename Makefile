@@ -5,6 +5,7 @@ PYTHON?=python
 # the make command, where <rel> is one of:
 #
 #   acornsoft
+#   4tracks
 #   superior
 #
 # So, for example:
@@ -18,6 +19,10 @@ ifeq ($(variant), superior)
   variant-revs=2
   folder-revs=/superior
   suffix-revs=-superior
+else ifeq ($(variant), 4tracks)
+  variant-revs=3
+  folder-revs=/4tracks
+  suffix-revs=-4tracks
 else
   variant-revs=1
   folder-revs=/acornsoft
