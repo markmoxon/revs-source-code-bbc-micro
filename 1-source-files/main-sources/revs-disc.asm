@@ -33,6 +33,7 @@ INCLUDE "1-source-files/main-sources/revs-header.h.asm"
 _ACORNSOFT              = (_VARIANT = 1)
 _SUPERIOR               = (_VARIANT = 2)
 _4TRACKS                = (_VARIANT = 3)
+_REVSPLUS               = (_VARIANT = 4)
 
 IF _ACORNSOFT
 
@@ -63,6 +64,19 @@ ELIF _SUPERIOR
  PUTFILE "3-assembled-output/OultonPark.bin", "OULTON", &0070DB, &0070DB
  PUTFILE "3-assembled-output/Snetterton.bin", "SNETTER", &0070DB, &0070DB
  PUTFILE "3-assembled-output/Silverstone.bin", "SILVER", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Revs2.bin", "REVS2", &001200, &001200
+
+ELIF _REVSPLUS
+
+ PUTFILE "1-source-files/boot-files/$.!BOOTS.bin", "!BOOT", &FFFFFF, &FFFFFF
+ PUTFILE "1-source-files/basic-programs/$.REVSPLUS.bin", "REVSMEN", &FF1900, &FF8023
+ PUTFILE "1-source-files/images/$.PLUSCRN.bin", "PLUSCRN", &007C00, &007C00
+ PUTFILE "3-assembled-output/BrandsHatch.bin", "BRANDS", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/DoningtonPark.bin", "DONING", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/OultonPark.bin", "OULTON", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Snetterton.bin", "SNETTER", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Silverstone.bin", "SILVER", &0070DB, &0070DB
+ PUTFILE "3-assembled-output/Nurburgring.bin", "NURBURG", &0070DB, &0070DB
  PUTFILE "3-assembled-output/Revs2.bin", "REVS2", &001200, &001200
 
 ENDIF

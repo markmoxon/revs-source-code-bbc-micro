@@ -7,6 +7,7 @@ PYTHON?=python
 #   acornsoft
 #   4tracks
 #   superior
+#   revsplus
 #
 # So, for example:
 #
@@ -23,6 +24,10 @@ else ifeq ($(variant), 4tracks)
   variant-revs=3
   folder-revs=/4tracks
   suffix-revs=-4tracks
+else ifeq ($(variant), revsplus)
+  variant-revs=4
+  folder-revs=/revsplus
+  suffix-revs=-plus
 else
   variant-revs=1
   folder-revs=/acornsoft

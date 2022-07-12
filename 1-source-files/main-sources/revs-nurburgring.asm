@@ -608,7 +608,7 @@ ORG CODE%
 
 .L54EB
 
- LDA &91                \ #01 in BH
+ LDA &01                \ #01 in BH
  AND #&40
  BEQ L54F4
  JSR L5582
@@ -784,7 +784,7 @@ ORG CODE%
 
 .L5572
 
- LDA &91                \ 01 in BH
+ LDA &01                \ 01 in BH
  AND #&40
  BEQ L557E
 

@@ -29,6 +29,7 @@ INCLUDE "1-source-files/main-sources/revs-header.h.asm"
 _ACORNSOFT              = (_VARIANT = 1)
 _SUPERIOR               = (_VARIANT = 2)
 _4TRACKS                = (_VARIANT = 3)
+_REVSPLUS               = (_VARIANT = 4)
 
 GUARD &8000             \ Guard against assembling over sideways ROMs
 
@@ -2360,7 +2361,7 @@ IF _ACORNSOFT OR _4TRACKS
                         \ block tables, so jump to SetupGame to continue setting
                         \ up the game
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  JMP Protect            \ If we get here we have processed all the blocks in the
                         \ block tables, so jump to Protect to continue setting
@@ -7668,7 +7669,7 @@ IF _ACORNSOFT OR _4TRACKS
 
  PHP                    \ Store the result of the scan on the stack
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed, as
  JSR ScanKeyboard       \ this will affect the speed of any steering changes
@@ -7709,7 +7710,7 @@ IF _ACORNSOFT OR _4TRACKS
 
  PHA                    \ Store A on the stack so we can retrieve it later
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  STA U                  \ Set (U T) = (A T)
 
@@ -7730,7 +7731,7 @@ IF _ACORNSOFT OR _4TRACKS
  JMP keys11             \ Jump to the end of part 2 to update the steering value
                         \ in (steeringHi steeringLo) to (A T)
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDA U                  \ Set (A T) = (U T)
                         \
@@ -7807,7 +7808,7 @@ IF _ACORNSOFT OR _4TRACKS
  LDX #&9D               \ Scan the keyboard to see if SPACE is being pressed
  JSR ScanKeyboard
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  PLP                    \ Retrieve the result of the keyboard scan above, when
                         \ we scanned for SPACE
@@ -7894,7 +7895,7 @@ IF _ACORNSOFT OR _4TRACKS
  LDA #12                \ Set A = 12, so A has a maximum value of 12, and |A T|
                         \ is set to a maximum value of 12 * 256
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  CMP steeringHi         \ If A < steeringHi, clear the C flag, so the following
                         \ call to SetSteeringLimit does nothing
@@ -7917,7 +7918,7 @@ IF _ACORNSOFT OR _4TRACKS
 
  LDA steeringLo         \ Set A = steeringLo
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  JMP AssistSteeringKeys \ Jump to AssistSteeringKeys, which in turn jumps back
                         \ to keys10, so this is effectively a JSR call
@@ -8531,7 +8532,7 @@ IF _ACORNSOFT OR _4TRACKS
  JSR ProcessShiftedKeys \ SHIFT holding down to trigger) and process them
                         \ accordingly
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDY #11                \ Check for all the shifted keys (i.e. those that need
  JSR ProcessShiftedKeys \ SHIFT holding down to trigger) and process them
@@ -11725,7 +11726,7 @@ IF _ACORNSOFT OR _4TRACKS
  JSR FillAfterObject    \ so the correct background colour is shown to the right
  DEC blockNumber        \ of the object part
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDA #0                 \ Set edgePixelMask = 0, so the next call to
  STA edgePixelMask      \ DrawObjectEdge ignores any edges from this call (as
@@ -12260,7 +12261,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .GetTyreDashEdgeSup
 
@@ -12309,7 +12310,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .FillAfterObjectSup
 
@@ -12589,7 +12590,7 @@ IF _ACORNSOFT OR _4TRACKS
                         \ the dashboard or tyre edge with the appropriate
                         \ content
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDY #&EF               \ Set Y = &DF so the call to GetTyreDashEdgeSup modifies
                         \ the FillAfterObjectSup routine at sedg5 to BNE sedg1,
@@ -13381,7 +13382,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .GetColourSup
 
@@ -13540,7 +13541,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .AssistSteering
 
@@ -13831,7 +13832,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .SetSteeringLimit
 
@@ -13877,7 +13878,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .SetPlayerDriftSup
 
@@ -22812,7 +22813,7 @@ IF _ACORNSOFT OR _4TRACKS
 
  EQUB &1C               \ Line 0 is unused and contains workspace noise
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  EQUB &28               \ Line 0 is unused and contains workspace noise
 
@@ -25384,7 +25385,7 @@ IF _ACORNSOFT OR _4TRACKS
  EQUB &88, &88
  EQUB &88, &CC
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  SKIP 20
 
@@ -25422,7 +25423,7 @@ IF _ACORNSOFT OR _4TRACKS
  EQUB &FF, &FF
  EQUB &FF, &FF
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  SKIP 20
 
@@ -25451,7 +25452,7 @@ IF _ACORNSOFT OR _4TRACKS
  EQUB &FF, &FF
  EQUB &FF, &FF
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  SKIP 8
 
@@ -25945,7 +25946,7 @@ IF _ACORNSOFT OR _4TRACKS
 
  EQUB &77, &BB          \ These values are workspace noise and have no meaning
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  EQUB &04               \ f3            Clear all bits    configAssist       &00
  EQUB &84               \ f6            Set bit 7         configAssist       &80
@@ -25967,7 +25968,7 @@ IF _ACORNSOFT OR _4TRACKS
  EQUB &DD, &EE          \ These values are workspace noise and have no meaning
  EQUB &77, &BB
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
 .menuKeysSup
 
@@ -27414,7 +27415,7 @@ NEXT
  EQUB &A6               \ DELETE
  EQUB &E9               \ f7
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
  EQUB &8C               \ f3
  EQUB &8A               \ f6
@@ -27440,7 +27441,7 @@ IF _ACORNSOFT OR _4TRACKS
  EQUB &CE               \ Negative inkey value for "2"
  EQUB &EE               \ Negative inkey value for "3"
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  EQUB &CE, &EE          \ These bytes appear to be unused
 
@@ -30160,7 +30161,7 @@ IF _ACORNSOFT OR _4TRACKS
  ROR playerDrift        \ Store the C flag in bit 7 of playerDrift, so this will
                         \ be set if A >= 22
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  JSR SetPlayerDriftSup  \ Set bit 7 of playerDrift if both A >= 22 and the
                         \ objSectionSegmt for the player is >= 3, so the
@@ -37692,7 +37693,7 @@ IF _ACORNSOFT OR _4TRACKS
  EQUB &32, &00
  EQUB &8D, &2B
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  EQUB &30, &18
  EQUB &0C, &06
@@ -39756,7 +39757,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .Protect
 
@@ -39809,7 +39810,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .GetSteeringAssist
 
@@ -39857,7 +39858,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-IF _SUPERIOR
+IF _SUPERIOR OR _REVSPLUS
 
 .SuperiorSetupGame
 
@@ -39923,7 +39924,7 @@ IF _ACORNSOFT OR _4TRACKS
 
                         \ Fall through into the main game loop to start the game
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDA #190               \ Call OSBYTE with A = 190, X = %00100000 and Y = 0 to
  LDY #0                 \ configure the digital joystick port on the BBC Master
@@ -40595,7 +40596,7 @@ IF _ACORNSOFT OR _4TRACKS
 
  LDX menuKeys,Y         \ Fetch the key number for menu option Y
 
-ELIF _SUPERIOR
+ELIF _SUPERIOR OR _REVSPLUS
 
  LDX menuKeysSup,Y      \ Fetch the key number for menu option Y
 
