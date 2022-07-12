@@ -624,7 +624,7 @@ ORG CODE%
  EQUB &1B               \ !&261B = HookUpdateHorizon
  EQUB &8C               \ !&248C = HookFieldOfView
  EQUB &39               \ !&2539 = HookCollapseTrack
- EQUB &94               \ !&1594 = HookSection4Steer
+ EQUB &94               \ !&1594 = HookSectionSteer
  EQUB &D1               \ !&4CD1 = xTrackSignVector
  EQUB &C9               \ !&4CC9 = yTrackSignVector
  EQUB &C1               \ !&4CC1 = zTrackSignVector
@@ -665,7 +665,7 @@ ORG CODE%
  EQUB &26               \ !&261B = HookUpdateHorizon
  EQUB &24               \ !&248C = HookFieldOfView
  EQUB &25               \ !&2539 = HookCollapseTrack
- EQUB &15               \ !&1594 = HookSection4Steer
+ EQUB &15               \ !&1594 = HookSectionSteer
  EQUB &4C               \ !&4CD1 = xTrackSignVector
  EQUB &4C               \ !&4CC9 = yTrackSignVector
  EQUB &4C               \ !&4CC1 = zTrackSignVector
@@ -1167,7 +1167,7 @@ ORG CODE%
  EQUB LO(HookUpdateHorizon)
  EQUB LO(HookFieldOfView)
  EQUB LO(HookCollapseTrack)
- EQUB LO(HookSection4Steer)
+ EQUB LO(HookSectionSteer)
  EQUB LO(xTrackSignVector)
  EQUB LO(yTrackSignVector)
  EQUB LO(zTrackSignVector)
@@ -1208,7 +1208,7 @@ ORG CODE%
  EQUB HI(HookUpdateHorizon)
  EQUB HI(HookFieldOfView)
  EQUB HI(HookCollapseTrack)
- EQUB HI(HookSection4Steer)
+ EQUB HI(HookSectionSteer)
  EQUB HI(xTrackSignVector)
  EQUB HI(yTrackSignVector)
  EQUB HI(zTrackSignVector)
@@ -1641,8 +1641,8 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts. This part performs five
-\ single-byte modifications.
+\ The code modifications are done in three parts. This part performs three
+\ single-byte modifications and one two-byte modification.
 \
 \ This is also where the zTrackSegmentI table is built, once the modifications
 \ have been done. The routine is padded out to be exactly 40 bytes long, so
@@ -1658,13 +1658,12 @@ ORG CODE%
  LDA #11                \ ?&35F4 = 11
  STA &35F4
 
- LDA #&E9               \ ?&45CC = &E9
+ LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump
  STA &45CC
-
- LDA #&59               \ ?&45CD = &59
+ LDA #HI(HookSlopeJump)
  STA &45CD
 
- LDA #&4B               \ ?&2772 = &4B
+ LDA #75                \ ?&2772 = 75
  STA &2772
 
  RTS                    \ Return from the subroutine
@@ -1874,7 +1873,7 @@ ORG CODE%
                         \ just like the code that we overwrote with the call to
                         \ the hook routine
 
- RTS                    \ Return from the subrouting
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2367,7 +2366,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSection4Steer
+\       Name: HookSectionSteer
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: If this is track section 4, increase the effect of the joystick's
@@ -2395,7 +2394,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.HookSection4Steer
+.HookSectionSteer
 
  LDY currentPlayer      \ Set A to the track section number * 8 for the current
  LDA objTrackSection,Y  \ player
@@ -3465,7 +3464,7 @@ ORG CODE%
 \ around the track.
 \
 \ If the starting line is at segment n, this value is the track length minus n,
-\ which is 914 - 914 at Silverstone.
+\ which is 914 - 914 at Brands Hatch.
 \
 \ ******************************************************************************
 
