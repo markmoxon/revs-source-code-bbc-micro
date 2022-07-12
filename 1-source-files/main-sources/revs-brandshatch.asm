@@ -488,6 +488,11 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: Calculate (A T) = 0.80 * A
 \
+\ ------------------------------------------------------------------------------
+\
+\ This routine is called from GetTrackAndMarkers to set the horizonTrackWidth to
+\ 80% of the width of the track on the horizon.
+\
 \ ******************************************************************************
 
 .Hook80Percent
@@ -1051,9 +1056,12 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ If we are facing forwards along the track, set A = |A|.
+\ This routine is called from MovePlayerOnTrack so that the yaw angle of the
+\ closest segment retains the correct sign, like this:
 \
-\ If we are facing backwards along the track, set A = -|A|.
+\   * If we are facing forwards along the track, set A = |A|
+\
+\   * If we are facing backwards along the track, set A = -|A|
 \
 \ ******************************************************************************
 
@@ -1093,6 +1101,10 @@ ORG CODE%
 \             pointers
 \
 \ ------------------------------------------------------------------------------
+\
+\ This routine is called from part 1 of GetTrackSegment so we update the
+\ sub-section and sub-section segment pointers when fetching a new track
+\ segment.
 \
 \ If bit 6 of the current section's flags is set, then the track segment vectors
 \ for this section need to be generated from the curve tables (as opposed to
@@ -1320,6 +1332,9 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine is called from part 3 of GetTrackSegment and TurnPlayerAround, so
+\ we calculate the next track segment vector on-the-fly for curved sections.
+\
 \ If bit 6 of the current section's flags is set, then the track segment vectors
 \ for this section need to be generated from the curve tables (as opposed to
 \ being calculated as a straight section). When this is the case, this routine
@@ -1504,6 +1519,9 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine is called from MovePlayerSegment to change the behaviour when
+\ moving the player backwards along the track.
+\
 \ Only move the player backwards by one segment if bit 7 of playerPastSegment is
 \ clear (in other words, if the player has not yet driven past the segment).
 \
@@ -1522,7 +1540,8 @@ ORG CODE%
 \       Name: SetSegmentVector
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Add the yaw angle and height deltas to the yaw angle and height
+\             (for curved sections) and calculate the segment vector
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1908,9 +1927,10 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine changes the logic in GetSegmentAngles at label gseg12, which is
-\ applied when a segment is outside the field of view. Note that in the
-\ following, the previous segment is further away than the current one.
+\ This routine is called from GetSegmentAngles to change the logic in at label
+\ gseg12, which is applied when a segment is outside the field of view. Note
+\ that in the following, the previous segment is further away than the current
+\ one.
 \
 \ In the original code:
 \
@@ -1966,7 +1986,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called by MapSegmentsToLines to flatten the height of the
+\ This routine is called from MapSegmentsToLines to flatten the height of the
 \ verge entries in the verge buffer that are hidden by the nearest hill to the
 \ player, so that the ground behind the nearest hill is effectively levelled
 \ off.
@@ -2269,10 +2289,10 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called by GetTrackAndMarkers to collapse the left verge of the
-\ track into the right verge, but only for a few entries just in front of the
-\ horizon section, i.e. for the track section list and the first three entries
-\ in the track segment list.
+\ This routine is called from GetTrackAndMarkers to collapse the left verge of
+\ the track into the right verge, but only for a few entries just in front of
+\ the horizon section, i.e. for the track section list and the first three
+\ entries in the track segment list.
 \
 \ Arguments:
 \
@@ -2355,8 +2375,8 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called by ProcessDrivingKeys to make it easier to steer round
-\ the Druids hairpin bend when using a joystick.
+\ This routine is called from ProcessDrivingKeys to make it easier to steer
+\ round the Druids hairpin bend when using a joystick.
 \
 \ If this is track section 4, set:
 \
@@ -2742,7 +2762,7 @@ ORG CODE%
 \             generated as a straight track rather than using the curve tables
 \             (this bit is only set for straight sections)
 \
-\ In the last one, is bit 0 is set then bit 7 of subSection gets set. This makes
+\ In the last one, if bit 0 is set then bit 7 of subSection gets set. This makes
 \ us skip the first part of the SetSegmentVector routine, which means we do not
 \ update the yaw angle or track height before calculating the segment vector.
 \ This means we reuse the segment vector from the end of the previous section
@@ -2967,11 +2987,11 @@ ORG CODE%
 \                           * 1 = show corner markers in red or white, as
 \                                 appropriate
 \
-\                         * Bit 6: Generate track segment vectors on-the-fly (G)
+\                         * Bit 6: Enable hooks to generate segment vectors (G)
 \
-\                           * 0 = do not generate on-the-fly
+\                           * 0 = disable HookDataPointers and HookSegmentVector
 \
-\                           * 1 = generate on-the-fly
+\                           * 1 = enable HookDataPointers and HookSegmentVector
 \
 \                         * Bit 7: Maximum approach speed for next section (Sp)
 \
@@ -3332,6 +3352,9 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ This routine is called from part 5 of ApplyElevation to jump the car off the
+\ ground when driving fast over sloping segments.
+\
 \ If the car is on the ground, replace the heightAboveTrack * 4 part of the
 \ car's y-coordinate calculation with playerSpeedHi * yTrackSegmentI * 4, to
 \ give:
@@ -3640,6 +3663,19 @@ ORG CODE%
 \   Category: Extra track data
 \    Summary: Move to the next to the next segment vector along the track and
 \             calculate the segment vector
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine is called from GetFirstSegment so we do the following when
+\ fetching the first segment in a section:
+\
+\   * Move to the next to the next segment vector along the track
+\
+\   * Update the sub-section and sub-section segment pointers accordingly
+\
+\   * Calculate the track segment vector on-the-fly for curved sections
+\
+\ This ensures that the first segment is set up correctly.
 \
 \ ******************************************************************************
 
