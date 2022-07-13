@@ -623,7 +623,7 @@ ORG CODE%
  EQUB &FC               \ !&12FC = HookDataPointers
  EQUB &1B               \ !&261B = HookUpdateHorizon
  EQUB &8C               \ !&248C = HookFieldOfView
- EQUB &39               \ !&2539 = HookCollapseTrack
+ EQUB &39               \ !&2539 = HookFixHorizon
  EQUB &94               \ !&1594 = HookSectionSteer
  EQUB &D1               \ !&4CD1 = xTrackSignVector
  EQUB &C9               \ !&4CC9 = yTrackSignVector
@@ -664,7 +664,7 @@ ORG CODE%
  EQUB &12               \ !&12FC = HookDataPointers
  EQUB &26               \ !&261B = HookUpdateHorizon
  EQUB &24               \ !&248C = HookFieldOfView
- EQUB &25               \ !&2539 = HookCollapseTrack
+ EQUB &25               \ !&2539 = HookFixHorizon
  EQUB &15               \ !&1594 = HookSectionSteer
  EQUB &4C               \ !&4CD1 = xTrackSignVector
  EQUB &4C               \ !&4CC9 = yTrackSignVector
@@ -1166,7 +1166,7 @@ ORG CODE%
  EQUB LO(HookDataPointers)
  EQUB LO(HookUpdateHorizon)
  EQUB LO(HookFieldOfView)
- EQUB LO(HookCollapseTrack)
+ EQUB LO(HookFixHorizon)
  EQUB LO(HookSectionSteer)
  EQUB LO(xTrackSignVector)
  EQUB LO(yTrackSignVector)
@@ -1207,7 +1207,7 @@ ORG CODE%
  EQUB HI(HookDataPointers)
  EQUB HI(HookUpdateHorizon)
  EQUB HI(HookFieldOfView)
- EQUB HI(HookCollapseTrack)
+ EQUB HI(HookFixHorizon)
  EQUB HI(HookSectionSteer)
  EQUB HI(xTrackSignVector)
  EQUB HI(yTrackSignVector)
@@ -1652,18 +1652,18 @@ ORG CODE%
 
 .mods3
 
- LDA #4                 \ ?&3574 = 4
+ LDA #4                 \ ?&3574 = 4 (object dimension in objectTop)
  STA &3574
 
- LDA #11                \ ?&35F4 = 11
+ LDA #11                \ ?&35F4 = 11 (object dimension in objectBottom)
  STA &35F4
 
- LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump
- STA &45CC
+ LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR &xxxx
+ STA &45CC              \                         instruction)
  LDA #HI(HookSlopeJump)
  STA &45CD
 
- LDA #75                \ ?&2772 = 75
+ LDA #75                \ ?&2772 = 75 (argument in a CMP #75 instruction)
  STA &2772
 
  RTS                    \ Return from the subroutine
@@ -2169,10 +2169,10 @@ ORG CODE%
 
  BPL mods1              \ Loop back until we have modified all 19 addresses
 
- LDA #&4C               \ ?&261A = &4C
+ LDA #&4C               \ ?&261A = &4C (opcode for a JMP &xxxx instruction)
  STA &261A
 
- STA &248B              \ ?&248B = &4C
+ STA &248B              \ ?&248B = &4C (opcode for a JMP &xxxx instruction)
 
  JMP mods2              \ Jump to part 2
 
@@ -2280,7 +2280,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookCollapseTrack
+\       Name: HookFixHorizon
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: Collapse the track for entries in the verge buffer that are just
@@ -2288,10 +2288,13 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from GetTrackAndMarkers to collapse the left verge of
-\ the track into the right verge, but only for a few entries just in front of
-\ the horizon section, i.e. for the track section list and the first three
-\ entries in the track segment list.
+\ This routine is called from GetTrackAndMarkers. It does the following:
+\
+\  * Cut objects off at the track line in A rather than horizonLine
+\
+\  * Collapse the left verge of the track into the right verge, but only for a
+\    few entries just in front of the horizon section, i.e. for the track
+\    section list and the first three entries in the track segment list
 \
 \ Arguments:
 \
@@ -2302,7 +2305,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.HookCollapseTrack
+.HookFixHorizon
 
  STA &1FEA              \ Modify the DrawObject routine at dobj3 instruction #6
                         \ so that objects get cut off at the track line number
@@ -2584,27 +2587,27 @@ ORG CODE%
 
 .mods2
 
- LDA #&20               \ ?&1248 = &20
+ LDA #&20               \ ?&1248 = &20 (opcode for a JSR &xxxx instruction)
  STA &1248
 
- STA &12FB              \ ?&12FB = &20
+ STA &12FB              \ ?&12FB = &20 (opcode for a JSR &xxxx instruction)
 
- STA &2538              \ ?&2538 = &20
+ STA &2538              \ ?&2538 = &20 (opcode for a JSR &xxxx instruction)
 
- STA &45CB              \ ?&45CB = &20
+ STA &45CB              \ ?&45CB = &20 (opcode for a JSR &xxxx instruction)
 
- LDA #&EA               \ ?&2545 = &EA
+ LDA #&EA               \ ?&2545 = &EA (opcode for a NOP instruction)
  STA &2545
 
- LDA #22                \ ?&4F55 = 22
+ LDA #22                \ ?&4F55 = 22 (argument in a CMP #22 instruction)
  STA &4F55
 
- STA &4F59              \ ?&4F59 = 22
+ STA &4F59              \ ?&4F59 = 22 (argument in a CMP #22 instruction)
 
- LDA #13                \ ?&24EA = 13
+ LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
  STA &24EA
 
- LDA #&A2               \ ?&1FE9 = &A2
+ LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
  JMP mods3              \ Jump to part 3

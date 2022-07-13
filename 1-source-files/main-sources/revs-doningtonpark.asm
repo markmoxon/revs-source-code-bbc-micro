@@ -564,24 +564,25 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: Hooky2
+\       Name: HookForward
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from xxx to xxx.
+\ This routine is called from MovePlayerSegment to ???.
 \
 \ ******************************************************************************
 
-.Hooky2
+.HookForward
 
  CMP #11
- BCS L53F0
+ BCS move1
+
  JSR MovePlayerForward
 
-.L53F0
+.move1
 
  JMP MovePlayerForward
 
@@ -601,9 +602,9 @@ ORG CODE%
 
 .mods4
 
- STA &4F55              \ ?&4F55 = 22
+ STA &4F55              \ ?&4F55 = 22 (argument in a CMP #22 instruction)
 
- STA &4F59              \ ?&4F59 = 22
+ STA &4F59              \ ?&4F59 = 22 (argument in a CMP #22 instruction)
 
  RTS                    \ Return from the subroutine
 
@@ -713,7 +714,7 @@ ORG CODE%
  EQUB &FC               \ !&12FC = HookDataPointers
  EQUB &1B               \ !&261B = HookUpdateHorizon
  EQUB &8C               \ !&248C = HookFieldOfView
- EQUB &39               \ !&2539 = HookCollapseTrack
+ EQUB &39               \ !&2539 = HookFixHorizon
  EQUB &94               \ !&1594 = HookSectionSteer
  EQUB &D1               \ !&4CD1 = xTrackSignVector
  EQUB &C9               \ !&4CC9 = yTrackSignVector
@@ -725,7 +726,7 @@ ORG CODE%
  EQUB &F3               \ !&24F3 = HookMoveBack
  EQUB &2C               \ !&462C = HookFlipAbsolute
  EQUB &43               \ !&2543 = Hook80Percent
- EQUB &24               \ !&2F24 = Hooky1
+ EQUB &24               \ !&2F24 = HookBackground
 
 \ ******************************************************************************
 \
@@ -752,7 +753,7 @@ ORG CODE%
  EQUB &12               \ !&12FC = HookDataPointers
  EQUB &26               \ !&261B = HookUpdateHorizon
  EQUB &24               \ !&248C = HookFieldOfView
- EQUB &25               \ !&2539 = HookCollapseTrack
+ EQUB &25               \ !&2539 = HookFixHorizon
  EQUB &15               \ !&1594 = HookSectionSteer
  EQUB &4C               \ !&4CD1 = xTrackSignVector
  EQUB &4C               \ !&4CC9 = yTrackSignVector
@@ -764,7 +765,7 @@ ORG CODE%
  EQUB &24               \ !&24F3 = HookMoveBack
  EQUB &46               \ !&462C = HookFlipAbsolute
  EQUB &25               \ !&2543 = Hook80Percent
- EQUB &2F               \ !&2F24 = Hooky1
+ EQUB &2F               \ !&2F24 = HookBackground
 
 \ ******************************************************************************
 \
@@ -1112,7 +1113,7 @@ ORG CODE%
                         \       = V * 0.52
 
  STA zTrackSegmentO,Y   \ Set the z-coordinate of the Y-th outer track segment
-                        \ vector to V * 0.53
+                        \ vector to V * 0.52
 
  LDA W                  \ Set the z-coordinate of the Y-th inner track segment
  STA zTrackSegmentI,Y   \ vector to W
@@ -1255,7 +1256,7 @@ ORG CODE%
  EQUB LO(HookDataPointers)
  EQUB LO(HookUpdateHorizon)
  EQUB LO(HookFieldOfView)
- EQUB LO(HookCollapseTrack)
+ EQUB LO(HookFixHorizon)
  EQUB LO(HookSectionSteer)
  EQUB LO(xTrackSignVector)
  EQUB LO(yTrackSignVector)
@@ -1267,7 +1268,7 @@ ORG CODE%
  EQUB LO(HookMoveBack)
  EQUB LO(HookFlipAbsolute)
  EQUB LO(Hook80Percent)
- EQUB LO(Hooky1)
+ EQUB LO(HookBackground)
 
 \ ******************************************************************************
 \
@@ -1294,7 +1295,7 @@ ORG CODE%
  EQUB HI(HookDataPointers)
  EQUB HI(HookUpdateHorizon)
  EQUB HI(HookFieldOfView)
- EQUB HI(HookCollapseTrack)
+ EQUB HI(HookFixHorizon)
  EQUB HI(HookSectionSteer)
  EQUB HI(xTrackSignVector)
  EQUB HI(yTrackSignVector)
@@ -1306,7 +1307,7 @@ ORG CODE%
  EQUB HI(HookMoveBack)
  EQUB HI(HookFlipAbsolute)
  EQUB HI(Hook80Percent)
- EQUB HI(Hooky1)
+ EQUB HI(HookBackground)
 
 \ ******************************************************************************
 \
@@ -1738,20 +1739,20 @@ ORG CODE%
 
 .mods3
 
- LDA #LO(Hooky2)        \ !&24DF = Hooky2
- STA &24DF
- LDA #HI(Hooky2)
+ LDA #LO(HookForward)   \ !&24DF = HookForward (address in a JSR &xxxx
+ STA &24DF              \          instruction)
+ LDA #HI(HookForward)
  STA &24E0
 
- LDA #LO(Hooky3)        \ !&45CC = Hooky3
- STA &45CC
- LDA #HI(Hooky3)
+ LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR &xxxx
+ STA &45CC              \                         instruction)
+ LDA #HI(HookSlopeJump)
  STA &45CD
 
- LDA #75                \ ?&2772 = 75
+ LDA #75                \ ?&2772 = 75 (argument in a CMP #75 instruction)
  STA &2772
 
- LDA #&A9               \ ?&1310 = &A9 &88 (LDA #&88)
+ LDA #&A9               \ !&1310 = &A9 &88 (LDA #&88 instruction)
  STA &1310
  LDA #&88
  STA &1311
@@ -2253,10 +2254,10 @@ ORG CODE%
 
  BPL mods1              \ Loop back until we have modified all 19 addresses
 
- LDA #&4C               \ ?&261A = &4C
+ LDA #&4C               \ ?&261A = &4C (opcode for a JMP &xxxx instruction)
  STA &261A
 
- STA &248B              \ ?&248B = &4C
+ STA &248B              \ ?&248B = &4C (opcode for a JMP &xxxx instruction)
 
  JMP mods2              \ Jump to part 2
 
@@ -2364,7 +2365,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookCollapseTrack
+\       Name: HookFixHorizon
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: Collapse the track for entries in the verge buffer that are just
@@ -2372,10 +2373,8 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from GetTrackAndMarkers to collapse the left verge of
-\ the track into the right verge, but only for a few entries just in front of
-\ the horizon section, i.e. for the track section list and the first three
-\ entries in the track segment list.
+\ This routine is called from GetTrackAndMarkers to cut objects off at the track
+\ line in A rather than horizonLine.
 \
 \ Arguments:
 \
@@ -2386,7 +2385,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.HookCollapseTrack
+.HookFixHorizon
 
  STA &1FEA              \ Modify the DrawObject routine at dobj3 instruction #6
                         \ so that objects get cut off at the track line number
@@ -2398,20 +2397,6 @@ ORG CODE%
                         \ horizonLine (this is the instruction that we overwrote
                         \ with the call to the hook routine, so this makes sure
                         \ we still do this)
-
-                        \ We now work through the verge buffer from index Y up
-                        \ to index 8, and do the following for each entry:
-                        \
-                        \   * If xVergeRight < xVergeLeft, set
-                        \     xVergeRight = xVergeLeft
-                        \
-                        \   * Set yVergeRight = yVergeLeft
-                        \
-                        \ This appears to squeeze the left verge of the track
-                        \ into the right verge, but only for a few entries just
-                        \ in front of the horizon section, i.e. for the track
-                        \ section list and the first three entries in the track
-                        \ segment list
 
  RTS                    \ Return from the subroutine
 
@@ -2618,27 +2603,27 @@ ORG CODE%
 
 .mods2
 
- LDA #&20               \ ?&1248 = &20
+ LDA #&20               \ ?&1248 = &20 (opcode for a JSR &xxxx instruction)
  STA &1248
 
- STA &12FB              \ ?&12FB = &20
+ STA &12FB              \ ?&12FB = &20 (opcode for a JSR &xxxx instruction)
 
- STA &2538              \ ?&2538 = &20
+ STA &2538              \ ?&2538 = &20 (opcode for a JSR &xxxx instruction)
 
- STA &45CB              \ ?&45CB = &20
+ STA &45CB              \ ?&45CB = &20 (opcode for a JSR &xxxx instruction)
 
- STA &2F23              \ ?&2F23 = &20
+ STA &2F23              \ ?&2F23 = &20 (opcode for a JSR &xxxx instruction)
 
- LDA #&EA               \ ?&2545 = &EA
+ LDA #&EA               \ ?&2545 = &EA (opcode for a NOP instruction)
  STA &2545
 
- LDA #13                \ ?&24EA = 13
+ LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
  STA &24EA
 
- LDA #&A2               \ ?&1FE9 = &A2
+ LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
- LDA #0                 \ ?&231B = 0
+ LDA #0                 \ ?&231B = 0 (branch offset in a BEQ instruction)
  STA &231B
 
  JMP mods3              \ Jump to part 3
@@ -3324,36 +3309,67 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: Hooky3
+\       Name: HookSlopeJump
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Jump the car when driving fast over sloping segments
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from xxx to xxx.
+\ This routine is called from part 5 of ApplyElevation to jump the car off the
+\ ground when driving fast over sloping segments.
+\
+\ If the car is on the ground, replace the heightAboveTrack * 4 part of the
+\ car's y-coordinate calculation with playerSpeedHi * yTrackSegmentI * 4, to
+\ give:
+\
+\   (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
+\                                      + carProgress * yTrackSegmentI
+\                                      + playerSpeedHi * yTrackSegmentI * 4
+\                                      + 172
+\
+\ So driving fast over sloping segments can make the car jump.
+\
+\ Arguments:
+\
+\   A                   Current value of heightAboveTrack
 \
 \ ******************************************************************************
 
-.Hooky3
+.HookSlopeJump
 
- BNE L59D4
+ BNE slop1              \ If A is non-zero, skip the following (so the hook has
+                        \ no effect when the car is off the ground)
 
- LDA playerSpeedHi
+                        \ If we get here then heightAboveTrack = 0, so the car
+                        \ is on the ground 
 
- JSR MultiplyHeight
+ LDA playerSpeedHi      \ Set A = the high byte of the current speed
 
- BPL L59D4
+ JSR MultiplyHeight     \ Set:
+                        \
+                        \   A = A * yTrackSegmentI
+                        \     = playerSpeedHi * yTrackSegmentI
+                        \
+                        \ The value given in yTrackSegmentI is the y-coordinate
+                        \ of the segment vector, i.e. the vector from this
+                        \ segment to the next, which is the same as the change
+                        \ in height as we move through the segment
+                        \
+                        \ So this value is higher with greater speed and on
+                        \ segments that have higher slopes
 
- DEC W
+ BPL slop1              \ If A is positive, skip the following instruction
 
-.L59D4
+ DEC W                  \ Decrement W to &FF, so (W A) has the correct sign
 
- ASL A
+.slop1
 
- ROL W
+ ASL A                  \ Implement the shifts that we overwrote with the call
+ ROL W                  \ to the hook routine, so we have effectively inserted
+                        \ the above code into the main game
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -3391,29 +3407,29 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: Hooky1
+\       Name: HookBackground
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: 
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from xxx to xxx.
+\ This routine is called from UpdateBackground to ???.
 \
 \ ******************************************************************************
 
-.Hooky1
+.HookBackground
 
  LDA backgroundColour+1,Y
  CMP #139
 
- BEQ L59F8
+ BEQ back1
 
  LDA backgroundColour,Y
 
  RTS
 
-.L59F8
+.back1
 
  LSR A
 
