@@ -36,13 +36,56 @@ LOAD% = &70DB           \ The load address of the track binary
 
 CODE% = &5300           \ The assembly address of the track data
 
-Multiply8x8 = &0C00
-Absolute16Bit = &0E40
-ScanKeyboard = &0E50
-sub_C13E0 = &13E0
-sub_C1933 = &1933
-Absolute8Bit = &3450
-sub_C4610 = &4610
+\ ******************************************************************************
+\
+\ Addresses in the main game code
+\
+\ ******************************************************************************
+
+thisSectionFlags    = &0001
+thisVectorNumber    = &0002
+yStore              = &001B
+horizonLine         = &001F
+frontSegmentIndex   = &0024
+directionFacing     = &0025
+segmentCounter      = &0042
+playerPastSegment   = &0043
+xStore              = &0045
+vergeBufferEnd      = &004B
+horizonListIndex    = &0051
+playerSpeedHi       = &0063
+currentPlayer       = &006F
+T                   = &0074
+U                   = &0075
+V                   = &0076
+W                   = &0077
+topTrackLine        = &007F
+blockOffset         = &0082
+objTrackSection     = &06E8
+objSectionSegmt     = &0880
+Multiply8x8         = &0C00
+Absolute16Bit       = &0E40
+ScanKeyboard        = &0E50
+MovePlayerForward   = &12F3
+UpdateVectorNumber  = &13E0
+MovePlayerBack      = &140B
+CheckVergeOnScreen  = &1933
+gseg13              = &2490
+gtrm2               = &2535
+Absolute8Bit        = &3450
+MultiplyHeight      = &4610
+xTrackSegmentI      = &5400
+yTrackSegmentI      = &5500
+zTrackSegmentI      = &5600
+xTrackSegmentO      = &5700
+zTrackSegmentO      = &5800
+trackSectionFrom    = &5905
+xVergeRightHi       = &5E90
+xVergeLeftHi        = &5EB8
+yVergeRight         = &5F20
+yVergeLeft          = &5F48
+backgroundColour    = &5F60
+playerDrift         = &62FB
 
 \ ******************************************************************************
 \
@@ -143,10 +186,10 @@ ORG CODE%
 
 .L53F0
 
-\ &B451 -> &1933 = sub_C1933
-\ JMP &B451 -> JMP sub_C1933
+\ &B451 -> &1933 = CheckVergeOnScreen
+\ JMP &B451 -> JMP CheckVergeOnScreen
 
- JMP sub_C1933
+ JMP CheckVergeOnScreen
 
  EQUB &08, &00, &12, &11, &08
 
@@ -288,153 +331,95 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5400
+\       Name: modifyAddressLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Low byte of the location in the main game code where we modify a
+\             two-byte address
 \
 \ ------------------------------------------------------------------------------
 \
-\ C64 addr -> BBC addr = value poked in subroutine
-\ (Plus any related pokes)
-\ Instruction before modification               -> After modification
-\
-\ Modifications applied by L5700 routine, poking value from L5400 into addresses
-\ in L5500:
-\
-\ &11FD -> &1249, !&1249 = L5672 in sub_C122D
-\ Also needs &11FC -> &1248, ?&1248 = &20
-\ 1248   B9 05 59   LDA trackData+&605,Y        -> JSR L5672
-\
-\ &123E -> &128A, !&128A = L5A1B in sub_C1267
-\ 1289   20 E0 13   JSR sub_C13E0               -> JSR L5A1B
-\
-\ &138B -> &13CA, !&13CA = L5572 in sub_C12F7
-\ 13C9   20 DA 13   JSR sub_C13DA               -> JSR L5572
-\
-\ &13E8 -> &1427, !&1427 = L5572 in sub_C1420
-\ 1426   20 DA 13   JSR sub_C13DA               -> JSR L5572
-\
-\ &12B0 -> &12FC, !&12FC = L54EB in sub_C12F7
-\ Also needs &12AF -> &12FB, !&12FB = &20
-\ 12FB   18         CLC                         -> JSR L54EB
-\ 12FC   69 03      ADC #&03
-\
-\ &227C -> &2539, !&2539 = L5772 in sub_C24F6
-\ Also needs &227B -> &2538, ?&2538 = &20
-\ 2538   99 48 5F   STA &5F48,Y                 -> JSR L5772
-\
-\ &1578 -> &1594, !&1594 = L59D9 in ProcessDrivingKeys
-\ 1593   20 00 0C   JSR Multiply8x8             -> JSR L59D9
-\
-\ &4D28 -> &4CD1, !&4CD1 = L5562 in sub_C4CA4
-\ 4CD0   BD D0 53   LDA trackData+&0D0,X        -> LDA L5562,X
-\
-\ &4D20 -> &4CC9, !&4CC9 = L5662 in sub_C4CA4
-\ 4CC8   BD F0 53   LDA trackData+&0F0,X        -> LDA L5662,X
-\
-\ &4D18 -> &4CC1, !&4CC1 = L5762 in sub_C4CA4
-\ 4CC0   BD E0 53   LDA trackData+&0E0,X        -> LDA L5762,X
-\
-\ &4526 -> &44D6, !&44D6 = L58A0 in Set5FB0
-\ 44D5   B9 D0 59   LDA L59D0,Y                 -> LDA L58A0,Y
-\
-\ &4D2E -> &4CD7, !&4CD7 = L5462 in sub_C4CA4
-\ 4CD6   BD EA 59   LDA trackData+&6EA,X        -> LDA L5462,X
-\
-\ &4D38 -> &4CE1, !&4CE1 = L5462 in sub_C4CA4
-\ 4CE0   BD EA 59   LDA trackData+&6EA,X        -> LDA L5462,X
-\
-\ &B468 -> &1947, !&1947 = L56C4 in sub_C193E
-\ 1946   20 33 19   JSR sub_C1933               -> JSR L56C4
-\
-\ &2286 -> &2543, !&2543 = L5555 in sub_C24F6
-\ 2542   20 50 34   JSR Absolute8Bit            -> JSR L5555
-\
-\ Modifications applied by L5600 routine:
-\
-\ &3574 -> &3574, ?&3574 = 4 in L3550
-\ Not sure what this does, it's an entry in a table variable
-\
-\ &35F4 -> &35F4, ?&35F4 = &0B in L35D0
-\ Not sure what this does, it's an entry in a table variable
-\
-\ &461C -> &45CC, !&45CC = L57AD in sub_C44EA
-\ Also needs &461B -> &45CB, ?&45CB = &20
-\ 45CB   0A         ASL A                       -> JSR L57AD
-\ 45CC   26 77      ROL &77
-\
-\ &2546 -> &2772, ?&2772 = &4B in sub_C2692
-\ 2771   C9 3C      CMP #&3C                    -> CMP #&4B
-\
-\ &282B -> &298E, ?&298E = &FF in sub_C2937
-\ 298D   29 1F      AND #&1F                    -> AND #&FF
-\
-\ Modifications applied by L5672 routine:
-\
-\ &20C0 -> &23B3, ?&23B3 = A in sub_C22FF
-\ 23B2   A9 07      LDA #&07                    -> LDA #A
-\
-\ Modifications applied by L56C4 routine:
-\
-\ &1B0C -> &1FEA, ?&1FEA = A in sub_C1FB4
-\ Also needs &1B0B -> &1FE9, ?&1FE9 = &A2
-\ 1FE9   A6 1F      LDX &1F                     -> LDX #A
-\
-\ Modifications applied by L5772 routine:
-\
-\ &1B0C -> &1FEA, ?&1FEA = A in sub_C1FB4
-\ Also needs &1B0B -> &1FE9, ?&1FE9 = &A2
-\ 1FE9   A6 1F      LDX &1F                     -> LDX #A
-\
-\ Modifications applied by L5800 routine:
-\
-\ &11FC -> &1248, ?&1248 = &20 (see JSR L5672 above)
-\ &12AF -> &12FB, ?&12FB = &20 (see JSR L54EB above)
-\ &227B -> &2538, ?&2538 = &20 (see JSR L5772 above)
-\ &461B -> &45CB, ?&45CB = &20 (see JSR L57AD above)
-\
-\ &2288 -> &2545, ?&2545 = &EA in sub_C24F6
-\ 2545   4A         LSR A                       -> NOP
-\
-\ &1B0B -> &1FE9, ?&1FE9 = &A2 (see LDX #A above)
+\ This is also where the xTrackSegmentI table is built, once the modifications
+\ have been done. The block is exactly 20 bytes long, so along with the
+\ modifyAddressHi block, there's one byte for each inner segment x-coordinate.
 \
 \ ******************************************************************************
 
-.L5400
-
-\ modAddrLo
 \ EQUB &FD, &3E, &8B, &E8, &B0, &7C, &78, &28
 \ EQUB &20, &18, &26, &2E, &38, &68, &86
 
- EQUB &49, &8A, &CA, &27, &FC, &39, &94, &D1
- EQUB &C9, &C1, &D6, &D7, &E1, &47, &43
+.modifyAddressLo
 
- EQUB &33, &3C, &4A, &57, &61 \ Unused
+ EQUB &49               \ !&1249 = HookSectionFrom
+ EQUB &8A               \ !&128A = HookFirstSegment
+ EQUB &CA               \ !&13CA = HookSegmentVector
+ EQUB &27               \ !&1427 = HookSegmentVector
+ EQUB &FC               \ !&12FC = HookDataPointers
+\EQUB &1B               \ !&261B = HookUpdateHorizon
+\EQUB &8C               \ !&248C = HookFieldOfView
+ EQUB &39               \ !&2539 = HookFixHorizon
+ EQUB &94               \ !&1594 = HookJoystick
+ EQUB &D1               \ !&4CD1 = xTrackSignVector
+ EQUB &C9               \ !&4CC9 = yTrackSignVector
+ EQUB &C1               \ !&4CC1 = zTrackSignVector
+ EQUB &D6               \ !&44D6 = trackRacingLine
+ EQUB &D7               \ !&4CD7 = trackSignData
+ EQUB &E1               \ !&4CE1 = trackSignData
+ EQUB &47               \ !&1947 = HookFlattenHills
+\EQUB &F3               \ !&24F3 = HookMoveBack
+\EQUB &2C               \ !&462C = HookFlipAbsolute
+ EQUB &43               \ !&2543 = Hook80Percent
+\EQUB &24               \ !&2F24 = HookBackground
+
+ EQUB &33, &3C          \ These bytes appear to be unused
+ EQUB &4A, &57
+ EQUB &61
 
 \ ******************************************************************************
 \
-\       Name: L5414
+\       Name: modifyAddressHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: High byte of the location in the main game code where we modify a
+\             two-byte address
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This is also where the xTrackSegmentI table is built, once the modifications
+\ have been done. The block is exactly 20 bytes long, so along with the
+\ modifyAddressLo block, there's one byte for each inner segment x-coordinate.
 \
 \ ******************************************************************************
 
-.L5414
-
-\ modAddrHi
 \ EQUB &11, &12, &13, &13, &12, &22, &15, &4D
 \ EQUB &4D, &4D, &45, &4D, &4D, &B4, &22
 
- EQUB &12, &12, &13, &14, &12, &25, &15, &4C
- EQUB &4C, &4C, &44, &4C, &4C, &19, &25
+.modifyAddressHi
 
- EQUB &2E, &3F, &4F, &57, &5B \ Unused
+ EQUB &12               \ !&1249 = HookSectionFrom
+ EQUB &12               \ !&128A = HookFirstSegment
+ EQUB &13               \ !&13CA = HookSegmentVector
+ EQUB &14               \ !&1427 = HookSegmentVector
+ EQUB &12               \ !&12FC = HookDataPointers
+\EQUB &26               \ !&261B = HookUpdateHorizon
+\EQUB &24               \ !&248C = HookFieldOfView
+ EQUB &25               \ !&2539 = HookFixHorizon
+ EQUB &15               \ !&1594 = HookJoystick
+ EQUB &4C               \ !&4CD1 = xTrackSignVector
+ EQUB &4C               \ !&4CC9 = yTrackSignVector
+ EQUB &4C               \ !&4CC1 = zTrackSignVector
+ EQUB &44               \ !&44D6 = trackRacingLine
+ EQUB &4C               \ !&4CD7 = trackSignData
+ EQUB &4C               \ !&4CE1 = trackSignData
+ EQUB &19               \ !&1947 = HookFlattenHills
+\EQUB &24               \ !&24F3 = HookMoveBack
+\EQUB &46               \ !&462C = HookFlipAbsolute
+ EQUB &25               \ !&2543 = Hook80Percent
+\EQUB &2F               \ !&2F24 = HookBackground
+
+ EQUB &2E, &3F          \ These bytes appear to be unused
+ EQUB &4F, &57
+ EQUB &5B
 
 \ ******************************************************************************
 \
@@ -462,7 +447,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5462
+\       Name: trackSignData
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -473,7 +458,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5462
+.trackSignData
 
  EQUB &01, &08, &14, &20, &35, &44
  EQUB &5B, &60, &6D, &7C, &8D, &90, &9C, &AC
@@ -579,23 +564,23 @@ ORG CODE%
  LDA #&9A               \ #88 in BH
  STA &75
  LDA &76
- STA L5400,Y
+ STA &5400,Y
  JSR L555C              \ 57BB in BH
- STA L5800,Y
+ STA &5800,Y
  LDA &77
- STA L5600,Y
+ STA &5600,Y
  JSR L555C              \ 57BB in BH
  EOR #&FF
  CLC
  ADC #&01
- STA L5700,Y
+ STA &5700,Y
  LDA L53FE              \ 53FC in BH
- STA L5500,Y
+ STA &5500,Y
  RTS
 
 \ ******************************************************************************
 \
-\       Name: L54EB
+\       Name: HookDataPointers
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -606,7 +591,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L54EB
+.HookDataPointers
 
  LDA &01                \ #01 in BH
  AND #&40
@@ -624,45 +609,95 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5500
+\       Name: newContentLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Low byte of the two-byte address that we want to poke into the
+\             main game code at the modify location
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This is also where the zTrackSegmentI table is built, once the modifications
+\ have been done. The block is padded out to be exactly 20 bytes long, so along
+\ with the newContentHi block, there's one byte for each inner segment
+\ z-coordinate.
 \
 \ ******************************************************************************
 
-.L5500
+.newContentLo
 
-\ Value to poke into modAddr
- EQUB &72, &1B, &72, &72, &EB, &72, &D9, &62
- EQUB &62, &62, &A0, &62, &62, &C4, &55
+\ EQUB &72, &1B, &72, &72, &EB, &72, &D9, &62
+\ EQUB &62, &62, &A0, &62, &62, &C4, &55
 
- EQUB &00, &00, &00, &00, &00 \ Unused
+ EQUB LO(HookSectionFrom)
+ EQUB LO(HookFirstSegment)
+ EQUB LO(HookSegmentVector)
+ EQUB LO(HookSegmentVector)
+ EQUB LO(HookDataPointers)
+\EQUB LO(HookUpdateHorizon)
+\EQUB LO(HookFieldOfView)
+ EQUB LO(HookFixHorizon)
+ EQUB LO(HookJoystick)
+ EQUB LO(xTrackSignVector)
+ EQUB LO(yTrackSignVector)
+ EQUB LO(zTrackSignVector)
+ EQUB LO(trackRacingLine)
+ EQUB LO(trackSignData)
+ EQUB LO(trackSignData)
+ EQUB LO(HookFlattenHills)
+\EQUB LO(HookMoveBack)
+\EQUB LO(HookFlipAbsolute)
+ EQUB LO(Hook80Percent)
+
+ EQUB &00, &00          \ These bytes pad the block out to exactly 20 bytes
+ EQUB &00, &00
+ EQUB &00
 
 \ ******************************************************************************
 \
-\       Name: L5514
+\       Name: newContentHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: High byte of the two-byte address that we want to poke into the
+\             main game code at the modify location
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This is also where the zTrackSegmentI table is built, once the modifications
+\ have been done. The block is padded out to be exactly 20 bytes long, so along
+\ with the newContentLo block, there's one byte for each inner segment
+\ z-coordinate.
 \
 \ ******************************************************************************
 
-.L5514
+.newContentHi
 
-\ Value to poke into modAddr+1
- EQUB &56, &5A, &55, &55, &54, &57, &59, &55
- EQUB &56, &57, &58, &54, &54, &56, &55
+\ EQUB &56, &5A, &55, &55, &54, &57, &59, &55
+\ EQUB &56, &57, &58, &54, &54, &56, &55
 
- EQUB &00, &00, &00, &00, &00 \ Unused
+ EQUB HI(HookSectionFrom)
+ EQUB HI(HookFirstSegment)
+ EQUB HI(HookSegmentVector)
+ EQUB HI(HookSegmentVector)
+ EQUB HI(HookDataPointers)
+\EQUB HI(HookUpdateHorizon)
+\EQUB HI(HookFieldOfView)
+ EQUB HI(HookFixHorizon)
+ EQUB HI(HookJoystick)
+ EQUB HI(xTrackSignVector)
+ EQUB HI(yTrackSignVector)
+ EQUB HI(zTrackSignVector)
+ EQUB HI(trackRacingLine)
+ EQUB HI(trackSignData)
+ EQUB HI(trackSignData)
+ EQUB HI(HookFlattenHills)
+\EQUB HI(HookMoveBack)
+\EQUB HI(HookFlipAbsolute)
+ EQUB HI(Hook80Percent)
+
+ EQUB &00, &00          \ These bytes pad the block out to exactly 20 bytes
+ EQUB &00, &00
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -688,7 +723,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5555
+\       Name: Hook80Percent
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -702,7 +737,7 @@ ORG CODE%
 \ EQUB &85, &75, &A9
 \ EQUB &CD, &4C, &00, &0C, &08, &4C, &6B, &46
 
-.L5555
+.Hook80Percent
 
  STA &75
  LDA #&CD
@@ -725,7 +760,7 @@ ORG CODE%
 
  PHP
 
-\ &466B -> &461B = sub_C1933
+\ &466B -> &461B = CheckVergeOnScreen
 \ JMP &466B -> JMP &461B
 
  JMP &461B
@@ -734,7 +769,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5562
+\       Name: xTrackSignVector
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -745,7 +780,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5562
+.xTrackSignVector
 
  EQUB &01, &FA, &FB, &09, &1C, &06
  EQUB &09, &FE, &00, &03, &DF, &FB, &FA, &FF
@@ -753,7 +788,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5572
+\       Name: HookSegmentVector
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -782,18 +817,18 @@ ORG CODE%
 \ EQUB &50, &34, &18, &6D, &FE, &53, &8D, &FE
 \ EQUB &53, &20, &72, &54, &A6, &45, &60
 
-.L5572
+.HookSegmentVector
 
  LDA &01                \ 01 in BH
  AND #&40
  BEQ L557E
 
-\ &13A1 -> &13E0 = sub_C13E0
-\ JSR &13A1 -> JSR sub_C13E0
+\ &13A1 -> &13E0 = UpdateVectorNumber
+\ JSR &13A1 -> JSR UpdateVectorNumber
 
- JSR sub_C13E0
+ JSR UpdateVectorNumber
 
- JSR L55BD              \ 55C4 in BH
+ JSR HookMoveBack              \ 55C4 in BH
 
 .L557E
 
@@ -814,10 +849,10 @@ ORG CODE%
 
 .L557F
 
-\ &13A1 -> &13E0 = sub_C13E0
-\ JSR &13A1 -> JSR sub_C13E0
+\ &13A1 -> &13E0 = UpdateVectorNumber
+\ JSR &13A1 -> JSR UpdateVectorNumber
 
- JSR sub_C13E0
+ JSR UpdateVectorNumber
 
 \ ******************************************************************************
 \
@@ -875,7 +910,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L55BD
+\       Name: HookMoveBack
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -886,7 +921,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L55BD
+.HookMoveBack
 
  STX &45
  LDY L53FA              \ 53F8 in BH
@@ -921,29 +956,32 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5600
+\       Name: ModifyGameCode (Part 3 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Modify the game code to support the extra track data
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The code modifications are done in three parts.
+\
+\ This is also where the zTrackSegmentI table is built, once the modifications
+\ have been done. The routine is padded out to be exactly 40 bytes long, so
+\ there's one byte for each inner segment z-coordinate.
 \
 \ ******************************************************************************
 
-.L5600
+.mods3
 
 \ EQUB &A9, &04, &8D, &74, &35, &A9, &0B, &8D
 \ EQUB &F4, &35, &A9, &AD, &8D, &1C, &46, &A9
 \ EQUB &57, &8D, &1D, &46, &A9, &4B, &8D, &46
 \ EQUB &25, &A9, &FF, &8D, &2B, &28, &60
 
- LDA #&04
- STA &3574      \ Same, changes 0 to 4
-
- LDA #&0B
- STA &35F4      \ Same, changes 3 to &B
+\ LDA #&04
+\ STA &3574      \ Same, changes 0 to 4
+\ LDA #&0B
+\ STA &35F4      \ Same, changes 3 to &B
 
 \ &461C/D -> &45CC, !&45CC/D = L57AD (also needs &461B -> &45CB, !&45CB = &20)
 
@@ -952,28 +990,34 @@ ORG CODE%
 \ LDA #&57
 \ STA &461D
 
- LDA #&AD
- STA &45CC
- LDA #&57
- STA &45CD
-
 \ &2546 -> &2772, ?&2772 = &4B
 
 \ LDA #&4B
 \ STA &2546
-
- LDA #&4B
- STA &2772
 
 \ &282B -> &298E, ?&298E = &FF
 
 \ LDA #&FF
 \ STA &282B
 
- LDA #&FF
+ LDA #4                 \ ?&3574 = 4 (object dimension in objectTop)
+ STA &3574
+
+ LDA #11                \ ?&35F4 = 11 (object dimension in objectBottom)
+ STA &35F4
+
+ LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR &xxxx
+ STA &45CC              \                         instruction)
+ LDA #HI(HookSlopeJump)
+ STA &45CD
+
+ LDA #75                \ ?&2772 = 75 (argument in a CMP #75 instruction)
+ STA &2772
+
+ LDA #&FF               \ THIS ONE IS NEW
  STA &298E
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -1044,14 +1088,14 @@ ORG CODE%
 
 .L565F
 
-\ &B451 -> &1933 = sub_C1933
-\ JMP &B451 -> JMP sub_C1933
+\ &B451 -> &1933 = CheckVergeOnScreen
+\ JMP &B451 -> JMP CheckVergeOnScreen
 
- JMP sub_C1933
+ JMP CheckVergeOnScreen
 
 \ ******************************************************************************
 \
-\       Name: L5662
+\       Name: yTrackSignVector
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -1062,7 +1106,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5662
+.yTrackSignVector
 
  EQUB &F8, &06, &43, &23, &27, &0C
  EQUB &16, &FA, &A6, &09, &FA, &08, &09, &5D
@@ -1070,7 +1114,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5672
+\       Name: HookSectionFrom
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -1100,7 +1144,7 @@ ORG CODE%
 \ EQUB &82, &30, &DA, &A4, &4B, &88, &84, &75
 \ EQUB &4C, &E0, &53
 
-.L5672
+.HookSectionFrom
 
  STY &1B
  LDA L5905,Y
@@ -1130,7 +1174,7 @@ ORG CODE%
  STA L53FF              \ 53FD in BH
  BIT &25
  BMI L56AA
- JSR L55BD              \ 55C4 in BH
+ JSR HookMoveBack       \ 55C4 in BH
 
 .L56AA
 
@@ -1183,7 +1227,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L56C4
+\       Name: HookFlattenHills
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -1194,7 +1238,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L56C4
+.HookFlattenHills
 
  TYA
  AND #&20
@@ -1245,7 +1289,7 @@ ORG CODE%
  LDY &4B
  DEY
  STY &75
- JMP L53E0              \ JMP sub_C1933 in BH
+ JMP L53E0              \ JMP CheckVergeOnScreen in BH
 
  EQUB &78, &78, &78, &78, &00
 
@@ -1262,30 +1306,75 @@ ORG CODE%
 \
 \ ******************************************************************************
 
+.L5700
+
+\ ******************************************************************************
+\
+\       Name: ModifyGameCode (Part 1 of 4)
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Modify the game code to support the extra track data
+\
+\ ------------------------------------------------------------------------------
+\
+\ The code modifications are done in four parts.
+\
+\ The (modifyAddressHi modifyAddressLo) table contains the locations in the main
+\ game code that we want to modify.
+\
+\ The (newContentHi newContentLo) table contains the new two-byte addresses that
+\ we want to poke into the main game code at the modify locations.
+\
+\ This part also does a couple of single-byte modifications.
+\
+\ This is also where the xTrackSegmentO table is built, once the modifications
+\ have been done. The routine is padded out to be exactly 40 bytes long, so
+\ there's one byte for each inner segment x-coordinate.
+\
+\ ******************************************************************************
+
 \ EQUB &A2, &0E, &BD, &14, &54, &85, &75, &BD
 \ EQUB &00, &54, &85, &74, &A0, &00, &BD, &00
 \ EQUB &55, &91, &74, &C8, &BD, &14, &55, &91
 \ EQUB &74, &CA, &10, &E6, &4C, &00, &58
 
-.L5700
+.ModifyGameCode
 
- LDX #&0E               \ 12 in BH
+ LDX #14                \ We are about to modify 15 two-byte addresses in the
+                        \ main game code, so set a counter in X
 
-.L5702
+.mods1
 
- LDA L5414,X
- STA &75
- LDA L5400,X
- STA &74
- LDY #&00
- LDA L5500,X
- STA (&74),Y
- INY
- LDA L5514,X
- STA (&74),Y
- DEX
- BPL L5702
- JMP L5800
+ LDA modifyAddressHi,X  \ Set (U T) = the X-th entry in the (modifyAddressHi
+ STA U                  \ modifyAddressLo) table, which contains the location
+ LDA modifyAddressLo,X  \ of the code to modify in the main game code
+ STA T
+
+ LDY #0                 \ We now modify two bytes, so set an index in Y
+
+ LDA newContentLo,X     \ We want to modify the two-byte address at location
+                        \ (U T), setting it to the new address in the
+                        \ (newContentHi newContentLo) table, so set A to the
+                        \ low byte of the X-th entry from the table, i.e. to
+                        \ the low byte of the new address
+
+ STA (T),Y              \ Modify the byte at (U T) to the low byte of the new
+                        \ address in A
+
+ INY                    \ Increment Y to point to the next byte
+
+ LDA newContentHi,X     \ Set A to the high byte of the X-th entry from the
+                        \ table, i.e. to the high byte of the new address
+
+ STA (T),Y              \ Modify the byte at (U T) + 1 to the high byte of the
+                        \ new address in A
+
+ DEX                    \ Decrement the loop counter to move on to the next
+                        \ address to modify
+
+ BPL mods1              \ Loop back until we have modified all 19 addresses
+
+ JMP mods2              \ Jump to part 2
 
 \ ******************************************************************************
 \
@@ -1331,7 +1420,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5762
+\       Name: zTrackSignVector
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -1342,7 +1431,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5762
+.zTrackSignVector
 
  EQUB &48, &0D, &B5, &DF, &CA, &FD
  EQUB &B7, &14, &3D, &04, &40, &FD, &03, &49
@@ -1370,7 +1459,7 @@ ORG CODE%
 \ EQUB &A0, &84, &99, &C8, &84, &C8, &C0, &09
 \ EQUB &90, &CE, &A4, &51, &60
 
-.L5772
+.HookFixHorizon
 
 \ STA &1B0C
  STA &1FEA
@@ -1436,14 +1525,30 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L57AD
+\       Name: HookSlopeJump
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Jump the car when driving fast over sloping segments
 \
 \ ------------------------------------------------------------------------------
 \
-\ L5919 in BH
+\ This routine is called from part 5 of ApplyElevation to jump the car off the
+\ ground when driving fast over sloping segments.
+\
+\ If the car is on the ground, replace the heightAboveTrack * 4 part of the
+\ car's y-coordinate calculation with playerSpeedHi * yTrackSegmentI * 4, to
+\ give:
+\
+\   (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
+\                                      + carProgress * yTrackSegmentI
+\                                      + playerSpeedHi * yTrackSegmentI * 4
+\                                      + 172
+\
+\ So driving fast over sloping segments can make the car jump.
+\
+\ Arguments:
+\
+\   A                   Current value of heightAboveTrack
 \
 \ ******************************************************************************
 
@@ -1451,22 +1556,40 @@ ORG CODE%
 \ EQUB &63, &20, &60, &46, &10, &02, &C6, &77
 \ EQUB &0A, &26, &77, &60
 
-.L57AD
+.HookSlopeJump
 
- BNE L57B8
- LDA &63
+ BNE slop1              \ If A is non-zero, skip the following (so the hook has
+                        \ no effect when the car is off the ground)
 
-\ JSR &4660
- JSR sub_C4610
+                        \ If we get here then heightAboveTrack = 0, so the car
+                        \ is on the ground 
 
- BPL L57B8
- DEC &77
+ LDA playerSpeedHi      \ Set A = the high byte of the current speed
 
-.L57B8
+ JSR MultiplyHeight     \ Set:
+                        \
+                        \   A = A * yTrackSegmentI
+                        \     = playerSpeedHi * yTrackSegmentI
+                        \
+                        \ The value given in yTrackSegmentI is the y-coordinate
+                        \ of the segment vector, i.e. the vector from this
+                        \ segment to the next, which is the same as the change
+                        \ in height as we move through the segment
+                        \
+                        \ So this value is higher with greater speed and on
+                        \ segments that have higher slopes
 
- ASL A
- ROL &77
- RTS
+ BPL slop1              \ If A is positive, skip the following instruction
+
+ DEC W                  \ Decrement W to &FF, so (W A) has the correct sign
+
+.slop1
+
+ ASL A                  \ Implement the shifts that we overwrote with the call
+ ROL W                  \ to the hook routine, so we have effectively inserted
+                        \ the above code into the main game
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -1510,20 +1633,24 @@ ORG CODE%
  EQUB &44, &45, &46, &47, &49, &4A, &4B, &4C
  EQUB &4D, &4E, &4F, &51, &52, &53, &54, &55
 
+
+
 \ ******************************************************************************
 \
-\       Name: L5800
+\       Name: ModifyGameCode (Part 2 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Modify the game code to support the extra track data
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The code modifications are done in three parts.
+\
+\ This is also where the zTrackSegmentO table is built, once the modifications
+\ have been done. The routine is exactly 40 bytes long, so there's one byte for
+\ each outer segment z-coordinate.
 \
 \ ******************************************************************************
-
-.L5800
 
 \ EQUB &A9, &20, &8D, &FC, &11, &8D, &AF, &12
 \ EQUB &8D, &7B, &22, &8D, &1B, &46, &A9, &EA
@@ -1541,29 +1668,34 @@ ORG CODE%
 \ STA &227B
 \ STA &461B
 
- LDA #&20
- STA &1248
- STA &12FB
- STA &2538
- STA &45CB
-
 \ &2288 -> &2545, ?&2545 = &EA
 
 \ LDA #&EA
 \ STA &2288
-
- LDA #&EA
- STA &2545
 
 \ &1B0B -> &1FE9, ?&1FE9 = &A2
 
 \ LDA #&A2
 \ STA &1B0B
 
- LDA #&A2
+.mods2
+
+ LDA #&20               \ ?&1248 = &20 (opcode for a JSR &xxxx instruction)
+ STA &1248
+
+ STA &12FB              \ ?&12FB = &20 (opcode for a JSR &xxxx instruction)
+
+ STA &2538              \ ?&2538 = &20 (opcode for a JSR &xxxx instruction)
+
+ STA &45CB              \ ?&45CB = &20 (opcode for a JSR &xxxx instruction)
+
+ LDA #&EA               \ ?&2545 = &EA (opcode for a NOP instruction)
+ STA &2545
+
+ LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
- JMP L5600
+ JMP mods3              \ Jump to part 3
 
 \ ******************************************************************************
 \
@@ -1667,7 +1799,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L58A0
+\       Name: trackRacingLine
 \       Type: Variable
 \   Category: 
 \    Summary: 
@@ -1678,7 +1810,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L58A0
+.trackRacingLine
 
  EQUB &18, &18, &67, &48, &19, &19, &52, &30
  EQUB &47, &18, &18, &3B, &19, &3C, &00, &3D
@@ -1789,7 +1921,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L59D9
+\       Name: HookJoystick
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -1805,7 +1937,7 @@ ORG CODE%
 \ EQUB &C9, &40, &D0, &02, &A0, &CD, &C9, &D0
 \ EQUB &D0, &02, &A0, &CA, &98, &4C, &AF, &56
 
-.L59D9
+.HookJoystick
 
  PHP
  PHA
@@ -1862,7 +1994,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5A1B
+\       Name: HookFirstSegment
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -1873,7 +2005,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.L5A1B 
+.HookFirstSegment 
 
  JSR L557F
  JMP L5472
@@ -1884,54 +2016,71 @@ ORG CODE%
 \
 \       Name: CallTrackHook
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The track file's hook code
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
 .CallTrackHook
 
-\ JMP &9C00
-
- JMP L5700
+ JMP ModifyGameCode     \ Modify the main game code
 
 \ ******************************************************************************
 \
 \       Name: trackChecksum
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The track file's checksum
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
 .trackChecksum
 
- EQUB &60, &00, &00, &78
+ EQUB &60               \ Counts the number of data bytes ending in %00
+
+ EQUB &00               \ Counts the number of data bytes ending in %01
+
+ EQUB &00               \ Counts the number of data bytes ending in %10
+ 
+ EQUB &78               \ Counts the number of data bytes ending in %11
+
+\ ******************************************************************************
+\
+\       Name: trackGameName
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The game name
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This string is checked by the loader to see whether a track file has been
+\ loaded (and if not, it loads one).
+\
+\ ******************************************************************************
+
+.trackGameName
+
+ EQUS "REVS"            \ Game name
 
 \ ******************************************************************************
 \
 \       Name: trackName
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: The track name
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This string is shown on the loading screen.
 \
 \ ******************************************************************************
 
 .trackName
 
- EQUS "REVS"            \ Game name
  EQUS "Nurburgring"     \ Track name
  EQUB 13
 
@@ -2038,7 +2187,7 @@ ORG &9C00
 .L9C3F
 
 \ JMP $5A30             \ $5A30 jumps straight to &5700
-JMP L5700
+ JMP ModifyGameCode
 
 \ ******************************************************************************
 \

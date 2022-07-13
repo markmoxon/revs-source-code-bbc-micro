@@ -1642,8 +1642,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts. This part performs three
-\ single-byte modifications and one two-byte modification.
+\ The code modifications are done in three parts.
 \
 \ This is also where the zTrackSegmentI table is built, once the modifications
 \ have been done. The routine is padded out to be exactly 40 bytes long, so
@@ -2117,8 +2116,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts. This part modifies a set of
-\ two-byte addresses in the main game code.
+\ The code modifications are done in three parts.
 \
 \ The (modifyAddressHi modifyAddressLo) table contains the locations in the main
 \ game code that we want to modify.
@@ -2577,8 +2575,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in three parts. This part performs nine
-\ single-byte modifications.
+\ The code modifications are done in three parts.
 \
 \ This is also where the zTrackSegmentO table is built, once the modifications
 \ have been done. The routine is exactly 40 bytes long, so there's one byte for

@@ -62,8 +62,10 @@ W                   = &0077
 topTrackLine        = &007F
 blockOffset         = &0082
 objTrackSection     = &06E8
+objSectionSegmt     = &0880
 Multiply8x8         = &0C00
 Absolute16Bit       = &0E40
+MovePlayerForward   = &12F3
 UpdateVectorNumber  = &13E0
 MovePlayerBack      = &140B
 CheckVergeOnScreen  = &1933
@@ -77,15 +79,10 @@ zTrackSegmentI      = &5600
 xTrackSegmentO      = &5700
 zTrackSegmentO      = &5800
 trackSectionFrom    = &5905
-xVergeRightLo       = &5E40
-xVergeLeftLo        = &5E68
 xVergeRightHi       = &5E90
 xVergeLeftHi        = &5EB8
 yVergeRight         = &5F20
 yVergeLeft          = &5F48
-
-objSectionSegmt     = &0880
-MovePlayerForward   = &12F3
 backgroundColour    = &5F60
 playerDrift         = &62FB
 
@@ -624,8 +621,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in four parts. This part performs two
-\ single-byte modifications.
+\ The code modifications are done in four parts.
 \
 \ ******************************************************************************
 
@@ -1757,8 +1753,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in four parts. This part performs one
-\ single-byte modifications and three two-byte modifications.
+\ The code modifications are done in four parts.
 \
 \ This is also where the zTrackSegmentI table is built, once the modifications
 \ have been done. The routine is padded out to be exactly 40 bytes long, so
@@ -1781,7 +1776,7 @@ ORG CODE%
  LDA #75                \ ?&2772 = 75 (argument in a CMP #75 instruction)
  STA &2772
 
- LDA #&A9               \ !&1310 = &A9 &88 (LDA #&88 instruction)
+ LDA #&A9               \ !&1310 = &A9 &88 (LDA #17*8 instruction)
  STA &1310
  LDA #&88
  STA &1311
@@ -2230,8 +2225,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in four parts. This part modifies a set of
-\ two-byte addresses in the main game code.
+\ The code modifications are done in four parts.
 \
 \ The (modifyAddressHi modifyAddressLo) table contains the locations in the main
 \ game code that we want to modify.
@@ -2665,8 +2659,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ The code modifications are done in four parts. This part performs nine
-\ single-byte modifications.
+\ The code modifications are done in four parts.
 \
 \ This is also where the zTrackSegmentO table is built, once the modifications
 \ have been done. The routine is exactly 40 bytes long, so there's one byte for
