@@ -516,20 +516,25 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSectionSteer (Part 3 of 3)
+\       Name: HookJoystick (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Apply enhanced joystick steering to specific track sections
 \
-\ ------------------------------------------------------------------------------
-\
-\ Arguments:
-\
-\   Y                   The factor to apply to the steering (188, 205 or 215)
-
 \ ******************************************************************************
 
-.secs12
+.joys12
+
+                        \ By this point, Y contains the scale factor to apply to
+                        \ the steering, which is one of the following values:
+                        \
+                        \   * 181 for a scale factor of 1.00
+                        \
+                        \   * 188 for a scale factor of 1.08
+                        \
+                        \   * 205 for a scale factor of 1.28
+                        \
+                        \   * 215 for a scale factor of 1.41
 
  TYA                    \ Set A = Y
                         \
@@ -548,16 +553,28 @@ ORG CODE%
  ASL T                  \ Set (A T) = (A T) * 2
  ROL A                  \           = 2 * (A * x-axis) ^ 2
 
-                        \ So if A = 240, we have:
+                        \ So for A = 215 we have:
                         \
-                        \   (A T) = 2 * (240/256 * x-axis) ^ 2
-                        \         = 2 * (0.9375 * x-axis) ^ 2
-                        \         = 1.76 * x-axis ^ 2
+                        \   (A T) = 2 * (215/256 * x-axis) ^ 2
+                        \         = 2 * (0.840 * x-axis) ^ 2
+                        \         = 1.41 * x-axis ^ 2
                         \
-                        \ otherwise we have:
+                        \ and for A = 205 we have:
+                        \
+                        \   (A T) = 2 * (205/256 * x-axis) ^ 2
+                        \         = 2 * (0.8012 * x-axis) ^ 2
+                        \         = 1.28 * x-axis ^ 2
+                        \
+                        \ and for A = 188 we have:
+                        \
+                        \   (A T) = 2 * (188/256 * x-axis) ^ 2
+                        \         = 2 * (0.734 * x-axis) ^ 2
+                        \         = 1.08 * x-axis ^ 2
+                        \
+                        \ and for A = 181 we have:
                         \
                         \   (A T) = 2 * (181/256 * x-axis) ^ 2
-                        \         = 2 * (0.7070 * x-axis) ^ 2
+                        \         = 2 * (0.707 * x-axis) ^ 2
                         \         = 1.00 * x-axis ^ 2
 
  RTS                    \ Return from the subroutine
@@ -567,24 +584,36 @@ ORG CODE%
 \       Name: HookForward
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Move the player forward by an extra segment when edgeSegmentNumber
+\             is 10
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from MovePlayerSegment to ???.
+\ This routine is called from MovePlayerSegment to move the player forward by an
+\ extra segment if required.
+\
+\ Arguments:
+\
+\   A                   The value of edgeSegmentNumber
 \
 \ ******************************************************************************
 
 .HookForward
 
- CMP #11
- BCS move1
+ CMP #11                \ If edgeSegmentNumber >= 11, then the player is either
+ BCS move1              \ in the same segment, or has moved backwards, so jump
+                        \ to move1
 
- JSR MovePlayerForward
+                        \ If we get here then edgeSegmentNumber < 11, so
+                        \ edgeSegmentNumber must be 10, so we move the player
+                        \ forwards by two segments
+
+ JSR MovePlayerForward  \ Move the player forwards by one segment
 
 .move1
 
- JMP MovePlayerForward
+ JMP MovePlayerForward  \ Move the player forwards by one segment, returning
+                        \ from the subroutine using a tail call
 
 \ ******************************************************************************
 \
@@ -715,7 +744,7 @@ ORG CODE%
  EQUB &1B               \ !&261B = HookUpdateHorizon
  EQUB &8C               \ !&248C = HookFieldOfView
  EQUB &39               \ !&2539 = HookFixHorizon
- EQUB &94               \ !&1594 = HookSectionSteer
+ EQUB &94               \ !&1594 = HookJoystick
  EQUB &D1               \ !&4CD1 = xTrackSignVector
  EQUB &C9               \ !&4CC9 = yTrackSignVector
  EQUB &C1               \ !&4CC1 = zTrackSignVector
@@ -754,7 +783,7 @@ ORG CODE%
  EQUB &26               \ !&261B = HookUpdateHorizon
  EQUB &24               \ !&248C = HookFieldOfView
  EQUB &25               \ !&2539 = HookFixHorizon
- EQUB &15               \ !&1594 = HookSectionSteer
+ EQUB &15               \ !&1594 = HookJoystick
  EQUB &4C               \ !&4CD1 = xTrackSignVector
  EQUB &4C               \ !&4CC9 = yTrackSignVector
  EQUB &4C               \ !&4CC1 = zTrackSignVector
@@ -864,7 +893,7 @@ ORG CODE%
  EQUB %11000000         \ Sign 11: 11000 000   Type 7    Straight    Section  24
  EQUB %00000000         \ Sign 12: 00000 000   Type 7    Straight    Section   0
  EQUB %00001000         \ Sign 13: 00001 000   Type 7    Straight    Section   1
- EQUB %00010011         \ Sign 14: 00010 011   Type 10   Hairpin     Section   2
+ EQUB %00010011         \ Sign 14: 00010 011   Type 10   Chicane     Section   2
  EQUB %00010000         \ Sign 15: 00010 000   Type 7    Straight    Section   2
 
 \ ******************************************************************************
@@ -1257,7 +1286,7 @@ ORG CODE%
  EQUB LO(HookUpdateHorizon)
  EQUB LO(HookFieldOfView)
  EQUB LO(HookFixHorizon)
- EQUB LO(HookSectionSteer)
+ EQUB LO(HookJoystick)
  EQUB LO(xTrackSignVector)
  EQUB LO(yTrackSignVector)
  EQUB LO(zTrackSignVector)
@@ -1296,7 +1325,7 @@ ORG CODE%
  EQUB HI(HookUpdateHorizon)
  EQUB HI(HookFieldOfView)
  EQUB HI(HookFixHorizon)
- EQUB HI(HookSectionSteer)
+ EQUB HI(HookJoystick)
  EQUB HI(xTrackSignVector)
  EQUB HI(yTrackSignVector)
  EQUB HI(zTrackSignVector)
@@ -2368,8 +2397,7 @@ ORG CODE%
 \       Name: HookFixHorizon
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: Collapse the track for entries in the verge buffer that are just
-\             in front of the horizon section
+\    Summary: Apply the horizon line in A instead of horizonLine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2402,27 +2430,45 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSectionSteer (Part 1 of 3)
+\       Name: HookJoystick (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: If this is track section 4, increase the effect of the joystick's
-\             x-axis steering by a factor of 1.76
+\    Summary: Apply enhanced joystick steering to specific track sections
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from ProcessDrivingKeys to make it easier to steer
-\ round the Druids hairpin bend when using a joystick.
+\ This routine is called from ProcessDrivingKeys to zero the playerDrift flag
+\ when the player is in one of the specified track sections, which has the
+\ effect of cancelling drift:
 \
-\ If this is track section 4, set:
+\   * Section 2: if the player is in segment 0 or 1, cancel drift
 \
-\   (A T) = 1.76 * x-axis ^ 2
+\   * Section 11: if the player is in segment 40 or later, cancel drift
 \
-\ otherwise set:
+\   * Section 12: cancel drift
 \
-\   (A T) = x-axis ^ 2
+\   * Section 21: if the player is in segment 34 or later, cancel drift
 \
-\ The latter is the same as the existing game code, so this hook only affects
-\ track section 4.
+\   * Section 22: cancel drift
+\
+\ In addition, scale the steering in the following sections to make it easier
+\ to steer when using a joystick:
+\
+\   * Section 2: scale the steering by 1.41
+\
+\   * Section 3: scale the steering by 1.28
+\
+\   * Section 5: scale the steering by 1.08
+\
+\   * Section 6: scale the steering by 1.08
+\
+\ Specifically, the scaling is applied as follows:
+\
+\   (A T) = scale_factor * x-axis ^ 2
+\
+\ which replaces this existing code in ProcessDrivingKeys:
+\
+\   (A T) = x-axis^2
 \
 \ Arguments:
 \
@@ -2430,77 +2476,104 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.HookSectionSteer
+.HookJoystick
 
  LDY currentPlayer      \ Set A to the track section number * 8 for the current
  LDA objTrackSection,Y  \ player
 
- CMP #16
- BNE secs2
+ CMP #16                \ If the track section <> 16 (i.e. section 2), jump to
+ BNE joys2              \ joys2 to keep checking
 
- LDA objSectionSegmt,Y
- CMP #2
- BCC secs1
- LSR playerDrift
+ LDA objSectionSegmt,Y  \ Set A = objSectionSegmt, which keeps track of the
+                        \ player's segment number in the current track section
 
-.secs1
+ CMP #2                 \ If A < 2, jump to joys1
+ BCC joys1
 
- LDY #215
- JMP secs12
+ LSR playerDrift        \ A = 0 or 1, which means the player is in one of the
+                        \ first two segments in the section so clear bit 7 of
+                        \ playerDrift to denote that the player is not drifting
+                        \ sideways (i.e. cancel any drift)
 
-.secs2
+.joys1
 
- PHA
- CMP #88
- BNE secs3
+ LDY #215               \ Set Y = 215 so we scale the steering by 1.41
 
- LDA #39
- BNE secs4
+ JMP joys12             \ Jump to part 3 to scale the steering
 
-.secs3
+.joys2
 
- CMP #168
- BNE secs5
+ PHA                    \ Store the player's track section number * 8 on the
+                        \ stack so we can retrieve it below
 
- LDA #33
+ CMP #88                \ If the track section <> 88 (i.e. section 11), jump to
+ BNE joys3              \ joys3 to keep checking
 
-.secs4
+ LDA #39                \ Set A = 39 so we disable drift if the player is in
+                        \ segment 40 or later in track section 11
 
- CMP objSectionSegmt,Y
- BCC secs6
- BCS secs7
+ BNE joys4              \ Jump to joys4 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
-.secs5
+.joys3
 
- CMP #96
- BEQ secs6
+ CMP #168               \ If the track section <> 168 (i.e. section 21), jump to
+ BNE joys5              \ joys5 to keep checking
 
- CMP #176
- BNE secs7
+ LDA #33                \ Set A = 33 so we disable drift if the player is in
+                        \ segment 34 or later in track section 21
 
-.secs6
+.joys4
 
- LSR playerDrift
+ CMP objSectionSegmt,Y  \ If A < the player's segment number in the current
+ BCC joys6              \ track section, jump to joys6 to cancel drift
 
-.secs7
+ BCS joys7              \ Jump to joys7 to keep checking (this BCS is
+                        \ effectively a JMP as we just passed through a BCC)
 
- PLA
- JMP secs8
+.joys5
+
+ CMP #96                \ If the track section = 96 (i.e. section 12), jump to
+ BEQ joys6              \ joys6 to cancel drift
+
+ CMP #176               \ If the track section <> 176 (i.e. section 22), jump to
+ BNE joys7              \ joys7 to keep checking
+
+.joys6
+
+ LSR playerDrift        \ Clear bit 7 of playerDrift to denote that the player
+                        \ is not drifting sideways (i.e. cancel any drift)
+
+.joys7
+
+ PLA                    \ Retrieve the player's track section number * 8 from
+                        \ the stack
+
+ JMP joys8              \ Jump to part 2
 
 \ ******************************************************************************
 \
 \       Name: Hook80Percent
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
+\             horizon
 \
 \ ******************************************************************************
 
 .Hook80Percent
 
- JSR Absolute8Bit
+ JSR Absolute8Bit       \ Set A = |A|, so A contains the arc of the track at
+                        \ the horizon (i.e. the track width on the section or
+                        \ segment at the horizon) in terms of the high bytes
+                        \ (this is the same as the original code that we
+                        \ overwrote
 
- JMP Multiply80Percent
+ JMP Multiply80Percent  \ Set the following:
+                        \
+                        \   (A T) = 0.80 * A
+                        \
+                        \ and return from the subroutine using a tail call
 
  EQUB &4C, &EF          \ These bytes appear to be unused
  EQUB &53
@@ -2768,7 +2841,8 @@ ORG CODE%
 \   * Bits 2 to 7 = the number of the first sub-section in this section
 \
 \   * Bit 1 = if this is set, then in the horizon calculations, we always skip
-\             the setting of horizonLine to 7
+\             the setting of horizonLine to 7 (this is never the case in
+\             Donington Park as this bit is clear for all sections)
 \
 \   * Bit 0 = if this is set, then the segment vectors for this section are
 \             generated as a straight track rather than using the curve tables
@@ -3373,67 +3447,101 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSectionSteer (Part 2 of 3)
+\       Name: HookJoystick (Part 2 of 3)
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Apply enhanced joystick steering to specific track sections
 \
 \ ******************************************************************************
 
-.secs8
+.joys8
 
- LDY #181
+ LDY #181               \ Set Y = 181 so by default we scale the steering by
+                        \ 1.00
 
- CMP #24
- BNE secs9
+ CMP #24                \ If the track section <> 24 (i.e. section 3), jump to
+ BNE joys9              \ joys9 to keep checking
 
- LDY #205
+ LDY #205               \ Set Y = 205 so we scale the steering by 1.28
 
-.secs9
+.joys9
 
- CMP #48
- BEQ secs10
+ CMP #48                \ If the track section = 48 (i.e. section 6), jump to
+ BEQ joys10             \ joys10 to scale the steering by 1.08
 
- CMP #40
- BNE secs11
+ CMP #40                \ If the track section <> 40 (i.e. section 5), jump to
+ BNE joys11             \ joys11 to keep checking
 
-.secs10
+.joys10
 
- LDY #188
+ LDY #188               \ Set Y = 188 so we scale the steering by 1.08
 
-.secs11
+.joys11
 
- JMP secs12
+ JMP joys12             \ Jump to part 3 to scale the steering
 
 \ ******************************************************************************
 \
 \       Name: HookBackground
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: 
+\    Summary: Do not update the background colour when the track line above is
+\             showing green for the leftTrackStart verge
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is called from UpdateBackground to ???.
+\ This routine is called from UpdateBackground to skip updating the background
+\ colour table when the track line above is showing green for the leftTrackStart
+\ verge.
 \
 \ ******************************************************************************
 
 .HookBackground
 
- LDA backgroundColour+1,Y
- CMP #139
+                        \ If we get here then the edge we are drawing is
+                        \ partially off-screen and the track line in Y has been
+                        \ decremented
 
- BEQ back1
+ LDA backgroundColour+1,Y \ Set A to the contents of the background colour table
+                          \ for the track line we are drawing (i.e. track line
+                          \ Y + 1, as we just decremented Y)
 
- LDA backgroundColour,Y
+ CMP #%10001011         \ If A = 10001011, then this represents:
+ BEQ back1              \
+                        \   * Set by UpdateBackground to the value in
+                        \     backgroundLeft
+                        \
+                        \   * Verge type = leftTrackStart
+                        \
+                        \   * Not set by SetVergeBackground
+                        \
+                        \   * Colour = logical colour 3 (green)
+                        \
+                        \ In this case, jump to back1 to return to the main
+                        \ UpdateBackground routine without updating the
+                        \ background colour
 
- RTS
+                        \ If we get here then we just implement the same code as
+                        \ in the original
+
+ LDA backgroundColour,Y \ Set A to the contents of the background colour table
+                        \ for track line Y
+
+ RTS                    \ Return from the subroutine
 
 .back1
 
- LSR A
+ LSR A                  \ Shift A to the right, so A = 01000101
+                        \
+                        \ This is a non-zero value, so when we return back into
+                        \ the main code, we will take the BNE upba4 branch to
+                        \ return from the subroutine without updating the
+                        \ background
+                        \
+                        \ This LSR is therefore just a quick way of setting the
+                        \ Z flag so the BNE upba4 branch is taken on our return
 
- RTS
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \

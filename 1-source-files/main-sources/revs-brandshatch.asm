@@ -486,7 +486,8 @@ ORG CODE%
 \       Name: Hook80Percent
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: Calculate (A T) = 0.80 * A
+\    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
+\             horizon
 \
 \ ------------------------------------------------------------------------------
 \
@@ -624,7 +625,7 @@ ORG CODE%
  EQUB &1B               \ !&261B = HookUpdateHorizon
  EQUB &8C               \ !&248C = HookFieldOfView
  EQUB &39               \ !&2539 = HookFixHorizon
- EQUB &94               \ !&1594 = HookSectionSteer
+ EQUB &94               \ !&1594 = HookJoystick
  EQUB &D1               \ !&4CD1 = xTrackSignVector
  EQUB &C9               \ !&4CC9 = yTrackSignVector
  EQUB &C1               \ !&4CC1 = zTrackSignVector
@@ -665,7 +666,7 @@ ORG CODE%
  EQUB &26               \ !&261B = HookUpdateHorizon
  EQUB &24               \ !&248C = HookFieldOfView
  EQUB &25               \ !&2539 = HookFixHorizon
- EQUB &15               \ !&1594 = HookSectionSteer
+ EQUB &15               \ !&1594 = HookJoystick
  EQUB &4C               \ !&4CD1 = xTrackSignVector
  EQUB &4C               \ !&4CC9 = yTrackSignVector
  EQUB &4C               \ !&4CC1 = zTrackSignVector
@@ -1167,7 +1168,7 @@ ORG CODE%
  EQUB LO(HookUpdateHorizon)
  EQUB LO(HookFieldOfView)
  EQUB LO(HookFixHorizon)
- EQUB LO(HookSectionSteer)
+ EQUB LO(HookJoystick)
  EQUB LO(xTrackSignVector)
  EQUB LO(yTrackSignVector)
  EQUB LO(zTrackSignVector)
@@ -1208,7 +1209,7 @@ ORG CODE%
  EQUB HI(HookUpdateHorizon)
  EQUB HI(HookFieldOfView)
  EQUB HI(HookFixHorizon)
- EQUB HI(HookSectionSteer)
+ EQUB HI(HookJoystick)
  EQUB HI(xTrackSignVector)
  EQUB HI(yTrackSignVector)
  EQUB HI(zTrackSignVector)
@@ -2283,8 +2284,7 @@ ORG CODE%
 \       Name: HookFixHorizon
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: Collapse the track for entries in the verge buffer that are just
-\             in front of the horizon section
+\    Summary: Apply the horizon line in A instead of horizonLine
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2369,11 +2369,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookSectionSteer
+\       Name: HookJoystick
 \       Type: Subroutine
 \   Category: Extra track data
-\    Summary: If this is track section 4, increase the effect of the joystick's
-\             x-axis steering by a factor of 1.76
+\    Summary: Apply enhanced joystick steering to specific track sections
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2397,23 +2396,25 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.HookSectionSteer
+.HookJoystick
 
  LDY currentPlayer      \ Set A to the track section number * 8 for the current
  LDA objTrackSection,Y  \ player
 
- LDY #181               \ Set Y = 181
+ LDY #181               \ Set Y = 181 so we scale the steering by 1.00
 
- CMP #32                \ If the track section <> 32 (i.e. section 4), skip the
- BNE secs1              \ following instruction
+ CMP #32                \ If the track section <> 32 (i.e. section 4), jump to
+ BNE joys1              \ joys1 to skip the following instruction
 
- LDY #240               \ The player is in track section 4, so set Y = 240
+ LDY #240               \ The player is in track section 4, so set Y = 240 to
+                        \ scale the steering by 1.76
 
-.secs1
+.joys1
 
  TYA                    \ Set A = Y
                         \
-                        \ So A is 181, or 240 if this is track section 4
+                        \ So A is 240 if this is track section 4, or 181 for all
+                        \ other sections
 
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = A * x-axis
@@ -2428,16 +2429,16 @@ ORG CODE%
  ASL T                  \ Set (A T) = (A T) * 2
  ROL A                  \           = 2 * (A * x-axis) ^ 2
 
-                        \ So if A = 240 (for track section 4), we have:
+                        \ So for A = 240 (track section 4) we have:
                         \
                         \   (A T) = 2 * (240/256 * x-axis) ^ 2
-                        \         = 2 * (0.9375 * x-axis) ^ 2
+                        \         = 2 * (0.938 * x-axis) ^ 2
                         \         = 1.76 * x-axis ^ 2
                         \
-                        \ otherwise we have:
+                        \ and for A = 181 (all other sections) we have:
                         \
                         \   (A T) = 2 * (181/256 * x-axis) ^ 2
-                        \         = 2 * (0.7070 * x-axis) ^ 2
+                        \         = 2 * (0.707 * x-axis) ^ 2
                         \         = 1.00 * x-axis ^ 2
 
  RTS                    \ Return from the subroutine
