@@ -2531,8 +2531,7 @@ ORG CODE%
 \ segments from the starting line to the start of section 0, counting forwards
 \ around the track.
 \
-\ If the starting line is at segment n, this value is the track length minus n,
-\ which is 1024 - 181 at Silverstone.
+\ If the starting line is at segment n, this value is the track length minus n.
 \
 \ ******************************************************************************
 

@@ -36,6 +36,8 @@ LOAD% = &70DB           \ The load address of the track binary
 
 CODE% = &5300           \ The assembly address of the track data
 
+trackWidth = 134        \ Track width
+
 \ ******************************************************************************
 \
 \ Addresses in the main game code
@@ -535,7 +537,7 @@ ORG CODE%
 
  TYA                    \ Set A = Y
                         \
-                        \ So A is 188, 205 or 215
+                        \ So A is 181, 188, 205 or 215
 
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = A * x-axis
@@ -1104,8 +1106,8 @@ ORG CODE%
                         \ We can also calculate the vector from the inner verge
                         \ to the outer verge as follows:
                         \
-                        \   * xTrackSegmentO = -W * 0.52
-                        \   * zTrackSegmentO = V * 0.52
+                        \   * xTrackSegmentO = -W * trackWidth / 256
+                        \   * zTrackSegmentO = V * trackWidth / 256
                         \
                         \ This works because given a 2D vector [V W], the vector
                         \ [-W V] is the vector's normal, i.e. the same vector,
@@ -1118,41 +1120,39 @@ ORG CODE%
                         \ degrees across the track, which is the vector that we
                         \ want to calculate
                         \
-                        \ Multiplying the normal vector by 0.52 sets the track
-                        \ width to 52% of the length of the track segment vector
-                        \ (so we could make the track wider by changing this
-                        \ value)
+                        \ Multiplying the normal vector by the track width sets
+                        \ the correct length for the outer segment vector, so
+                        \ we could make the track wider by changing the value of
+                        \ the trackWidth configuration variable
 
  LDY thisVectorNumber   \ Set Y to thisVectorNumber, which contains the value of
                         \ trackSectionFrom for this track section (i.e. the
                         \ number of the first segment vector in the section)
 
- LDA #134               \ Set U = 134
+ LDA #trackWidth        \ Set U to the width of the track
  STA U
 
  LDA V                  \ Set the x-coordinate of the Y-th inner track segment
  STA xTrackSegmentI,Y   \ vector to V
 
  JSR Multiply8x8Signed  \ Set A = A * U / 256
-                        \       = V * 134 / 256
-                        \       = V * 0.52
+                        \       = V * trackWidth / 256
 
  STA zTrackSegmentO,Y   \ Set the z-coordinate of the Y-th outer track segment
-                        \ vector to V * 0.52
+                        \ vector to V * trackWidth / 256
 
  LDA W                  \ Set the z-coordinate of the Y-th inner track segment
  STA zTrackSegmentI,Y   \ vector to W
 
  JSR Multiply8x8Signed  \ Set A = A * U / 256
-                        \       = W * 134 / 256
-                        \       = W * 0.52
+                        \       = W * trackWidth / 256
 
  EOR #&FF               \ Negate A using two's complement, so:
  CLC                    \
- ADC #1                 \   A = -W * 0.52
+ ADC #1                 \   A = -W * trackWidth / 256
 
  STA xTrackSegmentO,Y   \ Set the x-coordinate of the Y-th outer track segment
-                        \ vector to -W * 0.52
+                        \ vector to -W * trackWidth / 256
 
  LDA heightOfTrack      \ Set the y-coordinate of the Y-th track segment vector
  STA yTrackSegmentI,Y   \ to the height of the track
@@ -1763,13 +1763,13 @@ ORG CODE%
 
 .mods3
 
- LDA #LO(HookForward)   \ !&24DF = HookForward (address in a JSR &xxxx
+ LDA #LO(HookForward)   \ !&24DF = HookForward (address in a JSR
  STA &24DF              \          instruction)
  LDA #HI(HookForward)
  STA &24E0
 
- LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR &xxxx
- STA &45CC              \                         instruction)
+ LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR instruction)
+ STA &45CC
  LDA #HI(HookSlopeJump)
  STA &45CD
 
@@ -2084,7 +2084,7 @@ ORG CODE%
 
  JMP gseg13             \ Jump to gseg13
 
-\******************************************************************************
+\ ******************************************************************************
 \
 \       Name: HookFlattenHills
 \       Type: Subroutine
@@ -2669,16 +2669,16 @@ ORG CODE%
 
 .mods2
 
- LDA #&20               \ ?&1248 = &20 (opcode for a JSR &xxxx instruction)
+ LDA #&20               \ ?&1248 = &20 (opcode for a JSR instruction)
  STA &1248
 
- STA &12FB              \ ?&12FB = &20 (opcode for a JSR &xxxx instruction)
+ STA &12FB              \ ?&12FB = &20 (opcode for a JSR instruction)
 
- STA &2538              \ ?&2538 = &20 (opcode for a JSR &xxxx instruction)
+ STA &2538              \ ?&2538 = &20 (opcode for a JSR instruction)
 
- STA &45CB              \ ?&45CB = &20 (opcode for a JSR &xxxx instruction)
+ STA &45CB              \ ?&45CB = &20 (opcode for a JSR instruction)
 
- STA &2F23              \ ?&2F23 = &20 (opcode for a JSR &xxxx instruction)
+ STA &2F23              \ ?&2F23 = &20 (opcode for a JSR instruction)
 
  LDA #&EA               \ ?&2545 = &EA (opcode for a NOP instruction)
  STA &2545
@@ -2834,8 +2834,7 @@ ORG CODE%
 \   * Bits 2 to 7 = the number of the first sub-section in this section
 \
 \   * Bit 1 = if this is set, then in the horizon calculations, we always skip
-\             the setting of horizonLine to 7 (this is never the case in
-\             Donington Park as this bit is clear for all sections)
+\             the setting of horizonLine to 7
 \
 \   * Bit 0 = if this is set, then the segment vectors for this section are
 \             generated as a straight track rather than using the curve tables
@@ -3591,8 +3590,7 @@ ORG CODE%
 \ segments from the starting line to the start of section 0, counting forwards
 \ around the track.
 \
-\ If the starting line is at segment n, this value is the track length minus n,
-\ which is 719 - 209 at Donington Park.
+\ If the starting line is at segment n, this value is the track length minus n.
 \
 \ ******************************************************************************
 

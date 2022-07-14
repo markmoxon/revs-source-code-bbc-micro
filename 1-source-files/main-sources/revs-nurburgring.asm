@@ -36,6 +36,8 @@ LOAD% = &70DB           \ The load address of the track binary
 
 CODE% = &5300           \ The assembly address of the track data
 
+trackWidth = 154        \ Track width
+
 \ ******************************************************************************
 \
 \ Addresses in the main game code
@@ -97,20 +99,68 @@ playerDrift         = &62FB
 
 ORG CODE%
 
+.trackData
+
 \ ******************************************************************************
 \
-\       Name: trackData
+\       Name: Track section data (Part 1 of 2)
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Data for the track sections
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part defines the following aspects of these track sections:
+\
+\ trackSectionData      Various data for the track section:
+\
+\                         * Bits 0-2: Size of the track section list
+\
+\                           Defines the number of entries that we store in the
+\                           track section list for this section, which is used
+\                           to calculate the coordinates of the track verges
+\                           (higher numbers mean more sections are calculated,
+\                           so higher numbers are used for more complex parts
+\                           of the track)
+\
+\                           This value is given in the bottom nibble of the
+\                           track section data byte (bit 3 is ignored), i.e. the
+\                           second digit in the hexadecimal value
+\
+\                         * Bits 4-7: Sign number
+\
+\                           The number of the road sign (0 to 15) to show when
+\                           we enter this section, but only if the sign number
+\                           is different to the number in the previous section
+\
+\                           This value is given in the top nibble of the track
+\                           section data byte, i.e. the first digit in the
+\                           hexadecimal value
+\
+\ xTrackSectionIHi      High byte of the x-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ yTrackSectionIHi      High byte of the y-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ zTrackSectionIHi      High byte of the z-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ xTrackSectionOHi      High byte of the x-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackSectionTurn      The number of the segment towards the end of the section
+\                       where non-player cars should start turning in
+\                       preparation for the next section
+\
+\ zTrackSectionOHi      High byte of the z-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackDriverSpeed      The maximum speed for non-player drivers on this section
+\                       of the track
 \
 \ ******************************************************************************
-
-.trackData
 
  EQUB &01, &2E, &1F, &00, &2D, &FF, &00, &FF
  EQUB &13, &2E, &1D, &26, &2D, &4D, &26, &92
@@ -171,19 +221,6 @@ ORG CODE%
  BPL L53F0
  JMP L5655
 
-\ ******************************************************************************
-\
-\       Name: L53F0
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
 .L53F0
 
 \ &B451 -> &1933 = CheckVergeOnScreen
@@ -229,103 +266,82 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L53FA
+\       Name: subSection
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The number of the current sub-section
 \
 \ ******************************************************************************
 
-.L53FA
+.subSection
 
  EQUB &EC
 
 \ ******************************************************************************
 \
-\       Name: L53FB
+\       Name: trackSubCount
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The total number of sub-sections in the track
 \
 \ ******************************************************************************
 
-.L53FB
+.trackSubCount
 
- EQUB &2D
+ EQUB 45
 
 \ ******************************************************************************
 \
-\       Name: L53FC
+\       Name: yawAngleLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: Low byte of the current yaw angle of the track, i.e. the angle at
+\             which the track is pointing along the ground
 \
 \ ******************************************************************************
 
-.L53FC
+.yawAngleLo
 
  EQUB &16
 
 \ ******************************************************************************
 \
-\       Name: L53FD
+\       Name: yawAngleHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: High byte of the current yaw angle of the track, i.e. the angle at
+\             which the track is pointing along the ground
 \
 \ ******************************************************************************
 
-.L53FD
+.yawAngleHi
 
  EQUB &04
 
 \ ******************************************************************************
 \
-\       Name: L53FE
+\       Name: heightOfTrack
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The height above ground of the current track sub-section
 \
 \ ******************************************************************************
 
-.L53FE
+.heightOfTrack
 
  EQUB &F0
 
 \ ******************************************************************************
 \
-\       Name: L53FF
+\       Name: subSectionSegment
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The number of the segment within the current sub-section, counting
+\             from the start of the sub-section
 \
 \ ******************************************************************************
 
-.L53FF
+.subSectionSegment
 
  EQUB &08
 
@@ -371,7 +387,7 @@ ORG CODE%
  EQUB &43               \ !&2543 = Hook80Percent
 \EQUB &24               \ !&2F24 = HookBackground
 
- EQUB &33, &3C          \ These bytes appear to be unused
+ EQUB &33, &3C          \ These bytes pad the block out to exactly 20 bytes
  EQUB &4A, &57
  EQUB &61
 
@@ -417,24 +433,21 @@ ORG CODE%
  EQUB &25               \ !&2543 = Hook80Percent
 \EQUB &2F               \ !&2F24 = HookBackground
 
- EQUB &2E, &3F          \ These bytes appear to be unused
+ EQUB &2E, &3F          \ These bytes pad the block out to exactly 20 bytes
  EQUB &4F, &57
  EQUB &5B
 
 \ ******************************************************************************
 \
-\       Name: L5428
+\       Name: trackYawDeltaHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: High byte of the change in yaw angle that we apply to each segment
+\             in the specified sub-section when building the track
 \
 \ ******************************************************************************
 
-.L5428
+.trackYawDeltaHi
 
  EQUB &00, &00, &00, &00, &07, &00, &FD, &FE
  EQUB &FE, &00, &00, &00, &00, &FD, &05, &FF
@@ -449,12 +462,9 @@ ORG CODE%
 \
 \       Name: trackSignData
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Track data
+\    Summary: Base coordinates and object types for 16 road signs
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -466,14 +476,27 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5472
+\       Name: CalcSegmentVector
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Calculate the segment vector for the current segment
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine calculates the segment vector for the current segment, by
+\ converting the direction of the track at this point, which is stored in the
+\ yaw angle in (yawAngleHi yawAngleLo), into a direction vector to store in the
+\ (xTrackSegmentI yTrackSegmentI zTrackSegmentI) tables in the track data file.
+\
+\ We also calculate the outer track segment vector (i.e. the vector across the
+\ track) and store it in the (xTrackSegmentO yTrackSegmentI zTrackSegmentO)
+\ tables in the track data file.
+\
+\ Note that the track segment vector tables overwrite the modification routines,
+\ as those are no longer used, and the main game code still thinks that's where
+\ the segment vector tables are stored as part of the track data file (which
+\ they are, it's just that they are dynamically generated in the extra track
+\ files, rather than being full of static data).
 \
 \ ******************************************************************************
 
@@ -496,114 +519,293 @@ ORG CODE%
 \ EQUB &03, &20, &82, &55, &A5, &24, &18, &69
 \ EQUB &03, &60
 
-.L5472
+.CalcSegmentVector
 
- LDA L53FC              \ L53FA in BH
- ASL A
- LDA L53FD              \ L53FB in BH
- ROL A
- PHA
- ROL A
- ROL A
- ROL A
- AND #&07
- STA &75
- LSR A
- PLA
- AND #&3F
- BCC L548C
+                        \ This routine calculates the segment vector for the
+                        \ current segment within the current sub-section
+                        \
+                        \ The segment vector contains two vectors:
+                        \
+                        \   * (xTrackSegmentI yTrackSegmentI zTrackSegmentI) is
+                        \     the vector along the inside of the track from the
+                        \     previous segment to the current segment
+                        \
+                        \   * (xTrackSegmentO yTrackSegmentI zTrackSegmentO) is
+                        \     the vector from the inner edge of the track to the
+                        \     outer edge of the track for the current segment
+                        \
+                        \ We start by analysing the track's yaw angle to see in
+                        \ which direction the track that we're building is
+                        \ currently pointing, so we can set the correct signs
+                        \ and axes for the segment vector
 
-.L5488
+ LDA yawAngleLo         \ Set A = (yawAngleHi yawAngleLo) << 1
+ ASL A                  \
+ LDA yawAngleHi         \ Keeping the high byte only and rotating bit 7 into
+ ROL A                  \ the C flag
 
- EOR #&3F
- ADC #&00
+ PHA                    \ Push the high byte in A onto the stack, so the stack
+                        \ contains the high byte of yawAngle << 1
 
-.L548C
+ ROL A                  \ Set bits 0-2 of U to bits 5-7 of yawAngleHi (i.e. the
+ ROL A                  \ top three bits), so this is equivalent to:
+ ROL A                  \
+ AND #%00000111         \   U = (yawAngleHi yawAngleLo) DIV 8192
+ STA U                  \
+                        \ We will use U to work out the direction of the track
+                        \ that we are building
 
+                        \ We now work out the index into the xTrackCurve and
+                        \ zTrackCurve tables for the curve that matches the
+                        \ direction of the track, putting the result in X
+                        \
+                        \ The curve tables contain coordinates for a curve that
+                        \ covers one-eighth of a circle, or 45 degrees, so we
+                        \ first reduce the yaw angle into that range by reducing
+                        \ our 32-bit angle into this range
+                        \
+                        \ The 32-bit angle in (yawAngleHi yawAngleLo) cover a
+                        \ whole circle, so 0 to 65536 represents 0 to 360
+                        \ degrees, so one-eighth of a circle, or 45 degrees, is
+                        \ represented by 65536 / 8 = 8192
+                        \
+                        \ So we reduce the 32-bit value into the range 0 to 8192
+                        \ so we can map it to the curve in the curve tables
+
+ LSR A                  \ Set the C flag to bit 0 of A, i.e. bit 5 of yawAngleHi
+
+ PLA                    \ Retrieve the high byte that we pushed onto the stack,
+                        \ i.e. the high byte of yawAngle << 1
+
+ AND #%00111111         \ Clear bits 6 and 7 of A, so A now contains two zeroes,
+                        \ then bits 4, 3, 2, 1, 0 of yawAngleHi, then bit 7 of
+                        \ yawAngleLo
+
+                        \ By this point, we have:
+                        \
+                        \   X = (yawAngleHi yawAngleLo) MOD 8192
+                        \
+                        \ This is the corresponding point in the curve tables
+                        \ for the track direction, reduced to one-eighth of a
+                        \ circle, or 0 to 45 degrees
+                        \
+                        \ The next eighth of the circle (i.e. from 45 to 90
+                        \ degrees) will map to the curve tables, but in reverse,
+                        \ so we can extend our calculation to quarter circle by
+                        \ flipping the index in X for this range of yaw angle
+                        \ (i.e. if we are in the second eighth of the circle,
+                        \ from 45 to 90 degrees, which is when bit 5 of the high
+                        \ byte is clear)
+
+ BCC vect1              \ If the C flag, i.e. bit 5 of yawAngleHi, is clear,
+                        \ jump to vect1 to skip the following
+
+ EOR #%00111111         \ Negate A using two's complement (the ADC adds 1 as the
+ ADC #0                 \ C flag is set)
+
+.vect1
+
+                        \ By this point, A contains the index of the curve
+                        \ within the curve tables that corresponds to the angle
+                        \ in which the track is pointing, reduced to the first
+                        \ quarter of a circle (0 to 90 degrees)
+                        \
+                        \ We can now fetch the vector for that point on the
+                        \ curve, which will give us the vector of the curve at
+                        \ that point (i.e. the direction of the curve for the
+                        \ track segment we are building)
+
+ TAX                    \ Set X = A
+
+ LDY xTrackCurve,X      \ Set Y = X-th entry in xTrackCurve
+
+ LDA zTrackCurve,X      \ Set X = X-th entry in zTrackCurve
  TAX
- LDY L57BF,X
- LDA L58BF,X
- TAX
- LDA &75
- CLC
- ADC #&01
- AND #&02
- BNE L54A3
- STY &76
- STX &77
- BEQ L54A7
 
-.L54A3
+                        \ The vector in X and Y now contains the correct values
+                        \ for the curve vector, but because we reduced it to the
+                        \ first quarter in the circle, the signs may not be
+                        \ correct, and we may need to swap the x-coordinate and
+                        \ z-coordinate
+                        \
+                        \ We now use the value of U to set the vector properly,
+                        \ as the value of U determines which eighth of the
+                        \ circle corresponds to the track direction
 
- STX &76
- STY &77
+ LDA U                  \ If bit 1 of U + 1 is set, i.e. U ends in %01 or %10,
+ CLC                    \ i.e. bits 5 and 6 of yawAngleHi are different, then
+ ADC #1                 \ jump to vect2 to set V and W the other way round
+ AND #%00000010
+ BNE vect2
 
-.L54A7
+ STY V                  \ Set V = Y
 
- LDA &75
- CMP #&04
- BCC L54B3
- LDA #&00
- SBC &76
- STA &76
+ STX W                  \ Set W = X
 
-.L54B3
+ BEQ vect3              \ Jump to vect3 (this BEQ is effectively a JMP as we
+                        \ passed through a BNE above)
 
- LDA &75
- CMP #&06
- BCS L54C3
- CMP #&02
- BCC L54C3
- LDA #&00
- SBC &77
- STA &77
+.vect2
 
-.L54C3
+ STX V                  \ Set V = X
 
- LDY &02
- LDA #&9A               \ #88 in BH
- STA &75
- LDA &76
- STA &5400,Y
- JSR L555C              \ 57BB in BH
- STA &5800,Y
- LDA &77
- STA &5600,Y
- JSR L555C              \ 57BB in BH
- EOR #&FF
- CLC
- ADC #&01
- STA &5700,Y
- LDA L53FE              \ 53FC in BH
- STA &5500,Y
- RTS
+ STY W                  \ Set W = Y
+
+.vect3
+
+ LDA U                  \ If U < 4, i.e. bit 2 of U is clear, i.e. bit 7 of
+ CMP #4                 \ yawAngleHi is clear, jump to vect4 to skip the
+ BCC vect4              \ following
+
+                        \ If we get here then bit 2 of U is set, i.e. bit 7 of
+                        \ yawAngleHi is set
+
+ LDA #0                 \ Set V = -V
+ SBC V
+ STA V
+
+.vect4
+
+ LDA U                  \ If U >= 6, i.e. bits 1 and 2 of U are set, i.e. bits
+ CMP #6                 \ 6 and 7 of yawAngleHi are set, jump to vect5 to skip
+ BCS vect5              \ the following
+
+ CMP #2                 \ If U < 2, i.e. bits 1 and 2 of U are clear, i.e. bits
+ BCC vect5              \ 6 and 7 of yawAngleHi are clear, jump to vect5 to skip
+                        \ the following
+
+                        \ If we get here then bits 1 and 2 of U are different,
+                        \ i.e. bits 6 and 7 of yawAngleHi are different
+
+ LDA #0                 \ Set W = -W
+ SBC W
+ STA W
+
+.vect5
+
+                        \ By this point we have the x- and z-coordinates of the
+                        \ vector for the track direction in the segment that we
+                        \ want to build, and we already know the height of the
+                        \ track at this point (it's in heightOfTrack)
+                        \
+                        \ The inner track segment vector at this point is
+                        \ therefore:
+                        \
+                        \   [       V       ]
+                        \   [ heightOfTrack ]
+                        \   [       W       ]
+                        \
+                        \ And we can now store the vector in the track data file
+                        \ as follows:
+                        \
+                        \   * xTrackSegmentI = V
+                        \   * yTrackSegmentI = heightOfTrack
+                        \   * zTrackSegmentI = W
+                        \
+                        \ We can also calculate the vector from the inner verge
+                        \ to the outer verge as follows:
+                        \
+                        \   * xTrackSegmentO = -W * trackWidth / 256
+                        \   * zTrackSegmentO = V * trackWidth / 256
+                        \
+                        \ This works because given a 2D vector [V W], the vector
+                        \ [-W V] is the vector's normal, i.e. the same vector,
+                        \ but perpendicular to the original
+                        \
+                        \ If we take the original inner vector in [V W], then
+                        \ its normal vector is a vector that's perpendicular to
+                        \ the original, so instead of being a vector pointing
+                        \ along the inner edge, it's a vector pointing at 90
+                        \ degrees across the track, which is the vector that we
+                        \ want to calculate
+                        \
+                        \ Multiplying the normal vector by the track width sets
+                        \ the correct length for the outer segment vector, so
+                        \ we could make the track wider by changing the value of
+                        \ the trackWidth configuration variable
+
+ LDY thisVectorNumber   \ Set Y to thisVectorNumber, which contains the value of
+                        \ trackSectionFrom for this track section (i.e. the
+                        \ number of the first segment vector in the section)
+
+ LDA #trackWidth        \ Set U to the width of the track
+ STA U
+
+ LDA V                  \ Set the x-coordinate of the Y-th inner track segment
+ STA xTrackSegmentI,Y   \ vector to V
+
+ JSR Multiply8x8Signed  \ Set A = A * U / 256
+                        \       = V * trackWidth / 256
+
+ STA zTrackSegmentO,Y   \ Set the z-coordinate of the Y-th outer track segment
+                        \ vector to V * trackWidth / 256
+
+ LDA W                  \ Set the z-coordinate of the Y-th inner track segment
+ STA zTrackSegmentI,Y   \ vector to W
+
+ JSR Multiply8x8Signed  \ Set A = A * U / 256
+                        \       = W * trackWidth / 256
+
+ EOR #&FF               \ Negate A using two's complement, so:
+ CLC                    \
+ ADC #1                 \   A = -W * trackWidth / 256
+
+ STA xTrackSegmentO,Y   \ Set the x-coordinate of the Y-th outer track segment
+                        \ vector to -W * trackWidth / 256
+
+ LDA heightOfTrack      \ Set the y-coordinate of the Y-th track segment vector
+ STA yTrackSegmentI,Y   \ to the height of the track
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
 \       Name: HookDataPointers
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: If bit 6 of the current section's flags is set, update the data
+\             pointers
 \
 \ ------------------------------------------------------------------------------
 \
-\ Called L54F1 in BH
+\ This routine is called from part 1 of GetTrackSegment so we update the
+\ sub-section and sub-section segment pointers when fetching a new track
+\ segment.
+\
+\ If bit 6 of the current section's flags is set, then the track segment vectors
+\ for this section need to be generated from the curve tables (as opposed to
+\ being calculated as a straight section). When this is the case, this routine
+\ calls UpdateDataPointers to update the pointers to the next sub-section and
+\ segment along the track.
 \
 \ ******************************************************************************
 
 .HookDataPointers
 
- LDA &01                \ #01 in BH
- AND #&40
- BEQ L54F4
- JSR L5582
+ LDA thisSectionFlags   \ If bit 6 of the current section's flags is clear, jump
+ AND #%01000000         \ to flab1 to skip the following call, so we just
+ BEQ flab1              \ implement the same code as in the original
 
-.L54F4
+ JSR UpdateDataPointers \ Bit 6 of the current section's flags is set, so we are
+                        \ generating this section's segment vectors using the
+                        \ curve tables, so call UpdateDataPointers to update
+                        \ the pointers to the next sub-section and segment along
+                        \ the track, before continuing with the same code as in
+                        \ the original
 
- LDA &24
- CLC
- ADC #&03
- RTS
+.flab1
+
+ LDA frontSegmentIndex  \ Set A to the index * 3 of the front track segment in
+                        \ the track segment buffer
+
+ CLC                    \ Set A = frontSegmentIndex + 3
+ ADC #3                 \
+                        \ to move on to the next track segment ahead of the
+                        \ current front segment in the track segment buffer,
+                        \ which will become the new front segment
+
+ RTS                    \ Return from the subroutine
+
 
  EQUB &0C, &08, &03, &FE, &FB, &00
 
@@ -701,18 +903,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5528
+\       Name: trackYawDeltaLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: Low byte of the change in yaw angle that we apply to each segment
+\             in the specified sub-section when building the track
 \
 \ ******************************************************************************
 
-.L5528
+.trackYawDeltaLo
 
  EQUB &00, &00, &00, &00, &E8, &00, &54, &C6
  EQUB &C6, &00, &00, &00, &00, &8F, &9E, &B7
@@ -725,12 +924,14 @@ ORG CODE%
 \
 \       Name: Hook80Percent
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
+\             horizon
 \
 \ ------------------------------------------------------------------------------
 \
-\ Called L53F0 in BH
+\ This routine is called from GetTrackAndMarkers to set the horizonTrackWidth to
+\ 80% of the width of the track on the horizon.
 \
 \ ******************************************************************************
 
@@ -739,44 +940,77 @@ ORG CODE%
 
 .Hook80Percent
 
- STA &75
- LDA #&CD
- JMP Multiply8x8        \ Same address in C64 and BBC
+ STA U                  \ Set U = A
+
+ LDA #205               \ Set A = 205
+
+ JMP Multiply8x8        \ Set (A T) = A * U
+                        \           = 205 * A
+                        \
+                        \ returning from the subroutine using a tail call
+                        \
+                        \ This calculates the following in A:
+                        \
+                        \   A = (A T) / 256
+                        \     = 205 * A / 256
+                        \     = 0.80 * A
 
 \ ******************************************************************************
 \
-\       Name: L555C
+\       Name: Multiply8x8Signed
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Multiply two 8-bit numbers, one of which is signed
 \
 \ ------------------------------------------------------------------------------
 \
-\ Called L57BB in BH
+\ This routine calculates the following, retaining the sign in A.
+\
+\   A = A * U / 256
+\
+\ Specifically, if the last instruction to affect the N flag before the call is
+\ an LDA instruction, and A is signed, then set:
+\
+\   A = |A| * U * abs(A)
+\     = A * U / 256
+\
+\ So this multiplies A and U, retaining the sign in A.
 \
 \ ******************************************************************************
 
-.L555C
+.Multiply8x8Signed
 
- PHP
+ PHP                    \ Store the N flag on the stack, as set by the LDA just
+                        \ before the call, so this equals abs(A)
 
-\ &466B -> &461B = CheckVergeOnScreen
-\ JMP &466B -> JMP &461B
+ JMP MultiplyHeight+11  \ Jump into the MultiplyHeight routine to do this:
+                        \
+                        \   JSR Absolute8Bit      \ Set A = |A|
+                        \
+                        \   JSR Multiply8x8       \ Set (A T) = A * U
+                        \                         \           = |A| * U
+                        \                         \
+                        \                         \ So A = |A| * U / 256
+                        \
+                        \   PLP                   \ Retrieve sign in N, which we
+                        \                         \ set to abs(A) above
+                        \
+                        \   JSR Absolute8Bit      \ Set A = |A| * abs(A)
+                        \                         \       = A * U / 256
+                        \
+                        \   RTS                   \ Return from the subroutine
+                        \
+                        \ So this sets A = A * U while retaining the sign in A
 
- JMP &461B
-
- EQUB &FC, &FC
+ EQUB &FC, &FC          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
 \       Name: xTrackSignVector
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The x-coordinate of the track sign vector for each sign, to be
+\             scaled and added to the inner track section vector for the sign
 \
 \ ******************************************************************************
 
@@ -790,12 +1024,21 @@ ORG CODE%
 \
 \       Name: HookSegmentVector
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: If bit 6 of the current section's flags is set, move to the next
+\             segment vector, calculate it and store it
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is called from part 3 of GetTrackSegment and TurnPlayerAround, so
+\ we calculate the next track segment vector on-the-fly for curved sections.
+\
+\ If bit 6 of the current section's flags is set, then the track segment vectors
+\ for this section need to be generated from the curve tables (as opposed to
+\ being calculated as a straight section). When this is the case, this routine
+\ calls UpdateVectorNumber and SetSegmentVector to calculate and store the next
+\ track segment vector, which can then be read by the main game code as if it
+\ were a static piece of data from a normal track data file.
 \
 \ ******************************************************************************
 
@@ -817,140 +1060,269 @@ ORG CODE%
 \ EQUB &50, &34, &18, &6D, &FE, &53, &8D, &FE
 \ EQUB &53, &20, &72, &54, &A6, &45, &60
 
+\ &13A1 -> &13E0 = UpdateVectorNumber
+\ JSR &13A1 -> JSR UpdateVectorNumber
+
 .HookSegmentVector
 
- LDA &01                \ 01 in BH
- AND #&40
- BEQ L557E
+ LDA thisSectionFlags   \ If bit 6 of the current section's flags is clear, jump
+ AND #%01000000         \ to flag1 to return from the subroutine
+ BEQ flag1
 
-\ &13A1 -> &13E0 = UpdateVectorNumber
-\ JSR &13A1 -> JSR UpdateVectorNumber
+                        \ Bit 6 of the current section's flags is set, so we are
+                        \ generating this section's segment vectors using the
+                        \ curve tables
+
+ JSR UpdateVectorNumber \ Update thisVectorNumber to the next segment vector
+                        \ along the track in the direction we are facing (we
+                        \ replaced a call to UpdateCurveVector with the call to
+                        \ the hook, so this implements that call, knowing that
+                        \ this is a curve)
+
+ JSR SetSegmentVector   \ Calculate and store the next segment vector, so it can
+                        \ be read by the main game code as if it were a static
+                        \ piece of data from a normal track data file
+
+.flag1
+
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: MoveToNextVector
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Move to the next to the next segment vector along the track and
+\             update the pointers
+\
+\ ******************************************************************************
+
+.MoveToNextVector
 
  JSR UpdateVectorNumber
 
- JSR HookMoveBack              \ 55C4 in BH
-
-.L557E
-
- RTS
-
 \ ******************************************************************************
 \
-\       Name: L557F
+\       Name: UpdateDataPointers
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: Update the sub-section and segment numbers to point to the next
+\             segment along the track in the correct direction
 \
 \ ******************************************************************************
 
-.L557F
+.UpdateDataPointers
 
-\ &13A1 -> &13E0 = UpdateVectorNumber
-\ JSR &13A1 -> JSR UpdateVectorNumber
+ LDY subSection         \ Set Y to the number of the current sub-section within
+                        \ the current track section
 
- JSR UpdateVectorNumber
+ LDA subSectionSegment  \ Set A to the number of the current segment within the
+                        \ current sub-section
 
-\ ******************************************************************************
-\
-\       Name: L5582
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
+ SEC                    \ Set the C flag for use in the following addition or
+                        \ subtraction
 
-.L5582
+ BIT directionFacing    \ If we are facing backwards along the track, jump to
+ BMI upda1              \ upda1 to move to the nect segment in that direction
 
- LDY L53FA              \ 53F8 in BH
- LDA L53FF              \ 53FD in BH
- SEC
- BIT &25
- BMI L55A0
- ADC #&00
- CMP L5728,Y
- BCC L55B6
- LDA #&00
- INY
- CPY L53FB              \ 53F9 in BH
- BCC L55B6
- LDY #&00
- BEQ L55B6
+                        \ If we get here then we are facing forwards along the
+                        \ track, so we increment subSectionSegment to point to
+                        \ the next segment
+                        \
+                        \ If subSectionSegment reaches trackSubSize for this
+                        \ sub-section, then we have reached the end of that
+                        \ sub-section and need to start the next sub-section,
+                        \ so we wrap the segment number within the sub-section
+                        \ round to zero and increment subSection to move on to
+                        \ the next sub-section
+                        \
+                        \ If subSection then reaches trackSubCount, which is the
+                        \ total number of sub-sections in the track, then we
+                        \ have reached the end of the last sub-section, so we
+                        \ wrap subSection round to zero
 
-.L55A0
+ ADC #0                 \ Set A = A + 1
+                        \       = subSectionSegment + 1
+                        \
+                        \ This works as the C flag is set
 
- SBC #&01
- BCS L55B6
- TYA
- AND #&7F
+ CMP trackSubSize,Y     \ If A < trackSubSize for this index, jump to upda3 to
+ BCC upda3              \ update the pointers and return from the subroutine
+
+ LDA #0                 \ Set A = 0, to set as the new segment number in
+                        \ subSectionSegment within the next sub-section
+
+ INY                    \ Increment Y to point to the next sub-section
+
+ CPY trackSubCount      \ If Y < trackSubCount, jump to upda3 to update the
+ BCC upda3              \ pointers and return from the subroutine
+
+ LDY #0                 \ Set Y = 0, to set the new value of subSection to the
+                        \ start of the data
+
+ BEQ upda3              \ Jump to upda3 to update the pointers and return from
+                        \ the subroutine (this BEQ is effectively a JMP as Y is
+                        \ always zero)
+
+.upda1
+
+                        \ If we get here then we are facing backwards along the
+                        \ track, so we decrement subSectionSegment to point to
+                        \ the previous segment, i.e. backwards along the track
+                        \
+                        \ If subSectionSegment goes past 0, then we have gone
+                        \ past the start of that sub-section and need to jump to
+                        \ the end of the previous sub-section, so we wrap the
+                        \ segment number within the sub-section to the last
+                        \ segment number in the previous sub-section and
+                        \ decrement subSection to move back to the previous
+                        \ sub-section
+                        \
+                        \ If subSection reaches 0, which is the start of the
+                        \ track, then we wrap it round to the last sub-section
+                        \ to go backwards past the start to reach the end of the
+                        \ track
+
+ SBC #1                 \ Set A = A - 1
+                        \       = subSectionSegment - 1
+                        \
+                        \ This works as the C flag is set
+
+ BCS upda3              \ If the subtraction didn't underflow, jump to upda3 to
+                        \ update the pointers and return from the subroutine
+
+                        \ If we get here, then subSectionSegment has just gone
+                        \ past 0, so we need to jump to the end of the previous
+                        \ sub-section
+
+ TYA                    \ Clear bit 7 of Y to ensure that Y is positive
+ AND #%01111111
  TAY
- CPY #&01
- BCS L55AF
- LDY L53FB              \ 53F9 in BH
 
-.L55AF
+ CPY #1                 \ If Y >= 1, jump to upda2 as we aren't about to go past
+ BCS upda2              \ the start of the first sub-section
 
- DEY
- LDA L5728,Y
- SEC
- SBC #&01
+                        \ If we get here then Y = 0, so we are in the first
+                        \ segment of the first sub-section, so we need to wrap
+                        \ the sub-section around to the end of the track
 
-.L55B6
+ LDY trackSubCount      \ Set Y = trackSubCount, so we set the new value of
+                        \ subSection to trackSubCount - 1, i.e. the last
+                        \ sub-section in the track
 
- STA L53FF              \ 53FD in BH
- STY L53FA              \ 53F8 in BH
- RTS
+.upda2
+
+ DEY                    \ Decrement Y to point to the previous sub-section
+
+ LDA trackSubSize,Y     \ Set A to trackSubSize - 1 for this index, which points
+ SEC                    \ to the last entry in the new sub-section
+ SBC #1
+
+.upda3
+
+ STA subSectionSegment  \ Update the segment number within the sub-section to
+                        \ the updated value of A
+
+ STY subSection         \ Update the sub-section to the updated value of Y
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: HookMoveBack
+\       Name: SetSegmentVector
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Add the yaw angle and height deltas to the yaw angle and height
+\             (for curved sections) and calculate the segment vector
 \
 \ ------------------------------------------------------------------------------
 \
-\ L55C4 in BH
+\ This routine adds the yaw angle and height deltas to the track yaw angle and
+\ height, to get the coordinates for the next segment along. It then calls the
+\ CalcSegmentVector routine to calculate the segment vectors and store them in
+\ the correct tables for the main game code to read.
+\
+\ If the current sub-section number has bit 7 set, then this section isn't being
+\ generated using the curve tables, but is instead being generated as a straight
+\ part of the track. In this case we don't update the yaw angle or track height
+\ before calculating the segment vector, as the main game code draws straight
+\ segments by simply adding the same track segment vector for each segment in
+\ the straight.
 \
 \ ******************************************************************************
 
-.HookMoveBack
+.SetSegmentVector
 
- STX &45
- LDY L53FA              \ 53F8 in BH
- BMI L55F3
- LDA L5528,Y
- STA &74
- LDA L5428,Y
- BIT &25
- JSR Absolute16Bit      \ Same address in C64 and BBC
- STA &75
- LDA &74
- CLC
- ADC L53FC              \ 53FA in BH
- STA L53FC              \ 53FA in BH
- LDA &75
- ADC L53FD              \ 53FB in BH
- STA L53FD              \ 53FB in BH
- LDA L5628,Y
- BIT &25
- JSR Absolute8Bit       \ Same address in C64 and BBC
- CLC
- ADC L53FE              \ 53FC in BH
- STA L53FE              \ 53FC in BH
+ STX xStore             \ Store X in xStore so we can retrieve it at the end of
+                        \ the routine
 
-.L55F3
+ LDY subSection         \ Set Y to the number of the current sub-section within
+                        \ the current track section
 
- JSR L5472
- LDX &45
- RTS
+ BMI sets1              \ If bit 7 of Y is set, then this part of the track is a
+                        \ straight section that doesn't use the curve vectors to
+                        \ generate the track, so jump to sets1 to skip updating
+                        \ the yaw angle and track height, as we simply reuse the
+                        \ same track segment vector for each segment within the
+                        \ straight
+
+                        \ We start by adding the yaw delta to the yaw angle
+
+ LDA trackYawDeltaLo,Y  \ Set (A T) = (trackYawDeltaHi trackYawDeltaLo) for this
+ STA T                  \ sub-section
+ LDA trackYawDeltaHi,Y
+
+ BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
+                        \ call to Absolute16Bit sets the sign of (A T) to
+                        \ abs(directionFacing)
+
+ JSR Absolute16Bit      \ Set the sign of (A T) to match the sign bit in
+                        \ directionFacing, so this negates (A T) if we are
+                        \ facing backwards along the track
+
+ STA U                  \ Set (U T) = (A T)
+                        \           = signed (trackYawDeltaHi trackYawDeltaLo)
+                        \             for this sub-section
+
+ LDA T                  \ Set yawAngle = yawAngle + (U T)
+ CLC                    \              = yawAngle + trackYawDelta
+ ADC yawAngleLo         \
+ STA yawAngleLo         \ starting with the low bytes
+
+ LDA U                  \ And then the high bytes
+ ADC yawAngleHi
+ STA yawAngleHi
+
+                        \ And now we add the track gradient (i.e. the height
+                        \ delta) to the track height
+
+ LDA trackGradient,Y    \ Set A to the gradient of this sub-section (i.e. the
+                        \ change of track height over the course of the
+                        \ sub-section)
+
+ BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
+                        \ call to Absolute8Bit sets the sign of A to
+                        \ abs(directionFacing)
+
+ JSR Absolute8Bit       \ Set the sign of A to match the sign bit in
+                        \ directionFacing, so this negates A if we are facing
+                        \ backwards along the track
+
+ CLC                    \ Set heightOfTrack = heightOfTrack + A
+ ADC heightOfTrack      \                   = heightOfTrack + trackGradient
+ STA heightOfTrack
+
+.sets1
+
+ JSR CalcSegmentVector  \ Calculate the segment vector for the current segment
+                        \ and put it in the xSegmentVectorI, ySegmentVectorI,
+                        \ zSegmentVectorI, xSegmentVectorO and zSegmentVectorO
+                        \ tables
+
+ LDX xStore             \ Retrieve the value of X we stores above, so we can
+                        \ return it unchanged by the routine
+
+ RTS                    \ Return from the subroutine
 
  EQUB &0D, &0A, &07, &03, &00, &00, &00
 
@@ -1039,18 +1411,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5628
+\       Name: trackGradient
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The change in height (i.e. the gradient) for each sub-section of
+\             the track
 \
 \ ******************************************************************************
 
-.L5628
+.trackGradient
 
  EQUB &00, &00, &FF, &00, &00, &00, &00, &00
  EQUB &01, &01, &00, &00, &FF, &00, &00, &00
@@ -1147,23 +1516,23 @@ ORG CODE%
 .HookSectionFrom
 
  STY &1B
- LDA L5905,Y
+ LDA trackSectionFrom,Y
  STA &02
  TYA
  LSR A
  LSR A
  LSR A
  TAY
- LDA L5846,Y
- STA L53FC              \ 53FA in BH
- LDA L5864,Y
- STA L53FD              \ 53FB in BH
- LDA L5828,Y
- STA L53FE              \ 53FC in BH
- LDA L5882,Y
+ LDA trackYawAngleLo,Y
+ STA yawAngleLo              \ 53FA in BH
+ LDA trackYawAngleHi,Y
+ STA yawAngleHi              \ 53FB in BH
+ LDA trackHeight,Y
+ STA heightOfTrack              \ 53FC in BH
+ LDA trackSubConfig,Y
  LSR A
  ROR A
- STA L53FA              \ 53F8 in BH
+ STA subSection              \ 53F8 in BH
  LDA #&0E
  ROR A
 
@@ -1171,10 +1540,10 @@ ORG CODE%
  STA &23B3
 
  LDA #&00
- STA L53FF              \ 53FD in BH
+ STA subSectionSegment              \ 53FD in BH
  BIT &25
  BMI L56AA
- JSR HookMoveBack       \ 55C4 in BH
+ JSR SetSegmentVector       \ 55C4 in BH
 
 .L56AA
 
@@ -1396,18 +1765,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5728
+\       Name: trackSubSize
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The size of each sub-section, i.e. the number of segments in each
+\             sub-section
 \
 \ ******************************************************************************
 
-.L5728
+.trackSubSize
 
  EQUB &53, &28, &16, &16, &07, &02, &14, &0A
  EQUB &07, &0B, &22, &03, &13, &18, &10, &2F
@@ -1610,30 +1976,81 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L57BF
+\       Name: xTrackCurve
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The x-coordinate of the tangent vector (i.e. the curve direction)
+\             at 64 points on a one-eighth circle covering 0 to 45 degrees
 \
 \ ******************************************************************************
 
-.L57BF
+.xTrackCurve
 
- EQUB &00
- EQUB &01, &03, &04, &06, &07, &09, &0A, &0C
- EQUB &0D, &0F, &10, &12, &13, &15, &16, &17
- EQUB &19, &1A, &1C, &1D, &1F, &20, &21, &23
- EQUB &24, &26, &27, &28, &2A, &2B, &2D, &2E
- EQUB &2F, &31, &32, &33, &35, &36, &37, &39
- EQUB &3A, &3B, &3C, &3E, &3F, &40, &41, &43
- EQUB &44, &45, &46, &47, &49, &4A, &4B, &4C
- EQUB &4D, &4E, &4F, &51, &52, &53, &54, &55
-
-
+ EQUB 0                 \ Coordinate  0 = (0, 120)
+ EQUB 1                 \ Coordinate  1 = (1, 120)
+ EQUB 3                 \ Coordinate  2 = (3, 120)
+ EQUB 4                 \ Coordinate  3 = (4, 120)
+ EQUB 6                 \ Coordinate  4 = (6, 120)
+ EQUB 7                 \ Coordinate  5 = (7, 120)
+ EQUB 9                 \ Coordinate  6 = (9, 120)
+ EQUB 10                \ Coordinate  7 = (10, 120)
+ EQUB 12                \ Coordinate  8 = (12, 119)
+ EQUB 13                \ Coordinate  9 = (13, 119)
+ EQUB 15                \ Coordinate 10 = (15, 119)
+ EQUB 16                \ Coordinate 11 = (16, 119)
+ EQUB 18                \ Coordinate 12 = (18, 119)
+ EQUB 19                \ Coordinate 13 = (19, 118)
+ EQUB 21                \ Coordinate 14 = (21, 118)
+ EQUB 22                \ Coordinate 15 = (22, 118)
+ EQUB 23                \ Coordinate 16 = (23, 118)
+ EQUB 25                \ Coordinate 17 = (25, 117)
+ EQUB 26                \ Coordinate 18 = (26, 117)
+ EQUB 28                \ Coordinate 19 = (28, 117)
+ EQUB 29                \ Coordinate 20 = (29, 116)
+ EQUB 31                \ Coordinate 21 = (31, 116)
+ EQUB 32                \ Coordinate 22 = (32, 116)
+ EQUB 33                \ Coordinate 23 = (33, 115)
+ EQUB 35                \ Coordinate 24 = (35, 115)
+ EQUB 36                \ Coordinate 25 = (36, 114)
+ EQUB 38                \ Coordinate 26 = (38, 114)
+ EQUB 39                \ Coordinate 27 = (39, 113)
+ EQUB 40                \ Coordinate 28 = (40, 113)
+ EQUB 42                \ Coordinate 29 = (42, 112)
+ EQUB 43                \ Coordinate 30 = (43, 112)
+ EQUB 45                \ Coordinate 31 = (45, 111)
+ EQUB 46                \ Coordinate 32 = (46, 111)
+ EQUB 47                \ Coordinate 33 = (47, 110)
+ EQUB 49                \ Coordinate 34 = (49, 110)
+ EQUB 50                \ Coordinate 35 = (50, 109)
+ EQUB 51                \ Coordinate 36 = (51, 108)
+ EQUB 53                \ Coordinate 37 = (53, 108)
+ EQUB 54                \ Coordinate 38 = (54, 107)
+ EQUB 55                \ Coordinate 39 = (55, 107)
+ EQUB 57                \ Coordinate 40 = (57, 106)
+ EQUB 58                \ Coordinate 41 = (58, 105)
+ EQUB 59                \ Coordinate 42 = (59, 104)
+ EQUB 60                \ Coordinate 43 = (60, 104)
+ EQUB 62                \ Coordinate 44 = (62, 103)
+ EQUB 63                \ Coordinate 45 = (63, 102)
+ EQUB 64                \ Coordinate 46 = (64, 101)
+ EQUB 65                \ Coordinate 47 = (65, 101)
+ EQUB 67                \ Coordinate 48 = (67, 100)
+ EQUB 68                \ Coordinate 49 = (68, 99)
+ EQUB 69                \ Coordinate 50 = (69, 98)
+ EQUB 70                \ Coordinate 51 = (70, 97)
+ EQUB 71                \ Coordinate 52 = (71, 96)
+ EQUB 73                \ Coordinate 53 = (73, 96)
+ EQUB 74                \ Coordinate 54 = (74, 95)
+ EQUB 75                \ Coordinate 55 = (75, 94)
+ EQUB 76                \ Coordinate 56 = (76, 93)
+ EQUB 77                \ Coordinate 57 = (77, 92)
+ EQUB 78                \ Coordinate 58 = (78, 91)
+ EQUB 79                \ Coordinate 59 = (79, 90)
+ EQUB 81                \ Coordinate 60 = (81, 89)
+ EQUB 82                \ Coordinate 61 = (82, 88)
+ EQUB 83                \ Coordinate 62 = (83, 87)
+ EQUB 84                \ Coordinate 63 = (84, 86)
+ EQUB 85                \ Coordinate 64 = (85, 85)
 
 \ ******************************************************************************
 \
@@ -1697,38 +2114,19 @@ ORG CODE%
 
  JMP mods3              \ Jump to part 3
 
-\ ******************************************************************************
-\
-\       Name: L581B
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L581B
-
  EQUB &3A, &34, &2D, &25, &1E
  EQUB &16, &0E, &1B, &28, &34, &3E, &41, &43
 
 \ ******************************************************************************
 \
-\       Name: L5828
+\       Name: trackHeight
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The height of the track above ground level for each track section
 \
 \ ******************************************************************************
 
-.L5828
+.trackHeight
 
  EQUB &FA, &FA, &E4, &E4, &EB, &F6, &E3, &E3
  EQUB &E3, &E3, &E3, &0E, &27, &3E, &3E, &3E
@@ -1737,18 +2135,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5846
+\       Name: trackYawAngleLo
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The low byte of the yaw angle of the start of each track section
+\             (i.e. the direction of the track at that point)
 \
 \ ******************************************************************************
 
-.L5846
+.trackYawAngleLo
 
  EQUB &00, &00
  EQUB &00, &58, &0E, &0E, &0E, &76, &76, &56
@@ -1758,18 +2153,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5864
+\       Name: trackYawAngleHi
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The high byte of the yaw angle of the start of each track section
+\             (i.e. the direction of the track at that point)
 \
 \ ******************************************************************************
 
-.L5864
+.trackYawAngleHi
 
  EQUB &00, &00, &00, &37
  EQUB &ED, &ED, &ED, &B2, &B2, &0C, &0C, &F5
@@ -1779,18 +2171,38 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5882
+\       Name: trackSubConfig
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Configuration data for each section that defines the sub-section
+\             numbers, and horizon calculations
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Each section has a trackSubConfig value that contains the following data:
+\
+\   * Bits 2 to 7 = the number of the first sub-section in this section
+\
+\   * Bit 1 = if this is set, then in the horizon calculations, we always skip
+\             the setting of horizonLine to 7
+\
+\   * Bit 0 = if this is set, then the segment vectors for this section are
+\             generated as a straight track rather than using the curve tables
+\             (this bit is only set for straight sections)
+\
+\ In the last one, if bit 0 is set then bit 7 of subSection gets set. This makes
+\ us skip the first part of the SetSegmentVector routine, which means we do not
+\ update the yaw angle or track height before calculating the segment vector.
+\ This means we reuse the segment vector from the end of the previous section
+\ for generating this track section. This is only done for straight sections,
+\ and the main game code draws straight sections by simply adding the same track
+\ segment vector for each segment in the straight, so setting bit 0 of a
+\ section's trackSubConfig ensures that it heads off in a straight line in the
+\ exact same direction as the tail end of the preceding section.
 \
 \ ******************************************************************************
 
-.L5882
+.trackSubConfig
 
  EQUB &00, &04, &12, &1A, &26, &2E
  EQUB &36, &3B, &3A, &3F, &3E, &4A, &4E, &56
@@ -1801,12 +2213,10 @@ ORG CODE%
 \
 \       Name: trackRacingLine
 \       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
+\   Category: Extra track data
+\    Summary: The optimum racing line for non-player drivers on each track
+\             section
+\  Deep dive: The track data file format
 \
 \ ******************************************************************************
 
@@ -1819,62 +2229,174 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L58BF
+\       Name: zTrackCurve
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: The z-coordinate of the tangent vector (i.e. the curve direction)
+\             at 64 points on a one-eighth circle covering 0 to 45 degrees
+\
+\ ******************************************************************************
+
+.zTrackCurve
+
+ EQUB 120               \ Coordinate  0 = (0, 120)
+ EQUB 120               \ Coordinate  1 = (1, 120)
+ EQUB 120               \ Coordinate  2 = (3, 120)
+ EQUB 120               \ Coordinate  3 = (4, 120)
+ EQUB 120               \ Coordinate  4 = (6, 120)
+ EQUB 120               \ Coordinate  5 = (7, 120)
+ EQUB 120               \ Coordinate  6 = (9, 120)
+ EQUB 120               \ Coordinate  7 = (10, 120)
+ EQUB 119               \ Coordinate  8 = (12, 119)
+ EQUB 119               \ Coordinate  9 = (13, 119)
+ EQUB 119               \ Coordinate 10 = (15, 119)
+ EQUB 119               \ Coordinate 11 = (16, 119)
+ EQUB 119               \ Coordinate 12 = (18, 119)
+ EQUB 118               \ Coordinate 13 = (19, 118)
+ EQUB 118               \ Coordinate 14 = (21, 118)
+ EQUB 118               \ Coordinate 15 = (22, 118)
+ EQUB 118               \ Coordinate 16 = (23, 118)
+ EQUB 117               \ Coordinate 17 = (25, 117)
+ EQUB 117               \ Coordinate 18 = (26, 117)
+ EQUB 117               \ Coordinate 19 = (28, 117)
+ EQUB 116               \ Coordinate 20 = (29, 116)
+ EQUB 116               \ Coordinate 21 = (31, 116)
+ EQUB 116               \ Coordinate 22 = (32, 116)
+ EQUB 115               \ Coordinate 23 = (33, 115)
+ EQUB 115               \ Coordinate 24 = (35, 115)
+ EQUB 114               \ Coordinate 25 = (36, 114)
+ EQUB 114               \ Coordinate 26 = (38, 114)
+ EQUB 113               \ Coordinate 27 = (39, 113)
+ EQUB 113               \ Coordinate 28 = (40, 113)
+ EQUB 112               \ Coordinate 29 = (42, 112)
+ EQUB 112               \ Coordinate 30 = (43, 112)
+ EQUB 111               \ Coordinate 31 = (45, 111)
+ EQUB 111               \ Coordinate 32 = (46, 111)
+ EQUB 110               \ Coordinate 33 = (47, 110)
+ EQUB 110               \ Coordinate 34 = (49, 110)
+ EQUB 109               \ Coordinate 35 = (50, 109)
+ EQUB 108               \ Coordinate 36 = (51, 108)
+ EQUB 108               \ Coordinate 37 = (53, 108)
+ EQUB 107               \ Coordinate 38 = (54, 107)
+ EQUB 107               \ Coordinate 39 = (55, 107)
+ EQUB 106               \ Coordinate 40 = (57, 106)
+ EQUB 105               \ Coordinate 41 = (58, 105)
+ EQUB 104               \ Coordinate 42 = (59, 104)
+ EQUB 104               \ Coordinate 43 = (60, 104)
+ EQUB 103               \ Coordinate 44 = (62, 103)
+ EQUB 102               \ Coordinate 45 = (63, 102)
+ EQUB 101               \ Coordinate 46 = (64, 101)
+ EQUB 101               \ Coordinate 47 = (65, 101)
+ EQUB 100               \ Coordinate 48 = (67, 100)
+ EQUB 99                \ Coordinate 49 = (68, 99)
+ EQUB 98                \ Coordinate 50 = (69, 98)
+ EQUB 97                \ Coordinate 51 = (70, 97)
+ EQUB 96                \ Coordinate 52 = (71, 96)
+ EQUB 96                \ Coordinate 53 = (73, 96)
+ EQUB 95                \ Coordinate 54 = (74, 95)
+ EQUB 94                \ Coordinate 55 = (75, 94)
+ EQUB 93                \ Coordinate 56 = (76, 93)
+ EQUB 92                \ Coordinate 57 = (77, 92)
+ EQUB 91                \ Coordinate 58 = (78, 91)
+ EQUB 90                \ Coordinate 59 = (79, 90)
+ EQUB 89                \ Coordinate 60 = (81, 89)
+ EQUB 88                \ Coordinate 61 = (82, 88)
+ EQUB 87                \ Coordinate 62 = (83, 87)
+ EQUB 86                \ Coordinate 63 = (84, 86)
+ EQUB 85                \ Coordinate 64 = (85, 85)
+
+\ ******************************************************************************
+\
+\       Name: Track section data (Part 2 of 2)
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Data for the track sections
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part defines the following aspects of these track sections:
+\
+\ trackSectionFlag      Various flags for the track section
+\
+\                       The abbreviations in brackets are used to show the
+\                       values of section's flags in the comments below
+\
+\                         * Bit 0: Section shape (Sh)
+\
+\                           * 0 = straight section (only one segment vector)
+\
+\                           * 1 = curved section (multiple segment vectors)
+\
+\                         * Bit 1: Colour of left verge marks (Vc)
+\
+\                           * 0 = black-and-white verge marks
+\
+\                           * 1 = red-and-white verge marks
+\
+\                         * Bit 2: Colour of right verge marks (Vc)
+\
+\                           * 0 = black-and-white verge marks
+\
+\                           * 1 = red-and-white verge marks
+\
+\                         * Bit 3: Show corner markers on right (Mlr)
+\
+\                           * 0 = do not show corner markers to the right of the
+\                                 track
+\
+\                           * 1 = show corner markers to the right of the track
+\
+\                         * Bit 4: Show corner markers on left (Mlr)
+\
+\                           * 0 = do not show corner markers to the left of the
+\                                 track
+\
+\                           * 1 = show corner markers to the left of the track
+\
+\                         * Bit 5: Corner marker colours (Mc)
+\
+\                           * 0 = show all corner markers in white
+\
+\                           * 1 = show corner markers in red or white, as
+\                                 appropriate
+\
+\                         * Bit 6: Enable hooks to generate segment vectors (G)
+\
+\                           * 0 = disable HookDataPointers and HookSegmentVector
+\
+\                           * 1 = enable HookDataPointers and HookSegmentVector
+\
+\                         * Bit 7: Maximum approach speed for next section (Sp)
+\
+\                           * 0 = the next section has no maximum approach speed
+\
+\                           * 1 = the next section has a maximum approach speed
+\
+\ xTrackSectionILo      Low byte of the x-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ yTrackSectionILo      Low byte of the y-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ zTrackSectionILo      Low byte of the z-coordinate of the starting point of
+\                       the inner verge of each track section
+\
+\ xTrackSectionOLo      Low byte of the x-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackSectionFrom      The number of the first segment vector in each section,
+\                       which enables us to fetch the segment vectors for a
+\                       given track section
+\
+\ zTrackSectionOLo      Low byte of the z-coordinate of the starting point of
+\                       the outside verge of each track section
+\
+\ trackSectionSize      The length of each track section in terms of segments
 \
 \ ******************************************************************************
 
-.L58BF
-
- EQUB &78
- EQUB &78, &78, &78, &78, &78, &78, &78, &77
- EQUB &77, &77, &77, &77, &76, &76, &76, &76
- EQUB &75, &75, &75, &74, &74, &74, &73, &73
- EQUB &72, &72, &71, &71, &70, &70, &6F, &6F
- EQUB &6E, &6E, &6D, &6C, &6C, &6B, &6B, &6A
- EQUB &69, &68, &68, &67, &66, &65, &65, &64
- EQUB &63, &62, &61, &60, &60, &5F, &5E, &5D
- EQUB &5C, &5B, &5A, &59, &58, &57, &56, &55
-
-\ ******************************************************************************
-\
-\       Name: L5900
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5900
-
- EQUB &42, &E0, &40, &00, &BF
-
-\ ******************************************************************************
-\
-\       Name: L5905
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5905
-
- EQUB &01, &00, &53
+ EQUB &42, &E0, &40, &00, &BF, &01, &00, &53
  EQUB &70, &E0, &4E, &E8, &BF, &05, &E8, &54
  EQUB &ED, &E0, &75, &48, &BF, &0A, &48, &09
  EQUB &73, &E8, &79, &AB, &A9, &14, &C4, &25
@@ -1968,49 +2490,291 @@ ORG CODE%
  TYA
  JMP L56AF
 
- EQUB &B5, &B8, &D8, &28, &D6, &03, &B0, &03
+ EQUB &B5, &B8          \ These bytes appear to be unused
 
 \ ******************************************************************************
 \
-\       Name: L5A00
+\       Name: trackSectionCount
 \       Type: Variable
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: The total number of track sections * 8
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 27 * 8
+
+\ ******************************************************************************
+\
+\       Name: trackVectorCount
+\       Type: Variable
+\   Category: Track data
+\    Summary: The total number of segment vectors in the segment vector tables
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 40
+
+\ ******************************************************************************
+\
+\       Name: trackLength
+\       Type: Variable
+\   Category: Track data
+\    Summary: The length of the full track in terms of segments
+\  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ The highest segment number is this value minus 1, as segment numbers start
+\ from zero.
 \
 \ ******************************************************************************
 
-.L5A00
+ EQUW 982               \ Segments are numbered from 0 to 981
 
- EQUB &45, &41, &00, &01, &01, &00, &48, &00
- EQUB &48, &2F, &28, &23, &1E, &A8, &00, &A8
- EQUB &6F, &5D, &52, &46, &C2, &D3, &DC, &04
- EQUB &21, &19, &00
+\ ******************************************************************************
+\
+\       Name: trackStartLine
+\       Type: Variable
+\   Category: Track data
+\    Summary: The segment number of the starting line
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ This is the segment number of the starting line, expressed as the number of
+\ segments from the starting line to the start of section 0, counting forwards
+\ around the track.
+\
+\ If the starting line is at segment n, this value is the track length minus n.
+\
+\ ******************************************************************************
 
-\ EQUB &20, &7F, &55, &4C, &72, &54
+ EQUW 982 - 38          \ The starting line is at segment 38
+
+\ ******************************************************************************
+\
+\       Name: trackLapTimeSec
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Lap times for adjusting the race class (seconds)
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ If the slowest lap time is a human player, and it's slower than one of these
+\ times, then we change the race class to the relevant difficulty.
+\
+\ ******************************************************************************
+
+ EQUB 69                \ Set class to Novice if slowest lap time > 1:69
+
+ EQUB 65                \ Set class to Amateur if slowest lap time > 1:65
+
+ EQUB 0                 \ Otherwise set class to Professional
+
+\ ******************************************************************************
+\
+\       Name: trackLapTimeMin
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Lap times for adjusting the race class (minutes)
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ If the slowest lap time is a human player, and it's slower than one of these
+\ times, then we change the race class to the relevant difficulty.
+\
+\ ******************************************************************************
+
+ EQUB 1                 \ Set class to Novice if slowest lap time > 1:69
+
+ EQUB 1                 \ Set class to Amateur if slowest lap time > 1:65
+
+ EQUB 0                 \ Otherwise set class to Professional
+
+\ ******************************************************************************
+\
+\       Name: trackGearRatio
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The gear ratio for each gear
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ The rev count is calculated by multiplying the track gear ratio by the current
+\ speed, so lower gears correspond to more revs at the same wheel speed when
+\ compared to higher gears.
+\
+\ ******************************************************************************
+
+ EQUB 72                \ Reverse
+
+ EQUB 0                 \ Neutral
+
+ EQUB 72                \ First gear
+
+ EQUB 47                \ Second gear
+
+ EQUB 40                \ Third gear
+
+ EQUB 35                \ Fourth gear
+
+ EQUB 30                \ Fifth gear
+
+\ ******************************************************************************
+\
+\       Name: trackGearPower
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The power for each gear
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ The engine torque is calculated by multiplying the rev count by the power for
+\ the relevant gear, so lower gears create more torque at the same rev count
+\ when compared to higher gears.
+\
+\ ******************************************************************************
+
+ EQUB 168               \ Reverse
+
+ EQUB 0                 \ Neutral
+
+ EQUB 168               \ First gear
+
+ EQUB 111               \ Second gear
+
+ EQUB 93                \ Third gear
+
+ EQUB 82                \ Fourth gear
+
+ EQUB 70                \ Fifth gear
+
+\ ******************************************************************************
+\
+\       Name: trackBaseSpeed
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The base speed for each race class, used when generating the best
+\             racing lines and non-player driver speeds
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 194               \ Base speed for Novice
+
+ EQUB 211               \ Base speed for Amateur
+
+ EQUB 220               \ Base speed for Professional
+
+\ ******************************************************************************
+\
+\       Name: trackStartPosition
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The starting race position of the player during a practice or
+\             qualifying lap
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 4
+
+\ ******************************************************************************
+\
+\       Name: trackCarSpacing
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: The spacing between the cars at the start of a qualifying lap, in
+\             segments
+\  Deep dive: The track data file format
+\
+\ ******************************************************************************
+
+ EQUB 33
+
+\ ******************************************************************************
+\
+\       Name: trackTimerAdjust
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Adjustment factor for the speed of the timers to allow for
+\             fine-tuning of time on a per-track basis
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ The value of the timerAdjust variable in the main game code is incremented on
+\ every iteration of the main driving loop. When it reaches the value in
+\ trackTimerAdjust, the timers adds 18/100 of a second rather than 9/100 of
+\ a second. Decreasing this value therefore speeds up the timers, allowing their
+\ speed to be adjusted on a per-track basis.
+\
+\ Setting this value to 255 disables the timer adjustment.
+\
+\ ******************************************************************************
+
+ EQUB 25
+
+\ ******************************************************************************
+\
+\       Name: trackRaceSlowdown
+\       Type: Variable
+\   Category: Extra track data
+\    Summary: Slowdown factor for non-player drivers in the race
+\  Deep dive: The track data file format
+\
+\ ------------------------------------------------------------------------------
+\
+\ Reduce the speed of all cars in a race by this amount (this does not affect
+\ the speed during qualifying). I suspect this is used for testing purposes.
+\
+\ ******************************************************************************
+
+ EQUB 0
 
 \ ******************************************************************************
 \
 \       Name: HookFirstSegment
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Move to the next to the next segment vector along the track and
+\             calculate the segment vector
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is called from GetFirstSegment so we do the following when
+\ fetching the first segment in a section:
+\
+\   * Move to the next to the next segment vector along the track
+\
+\   * Update the sub-section and sub-section segment pointers accordingly
+\
+\   * Calculate the track segment vector on-the-fly for curved sections
+\
+\ This ensures that the first segment is set up correctly.
 \
 \ ******************************************************************************
 
-.HookFirstSegment 
+\ EQUB &20, &7F, &55, &4C, &72, &54
 
- JSR L557F
- JMP L5472
+.HookFirstSegment
 
- EQUB 0
+ JSR MoveToNextVector   \ Move to the next to the next segment vector along the
+                        \ track and update the pointers
+
+ JMP CalcSegmentVector  \ Calculate the segment vector for the current segment
+                        \ and put it in the xSegmentVectorI, ySegmentVectorI,
+                        \ zSegmentVectorI, xSegmentVectorO and zSegmentVectorO
+                        \ tables, returning from the subroutine using a tail
+                        \ call
+
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
