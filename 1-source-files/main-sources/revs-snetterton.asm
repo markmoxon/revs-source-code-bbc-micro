@@ -69,7 +69,6 @@ objTrackSection     = &06E8
 objSectionSegmt     = &0880
 Multiply8x8         = &0C00
 Absolute16Bit       = &0E40
-MovePlayerForward   = &12F3
 UpdateVectorNumber  = &13E0
 MovePlayerBack      = &140B
 CheckVergeOnScreen  = &1933
@@ -165,31 +164,274 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB &63, &D1, &14, &D1, &D0, &FF, &D1, &FF
- EQUB &73, &D0, &14, &DE, &CF, &FF, &DE, &FF
- EQUB &83, &D0, &14, &FE, &CF, &1C, &FE, &7E
- EQUB &93, &D0, &11, &0F, &CF, &1A, &0F, &08
- EQUB &93, &CC, &11, &16, &CC, &09, &15, &52
- EQUB &A3, &C9, &11, &18, &C8, &10, &17, &0B
- EQUB &A3, &C8, &11, &1B, &C7, &1F, &1B, &76
- EQUB &B3, &CF, &11, &2B, &CE, &1E, &2B, &10
- EQUB &B3, &D5, &11, &2F, &D5, &FF, &2F, &FF
- EQUB &B3, &DD, &12, &2E, &DD, &0E, &2E, &91
- EQUB &C5, &E5, &13, &2C, &E5, &3C, &2D, &20
- EQUB &D5, &EF, &11, &19, &F0, &FF, &19, &FF
- EQUB &E4, &EA, &0E, &0C, &EB, &0F, &0C, &91
- EQUB &F3, &E8, &0D, &FF, &E9, &1A, &FF, &06
- EQUB &F3, &EA, &0C, &F7, &EB, &15, &F8, &0C
- EQUB &03, &EC, &0C, &F4, &ED, &FF, &F4, &FF
- EQUB &03, &EE, &10, &E0, &EF, &FF, &E0, &FF
- EQUB &13, &F1, &13, &C7, &F2, &1C, &C7, &8C
- EQUB &23, &F3, &13, &B7, &F4, &2A, &B7, &0E
- EQUB &33, &EA, &13, &AD, &EA, &FF, &AC, &FF
- EQUB &33, &DF, &13, &AC, &DF, &14, &AB, &57
- EQUB &43, &D3, &13, &AB, &D3, &13, &AA, &0B
- EQUB &43, &D1, &13, &AD, &D0, &FF, &AD, &81
- EQUB &53, &D1, &13, &BE, &D0, &FF, &BE, &FF
- EQUB &C1, &05, &15, &0A, &06, &FF, &09, &FF
+                        \ Track section 0
+
+ EQUB &63               \ trackSectionData       sign = 6, sectionListSize = 3
+ EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D120 = -12000
+ EQUB &14               \ yTrackSectionIHi       yTrackSectionI = &1400 =   5120
+ EQUB &D1               \ zTrackSectionIHi       zTrackSectionI = &D120 = -12000
+ EQUB &D0               \ xTrackSectionOHi       xTrackSectionO = &D028 = -12248
+ EQUB 255               \ trackSectionTurn
+ EQUB &D1               \ zTrackSectionOHi       zTrackSectionO = &D120 = -12000
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 1
+
+ EQUB &73               \ trackSectionData       sign = 7, sectionListSize = 3
+ EQUB &D0               \ xTrackSectionIHi       xTrackSectionI = &D0AD = -12115
+ EQUB &14               \ yTrackSectionIHi       yTrackSectionI = &1400 =   5120
+ EQUB &DE               \ zTrackSectionIHi       zTrackSectionI = &DEB8 =  -8520
+ EQUB &CF               \ xTrackSectionOHi       xTrackSectionO = &CFB5 = -12363
+ EQUB 255               \ trackSectionTurn
+ EQUB &DE               \ zTrackSectionOHi       zTrackSectionO = &DEAF =  -8529
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 2
+
+ EQUB &83               \ trackSectionData       sign = 8, sectionListSize = 3
+ EQUB &D0               \ xTrackSectionIHi       xTrackSectionI = &D068 = -12184
+ EQUB &14               \ yTrackSectionIHi       yTrackSectionI = &1400 =   5120
+ EQUB &FE               \ zTrackSectionIHi       zTrackSectionI = &FE20 =   -480
+ EQUB &CF               \ xTrackSectionOHi       xTrackSectionO = &CF70 = -12432
+ EQUB 28                \ trackSectionTurn
+ EQUB &FE               \ zTrackSectionOHi       zTrackSectionO = &FE1D =   -483
+ EQUB 126               \ trackDriverSpeed
+
+                        \ Track section 3
+
+ EQUB &93               \ trackSectionData       sign = 9, sectionListSize = 3
+ EQUB &D0               \ xTrackSectionIHi       xTrackSectionI = &D042 = -12222
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1181 =   4481
+ EQUB &0F               \ zTrackSectionIHi       zTrackSectionI = &0FF0 =   4080
+ EQUB &CF               \ xTrackSectionOHi       xTrackSectionO = &CF4A = -12470
+ EQUB 26                \ trackSectionTurn
+ EQUB &0F               \ zTrackSectionOHi       zTrackSectionO = &0FED =   4077
+ EQUB 8                 \ trackDriverSpeed
+
+                        \ Track section 4
+
+ EQUB &93               \ trackSectionData       sign = 9, sectionListSize = 3
+ EQUB &CC               \ xTrackSectionIHi       xTrackSectionI = &CC97 = -13161
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1154 =   4436
+ EQUB &16               \ zTrackSectionIHi       zTrackSectionI = &163B =   5691
+ EQUB &CC               \ xTrackSectionOHi       xTrackSectionO = &CC06 = -13306
+ EQUB 9                 \ trackSectionTurn
+ EQUB &15               \ zTrackSectionOHi       zTrackSectionO = &1572 =   5490
+ EQUB 82                \ trackDriverSpeed
+
+                        \ Track section 5
+
+ EQUB &A3               \ trackSectionData       sign = 10, sectionListSize = 3
+ EQUB &C9               \ xTrackSectionIHi       xTrackSectionI = &C92E = -14034
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1154 =   4436
+ EQUB &18               \ zTrackSectionIHi       zTrackSectionI = &18B1 =   6321
+ EQUB &C8               \ xTrackSectionOHi       xTrackSectionO = &C89D = -14179
+ EQUB 16                \ trackSectionTurn
+ EQUB &17               \ zTrackSectionOHi       zTrackSectionO = &17E8 =   6120
+ EQUB 11                \ trackDriverSpeed
+
+                        \ Track section 6
+
+ EQUB &A3               \ trackSectionData       sign = 10, sectionListSize = 3
+ EQUB &C8               \ xTrackSectionIHi       xTrackSectionI = &C809 = -14327
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1154 =   4436
+ EQUB &1B               \ zTrackSectionIHi       zTrackSectionI = &1B50 =   6992
+ EQUB &C7               \ xTrackSectionOHi       xTrackSectionO = &C71B = -14565
+ EQUB 31                \ trackSectionTurn
+ EQUB &1B               \ zTrackSectionOHi       zTrackSectionO = &1B98 =   7064
+ EQUB 118               \ trackDriverSpeed
+
+                        \ Track section 7
+
+ EQUB &B3               \ trackSectionData       sign = 11, sectionListSize = 3
+ EQUB &CF               \ xTrackSectionIHi       xTrackSectionI = &CF65 = -12443
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1154 =   4436
+ EQUB &2B               \ zTrackSectionIHi       zTrackSectionI = &2B84 =  11140
+ EQUB &CE               \ xTrackSectionOHi       xTrackSectionO = &CE84 = -12668
+ EQUB 30                \ trackSectionTurn
+ EQUB &2B               \ zTrackSectionOHi       zTrackSectionO = &2BEB =  11243
+ EQUB 16                \ trackDriverSpeed
+
+                        \ Track section 8
+
+ EQUB &B3               \ trackSectionData       sign = 11, sectionListSize = 3
+ EQUB &D5               \ xTrackSectionIHi       xTrackSectionI = &D57E = -10882
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1158 =   4440
+ EQUB &2F               \ zTrackSectionIHi       zTrackSectionI = &2F07 =  12039
+ EQUB &D5               \ xTrackSectionOHi       xTrackSectionO = &D59C = -10852
+ EQUB 255               \ trackSectionTurn
+ EQUB &2F               \ zTrackSectionOHi       zTrackSectionO = &2FFC =  12284
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 9
+
+ EQUB &B3               \ trackSectionData       sign = 11, sectionListSize = 3
+ EQUB &DD               \ xTrackSectionIHi       xTrackSectionI = &DD65 =  -8859
+ EQUB &12               \ yTrackSectionIHi       yTrackSectionI = &1268 =   4712
+ EQUB &2E               \ zTrackSectionIHi       zTrackSectionI = &2E08 =  11784
+ EQUB &DD               \ xTrackSectionOHi       xTrackSectionO = &DD83 =  -8829
+ EQUB 14                \ trackSectionTurn
+ EQUB &2E               \ zTrackSectionOHi       zTrackSectionO = &2EFD =  12029
+ EQUB 145               \ trackDriverSpeed
+
+                        \ Track section 10
+
+ EQUB &C5               \ trackSectionData       sign = 12, sectionListSize = 5
+ EQUB &E5               \ xTrackSectionIHi       xTrackSectionI = &E5C3 =  -6717
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &1388 =   5000
+ EQUB &2C               \ zTrackSectionIHi       zTrackSectionI = &2CFA =  11514
+ EQUB &E5               \ xTrackSectionOHi       xTrackSectionO = &E5E1 =  -6687
+ EQUB 60                \ trackSectionTurn
+ EQUB &2D               \ zTrackSectionOHi       zTrackSectionO = &2DEF =  11759
+ EQUB 32                \ trackDriverSpeed
+
+                        \ Track section 11
+
+ EQUB &D5               \ trackSectionData       sign = 13, sectionListSize = 5
+ EQUB &EF               \ xTrackSectionIHi       xTrackSectionI = &EF26 =  -4314
+ EQUB &11               \ yTrackSectionIHi       yTrackSectionI = &1166 =   4454
+ EQUB &19               \ zTrackSectionIHi       zTrackSectionI = &19C9 =   6601
+ EQUB &F0               \ xTrackSectionOHi       xTrackSectionO = &F00A =  -4086
+ EQUB 255               \ trackSectionTurn
+ EQUB &19               \ zTrackSectionOHi       zTrackSectionO = &196C =   6508
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 12
+
+ EQUB &E4               \ trackSectionData       sign = 14, sectionListSize = 4
+ EQUB &EA               \ xTrackSectionIHi       xTrackSectionI = &EA3F =  -5569
+ EQUB &0E               \ yTrackSectionIHi       yTrackSectionI = &0ED2 =   3794
+ EQUB &0C               \ zTrackSectionIHi       zTrackSectionI = &0CA6 =   3238
+ EQUB &EB               \ xTrackSectionOHi       xTrackSectionO = &EB30 =  -5328
+ EQUB 15                \ trackSectionTurn
+ EQUB &0C               \ zTrackSectionOHi       zTrackSectionO = &0C70 =   3184
+ EQUB 145               \ trackDriverSpeed
+
+                        \ Track section 13
+
+ EQUB &F3               \ trackSectionData       sign = 15, sectionListSize = 3
+ EQUB &E8               \ xTrackSectionIHi       xTrackSectionI = &E833 =  -6093
+ EQUB &0D               \ yTrackSectionIHi       yTrackSectionI = &0D3B =   3387
+ EQUB &FF               \ zTrackSectionIHi       zTrackSectionI = &FF38 =   -200
+ EQUB &E9               \ xTrackSectionOHi       xTrackSectionO = &E926 =  -5850
+ EQUB 26                \ trackSectionTurn
+ EQUB &FF               \ zTrackSectionOHi       zTrackSectionO = &FF08 =   -248
+ EQUB 6                 \ trackDriverSpeed
+
+                        \ Track section 14
+
+ EQUB &F3               \ trackSectionData       sign = 15, sectionListSize = 3
+ EQUB &EA               \ xTrackSectionIHi       xTrackSectionI = &EAA5 =  -5467
+ EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0CB3 =   3251
+ EQUB &F7               \ zTrackSectionIHi       zTrackSectionI = &F7F7 =  -2057
+ EQUB &EB               \ xTrackSectionOHi       xTrackSectionO = &EB54 =  -5292
+ EQUB 21                \ trackSectionTurn
+ EQUB &F8               \ zTrackSectionOHi       zTrackSectionO = &F8A6 =  -1882
+ EQUB 12                \ trackDriverSpeed
+
+                        \ Track section 15
+
+ EQUB &03               \ trackSectionData       sign = 0, sectionListSize = 3
+ EQUB &EC               \ xTrackSectionIHi       xTrackSectionI = &EC67 =  -5017
+ EQUB &0C               \ yTrackSectionIHi       yTrackSectionI = &0C97 =   3223
+ EQUB &F4               \ zTrackSectionIHi       zTrackSectionI = &F4B6 =  -2890
+ EQUB &ED               \ xTrackSectionOHi       xTrackSectionO = &ED58 =  -4776
+ EQUB 255               \ trackSectionTurn
+ EQUB &F4               \ zTrackSectionOHi       zTrackSectionO = &F4EB =  -2837
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 16
+
+ EQUB &03               \ trackSectionData       sign = 0, sectionListSize = 3
+ EQUB &EE               \ xTrackSectionIHi       xTrackSectionI = &EEE5 =  -4379
+ EQUB &10               \ yTrackSectionIHi       yTrackSectionI = &101B =   4123
+ EQUB &E0               \ zTrackSectionIHi       zTrackSectionI = &E0C2 =  -7998
+ EQUB &EF               \ xTrackSectionOHi       xTrackSectionO = &EFDA =  -4134
+ EQUB 255               \ trackSectionTurn
+ EQUB &E0               \ zTrackSectionOHi       zTrackSectionO = &E0DC =  -7972
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 17
+
+ EQUB &13               \ trackSectionData       sign = 1, sectionListSize = 3
+ EQUB &F1               \ xTrackSectionIHi       xTrackSectionI = &F1A3 =  -3677
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &C7               \ zTrackSectionIHi       zTrackSectionI = &C7A8 = -14424
+ EQUB &F2               \ xTrackSectionOHi       xTrackSectionO = &F298 =  -3432
+ EQUB 28                \ trackSectionTurn
+ EQUB &C7               \ zTrackSectionOHi       zTrackSectionO = &C7C2 = -14398
+ EQUB 140               \ trackDriverSpeed
+
+                        \ Track section 18
+
+ EQUB &23               \ trackSectionData       sign = 2, sectionListSize = 3
+ EQUB &F3               \ xTrackSectionIHi       xTrackSectionI = &F36A =  -3222
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &B7               \ zTrackSectionIHi       zTrackSectionI = &B763 = -18589
+ EQUB &F4               \ xTrackSectionOHi       xTrackSectionO = &F45F =  -2977
+ EQUB 42                \ trackSectionTurn
+ EQUB &B7               \ zTrackSectionOHi       zTrackSectionO = &B77D = -18563
+ EQUB 14                \ trackDriverSpeed
+
+                        \ Track section 19
+
+ EQUB &33               \ trackSectionData       sign = 3, sectionListSize = 3
+ EQUB &EA               \ xTrackSectionIHi       xTrackSectionI = &EA76 =  -5514
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &AD               \ zTrackSectionIHi       zTrackSectionI = &ADBC = -21060
+ EQUB &EA               \ xTrackSectionOHi       xTrackSectionO = &EA90 =  -5488
+ EQUB 255               \ trackSectionTurn
+ EQUB &AC               \ zTrackSectionOHi       zTrackSectionO = &ACC6 = -21306
+ EQUB 255               \ trackDriverSpeed
+
+                        \ Track section 20
+
+ EQUB &33               \ trackSectionData       sign = 3, sectionListSize = 3
+ EQUB &DF               \ xTrackSectionIHi       xTrackSectionI = &DF4E =  -8370
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &AC               \ zTrackSectionIHi       zTrackSectionI = &AC84 = -21372
+ EQUB &DF               \ xTrackSectionOHi       xTrackSectionO = &DF68 =  -8344
+ EQUB 20                \ trackSectionTurn
+ EQUB &AB               \ zTrackSectionOHi       zTrackSectionO = &AB8E = -21618
+ EQUB 87                \ trackDriverSpeed
+
+                        \ Track section 21
+
+ EQUB &43               \ trackSectionData       sign = 4, sectionListSize = 3
+ EQUB &D3               \ xTrackSectionIHi       xTrackSectionI = &D3AF = -11345
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &AB               \ zTrackSectionIHi       zTrackSectionI = &AB3F = -21697
+ EQUB &D3               \ xTrackSectionOHi       xTrackSectionO = &D3C9 = -11319
+ EQUB 19                \ trackSectionTurn
+ EQUB &AA               \ zTrackSectionOHi       zTrackSectionO = &AA49 = -21943
+ EQUB 11                \ trackDriverSpeed
+
+                        \ Track section 22
+
+ EQUB &43               \ trackSectionData       sign = 4, sectionListSize = 3
+ EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D120 = -12000
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &AD               \ zTrackSectionIHi       zTrackSectionI = &ADFA = -20998
+ EQUB &D0               \ xTrackSectionOHi       xTrackSectionO = &D028 = -12248
+ EQUB 255               \ trackSectionTurn
+ EQUB &AD               \ zTrackSectionOHi       zTrackSectionO = &ADFA = -20998
+ EQUB 129               \ trackDriverSpeed
+
+                        \ Track section 23
+
+ EQUB &53               \ trackSectionData       sign = 5, sectionListSize = 3
+ EQUB &D1               \ xTrackSectionIHi       xTrackSectionI = &D120 = -12000
+ EQUB &13               \ yTrackSectionIHi       yTrackSectionI = &13FF =   5119
+ EQUB &BE               \ zTrackSectionIHi       zTrackSectionI = &BE62 = -16798
+ EQUB &D0               \ xTrackSectionOHi       xTrackSectionO = &D028 = -12248
+ EQUB 255               \ trackSectionTurn
+ EQUB &BE               \ zTrackSectionOHi       zTrackSectionO = &BE62 = -16798
+ EQUB 255               \ trackDriverSpeed
+
+ EQUB &C1, &05          \ These bytes appear to be unused
+ EQUB &15, &0A
+ EQUB &06, &FF
+ EQUB &09, &FF
 
 \ ******************************************************************************
 \
@@ -282,25 +524,72 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This part of the routine sets the verge edge to being visible when the car is
+\ pointing along the track and the nose is pointing downwards.
 \
 \ ******************************************************************************
 
 .hill4
 
- LDA playerHeading
+ LDA playerHeading      \ Set A to the player's heading along the track, which
+                        \ is an angle that represents the direction in which our
+                        \ car is facing with respect to the track, like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ An angle of 0 means our car is facing forwards along
+                        \ the track, while an angle of +32 means we are facing
+                        \ 45 degrees to the right of straight on, and an angle
+                        \ of 128 means we are facing backwards along the track
 
- JSR Absolute8Bit
+ JSR Absolute8Bit       \ Set A = |A|, which reflects the angle into
+                        \ the right half of the above diagram:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   96
+                        \           127
 
- CMP #25
- BCS hill5
+ CMP #25                \ If A >= 25, then the car is pointing to a greater
+ BCS hill5              \ angle than 25 to either side of dead ahead (i.e. it is
+                        \ is pointing outside of the -24 to +24 field of view,
+                        \ or greater than 33 degrees either side of 0), so jump
+                        \ to hill5 to call CheckVergeOnScreen in the usual way
 
- LDA playerPitchAngle
- BPL hill5
+ LDA playerPitchAngle   \ If the player's pitch angle is positive, which means
+ BPL hill5              \ the car's nose is pointing up, above the horizontal,
+                        \ then jump to hill5 to call CheckVergeOnScreen in the
+                        \ usual way
 
- LSR V
+                        \ If we get here then the car nose is pointing downwards
+                        \ and the car is pointing straight along the track,
+                        \ within a -33 to +33 degree field of view
+                        \
+                        \ We therefore replace the call to CheckVergeOnScreen
+                        \ with the following, which clears bit 7 of V to flag
+                        \ the verge coordinate at index X as being visible
+                        \ on-screen
 
- RTS
+ LSR V                  \ Clear bit 7 of V
+
+ RTS                    \ Return from the subroutine
 
 .hill5
 
@@ -309,15 +598,11 @@ ORG CODE%
                         \ above code into the main game (the JMP ensures we
                         \ return from the subroutine using a tail call)
 
- EQUB &7F
-
-.L53F0
-
- STA U
- LDA #205
- JMP Multiply8x8
-
- BRK
+ EQUB &7F, &85          \ These bytes appear to be unused
+ EQUB &75, &A9
+ EQUB &CD, &4C
+ EQUB &00, &0C
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -492,14 +777,64 @@ ORG CODE%
 
 .trackYawDeltaHi
 
- EQUB &FF, &00, &00, &00, &00, &00, &FD, &FE
- EQUB &FD, &00, &13, &05, &01, &00, &02, &02
- EQUB &02, &04, &00, &01, &01, &01, &01, &00
- EQUB &FF, &FF, &00, &00, &FD, &02, &03, &00
- EQUB &00, &00, &00, &00, &00, &04, &02, &01
- EQUB &02, &00, &07, &00, &05, &FC, &FB, &00
- EQUB &00, &00, &00, &05, &02, &02, &00, &01
- EQUB &00, &00
+ EQUB &FF               \ Sub-section  0 = &FF77 ( -137)
+ EQUB &00               \ Sub-section  1 = &0000 (    0)
+ EQUB &00               \ Sub-section  2 = &0072 (  114)
+ EQUB &00               \ Sub-section  3 = &0000 (    0)
+ EQUB &00               \ Sub-section  4 = &0000 (    0)
+ EQUB &00               \ Sub-section  5 = &0000 (    0)
+ EQUB &FD               \ Sub-section  6 = &FD02 ( -766)
+ EQUB &FE               \ Sub-section  7 = &FE8C ( -372)
+ EQUB &FD               \ Sub-section  8 = &FD28 ( -728)
+ EQUB &00               \ Sub-section  9 = &0000 (    0)
+ EQUB &13               \ Sub-section 10 = &1333 ( 4915)
+ EQUB &05               \ Sub-section 11 = &05F6 ( 1526)
+ EQUB &01               \ Sub-section 12 = &01E5 (  485)
+ EQUB &00               \ Sub-section 13 = &0000 (    0)
+ EQUB &02               \ Sub-section 14 = &02DE (  734)
+ EQUB &02               \ Sub-section 15 = &02DE (  734)
+ EQUB &02               \ Sub-section 16 = &02DE (  734)
+ EQUB &04               \ Sub-section 17 = &0444 ( 1092)
+ EQUB &00               \ Sub-section 18 = &0000 (    0)
+ EQUB &01               \ Sub-section 19 = &01F5 (  501)
+ EQUB &01               \ Sub-section 20 = &015F (  351)
+ EQUB &01               \ Sub-section 21 = &014A (  330)
+ EQUB &01               \ Sub-section 22 = &014A (  330)
+ EQUB &00               \ Sub-section 23 = &0000 (    0)
+ EQUB &FF               \ Sub-section 24 = &FF4F ( -177)
+ EQUB &FF               \ Sub-section 25 = &FF4F ( -177)
+ EQUB &00               \ Sub-section 26 = &0062 (   98)
+ EQUB &00               \ Sub-section 27 = &0000 (    0)
+ EQUB &FD               \ Sub-section 28 = &FDA8 ( -600)
+ EQUB &02               \ Sub-section 29 = &026B (  619)
+ EQUB &03               \ Sub-section 30 = &0392 (  914)
+ EQUB &00               \ Sub-section 31 = &0063 (   99)
+ EQUB &00               \ Sub-section 32 = &0000 (    0)
+ EQUB &00               \ Sub-section 33 = &0000 (    0)
+ EQUB &00               \ Sub-section 34 = &0000 (    0)
+ EQUB &00               \ Sub-section 35 = &0000 (    0)
+ EQUB &00               \ Sub-section 36 = &0000 (    0)
+ EQUB &04               \ Sub-section 37 = &04FA ( 1274)
+ EQUB &02               \ Sub-section 38 = &0204 (  516)
+ EQUB &01               \ Sub-section 39 = &0123 (  291)
+ EQUB &02               \ Sub-section 40 = &02C1 (  705)
+ EQUB &00               \ Sub-section 41 = &0000 (    0)
+ EQUB &07               \ Sub-section 42 = &079B ( 1947)
+ EQUB &00               \ Sub-section 43 = &0000 (    0)
+ EQUB &05               \ Sub-section 44 = &057A ( 1402)
+ EQUB &FC               \ Sub-section 45 = &FCBB ( -837)
+ EQUB &FB               \ Sub-section 46 = &FBF8 (-1032)
+ EQUB &00               \ Sub-section 47 = &0000 (    0)
+ EQUB &00               \ Sub-section 48 = &0000 (    0)
+ EQUB &00               \ Sub-section 49 = &0000 (    0)
+ EQUB &00               \ Sub-section 50 = &0000 (    0)
+ EQUB &05               \ Sub-section 51 = &0555 ( 1365)
+ EQUB &02               \ Sub-section 52 = &0211 (  529)
+ EQUB &02               \ Sub-section 53 = &0211 (  529)
+ EQUB &00               \ Sub-section 54 = &0060 (   96)
+ EQUB &01               \ Sub-section 55 = &01B0 (  432)
+ EQUB &00               \ Sub-section 56 = &0078 (  120)
+ EQUB &00               \ Sub-section 57 = &0020 (   32)
 
 \ ******************************************************************************
 \
@@ -513,9 +848,22 @@ ORG CODE%
 
 .trackSignData
 
- EQUB &81, &94, &90, &AC, &B0, &B8
- EQUB &00, &08, &1D, &24, &3C, &54, &50, &58
- EQUB &6D, &70
+ EQUB %10000001         \ Sign  0: 10000 001   Type 8    Start flag   Section 16
+ EQUB %10010100         \ Sign  1: 10010 100   Type 11   Right turn   Section 18
+ EQUB %10010000         \ Sign  2: 10010 000   Type 7    Straight     Section 18
+ EQUB %10101100         \ Sign  3: 10101 100   Type 11   Right turn   Section 21
+ EQUB %10110000         \ Sign  4: 10110 000   Type 7    Straight     Section 22
+ EQUB %10111000         \ Sign  5: 10111 000   Type 7    Straight     Section 23
+ EQUB %00000000         \ Sign  6: 00000 000   Type 7    Straight     Section  0
+ EQUB %00001000         \ Sign  7: 00001 000   Type 7    Straight     Section  1
+ EQUB %00011101         \ Sign  8: 00011 101   Type 12   Left turn    Section  3
+ EQUB %00100100         \ Sign  9: 00100 100   Type 11   Right turn   Section  4
+ EQUB %00111100         \ Sign 10: 00111 100   Type 11   Right turn   Section  7
+ EQUB %01010100         \ Sign 11: 01010 100   Type 11   Right turn   Section 10
+ EQUB %01010000         \ Sign 12: 01010 000   Type 7    Straight     Section 10
+ EQUB %01011000         \ Sign 13: 01011 000   Type 7    Straight     Section 11
+ EQUB %01101101         \ Sign 14: 01101 101   Type 12   Left turn    Section 13
+ EQUB %01110000         \ Sign 15: 01110 000   Type 7    Straight     Section 14
 
 \ ******************************************************************************
 \
@@ -877,7 +1225,6 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
-
  EQUB &03, &60          \ These bytes appear to be unused
 
 \ ******************************************************************************
@@ -970,14 +1317,64 @@ ORG CODE%
 
 .trackYawDeltaLo
 
- EQUB &77, &00, &72, &00, &00, &00, &02, &8C
- EQUB &28, &00, &33, &F6, &E5, &00, &DE, &DE
- EQUB &DE, &44, &00, &F5, &5F, &4A, &4A, &00
- EQUB &4F, &4F, &62, &00, &A8, &6B, &92, &63
- EQUB &00, &00, &00, &00, &00, &FA, &04, &23
- EQUB &C1, &00, &9B, &00, &7A, &BB, &F8, &00
- EQUB &00, &00, &00, &55, &11, &11, &60, &B0
- EQUB &78, &20
+ EQUB &77               \ Sub-section  0 = &FF77 ( -137)
+ EQUB &00               \ Sub-section  1 = &0000 (    0)
+ EQUB &72               \ Sub-section  2 = &0072 (  114)
+ EQUB &00               \ Sub-section  3 = &0000 (    0)
+ EQUB &00               \ Sub-section  4 = &0000 (    0)
+ EQUB &00               \ Sub-section  5 = &0000 (    0)
+ EQUB &02               \ Sub-section  6 = &FD02 ( -766)
+ EQUB &8C               \ Sub-section  7 = &FE8C ( -372)
+ EQUB &28               \ Sub-section  8 = &FD28 ( -728)
+ EQUB &00               \ Sub-section  9 = &0000 (    0)
+ EQUB &33               \ Sub-section 10 = &1333 ( 4915)
+ EQUB &F6               \ Sub-section 11 = &05F6 ( 1526)
+ EQUB &E5               \ Sub-section 12 = &01E5 (  485)
+ EQUB &00               \ Sub-section 13 = &0000 (    0)
+ EQUB &DE               \ Sub-section 14 = &02DE (  734)
+ EQUB &DE               \ Sub-section 15 = &02DE (  734)
+ EQUB &DE               \ Sub-section 16 = &02DE (  734)
+ EQUB &44               \ Sub-section 17 = &0444 ( 1092)
+ EQUB &00               \ Sub-section 18 = &0000 (    0)
+ EQUB &F5               \ Sub-section 19 = &01F5 (  501)
+ EQUB &5F               \ Sub-section 20 = &015F (  351)
+ EQUB &4A               \ Sub-section 21 = &014A (  330)
+ EQUB &4A               \ Sub-section 22 = &014A (  330)
+ EQUB &00               \ Sub-section 23 = &0000 (    0)
+ EQUB &4F               \ Sub-section 24 = &FF4F ( -177)
+ EQUB &4F               \ Sub-section 25 = &FF4F ( -177)
+ EQUB &62               \ Sub-section 26 = &0062 (   98)
+ EQUB &00               \ Sub-section 27 = &0000 (    0)
+ EQUB &A8               \ Sub-section 28 = &FDA8 ( -600)
+ EQUB &6B               \ Sub-section 29 = &026B (  619)
+ EQUB &92               \ Sub-section 30 = &0392 (  914)
+ EQUB &63               \ Sub-section 31 = &0063 (   99)
+ EQUB &00               \ Sub-section 32 = &0000 (    0)
+ EQUB &00               \ Sub-section 33 = &0000 (    0)
+ EQUB &00               \ Sub-section 34 = &0000 (    0)
+ EQUB &00               \ Sub-section 35 = &0000 (    0)
+ EQUB &00               \ Sub-section 36 = &0000 (    0)
+ EQUB &FA               \ Sub-section 37 = &04FA ( 1274)
+ EQUB &04               \ Sub-section 38 = &0204 (  516)
+ EQUB &23               \ Sub-section 39 = &0123 (  291)
+ EQUB &C1               \ Sub-section 40 = &02C1 (  705)
+ EQUB &00               \ Sub-section 41 = &0000 (    0)
+ EQUB &9B               \ Sub-section 42 = &079B ( 1947)
+ EQUB &00               \ Sub-section 43 = &0000 (    0)
+ EQUB &7A               \ Sub-section 44 = &057A ( 1402)
+ EQUB &BB               \ Sub-section 45 = &FCBB ( -837)
+ EQUB &F8               \ Sub-section 46 = &FBF8 (-1032)
+ EQUB &00               \ Sub-section 47 = &0000 (    0)
+ EQUB &00               \ Sub-section 48 = &0000 (    0)
+ EQUB &00               \ Sub-section 49 = &0000 (    0)
+ EQUB &00               \ Sub-section 50 = &0000 (    0)
+ EQUB &55               \ Sub-section 51 = &0555 ( 1365)
+ EQUB &11               \ Sub-section 52 = &0211 (  529)
+ EQUB &11               \ Sub-section 53 = &0211 (  529)
+ EQUB &60               \ Sub-section 54 = &0060 (   96)
+ EQUB &B0               \ Sub-section 55 = &01B0 (  432)
+ EQUB &78               \ Sub-section 56 = &0078 (  120)
+ EQUB &20               \ Sub-section 57 = &0020 (   32)
 
 \ ******************************************************************************
 \
@@ -991,9 +1388,22 @@ ORG CODE%
 
 .xTrackSignVector
 
- EQUB &04, &FD, &FC, &3D, &01, &FB
- EQUB &00, &F9, &01, &F1, &EB, &E3, &20, &0A
- EQUB &07, &03
+ EQUB   4               \ Sign  0 = (  4 << 6,   8 << 4,   0 << 6) + section  0
+ EQUB  -3               \ Sign  1 = ( -3 << 6,   8 << 4,  68 << 6) + section  2
+ EQUB  -4               \ Sign  2 = ( -4 << 6,   8 << 4, -23 << 6) + section  3
+ EQUB  61               \ Sign  3 = ( 61 << 6,   8 << 4,   2 << 6) + section  5
+ EQUB   1               \ Sign  4 = (  1 << 6,   8 << 4,  27 << 6) + section  7
+ EQUB  -5               \ Sign  5 = ( -5 << 6,   8 << 4,  18 << 6) + section  9
+ EQUB   0               \ Sign  6 = (  0 << 6,   8 << 4,  26 << 6) + section 12
+ EQUB  -7               \ Sign  7 = ( -7 << 6,   8 << 4,  27 << 6) + section 14
+ EQUB   1               \ Sign  8 = (  1 << 6,  48 << 4, -77 << 6) + section 14
+ EQUB -15               \ Sign  9 = (-15 << 6,   8 << 4,   5 << 6) + section 14
+ EQUB -21               \ Sign 10 = (-21 << 6,   8 << 4, -34 << 6) + section 18
+ EQUB -29               \ Sign 11 = (-29 << 6,  -8 << 4,   9 << 6) + section 19
+ EQUB  32               \ Sign 12 = ( 32 << 6,  18 << 4, -13 << 6) + section 20
+ EQUB  10               \ Sign 13 = ( 10 << 6,  28 << 4,  16 << 6) + section 21
+ EQUB   7               \ Sign 14 = (  7 << 6,  32 << 4,  50 << 6) + section 22
+ EQUB   3               \ Sign 15 = (  3 << 6,   8 << 4,  -5 << 6) + section 23
 
 \ ******************************************************************************
 \
@@ -1054,7 +1464,7 @@ ORG CODE%
 .MoveToNextVector
 
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next segment vector
-                        \ along the track in the direction we are facing 
+                        \ along the track in the direction we are facing
 
 \ ******************************************************************************
 \
@@ -1360,14 +1770,64 @@ ORG CODE%
 
 .trackGradient
 
- EQUB &00, &00, &00, &00, &FD, &00, &03, &00
- EQUB &00, &00, &00, &00, &00, &00, &F4, &04
- EQUB &0A, &FB, &00, &FF, &FF, &FF, &FF, &01
- EQUB &00, &00, &00, &01, &00, &01, &01, &02
- EQUB &00, &00, &FF, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &FD, &01, &03, &00
- EQUB &FE, &00, &01, &FC, &FC, &03, &03, &FC
- EQUB &FE, &01
+ EQUB &00               \ Sub-section  0 =   0
+ EQUB &00               \ Sub-section  1 =   0
+ EQUB &00               \ Sub-section  2 =   0
+ EQUB &00               \ Sub-section  3 =   0
+ EQUB &FD               \ Sub-section  4 =  -3
+ EQUB &00               \ Sub-section  5 =   0
+ EQUB &03               \ Sub-section  6 =   3
+ EQUB &00               \ Sub-section  7 =   0
+ EQUB &00               \ Sub-section  8 =   0
+ EQUB &00               \ Sub-section  9 =   0
+ EQUB &00               \ Sub-section 10 =   0
+ EQUB &00               \ Sub-section 11 =   0
+ EQUB &00               \ Sub-section 12 =   0
+ EQUB &00               \ Sub-section 13 =   0
+ EQUB &F4               \ Sub-section 14 = -12
+ EQUB &04               \ Sub-section 15 =   4
+ EQUB &0A               \ Sub-section 16 =  10
+ EQUB &FB               \ Sub-section 17 =  -5
+ EQUB &00               \ Sub-section 18 =   0
+ EQUB &FF               \ Sub-section 19 =  -1
+ EQUB &FF               \ Sub-section 20 =  -1
+ EQUB &FF               \ Sub-section 21 =  -1
+ EQUB &FF               \ Sub-section 22 =  -1
+ EQUB &01               \ Sub-section 23 =   1
+ EQUB &00               \ Sub-section 24 =   0
+ EQUB &00               \ Sub-section 25 =   0
+ EQUB &00               \ Sub-section 26 =   0
+ EQUB &01               \ Sub-section 27 =   1
+ EQUB &00               \ Sub-section 28 =   0
+ EQUB &01               \ Sub-section 29 =   1
+ EQUB &01               \ Sub-section 30 =   1
+ EQUB &02               \ Sub-section 31 =   2
+ EQUB &00               \ Sub-section 32 =   0
+ EQUB &00               \ Sub-section 33 =   0
+ EQUB &FF               \ Sub-section 34 =  -1
+ EQUB &00               \ Sub-section 35 =   0
+ EQUB &00               \ Sub-section 36 =   0
+ EQUB &00               \ Sub-section 37 =   0
+ EQUB &00               \ Sub-section 38 =   0
+ EQUB &00               \ Sub-section 39 =   0
+ EQUB &00               \ Sub-section 40 =   0
+ EQUB &00               \ Sub-section 41 =   0
+ EQUB &00               \ Sub-section 42 =   0
+ EQUB &00               \ Sub-section 43 =   0
+ EQUB &FD               \ Sub-section 44 =  -3
+ EQUB &01               \ Sub-section 45 =   1
+ EQUB &03               \ Sub-section 46 =   3
+ EQUB &00               \ Sub-section 47 =   0
+ EQUB &FE               \ Sub-section 48 =  -2
+ EQUB &00               \ Sub-section 49 =   0
+ EQUB &01               \ Sub-section 50 =   1
+ EQUB &FC               \ Sub-section 51 =  -4
+ EQUB &FC               \ Sub-section 52 =  -4
+ EQUB &03               \ Sub-section 53 =   3
+ EQUB &03               \ Sub-section 54 =   3
+ EQUB &FC               \ Sub-section 55 =  -4
+ EQUB &FE               \ Sub-section 56 =  -2
+ EQUB &01               \ Sub-section 57 =   1
 
 \ ******************************************************************************
 \
@@ -1381,9 +1841,22 @@ ORG CODE%
 
 .yTrackSignVector
 
- EQUB &08, &08, &08, &08, &08, &08
- EQUB &08, &08, &30, &08, &08, &F8, &12, &1C
- EQUB &20, &08
+ EQUB   8               \ Sign  0 = (  4 << 6,   8 << 4,   0 << 6) + section  0
+ EQUB   8               \ Sign  1 = ( -3 << 6,   8 << 4,  68 << 6) + section  2
+ EQUB   8               \ Sign  2 = ( -4 << 6,   8 << 4, -23 << 6) + section  3
+ EQUB   8               \ Sign  3 = ( 61 << 6,   8 << 4,   2 << 6) + section  5
+ EQUB   8               \ Sign  4 = (  1 << 6,   8 << 4,  27 << 6) + section  7
+ EQUB   8               \ Sign  5 = ( -5 << 6,   8 << 4,  18 << 6) + section  9
+ EQUB   8               \ Sign  6 = (  0 << 6,   8 << 4,  26 << 6) + section 12
+ EQUB   8               \ Sign  7 = ( -7 << 6,   8 << 4,  27 << 6) + section 14
+ EQUB  48               \ Sign  8 = (  1 << 6,  48 << 4, -77 << 6) + section 14
+ EQUB   8               \ Sign  9 = (-15 << 6,   8 << 4,   5 << 6) + section 14
+ EQUB   8               \ Sign 10 = (-21 << 6,   8 << 4, -34 << 6) + section 18
+ EQUB  -8               \ Sign 11 = (-29 << 6,  -8 << 4,   9 << 6) + section 19
+ EQUB  18               \ Sign 12 = ( 32 << 6,  18 << 4, -13 << 6) + section 20
+ EQUB  28               \ Sign 13 = ( 10 << 6,  28 << 4,  16 << 6) + section 21
+ EQUB  32               \ Sign 14 = (  7 << 6,  32 << 4,  50 << 6) + section 22
+ EQUB   8               \ Sign 15 = (  3 << 6,   8 << 4,  -5 << 6) + section 23
 
 \ ******************************************************************************
 \
@@ -1457,7 +1930,7 @@ ORG CODE%
  STA &23B3              \ Modify the GetSectionAngles routine, at instruction
                         \ #4 after gsec11, to test prevHorizonIndex against the
                         \ value we just calculated in A rather than 7
-                        \ 
+                        \
                         \ So if this section's trackSubConfig has bit 1 set, the
                         \ test becomes prevHorizonIndex <= 135, which is always
                         \ true, so this modification makes us never set the
@@ -1599,7 +2072,9 @@ ORG CODE%
 \ player, so that the ground behind the nearest hill is effectively levelled
 \ off.
 \
-\ It also sets horizonTrackWidth to 80% of the track width at the hill crest.
+\ It also sets horizonTrackWidth to 80% of the track width at the hill crest,
+\ and sets the verge edge to being visible when the car is pointing along the
+\ track and the nose is pointing downwards.
 \
 \ Arguments:
 \
@@ -1795,14 +2270,64 @@ ORG CODE%
 
 .trackSubSize
 
- EQUB &02, &1B, &02, &41, &06, &20, &06, &06
- EQUB &04, &03, &02, &02, &03, &23, &03, &03
- EQUB &06, &04, &12, &08, &18, &0A, &0A, &15
- EQUB &09, &09, &0D, &07, &11, &05, &03, &0C
- EQUB &1F, &1E, &18, &0E, &15, &03, &06, &0D
- EQUB &08, &19, &09, &28, &05, &05, &0C, &0F
- EQUB &15, &23, &16, &03, &0E, &08, &13, &08
- EQUB &11, &22
+ EQUB 2                 \ Sub-section  0
+ EQUB 27                \ Sub-section  1
+ EQUB 2                 \ Sub-section  2
+ EQUB 65                \ Sub-section  3
+ EQUB 6                 \ Sub-section  4
+ EQUB 32                \ Sub-section  5
+ EQUB 6                 \ Sub-section  6
+ EQUB 6                 \ Sub-section  7
+ EQUB 4                 \ Sub-section  8
+ EQUB 3                 \ Sub-section  9
+ EQUB 2                 \ Sub-section 10
+ EQUB 2                 \ Sub-section 11
+ EQUB 3                 \ Sub-section 12
+ EQUB 35                \ Sub-section 13
+ EQUB 3                 \ Sub-section 14
+ EQUB 3                 \ Sub-section 15
+ EQUB 6                 \ Sub-section 16
+ EQUB 4                 \ Sub-section 17
+ EQUB 18                \ Sub-section 18
+ EQUB 8                 \ Sub-section 19
+ EQUB 24                \ Sub-section 20
+ EQUB 10                \ Sub-section 21
+ EQUB 10                \ Sub-section 22
+ EQUB 21                \ Sub-section 23
+ EQUB 9                 \ Sub-section 24
+ EQUB 9                 \ Sub-section 25
+ EQUB 13                \ Sub-section 26
+ EQUB 7                 \ Sub-section 27
+ EQUB 17                \ Sub-section 28
+ EQUB 5                 \ Sub-section 29
+ EQUB 3                 \ Sub-section 30
+ EQUB 12                \ Sub-section 31
+ EQUB 31                \ Sub-section 32
+ EQUB 30                \ Sub-section 33
+ EQUB 24                \ Sub-section 34
+ EQUB 14                \ Sub-section 35
+ EQUB 21                \ Sub-section 36
+ EQUB 3                 \ Sub-section 37
+ EQUB 6                 \ Sub-section 38
+ EQUB 13                \ Sub-section 39
+ EQUB 8                 \ Sub-section 40
+ EQUB 25                \ Sub-section 41
+ EQUB 9                 \ Sub-section 42
+ EQUB 40                \ Sub-section 43
+ EQUB 5                 \ Sub-section 44
+ EQUB 5                 \ Sub-section 45
+ EQUB 12                \ Sub-section 46
+ EQUB 15                \ Sub-section 47
+ EQUB 21                \ Sub-section 48
+ EQUB 35                \ Sub-section 49
+ EQUB 22                \ Sub-section 50
+ EQUB 3                 \ Sub-section 51
+ EQUB 14                \ Sub-section 52
+ EQUB 8                 \ Sub-section 53
+ EQUB 19                \ Sub-section 54
+ EQUB 8                 \ Sub-section 55
+ EQUB 17                \ Sub-section 56
+ EQUB 34                \ Sub-section 57
 
 \ ******************************************************************************
 \
@@ -1816,9 +2341,22 @@ ORG CODE%
 
 .zTrackSignVector
 
- EQUB &00, &44, &E9, &02, &1B, &12
- EQUB &1A, &1B, &B3, &05, &DE, &09, &F3, &10
- EQUB &32, &FB
+ EQUB   0               \ Sign  0 = (  4 << 6,   8 << 4,   0 << 6) + section  0
+ EQUB  68               \ Sign  1 = ( -3 << 6,   8 << 4,  68 << 6) + section  2
+ EQUB -23               \ Sign  2 = ( -4 << 6,   8 << 4, -23 << 6) + section  3
+ EQUB   2               \ Sign  3 = ( 61 << 6,   8 << 4,   2 << 6) + section  5
+ EQUB  27               \ Sign  4 = (  1 << 6,   8 << 4,  27 << 6) + section  7
+ EQUB  18               \ Sign  5 = ( -5 << 6,   8 << 4,  18 << 6) + section  9
+ EQUB  26               \ Sign  6 = (  0 << 6,   8 << 4,  26 << 6) + section 12
+ EQUB  27               \ Sign  7 = ( -7 << 6,   8 << 4,  27 << 6) + section 14
+ EQUB -77               \ Sign  8 = (  1 << 6,  48 << 4, -77 << 6) + section 14
+ EQUB   5               \ Sign  9 = (-15 << 6,   8 << 4,   5 << 6) + section 14
+ EQUB -34               \ Sign 10 = (-21 << 6,   8 << 4, -34 << 6) + section 18
+ EQUB   9               \ Sign 11 = (-29 << 6,  -8 << 4,   9 << 6) + section 19
+ EQUB -13               \ Sign 12 = ( 32 << 6,  18 << 4, -13 << 6) + section 20
+ EQUB  16               \ Sign 13 = ( 10 << 6,  28 << 4,  16 << 6) + section 21
+ EQUB  50               \ Sign 14 = (  7 << 6,  32 << 4,  50 << 6) + section 22
+ EQUB  -5               \ Sign 15 = (  3 << 6,   8 << 4,  -5 << 6) + section 23
 
 \ ******************************************************************************
 \
@@ -1889,7 +2427,7 @@ ORG CODE%
                         \ xVergeRight < xVergeLeft
 
  LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeLeft
- STA xVergeLeftLo,Y     
+ STA xVergeLeftLo,Y
  LDA xVergeRightHi,Y
  STA xVergeLeftHi,Y
 
@@ -2111,10 +2649,34 @@ ORG CODE%
 
 .trackHeight
 
- EQUB &00, &00, &00, &EE, &00, &00, &00, &00
- EQUB &10, &10, &10, &DC, &F1, &F8, &F8, &00
- EQUB &18, &00, &00, &00, &00, &00, &00, &00
- EQUB &26, &FC, &12, &E6, &FF, &00
+ EQUB &00               \ Section  0 =   0
+ EQUB &00               \ Section  1 =   0
+ EQUB &00               \ Section  2 =   0
+ EQUB &EE               \ Section  3 = -18
+ EQUB &00               \ Section  4 =   0
+ EQUB &00               \ Section  5 =   0
+ EQUB &00               \ Section  6 =   0
+ EQUB &00               \ Section  7 =   0
+ EQUB &10               \ Section  8 =  16
+ EQUB &10               \ Section  9 =  16
+ EQUB &10               \ Section 10 =  16
+ EQUB &DC               \ Section 11 = -36
+ EQUB &F1               \ Section 12 = -15
+ EQUB &F8               \ Section 13 =  -8
+ EQUB &F8               \ Section 14 =  -8
+ EQUB &00               \ Section 15 =   0
+ EQUB &18               \ Section 16 =  24
+ EQUB &00               \ Section 17 =   0
+ EQUB &00               \ Section 18 =   0
+ EQUB &00               \ Section 19 =   0
+ EQUB &00               \ Section 20 =   0
+ EQUB &00               \ Section 21 =   0
+ EQUB &00               \ Section 22 =   0
+ EQUB &00               \ Section 23 =   0
+
+ EQUB &26, &FC          \ These bytes appear to be unused
+ EQUB &12, &E6
+ EQUB &FF, &00
 
 \ ******************************************************************************
 \
@@ -2128,11 +2690,34 @@ ORG CODE%
 
 .trackYawAngleLo
 
- EQUB &00, &EE
- EQUB &D2, &D2, &C6, &C6, &18, &C7, &3F, &3F
- EQUB &3F, &97, &5E, &1F, &47, &14, &B8, &B8
- EQUB &B8, &8D, &8D, &8D, &00, &00, &B3, &B3
- EQUB &B3, &28, &C8, &00
+ EQUB &00               \ Section  0 = &0000 =     0 =   0.0 degrees
+ EQUB &EE               \ Section  1 = &FEEE = 65262 = 358.5 degrees
+ EQUB &D2               \ Section  2 = &FFD2 = 65490 = 359.7 degrees
+ EQUB &D2               \ Section  3 = &FFD2 = 65490 = 359.7 degrees
+ EQUB &C6               \ Section  4 = &D9C6 = 55750 = 306.2 degrees
+ EQUB &C6               \ Section  5 = &D9C6 = 55750 = 306.2 degrees
+ EQUB &18               \ Section  6 = &0C18 =  3096 =  17.0 degrees
+ EQUB &C7               \ Section  7 = &11C7 =  4551 =  25.0 degrees
+ EQUB &3F               \ Section  8 = &453F = 17727 =  97.4 degrees
+ EQUB &3F               \ Section  9 = &453F = 17727 =  97.4 degrees
+ EQUB &3F               \ Section 10 = &453F = 17727 =  97.4 degrees
+ EQUB &97               \ Section 11 = &8F97 = 36759 = 201.9 degrees
+ EQUB &5E               \ Section 12 = &895E = 35166 = 193.2 degrees
+ EQUB &1F               \ Section 13 = &881F = 34847 = 191.4 degrees
+ EQUB &47               \ Section 14 = &6047 = 24647 = 135.4 degrees
+ EQUB &14               \ Section 15 = &7714 = 30484 = 167.5 degrees
+ EQUB &B8               \ Section 16 = &7BB8 = 31672 = 174.0 degrees
+ EQUB &B8               \ Section 17 = &7BB8 = 31672 = 174.0 degrees
+ EQUB &B8               \ Section 18 = &7BB8 = 31672 = 174.0 degrees
+ EQUB &8D               \ Section 19 = &BB8D = 48013 = 263.7 degrees
+ EQUB &8D               \ Section 20 = &BB8D = 48013 = 263.7 degrees
+ EQUB &8D               \ Section 21 = &BB8D = 48013 = 263.7 degrees
+ EQUB &0                \ Section 22 = &0000 =     0 =   0.0 degrees
+ EQUB &0                \ Section 23 = &0000 =     0 =   0.0 degrees
+
+ EQUB &B3, &B3          \ These bytes appear to be unused
+ EQUB &B3, &28
+ EQUB &C8, &00
 
 \ ******************************************************************************
 \
@@ -2146,10 +2731,33 @@ ORG CODE%
 
 .trackYawAngleHi
 
- EQUB &00, &FE, &FF, &FF
- EQUB &D9, &D9, &0C, &11, &45, &45, &45, &8F
- EQUB &89, &88, &60, &77, &7B, &7B, &7B, &BB
- EQUB &BB, &BB, &00, &00, &A1, &A1, &A1, &DF
+ EQUB &00               \ Section  0 = &0000 =     0 =   0.0 degrees
+ EQUB &FE               \ Section  1 = &FEEE = 65262 = 358.5 degrees
+ EQUB &FF               \ Section  2 = &FFD2 = 65490 = 359.7 degrees
+ EQUB &FF               \ Section  3 = &FFD2 = 65490 = 359.7 degrees
+ EQUB &D9               \ Section  4 = &D9C6 = 55750 = 306.2 degrees
+ EQUB &D9               \ Section  5 = &D9C6 = 55750 = 306.2 degrees
+ EQUB &0C               \ Section  6 = &0C18 =  3096 =  17.0 degrees
+ EQUB &11               \ Section  7 = &11C7 =  4551 =  25.0 degrees
+ EQUB &45               \ Section  8 = &453F = 17727 =  97.4 degrees
+ EQUB &45               \ Section  9 = &453F = 17727 =  97.4 degrees
+ EQUB &45               \ Section 10 = &453F = 17727 =  97.4 degrees
+ EQUB &8F               \ Section 11 = &8F97 = 36759 = 201.9 degrees
+ EQUB &89               \ Section 12 = &895E = 35166 = 193.2 degrees
+ EQUB &88               \ Section 13 = &881F = 34847 = 191.4 degrees
+ EQUB &60               \ Section 14 = &6047 = 24647 = 135.4 degrees
+ EQUB &77               \ Section 15 = &7714 = 30484 = 167.5 degrees
+ EQUB &7B               \ Section 16 = &7BB8 = 31672 = 174.0 degrees
+ EQUB &7B               \ Section 17 = &7BB8 = 31672 = 174.0 degrees
+ EQUB &7B               \ Section 18 = &7BB8 = 31672 = 174.0 degrees
+ EQUB &BB               \ Section 19 = &BB8D = 48013 = 263.7 degrees
+ EQUB &BB               \ Section 20 = &BB8D = 48013 = 263.7 degrees
+ EQUB &BB               \ Section 21 = &BB8D = 48013 = 263.7 degrees
+ EQUB &00               \ Section 22 = &0000 =     0 =   0.0 degrees
+ EQUB &00               \ Section 23 = &0000 =     0 =   0.0 degrees
+
+ EQUB &A1, &A1          \ These bytes appear to be unused
+ EQUB &A1, &DF
  EQUB &F3, &00
 
 \ ******************************************************************************
@@ -2166,8 +2774,8 @@ ORG CODE%
 \
 \   * Bits 2 to 7 = the number of the first sub-section in this section
 \
-\   * Bit 1 = if this is set, then in the horizon calculations, we always skip
-\             the setting of horizonLine to 7
+\   * Bit 1 = if this is set, then in the horizon calculations, we skip the
+\             check that sets horizonLine to 7
 \
 \   * Bit 0 = if this is set, then the segment vectors for this section are
 \             generated as a straight track rather than using the curve tables
@@ -2187,10 +2795,34 @@ ORG CODE%
 
 .trackSubConfig
 
- EQUB &00, &08, &10, &18, &27, &26
- EQUB &32, &3A, &4B, &4A, &4E, &5E, &66, &72
- EQUB &76, &7E, &86, &8E, &96, &A7, &A6, &AA
- EQUB &AF, &AE, &BC, &C4, &CE, &DA, &E2, &00
+ EQUB %00000000         \ Section  0 = 000000 0 0    From  0  check     curve
+ EQUB %00001000         \ Section  1 = 000010 0 0    From  2  check     curve
+ EQUB %00010000         \ Section  2 = 000100 0 0    From  4  check     curve
+ EQUB %00011000         \ Section  3 = 000110 0 0    From  6  check     curve
+ EQUB %00100111         \ Section  4 = 001001 1 1    From  9  no check  straight
+ EQUB %00100110         \ Section  5 = 001001 1 0    From  9  no check  curve
+ EQUB %00110010         \ Section  6 = 001100 1 0    From 12  no check  curve
+ EQUB %00111010         \ Section  7 = 001110 1 0    From 14  no check  curve
+ EQUB %01001011         \ Section  8 = 010010 1 1    From 18  no check  straight
+ EQUB %01001010         \ Section  9 = 010010 1 0    From 18  no check  curve
+ EQUB %01001110         \ Section 10 = 010011 1 0    From 19  no check  curve
+ EQUB %01011110         \ Section 11 = 010111 1 0    From 23  no check  curve
+ EQUB %01100110         \ Section 12 = 011001 1 0    From 25  no check  curve
+ EQUB %01110010         \ Section 13 = 011100 1 0    From 28  no check  curve
+ EQUB %01110110         \ Section 14 = 011101 1 0    From 29  no check  curve
+ EQUB %01111110         \ Section 15 = 011111 1 0    From 31  no check  curve
+ EQUB %10000110         \ Section 16 = 100001 1 0    From 33  no check  curve
+ EQUB %10001110         \ Section 17 = 100011 1 0    From 35  no check  curve
+ EQUB %10010110         \ Section 18 = 100101 1 0    From 37  no check  curve
+ EQUB %10100111         \ Section 19 = 101001 1 1    From 41  no check  straight
+ EQUB %10100110         \ Section 20 = 101001 1 0    From 41  no check  curve
+ EQUB %10101010         \ Section 21 = 101010 1 0    From 42  no check  curve
+ EQUB %10101111         \ Section 22 = 101011 1 1    From 43  no check  straight
+ EQUB %10101110         \ Section 23 = 101011 1 0    From 43  no check  curve
+
+ EQUB &BC, &C4          \ These bytes appear to be unused
+ EQUB &CE, &DA
+ EQUB &E2, &00
 
 \ ******************************************************************************
 \
@@ -2205,10 +2837,35 @@ ORG CODE%
 
 .trackRacingLine
 
- EQUB &00, &19, &19, &2E, &00, &57, &18, &3F
- EQUB &18, &18, &3D, &19, &19, &64, &BD, &24
- EQUB &18, &18, &6B, &18, &18, &57, &19, &00
- EQUB &00, &18, &4B, &18, &18, &18, &00
+ EQUB %00000000         \ Section  0 = 000000 0 0 =  +0 * baseSpeed
+ EQUB %00011001         \ Section  1 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %00011001         \ Section  2 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %00101110         \ Section  3 = 001011 1 0 = +11
+ EQUB %00000000         \ Section  4 = 000000 0 0 =  +0 * baseSpeed
+ EQUB %01010111         \ Section  5 = 010101 1 1 = -21
+ EQUB %00011000         \ Section  6 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00111111         \ Section  7 = 001111 1 1 = -15
+ EQUB %00011000         \ Section  8 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section  9 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00111101         \ Section 10 = 001111 0 1 = -15 * baseSpeed
+ EQUB %00011001         \ Section 11 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %00011001         \ Section 12 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %01100100         \ Section 13 = 011001 0 0 = +25 * baseSpeed
+ EQUB %10111101         \ Section 14 = 101111 0 1 = -47 * baseSpeed
+ EQUB %00100100         \ Section 15 = 001001 0 0 =  +9 * baseSpeed
+ EQUB %00011000         \ Section 16 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 17 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %01101011         \ Section 18 = 011010 1 1 = -26
+ EQUB %00011000         \ Section 19 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %00011000         \ Section 20 = 000110 0 0 =  +6 * baseSpeed
+ EQUB %01010111         \ Section 21 = 010101 1 1 = -21
+ EQUB %00011001         \ Section 22 = 000110 0 1 =  -6 * baseSpeed
+ EQUB %00000000         \ Section 23 = 000000 0 0 =  +0 * baseSpeed
+
+ EQUB &00, &18          \ These bytes appear to be unused
+ EQUB &4B, &18
+ EQUB &18, &18
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -2379,31 +3036,271 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB &40, &20, &00, &20, &28, &01, &20, &1D
- EQUB &40, &AD, &00, &B8, &B5, &1F, &AF, &43
- EQUB &68, &68, &00, &20, &70, &13, &1D, &26
- EQUB &F3, &42, &81, &F0, &4A, &12, &ED, &10
- EQUB &00, &97, &54, &3B, &06, &23, &72, &09
- EQUB &ED, &2E, &54, &B1, &9D, &25, &E8, &07
- EQUB &72, &09, &54, &50, &1B, &05, &98, &26
- EQUB &ED, &65, &54, &84, &84, &04, &EB, &10
- EQUB &02, &7E, &58, &07, &9C, &15, &FC, &11
- EQUB &70, &65, &68, &08, &83, &17, &FD, &12
- EQUB &ED, &C3, &88, &FA, &E1, &02, &EF, &34
- EQUB &40, &26, &66, &C9, &0A, &0F, &6C, &1E
- EQUB &68, &3F, &D2, &A6, &30, &06, &70, &1D
- EQUB &F3, &33, &3B, &38, &26, &25, &08, &11
- EQUB &ED, &A5, &B3, &F7, &54, &10, &A6, &08
- EQUB &C0, &67, &97, &B6, &58, &1A, &EB, &2B
- EQUB &40, &E5, &1B, &C2, &DA, &1F, &DC, &36
- EQUB &70, &A3, &FF, &A8, &98, &07, &C2, &23
- EQUB &ED, &6A, &FF, &63, &5F, &04, &7D, &1E
- EQUB &02, &76, &FF, &BC, &90, &24, &C6, &18
- EQUB &70, &4E, &FF, &84, &68, &27, &8E, &19
- EQUB &ED, &AF, &FF, &3F, &C9, &1A, &49, &09
- EQUB &02, &20, &FF, &FA, &28, &25, &FA, &23
- EQUB &C0, &20, &FF, &62, &28, &00, &62, &28
- EQUB &40
+                        \ Track section 0
+
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &20               \ xTrackSectionILo       xTrackSectionI = &D120 = -12000
+ EQUB &00               \ yTrackSectionILo       yTrackSectionI = &1400 =   5120
+ EQUB &20               \ zTrackSectionILo       zTrackSectionI = &D120 = -12000
+ EQUB &28               \ xTrackSectionOLo       xTrackSectionO = &D028 = -12248
+ EQUB 1                 \ trackSectionFrom
+ EQUB &20               \ zTrackSectionOLo       zTrackSectionO = &D120 = -12000
+ EQUB 29                \ trackSectionSize
+
+                        \ Track section 1
+
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &AD               \ xTrackSectionILo       xTrackSectionI = &D0AD = -12115
+ EQUB &00               \ yTrackSectionILo       yTrackSectionI = &1400 =   5120
+ EQUB &B8               \ zTrackSectionILo       zTrackSectionI = &DEB8 =  -8520
+ EQUB &B5               \ xTrackSectionOLo       xTrackSectionO = &CFB5 = -12363
+ EQUB 31                \ trackSectionFrom
+ EQUB &AF               \ zTrackSectionOLo       zTrackSectionO = &DEAF =  -8529
+ EQUB 67                \ trackSectionSize
+
+                        \ Track section 2
+
+ EQUB %01101000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=01 Vc=00 Sh=0
+ EQUB &68               \ xTrackSectionILo       xTrackSectionI = &D068 = -12184
+ EQUB &00               \ yTrackSectionILo       yTrackSectionI = &1400 =   5120
+ EQUB &20               \ zTrackSectionILo       zTrackSectionI = &FE20 =   -480
+ EQUB &70               \ xTrackSectionOLo       xTrackSectionO = &CF70 = -12432
+ EQUB 19                \ trackSectionFrom
+ EQUB &1D               \ zTrackSectionOLo       zTrackSectionO = &FE1D =   -483
+ EQUB 38                \ trackSectionSize
+
+                        \ Track section 3
+
+ EQUB %11110011         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=10 Vc=01 Sh=1
+ EQUB &42               \ xTrackSectionILo       xTrackSectionI = &D042 = -12222
+ EQUB &81               \ yTrackSectionILo       yTrackSectionI = &1181 =   4481
+ EQUB &F0               \ zTrackSectionILo       zTrackSectionI = &0FF0 =   4080
+ EQUB &4A               \ xTrackSectionOLo       xTrackSectionO = &CF4A = -12470
+ EQUB 18                \ trackSectionFrom
+ EQUB &ED               \ zTrackSectionOLo       zTrackSectionO = &0FED =   4077
+ EQUB 16                \ trackSectionSize
+
+                        \ Track section 4
+
+ EQUB %00000000         \ trackSectionFlag       Sp=0 G=0 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &97               \ xTrackSectionILo       xTrackSectionI = &CC97 = -13161
+ EQUB &54               \ yTrackSectionILo       yTrackSectionI = &1154 =   4436
+ EQUB &3B               \ zTrackSectionILo       zTrackSectionI = &163B =   5691
+ EQUB &06               \ xTrackSectionOLo       xTrackSectionO = &CC06 = -13306
+ EQUB 35                \ trackSectionFrom
+ EQUB &72               \ zTrackSectionOLo       zTrackSectionO = &1572 =   5490
+ EQUB 9                 \ trackSectionSize
+
+                        \ Track section 5
+
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB &2E               \ xTrackSectionILo       xTrackSectionI = &C92E = -14034
+ EQUB &54               \ yTrackSectionILo       yTrackSectionI = &1154 =   4436
+ EQUB &B1               \ zTrackSectionILo       zTrackSectionI = &18B1 =   6321
+ EQUB &9D               \ xTrackSectionOLo       xTrackSectionO = &C89D = -14179
+ EQUB 37                \ trackSectionFrom
+ EQUB &E8               \ zTrackSectionOLo       zTrackSectionO = &17E8 =   6120
+ EQUB 7                 \ trackSectionSize
+
+                        \ Track section 6
+
+ EQUB %01110010         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=01 Sh=0
+ EQUB &09               \ xTrackSectionILo       xTrackSectionI = &C809 = -14327
+ EQUB &54               \ yTrackSectionILo       yTrackSectionI = &1154 =   4436
+ EQUB &50               \ zTrackSectionILo       zTrackSectionI = &1B50 =   6992
+ EQUB &1B               \ xTrackSectionOLo       xTrackSectionO = &C71B = -14565
+ EQUB 5                 \ trackSectionFrom
+ EQUB &98               \ zTrackSectionOLo       zTrackSectionO = &1B98 =   7064
+ EQUB 38                \ trackSectionSize
+
+                        \ Track section 7
+
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB &65               \ xTrackSectionILo       xTrackSectionI = &CF65 = -12443
+ EQUB &54               \ yTrackSectionILo       yTrackSectionI = &1154 =   4436
+ EQUB &84               \ zTrackSectionILo       zTrackSectionI = &2B84 =  11140
+ EQUB &84               \ xTrackSectionOLo       xTrackSectionO = &CE84 = -12668
+ EQUB 4                 \ trackSectionFrom
+ EQUB &EB               \ zTrackSectionOLo       zTrackSectionO = &2BEB =  11243
+ EQUB 16                \ trackSectionSize
+
+                        \ Track section 8
+
+ EQUB %00000010         \ trackSectionFlag       Sp=0 G=0 Mc=0 Mlr=00 Vc=01 Sh=0
+ EQUB &7E               \ xTrackSectionILo       xTrackSectionI = &D57E = -10882
+ EQUB &58               \ yTrackSectionILo       yTrackSectionI = &1158 =   4440
+ EQUB &07               \ zTrackSectionILo       zTrackSectionI = &2F07 =  12039
+ EQUB &9C               \ xTrackSectionOLo       xTrackSectionO = &D59C = -10852
+ EQUB 21                \ trackSectionFrom
+ EQUB &FC               \ zTrackSectionOLo       zTrackSectionO = &2FFC =  12284
+ EQUB 17                \ trackSectionSize
+
+                        \ Track section 9
+
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB &65               \ xTrackSectionILo       xTrackSectionI = &DD65 =  -8859
+ EQUB &68               \ yTrackSectionILo       yTrackSectionI = &1268 =   4712
+ EQUB &08               \ zTrackSectionILo       zTrackSectionI = &2E08 =  11784
+ EQUB &83               \ xTrackSectionOLo       xTrackSectionO = &DD83 =  -8829
+ EQUB 23                \ trackSectionFrom
+ EQUB &FD               \ zTrackSectionOLo       zTrackSectionO = &2EFD =  12029
+ EQUB 18                \ trackSectionSize
+
+                        \ Track section 10
+
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB &C3               \ xTrackSectionILo       xTrackSectionI = &E5C3 =  -6717
+ EQUB &88               \ yTrackSectionILo       yTrackSectionI = &1388 =   5000
+ EQUB &FA               \ zTrackSectionILo       zTrackSectionI = &2CFA =  11514
+ EQUB &E1               \ xTrackSectionOLo       xTrackSectionO = &E5E1 =  -6687
+ EQUB 2                 \ trackSectionFrom
+ EQUB &EF               \ zTrackSectionOLo       zTrackSectionO = &2DEF =  11759
+ EQUB 52                \ trackSectionSize
+
+                        \ Track section 11
+
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &26               \ xTrackSectionILo       xTrackSectionI = &EF26 =  -4314
+ EQUB &66               \ yTrackSectionILo       yTrackSectionI = &1166 =   4454
+ EQUB &C9               \ zTrackSectionILo       zTrackSectionI = &19C9 =   6601
+ EQUB &0A               \ xTrackSectionOLo       xTrackSectionO = &F00A =  -4086
+ EQUB 15                \ trackSectionFrom
+ EQUB &6C               \ zTrackSectionOLo       zTrackSectionO = &196C =   6508
+ EQUB 30                \ trackSectionSize
+
+                        \ Track section 12
+
+ EQUB %01101000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=01 Vc=00 Sh=0
+ EQUB &3F               \ xTrackSectionILo       xTrackSectionI = &EA3F =  -5569
+ EQUB &D2               \ yTrackSectionILo       yTrackSectionI = &0ED2 =   3794
+ EQUB &A6               \ zTrackSectionILo       zTrackSectionI = &0CA6 =   3238
+ EQUB &30               \ xTrackSectionOLo       xTrackSectionO = &EB30 =  -5328
+ EQUB 6                 \ trackSectionFrom
+ EQUB &70               \ zTrackSectionOLo       zTrackSectionO = &0C70 =   3184
+ EQUB 29                \ trackSectionSize
+
+                        \ Track section 13
+
+ EQUB %11110011         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=10 Vc=01 Sh=1
+ EQUB &33               \ xTrackSectionILo       xTrackSectionI = &E833 =  -6093
+ EQUB &3B               \ yTrackSectionILo       yTrackSectionI = &0D3B =   3387
+ EQUB &38               \ zTrackSectionILo       zTrackSectionI = &FF38 =   -200
+ EQUB &26               \ xTrackSectionOLo       xTrackSectionO = &E926 =  -5850
+ EQUB 37                \ trackSectionFrom
+ EQUB &08               \ zTrackSectionOLo       zTrackSectionO = &FF08 =   -248
+ EQUB 17                \ trackSectionSize
+
+                        \ Track section 14
+
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB &A5               \ xTrackSectionILo       xTrackSectionI = &EAA5 =  -5467
+ EQUB &B3               \ yTrackSectionILo       yTrackSectionI = &0CB3 =   3251
+ EQUB &F7               \ zTrackSectionILo       zTrackSectionI = &F7F7 =  -2057
+ EQUB &54               \ xTrackSectionOLo       xTrackSectionO = &EB54 =  -5292
+ EQUB 16                \ trackSectionFrom
+ EQUB &A6               \ zTrackSectionOLo       zTrackSectionO = &F8A6 =  -1882
+ EQUB 8                 \ trackSectionSize
+
+                        \ Track section 15
+
+ EQUB %11000000         \ trackSectionFlag       Sp=1 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &67               \ xTrackSectionILo       xTrackSectionI = &EC67 =  -5017
+ EQUB &97               \ yTrackSectionILo       yTrackSectionI = &0C97 =   3223
+ EQUB &B6               \ zTrackSectionILo       zTrackSectionI = &F4B6 =  -2890
+ EQUB &58               \ xTrackSectionOLo       xTrackSectionO = &ED58 =  -4776
+ EQUB 26                \ trackSectionFrom
+ EQUB &EB               \ zTrackSectionOLo       zTrackSectionO = &F4EB =  -2837
+ EQUB 43                \ trackSectionSize
+
+                        \ Track section 16
+
+ EQUB %01000000         \ trackSectionFlag       Sp=0 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &E5               \ xTrackSectionILo       xTrackSectionI = &EEE5 =  -4379
+ EQUB &1B               \ yTrackSectionILo       yTrackSectionI = &101B =   4123
+ EQUB &C2               \ zTrackSectionILo       zTrackSectionI = &E0C2 =  -7998
+ EQUB &DA               \ xTrackSectionOLo       xTrackSectionO = &EFDA =  -4134
+ EQUB 31                \ trackSectionFrom
+ EQUB &DC               \ zTrackSectionOLo       zTrackSectionO = &E0DC =  -7972
+ EQUB 54                \ trackSectionSize
+
+                        \ Track section 17
+
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB &A3               \ xTrackSectionILo       xTrackSectionI = &F1A3 =  -3677
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &A8               \ zTrackSectionILo       zTrackSectionI = &C7A8 = -14424
+ EQUB &98               \ xTrackSectionOLo       xTrackSectionO = &F298 =  -3432
+ EQUB 7                 \ trackSectionFrom
+ EQUB &C2               \ zTrackSectionOLo       zTrackSectionO = &C7C2 = -14398
+ EQUB 35                \ trackSectionSize
+
+                        \ Track section 18
+
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB &6A               \ xTrackSectionILo       xTrackSectionI = &F36A =  -3222
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &63               \ zTrackSectionILo       zTrackSectionI = &B763 = -18589
+ EQUB &5F               \ xTrackSectionOLo       xTrackSectionO = &F45F =  -2977
+ EQUB 4                 \ trackSectionFrom
+ EQUB &7D               \ zTrackSectionOLo       zTrackSectionO = &B77D = -18563
+ EQUB 30                \ trackSectionSize
+
+                        \ Track section 19
+
+ EQUB %00000010         \ trackSectionFlag       Sp=0 G=0 Mc=0 Mlr=00 Vc=01 Sh=0
+ EQUB &76               \ xTrackSectionILo       xTrackSectionI = &EA76 =  -5514
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &BC               \ zTrackSectionILo       zTrackSectionI = &ADBC = -21060
+ EQUB &90               \ xTrackSectionOLo       xTrackSectionO = &EA90 =  -5488
+ EQUB 36                \ trackSectionFrom
+ EQUB &C6               \ zTrackSectionOLo       zTrackSectionO = &ACC6 = -21306
+ EQUB 24                \ trackSectionSize
+
+                        \ Track section 20
+
+ EQUB %01110000         \ trackSectionFlag       Sp=0 G=1 Mc=1 Mlr=10 Vc=00 Sh=0
+ EQUB &4E               \ xTrackSectionILo       xTrackSectionI = &DF4E =  -8370
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &84               \ zTrackSectionILo       zTrackSectionI = &AC84 = -21372
+ EQUB &68               \ xTrackSectionOLo       xTrackSectionO = &DF68 =  -8344
+ EQUB 39                \ trackSectionFrom
+ EQUB &8E               \ zTrackSectionOLo       zTrackSectionO = &AB8E = -21618
+ EQUB 25                \ trackSectionSize
+
+                        \ Track section 21
+
+ EQUB %11101101         \ trackSectionFlag       Sp=1 G=1 Mc=1 Mlr=01 Vc=10 Sh=1
+ EQUB &AF               \ xTrackSectionILo       xTrackSectionI = &D3AF = -11345
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &3F               \ zTrackSectionILo       zTrackSectionI = &AB3F = -21697
+ EQUB &C9               \ xTrackSectionOLo       xTrackSectionO = &D3C9 = -11319
+ EQUB 26                \ trackSectionFrom
+ EQUB &49               \ zTrackSectionOLo       zTrackSectionO = &AA49 = -21943
+ EQUB 9                 \ trackSectionSize
+
+                        \ Track section 22
+
+ EQUB %00000010         \ trackSectionFlag       Sp=0 G=0 Mc=0 Mlr=00 Vc=01 Sh=0
+ EQUB &20               \ xTrackSectionILo       xTrackSectionI = &D120 = -12000
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &FA               \ zTrackSectionILo       zTrackSectionI = &ADFA = -20998
+ EQUB &28               \ xTrackSectionOLo       xTrackSectionO = &D028 = -12248
+ EQUB 37                \ trackSectionFrom
+ EQUB &FA               \ zTrackSectionOLo       zTrackSectionO = &ADFA = -20998
+ EQUB 35                \ trackSectionSize
+
+                        \ Track section 23
+
+ EQUB %11000000         \ trackSectionFlag       Sp=1 G=1 Mc=0 Mlr=00 Vc=00 Sh=0
+ EQUB &20               \ xTrackSectionILo       xTrackSectionI = &D120 = -12000
+ EQUB &FF               \ yTrackSectionILo       yTrackSectionI = &13FF =   5119
+ EQUB &62               \ zTrackSectionILo       zTrackSectionI = &BE62 = -16798
+ EQUB &28               \ xTrackSectionOLo       xTrackSectionO = &D028 = -12248
+ EQUB 0                 \ trackSectionFrom
+ EQUB &62               \ zTrackSectionOLo       zTrackSectionO = &BE62 = -16798
+ EQUB 40                \ trackSectionSize
+
+ EQUB &40               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
@@ -2486,7 +3383,7 @@ ORG CODE%
                         \ no effect when the car is off the ground)
 
                         \ If we get here then heightAboveTrack = 0, so the car
-                        \ is on the ground 
+                        \ is on the ground
 
  LDA playerSpeedHi      \ Set A = the high byte of the current speed
 
@@ -2926,7 +3823,7 @@ ORG CODE%
  EQUB &C2               \ Counts the number of data bytes ending in %01
 
  EQUB &3E               \ Counts the number of data bytes ending in %10
- 
+
  EQUB &7F               \ Counts the number of data bytes ending in %11
 
 \ ******************************************************************************

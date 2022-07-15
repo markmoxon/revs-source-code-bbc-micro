@@ -1382,7 +1382,7 @@ ORG CODE%
 .MoveToNextVector
 
  JSR UpdateVectorNumber \ Update thisVectorNumber to the next segment vector
-                        \ along the track in the direction we are facing 
+                        \ along the track in the direction we are facing
 
 \ ******************************************************************************
 \
@@ -1848,7 +1848,7 @@ ORG CODE%
  STA &23B3              \ Modify the GetSectionAngles routine, at instruction
                         \ #4 after gsec11, to test prevHorizonIndex against the
                         \ value we just calculated in A rather than 7
-                        \ 
+                        \
                         \ So if this section's trackSubConfig has bit 1 set, the
                         \ test becomes prevHorizonIndex <= 135, which is always
                         \ true, so this modification makes us never set the
@@ -2346,7 +2346,7 @@ ORG CODE%
                         \ xVergeRight < xVergeLeft
 
  LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeLeft
- STA xVergeLeftLo,Y     
+ STA xVergeLeftLo,Y
  LDA xVergeRightHi,Y
  STA xVergeLeftHi,Y
 
@@ -2755,8 +2755,8 @@ ORG CODE%
 \
 \   * Bits 2 to 7 = the number of the first sub-section in this section
 \
-\   * Bit 1 = if this is set, then in the horizon calculations, we always skip
-\             the setting of horizonLine to 7
+\   * Bit 1 = if this is set, then in the horizon calculations, we skip the
+\             check that sets horizonLine to 7
 \
 \   * Bit 0 = if this is set, then the segment vectors for this section are
 \             generated as a straight track rather than using the curve tables
@@ -2791,17 +2791,17 @@ ORG CODE%
  EQUB %01101010         \ Section 12 = 011010 1 0    From 26  no check  curve
  EQUB %01110110         \ Section 13 = 011101 1 0    From 29  no check  curve
  EQUB %01111110         \ Section 14 = 011111 1 0    From 31  no check  curve
- EQUB %10000100         \ Section 15 = 100001 0 0    From 33            curve
- EQUB %10010001         \ Section 16 = 100100 0 1    From 36            straight
+ EQUB %10000100         \ Section 15 = 100001 0 0    From 33  check     curve
+ EQUB %10010001         \ Section 16 = 100100 0 1    From 36  check     straight
  EQUB %10010010         \ Section 17 = 100100 1 0    From 36  no check  curve
  EQUB %10100010         \ Section 18 = 101000 1 0    From 40  no check  curve
  EQUB %10101010         \ Section 19 = 101010 1 0    From 42  no check  curve
  EQUB %10101111         \ Section 20 = 101011 1 1    From 43  no check  straight
  EQUB %10101110         \ Section 21 = 101011 1 0    From 43  no check  curve
- EQUB %10110101         \ Section 22 = 101101 0 1    From 45            straight
- EQUB %10110100         \ Section 23 = 101101 0 0    From 45            curve
- EQUB %10111100         \ Section 24 = 101111 0 0    From 47            curve
- EQUB %11000100         \ Section 25 = 110001 0 0    From 49            curve
+ EQUB %10110101         \ Section 22 = 101101 0 1    From 45  check     straight
+ EQUB %10110100         \ Section 23 = 101101 0 0    From 45  check     curve
+ EQUB %10111100         \ Section 24 = 101111 0 0    From 47  check     curve
+ EQUB %11000100         \ Section 25 = 110001 0 0    From 49  check     curve
  EQUB %11001110         \ Section 26 = 110011 1 0    From 51  no check  curve
  EQUB %11011010         \ Section 27 = 110110 1 0    From 54  no check  curve
  EQUB %11100010         \ Section 28 = 111000 1 0    From 56  no check  curve
@@ -2822,32 +2822,32 @@ ORG CODE%
 .trackRacingLine
 
  EQUB %00011000         \ Section  0 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00110011         \ Section  1 = 001100 1 1 = -12            
+ EQUB %00110011         \ Section  1 = 001100 1 1 = -12
  EQUB %00011000         \ Section  2 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00000000         \ Section  3 = 000000 0 0 =  +0 * baseSpeed
- EQUB %01001111         \ Section  4 = 010011 1 1 = -19            
+ EQUB %01001111         \ Section  4 = 010011 1 1 = -19
  EQUB %00110001         \ Section  5 = 001100 0 1 = -12 * baseSpeed
  EQUB %01101000         \ Section  6 = 011010 0 0 = +26 * baseSpeed
  EQUB %00011001         \ Section  7 = 000110 0 1 =  -6 * baseSpeed
  EQUB %00110000         \ Section  8 = 001100 0 0 = +12 * baseSpeed
  EQUB %00011001         \ Section  9 = 000110 0 1 =  -6 * baseSpeed
- EQUB %00101110         \ Section 10 = 001011 1 0 = +11            
+ EQUB %00101110         \ Section 10 = 001011 1 0 = +11
  EQUB %00011000         \ Section 11 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section 12 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section 13 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section 14 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00110011         \ Section 15 = 001100 1 1 = -12            
+ EQUB %00110011         \ Section 15 = 001100 1 1 = -12
  EQUB %00011000         \ Section 16 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00111111         \ Section 17 = 001111 1 1 = -15            
+ EQUB %00111111         \ Section 17 = 001111 1 1 = -15
  EQUB %00011000         \ Section 18 = 000110 0 0 =  +6 * baseSpeed
  EQUB %01010101         \ Section 19 = 010101 0 1 = -21 * baseSpeed
  EQUB %00011000         \ Section 20 = 000110 0 0 =  +6 * baseSpeed
- EQUB %01011011         \ Section 21 = 010110 1 1 = -22            
+ EQUB %01011011         \ Section 21 = 010110 1 1 = -22
  EQUB %00110101         \ Section 22 = 001101 0 1 = -13 * baseSpeed
- EQUB %01000010         \ Section 23 = 010000 1 0 = +16            
+ EQUB %01000010         \ Section 23 = 010000 1 0 = +16
  EQUB %00011000         \ Section 24 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section 25 = 000110 0 0 =  +6 * baseSpeed
- EQUB %01001011         \ Section 26 = 010010 1 1 = -18            
+ EQUB %01001011         \ Section 26 = 010010 1 1 = -18
  EQUB %00011000         \ Section 27 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section 28 = 000110 0 0 =  +6 * baseSpeed
 
@@ -3378,7 +3378,7 @@ ORG CODE%
                         \ no effect when the car is off the ground)
 
                         \ If we get here then heightAboveTrack = 0, so the car
-                        \ is on the ground 
+                        \ is on the ground
 
  LDA playerSpeedHi      \ Set A = the high byte of the current speed
 
@@ -3722,7 +3722,7 @@ ORG CODE%
  EQUB &D4               \ Counts the number of data bytes ending in %01
 
  EQUB &78               \ Counts the number of data bytes ending in %10
- 
+
  EQUB &52               \ Counts the number of data bytes ending in %11
 
 \ ******************************************************************************
