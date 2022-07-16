@@ -501,41 +501,7 @@ ORG CODE%
 
  JMP CheckVergeOnScreen
 
- EQUB &08, &00, &12, &11, &08
-
-\ ******************************************************************************
-\
-\       Name: L53F8
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L53F8
-
- EQUB &08
-
-\ ******************************************************************************
-\
-\       Name: L53F9
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L53F9
-
- EQUB &F0
+ EQUB &08, &00, &12, &11, &08, &08, &F0
 
 \ ******************************************************************************
 \
@@ -1764,8 +1730,8 @@ ORG CODE%
  LDA #11                \ ?&35F4 = 11 (object dimension in objectBottom)
  STA &35F4
 
- LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR &xxxx
- STA &45CC              \                         instruction)
+ LDA #LO(HookSlopeJump) \ !&45CC = HookSlopeJump (address in a JSR instruction)
+ STA &45CC
  LDA #HI(HookSlopeJump)
  STA &45CD
 
@@ -1776,21 +1742,6 @@ ORG CODE%
  STA &298E
 
  RTS                    \ Return from the subroutine
-
-\ ******************************************************************************
-\
-\       Name: L561F
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L561F
 
  EQUB &6F
  EQUB &73, &75, &74, &6F, &66, &5B, &52, &4E
@@ -2097,20 +2048,7 @@ ORG CODE%
 
  EQUB &78, &78, &78, &78, &00
 
-\ ******************************************************************************
-\
-\       Name: L5700
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L5700
+\ &5600
 
 \ ******************************************************************************
 \
@@ -2179,21 +2117,6 @@ ORG CODE%
  BPL mods1              \ Loop back until we have modified all 19 addresses
 
  JMP mods2              \ Jump to part 2
-
-\ ******************************************************************************
-\
-\       Name: L571F
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L571F
 
  EQUB &AE
  EQUB &AB, &AA, &AD, &B2, &BA, &C3, &C6, &C8
@@ -2295,7 +2218,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5772
+\       Name: HookFixHorizon
 \       Type: Subroutine
 \   Category: 
 \    Summary: 
@@ -2315,60 +2238,63 @@ ORG CODE%
 \ EQUB &A0, &84, &99, &C8, &84, &C8, &C0, &09
 \ EQUB &90, &CE, &A4, &51, &60
 
+\ STA &1B0C
+\ STA &8508,Y
+\.L5778
+\ LDA &8400,Y
+\ SEC
+\ SBC &8428,Y
+\ LDA &8450,Y
+\ SBC &8478,Y
+\ BPL L5793
+\ LDA &8400,Y
+\ STA &8428,Y
+\ LDA &8450,Y
+\ STA &8478,Y
+\.L5793
+\ LDA &84E0,Y
+\ STA &8508,Y
+\ CPY #&06
+\ BCS L57A5
+\ LDA #&00
+\ STA &84A0,Y
+\ STA &84C8,Y
+\.L57A5
+
 .HookFixHorizon
 
-\ STA &1B0C
  STA &1FEA
-
-\ STA &8508,Y
  STA &5F48,Y
 
 .L5778
 
-\ LDA &8400,Y
  LDA &5E40,Y
-
  SEC
-
-\ SBC &8428,Y
  SBC &5E68,Y
 
-\ LDA &8450,Y
  LDA &5E90,Y
-
-\ SBC &8478,Y
  SBC &5EB8,Y
 
  BPL L5793
 
-\ LDA &8400,Y
  LDA &5E40,Y
-
-\ STA &8428,Y
  STA &5E68,Y
 
-\ LDA &8450,Y
  LDA &5E90,Y
-
-\ STA &8478,Y
  STA &5EB8,Y
 
 .L5793
 
-\ LDA &84E0,Y
  LDA &5F20,Y
-
-\ STA &8508,Y
  STA &5F48,Y
 
  CPY #&06               \ Here to label not in BH
  BCS L57A5
+
  LDA #&00
 
-\ STA &84A0,Y
  STA &5EE0,Y
 
-\ STA &84C8,Y
  STA &5F08,Y
 
 .L57A5
@@ -2446,21 +2372,6 @@ ORG CODE%
                         \ the above code into the main game
 
  RTS                    \ Return from the subroutine
-
-\ ******************************************************************************
-\
-\       Name: L57BC
-\       Type: Variable
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ 
-\
-\ ******************************************************************************
-
-.L57BC
 
  EQUB &F6, &F3, &F0
 
@@ -3331,13 +3242,14 @@ ORG CODE%
 \ EQUB &C9, &40, &D0, &02, &A0, &CD, &C9, &D0
 \ EQUB &D0, &02, &A0, &CA, &98, &4C, &AF, &56
 
+\ LDA &88E8,Y
+
 .HookJoystick
 
  PHP
  PHA
  LDY &6F
 
-\ LDA &88E8,Y
  LDA &06E8,Y
 
  LDY #&B5
@@ -3773,13 +3685,14 @@ ORG &9C00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ Contains C64-specific modifications? All keyboard mods plus SetPlayerDriftSup
+\ bug fix (so Superior variants includes a fix from the C64 Revs+ version)
 \
 \ ******************************************************************************
 
 .L9C00
 
- LDA L9C42
+ LDA L9C42              \ Only ever run this once
  BEQ L9C3F
 
  ASL L9C42
@@ -3787,7 +3700,8 @@ ORG &9C00
  LDA #$44
  STA $0E85              \ Changes JSR ScanKeyboard to JSR L9C44, looks like the
  LDA #$9C               \ second one in ProcessShiftedKeys at 0EF5, but it's
- STA $0E86              \ quite different as the C64 doesn't use SHIFT keys
+ STA $0E86              \ quite different as the C64 use the C= key rather than
+                        \ SHIFT
 
  LDA #$4C
  STA $154D              \ Changes JSR ScanKeyboard at 1583 in ProcessDrivingKeys
@@ -3819,6 +3733,8 @@ ORG &9C00
  STA $4659              \
  LDA #$9D               \ In Acornsoft, changes ROR L62FB at same address
  STA $465A              \ to JMP L9DA7
+                        \
+                        \ This implements the fix in SetPlayerDriftSup in L9DA7
 
 .L9C3F
 
@@ -4096,11 +4012,11 @@ ORG &9C00
 .L9D2E
 
  STA $77
- LDA $8400,X              \ CONVERT
+ LDA $8400,X            \ CONVERT
  SEC
  SBC $76
  STA $74
- LDA $8450,X              \ CONVERT
+ LDA $8450,X            \ CONVERT
  SBC $77
  PHP
  JSR Absolute16Bit
@@ -4117,7 +4033,7 @@ ORG &9C00
  ASL A
  ADC #$20
  STA $75
- LDA $8901,Y              \ CONVERT
+ LDA $8901,Y            \ CONVERT
  AND #$7F
  CMP #$40
  BCC L9D5E
@@ -4198,14 +4114,14 @@ ORG &9C00
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This implements the fix in SetPlayerDriftSup
 \
 \ ******************************************************************************
 
 .L9DA7
 
  BCC L9DAE
- LDA $0880,X              \ CONVERT
+ LDA $0880,X            \ CONVERT
  CMP #$03
 
 .L9DAE

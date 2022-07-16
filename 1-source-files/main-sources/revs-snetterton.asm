@@ -821,20 +821,14 @@ ORG CODE%
  EQUB &00               \ Sub-section 41 = &0000 (    0)
  EQUB &07               \ Sub-section 42 = &079B ( 1947)
  EQUB &00               \ Sub-section 43 = &0000 (    0)
- EQUB &05               \ Sub-section 44 = &057A ( 1402)
- EQUB &FC               \ Sub-section 45 = &FCBB ( -837)
- EQUB &FB               \ Sub-section 46 = &FBF8 (-1032)
- EQUB &00               \ Sub-section 47 = &0000 (    0)
- EQUB &00               \ Sub-section 48 = &0000 (    0)
- EQUB &00               \ Sub-section 49 = &0000 (    0)
- EQUB &00               \ Sub-section 50 = &0000 (    0)
- EQUB &05               \ Sub-section 51 = &0555 ( 1365)
- EQUB &02               \ Sub-section 52 = &0211 (  529)
- EQUB &02               \ Sub-section 53 = &0211 (  529)
- EQUB &00               \ Sub-section 54 = &0060 (   96)
- EQUB &01               \ Sub-section 55 = &01B0 (  432)
- EQUB &00               \ Sub-section 56 = &0078 (  120)
- EQUB &00               \ Sub-section 57 = &0020 (   32)
+
+ EQUB &05, &FC          \ These bytes appear to be unused
+ EQUB &FB, &00
+ EQUB &00, &00
+ EQUB &00, &05
+ EQUB &02, &02
+ EQUB &00, &01
+ EQUB &00, &00
 
 \ ******************************************************************************
 \
@@ -1361,20 +1355,14 @@ ORG CODE%
  EQUB &00               \ Sub-section 41 = &0000 (    0)
  EQUB &9B               \ Sub-section 42 = &079B ( 1947)
  EQUB &00               \ Sub-section 43 = &0000 (    0)
- EQUB &7A               \ Sub-section 44 = &057A ( 1402)
- EQUB &BB               \ Sub-section 45 = &FCBB ( -837)
- EQUB &F8               \ Sub-section 46 = &FBF8 (-1032)
- EQUB &00               \ Sub-section 47 = &0000 (    0)
- EQUB &00               \ Sub-section 48 = &0000 (    0)
- EQUB &00               \ Sub-section 49 = &0000 (    0)
- EQUB &00               \ Sub-section 50 = &0000 (    0)
- EQUB &55               \ Sub-section 51 = &0555 ( 1365)
- EQUB &11               \ Sub-section 52 = &0211 (  529)
- EQUB &11               \ Sub-section 53 = &0211 (  529)
- EQUB &60               \ Sub-section 54 = &0060 (   96)
- EQUB &B0               \ Sub-section 55 = &01B0 (  432)
- EQUB &78               \ Sub-section 56 = &0078 (  120)
- EQUB &20               \ Sub-section 57 = &0020 (   32)
+
+ EQUB &7A, &BB          \ These bytes appear to be unused
+ EQUB &F8, &00
+ EQUB &00, &00
+ EQUB &00, &55
+ EQUB &11, &11
+ EQUB &60, &B0
+ EQUB &78, &20
 
 \ ******************************************************************************
 \
@@ -1814,20 +1802,14 @@ ORG CODE%
  EQUB &00               \ Sub-section 41 =   0
  EQUB &00               \ Sub-section 42 =   0
  EQUB &00               \ Sub-section 43 =   0
- EQUB &FD               \ Sub-section 44 =  -3
- EQUB &01               \ Sub-section 45 =   1
- EQUB &03               \ Sub-section 46 =   3
- EQUB &00               \ Sub-section 47 =   0
- EQUB &FE               \ Sub-section 48 =  -2
- EQUB &00               \ Sub-section 49 =   0
- EQUB &01               \ Sub-section 50 =   1
- EQUB &FC               \ Sub-section 51 =  -4
- EQUB &FC               \ Sub-section 52 =  -4
- EQUB &03               \ Sub-section 53 =   3
- EQUB &03               \ Sub-section 54 =   3
- EQUB &FC               \ Sub-section 55 =  -4
- EQUB &FE               \ Sub-section 56 =  -2
- EQUB &01               \ Sub-section 57 =   1
+
+ EQUB &FD, &01          \ These bytes appear to be unused
+ EQUB &03, &00
+ EQUB &FE, &00
+ EQUB &01, &FC
+ EQUB &FC, &03
+ EQUB &03, &FC
+ EQUB &FE, &01
 
 \ ******************************************************************************
 \
@@ -2314,20 +2296,14 @@ ORG CODE%
  EQUB 25                \ Sub-section 41
  EQUB 9                 \ Sub-section 42
  EQUB 40                \ Sub-section 43
- EQUB 5                 \ Sub-section 44
- EQUB 5                 \ Sub-section 45
- EQUB 12                \ Sub-section 46
- EQUB 15                \ Sub-section 47
- EQUB 21                \ Sub-section 48
- EQUB 35                \ Sub-section 49
- EQUB 22                \ Sub-section 50
- EQUB 3                 \ Sub-section 51
- EQUB 14                \ Sub-section 52
- EQUB 8                 \ Sub-section 53
- EQUB 19                \ Sub-section 54
- EQUB 8                 \ Sub-section 55
- EQUB 17                \ Sub-section 56
- EQUB 34                \ Sub-section 57
+
+ EQUB &05, &05          \ These bytes appear to be unused
+ EQUB &0C, &0F
+ EQUB &15, &23
+ EQUB &16, &03
+ EQUB &0E, &08
+ EQUB &13, &08
+ EQUB &11, &22
 
 \ ******************************************************************************
 \
