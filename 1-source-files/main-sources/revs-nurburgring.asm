@@ -485,10 +485,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &A5, &44, &20, &50, &34, &C9, &19, &B0
-\ EQUB &07, &A5, &0D, &10, &03, &4C, &55, &56
-\ EQUB &4C, &51, &B4
-
 .hill4
 
  LDA playerHeading      \ Set A to the player's heading along the track, which
@@ -551,7 +547,10 @@ ORG CODE%
                         \ above code into the main game (the JMP ensures we
                         \ return from the subroutine using a tail call)
 
- EQUB &08, &00, &12, &11, &08, &08, &F0
+ EQUB &08, &00          \ These bytes appear to be unused
+ EQUB &12, &11
+ EQUB &08, &08
+ EQUB &F0
 
 \ ******************************************************************************
 \
@@ -650,9 +649,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &FD, &3E, &8B, &E8, &B0, &7C, &78, &28
-\ EQUB &20, &18, &26, &2E, &38, &68, &86
-
 .modifyAddressLo
 
  EQUB &49               \ !&1249 = HookSectionFrom
@@ -660,8 +656,6 @@ ORG CODE%
  EQUB &CA               \ !&13CA = HookSegmentVector
  EQUB &27               \ !&1427 = HookSegmentVector
  EQUB &FC               \ !&12FC = HookDataPointers
-\EQUB &1B               \ !&261B = HookUpdateHorizon
-\EQUB &8C               \ !&248C = HookFieldOfView
  EQUB &39               \ !&2539 = HookFixHorizon
  EQUB &94               \ !&1594 = HookJoystick
  EQUB &D1               \ !&4CD1 = xTrackSignVector
@@ -671,10 +665,7 @@ ORG CODE%
  EQUB &D7               \ !&4CD7 = trackSignData
  EQUB &E1               \ !&4CE1 = trackSignData
  EQUB &47               \ !&1947 = HookFlattenHills
-\EQUB &F3               \ !&24F3 = HookMoveBack
-\EQUB &2C               \ !&462C = HookFlipAbsolute
  EQUB &43               \ !&2543 = Hook80Percent
-\EQUB &24               \ !&2F24 = HookBackground
 
  EQUB &33, &3C          \ These bytes pad the block out to exactly 20 bytes
  EQUB &4A, &57
@@ -706,8 +697,6 @@ ORG CODE%
  EQUB &13               \ !&13CA = HookSegmentVector
  EQUB &14               \ !&1427 = HookSegmentVector
  EQUB &12               \ !&12FC = HookDataPointers
-\EQUB &26               \ !&261B = HookUpdateHorizon
-\EQUB &24               \ !&248C = HookFieldOfView
  EQUB &25               \ !&2539 = HookFixHorizon
  EQUB &15               \ !&1594 = HookJoystick
  EQUB &4C               \ !&4CD1 = xTrackSignVector
@@ -717,10 +706,7 @@ ORG CODE%
  EQUB &4C               \ !&4CD7 = trackSignData
  EQUB &4C               \ !&4CE1 = trackSignData
  EQUB &19               \ !&1947 = HookFlattenHills
-\EQUB &24               \ !&24F3 = HookMoveBack
-\EQUB &46               \ !&462C = HookFlipAbsolute
  EQUB &25               \ !&2543 = Hook80Percent
-\EQUB &2F               \ !&2F24 = HookBackground
 
  EQUB &2E, &3F          \ These bytes pad the block out to exactly 20 bytes
  EQUB &4F, &57
@@ -846,25 +832,6 @@ ORG CODE%
 \ files, rather than being full of static data).
 \
 \ ******************************************************************************
-
-\ EQUB &AD, &FC, &53, &0A, &AD, &FD
-\ EQUB &53, &2A, &48, &2A, &2A, &2A, &29, &07
-\ EQUB &85, &75, &4A, &68, &29, &3F, &90, &04
-\ EQUB &49, &3F, &69, &00, &AA, &BC, &BF, &57
-\ EQUB &BD, &BF, &58, &AA, &A5, &75, &18, &69
-\ EQUB &01, &29, &02, &D0, &06, &84, &76, &86
-\ EQUB &77, &F0, &04, &86, &76, &84, &77, &A5
-\ EQUB &75, &C9, &04, &90, &06, &A9, &00, &E5
-\ EQUB &76, &85, &76, &A5, &75, &C9, &06, &B0
-\ EQUB &0A, &C9, &02, &90, &06, &A9, &00, &E5
-\ EQUB &77, &85, &77, &A4, &02, &A9, &9A, &85
-\ EQUB &75, &A5, &76, &99, &00, &54, &20, &5C
-\ EQUB &55, &99, &00, &58, &A5, &77, &99, &00
-\ EQUB &56, &20, &5C, &55, &49, &FF, &18, &69
-\ EQUB &01, &99, &00, &57, &AD, &FE, &53, &99
-\ EQUB &00, &55, &60, &A5, &91, &29, &40, &F0
-\ EQUB &03, &20, &82, &55, &A5, &24, &18, &69
-\ EQUB &03, &60
 
 .CalcSegmentVector
 
@@ -1176,16 +1143,11 @@ ORG CODE%
 
 .newContentLo
 
-\ EQUB &72, &1B, &72, &72, &EB, &72, &D9, &62
-\ EQUB &62, &62, &A0, &62, &62, &C4, &55
-
  EQUB LO(HookSectionFrom)
  EQUB LO(HookFirstSegment)
  EQUB LO(HookSegmentVector)
  EQUB LO(HookSegmentVector)
  EQUB LO(HookDataPointers)
-\EQUB LO(HookUpdateHorizon)
-\EQUB LO(HookFieldOfView)
  EQUB LO(HookFixHorizon)
  EQUB LO(HookJoystick)
  EQUB LO(xTrackSignVector)
@@ -1195,8 +1157,6 @@ ORG CODE%
  EQUB LO(trackSignData)
  EQUB LO(trackSignData)
  EQUB LO(HookFlattenHills)
-\EQUB LO(HookMoveBack)
-\EQUB LO(HookFlipAbsolute)
  EQUB LO(Hook80Percent)
 
  EQUB &00, &00          \ These bytes pad the block out to exactly 20 bytes
@@ -1222,16 +1182,11 @@ ORG CODE%
 
 .newContentHi
 
-\ EQUB &56, &5A, &55, &55, &54, &57, &59, &55
-\ EQUB &56, &57, &58, &54, &54, &56, &55
-
  EQUB HI(HookSectionFrom)
  EQUB HI(HookFirstSegment)
  EQUB HI(HookSegmentVector)
  EQUB HI(HookSegmentVector)
  EQUB HI(HookDataPointers)
-\EQUB HI(HookUpdateHorizon)
-\EQUB HI(HookFieldOfView)
  EQUB HI(HookFixHorizon)
  EQUB HI(HookJoystick)
  EQUB HI(xTrackSignVector)
@@ -1241,8 +1196,6 @@ ORG CODE%
  EQUB HI(trackSignData)
  EQUB HI(trackSignData)
  EQUB HI(HookFlattenHills)
-\EQUB HI(HookMoveBack)
-\EQUB HI(HookFlipAbsolute)
  EQUB HI(Hook80Percent)
 
  EQUB &00, &00          \ These bytes pad the block out to exactly 20 bytes
@@ -1322,9 +1275,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &85, &75, &A9
-\ EQUB &CD, &4C, &00, &0C
-
 .Hook80Percent
 
  STA U                  \ Set U = A
@@ -1364,8 +1314,6 @@ ORG CODE%
 \ So this multiplies A and U, retaining the sign in A.
 \
 \ ******************************************************************************
-
-\ EQUB &08, &4C, &6B, &46
 
 .Multiply8x8Signed
 
@@ -1443,27 +1391,6 @@ ORG CODE%
 \ were a static piece of data from a normal track data file.
 \
 \ ******************************************************************************
-
-\ EQUB &A5, &91, &29, &40, &F0, &06, &20, &A1
-\ EQUB &13, &20, &BD, &55, &60, &20, &A1, &13
-\ EQUB &AC, &FA, &53, &AD, &FF, &53, &38, &24
-\ EQUB &25, &30, &13, &69, &00, &D9, &28, &57
-\ EQUB &90, &22, &A9, &00, &C8, &CC, &FB, &53
-\ EQUB &90, &1A, &A0, &00, &F0, &16, &E9, &01
-\ EQUB &B0, &12, &98, &29, &7F, &A8, &C0, &01
-\ EQUB &B0, &03, &AC, &FB, &53, &88, &B9, &28
-\ EQUB &57, &38, &E9, &01, &8D, &FF, &53, &8C
-\ EQUB &FA, &53, &60, &86, &45, &AC, &FA, &53
-\ EQUB &30, &2F, &B9, &28, &55, &85, &74, &B9
-\ EQUB &28, &54, &24, &25, &20, &40, &0E, &85
-\ EQUB &75, &A5, &74, &18, &6D, &FC, &53, &8D
-\ EQUB &FC, &53, &A5, &75, &6D, &FD, &53, &8D
-\ EQUB &FD, &53, &B9, &28, &56, &24, &25, &20
-\ EQUB &50, &34, &18, &6D, &FE, &53, &8D, &FE
-\ EQUB &53, &20, &72, &54, &A6, &45, &60
-
-\ &13A1 -> &13E0 = UpdateVectorNumber
-\ JSR &13A1 -> JSR UpdateVectorNumber
 
 .HookSegmentVector
 
@@ -1726,7 +1653,10 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &0D, &0A, &07, &03, &00, &00, &00
+ EQUB &0D, &0A          \ These bytes appear to be unused
+ EQUB &07, &03
+ EQUB &00, &00
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -1747,33 +1677,6 @@ ORG CODE%
 
 .mods3
 
-\ EQUB &A9, &04, &8D, &74, &35, &A9, &0B, &8D
-\ EQUB &F4, &35, &A9, &AD, &8D, &1C, &46, &A9
-\ EQUB &57, &8D, &1D, &46, &A9, &4B, &8D, &46
-\ EQUB &25, &A9, &FF, &8D, &2B, &28, &60
-
-\ LDA #&04
-\ STA &3574      \ Same, changes 0 to 4
-\ LDA #&0B
-\ STA &35F4      \ Same, changes 3 to &B
-
-\ &461C/D -> &45CC, !&45CC/D = L57AD (also needs &461B -> &45CB, !&45CB = &20)
-
-\ LDA #&AD
-\ STA &461C
-\ LDA #&57
-\ STA &461D
-
-\ &2546 -> &2772, ?&2772 = &4B
-
-\ LDA #&4B
-\ STA &2546
-
-\ &282B -> &298E, ?&298E = &FF
-
-\ LDA #&FF
-\ STA &282B
-
  LDA #4                 \ ?&3574 = 4 (object dimension in objectTop)
  STA &3574
 
@@ -1793,8 +1696,11 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &6F
- EQUB &73, &75, &74, &6F, &66, &5B, &52, &4E
+ EQUB &6F, &73          \ These bytes appear to be unused
+ EQUB &75, &74
+ EQUB &6F, &66
+ EQUB &5B, &52
+ EQUB &4E
 
 \ ******************************************************************************
 \
@@ -1871,10 +1777,6 @@ ORG CODE%
 \ ******************************************************************************
 
 .hill6
-
-\ EQUB &AD, &FF, &88
-\ EQUB &C9, &30, &B0, &03, &46, &76, &60, &4C
-\ EQUB &51, &B4
 
  LDA objTrackSection+23 \ Set A to the number * 8 of the track section for the
                         \ front segment of the track segment buffer
@@ -1960,25 +1862,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &84, &1B, &B9, &05, &59, &85
-\ EQUB &02, &98, &4A, &4A, &4A, &A8, &B9, &46
-\ EQUB &58, &8D, &FC, &53, &B9, &64, &58, &8D
-\ EQUB &FD, &53, &B9, &28, &58, &8D, &FE, &53
-\ EQUB &B9, &82, &58, &4A, &6A, &8D, &FA, &53
-\ EQUB &A9, &0E, &6A, &8D, &C0, &20, &A9, &00
-\ EQUB &8D, &FF, &53, &24, &25, &30, &03, &20
-\ EQUB &BD, &55, &A4, &1B, &A5, &02, &60, &85
-\ EQUB &75, &68, &20, &00, &0C, &28, &F0, &09
-\ EQUB &85, &75, &20, &00, &0C, &06, &74, &2A
-\ EQUB &60, &4C, &00, &0C, &98, &29, &20, &85
-\ EQUB &82, &A9, &00, &85, &7F, &88, &B9, &E0
-\ EQUB &84, &C5, &1F, &B0, &1E, &C5, &7F, &B0
-\ EQUB &F2, &A5, &7F, &69, &00, &99, &E0, &84
-\ EQUB &A5, &82, &D0, &E9, &A5, &7F, &8D, &0C
-\ EQUB &1B, &C8, &20, &7E, &22, &88, &38, &66
-\ EQUB &82, &30, &DA, &A4, &4B, &88, &84, &75
-\ EQUB &4C, &E0, &53
-
 .HookSectionFrom
 
  STY yStore             \ Store the section number in yStore, so we can retrieve
@@ -2048,10 +1931,24 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookJoystick (Part 2 of 3)
+\       Name: HookJoystick (Part 2 of 2)
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: Apply enhanced joystick steering to specific track sections
+\
+\ ------------------------------------------------------------------------------
+\
+\ This part of the routine scales the steering, but if the joystick x-axis high
+\ byte is zero, then the scaling is applied in a different way. Instad of this:
+\
+\     2 * (scale * x-axis) ^ 2
+\   = 2 * scale ^2 * x-axis ^2
+\
+\ we return this:
+\
+\   scale ^2 * x-axis
+\
+\ in other words, we divide the scale factor by 2 * x-axis.
 \
 \ ******************************************************************************
 
@@ -2066,7 +1963,7 @@ ORG CODE%
                         \
                         \   * 205 for a scale factor of 1.28
                         \
-                        \   * 212 for a scale factor of1.37
+                        \   * 212 for a scale factor of 1.37
 
  STA U                  \ Set U = A
                         \
@@ -2118,15 +2015,6 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
-\ ******************************************************************************
-\
-\       Name: HookJoystick (Part 3 of 3)
-\       Type: Subroutine
-\   Category: Extra track data
-\    Summary: Apply enhanced joystick steering to specific track sections
-\
-\ ******************************************************************************
-
 .joys5
 
                         \ If we get here then the joystick x-axis high byte is
@@ -2158,7 +2046,8 @@ ORG CODE%
 \
 \ It also sets horizonTrackWidth to 80% of the track width at the hill crest,
 \ and sets the verge edge to being visible when the car is pointing along the
-\ track and the nose is pointing downwards.
+\ track and the nose is pointing downwards (though the latter part is only done
+\ if we are looking at track sections 0 to 5 down the hill).
 \
 \ Arguments:
 \
@@ -2270,9 +2159,9 @@ ORG CODE%
 
  JMP hill4              \ Jump to part 2
 
- EQUB &78, &78, &78, &78, &00
-
-\ &5600
+ EQUB &78, &78          \ These bytes appear to be unused
+ EQUB &78, &78
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -2298,11 +2187,6 @@ ORG CODE%
 \ there's one byte for each inner segment x-coordinate.
 \
 \ ******************************************************************************
-
-\ EQUB &A2, &0E, &BD, &14, &54, &85, &75, &BD
-\ EQUB &00, &54, &85, &74, &A0, &00, &BD, &00
-\ EQUB &55, &91, &74, &C8, &BD, &14, &55, &91
-\ EQUB &74, &CA, &10, &E6, &4C, &00, &58
 
 .ModifyGameCode
 
@@ -2342,8 +2226,11 @@ ORG CODE%
 
  JMP mods2              \ Jump to part 2
 
- EQUB &AE
- EQUB &AB, &AA, &AD, &B2, &BA, &C3, &C6, &C8
+ EQUB &AE, &AB          \ These bytes appear to be unused
+ EQUB &AA, &AD
+ EQUB &B2, &BA
+ EQUB &C3, &C6
+ EQUB &C8
 
 \ ******************************************************************************
 \
@@ -2466,38 +2353,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &8D, &0C, &1B, &99, &08, &85
-\ EQUB &B9, &00, &84, &38, &F9, &28, &84, &B9
-\ EQUB &50, &84, &F9, &78, &84, &10, &0C, &B9
-\ EQUB &00, &84, &99, &28, &84, &B9, &50, &84
-\ EQUB &99, &78, &84, &B9, &E0, &84, &99, &08
-\ EQUB &85, &C0, &06, &B0, &08, &A9, &00, &99
-\ EQUB &A0, &84, &99, &C8, &84, &C8, &C0, &09
-\ EQUB &90, &CE, &A4, &51, &60
-
-\ STA &1B0C
-\ STA &8508,Y
-\.L5778
-\ LDA &8400,Y
-\ SEC
-\ SBC &8428,Y
-\ LDA &8450,Y
-\ SBC &8478,Y
-\ BPL L5793
-\ LDA &8400,Y
-\ STA &8428,Y
-\ LDA &8450,Y
-\ STA &8478,Y
-\.L5793
-\ LDA &84E0,Y
-\ STA &8508,Y
-\ CPY #&06
-\ BCS coll3
-\ LDA #&00
-\ STA &84A0,Y
-\ STA &84C8,Y
-\.coll3
-
 .HookFixHorizon
 
  STA &1FEA              \ Modify the DrawObject routine at dobj3 instruction #6
@@ -2603,10 +2458,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &D0, &09, &A5
-\ EQUB &63, &20, &60, &46, &10, &02, &C6, &77
-\ EQUB &0A, &26, &77, &60
-
 .HookSlopeJump
 
  BNE slop1              \ If A is non-zero, skip the following (so the hook has
@@ -2642,7 +2493,8 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &F6, &F3, &F0
+ EQUB &F6, &F3          \ These bytes appear to be unused
+ EQUB &F0
 
 \ ******************************************************************************
 \
@@ -2738,32 +2590,6 @@ ORG CODE%
 \ each outer segment z-coordinate.
 \
 \ ******************************************************************************
-
-\ EQUB &A9, &20, &8D, &FC, &11, &8D, &AF, &12
-\ EQUB &8D, &7B, &22, &8D, &1B, &46, &A9, &EA
-\ EQUB &8D, &88, &22, &A9, &A2, &8D, &0B, &1B
-\ EQUB &4C, &00, &56
-
-\ &11FC -> &1248, ?&1248 = &20
-\ &12AF -> &12FB, ?&12FB = &20
-\ &227B -> &2538, ?&2538 = &20
-\ &461B -> &45CB, ?&45CB = &20
-
-\ LDA #&20
-\ STA &11FC
-\ STA &12AF
-\ STA &227B
-\ STA &461B
-
-\ &2288 -> &2545, ?&2545 = &EA
-
-\ LDA #&EA
-\ STA &2288
-
-\ &1B0B -> &1FE9, ?&1FE9 = &A2
-
-\ LDA #&A2
-\ STA &1B0B
 
 .mods2
 
@@ -3495,7 +3321,7 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookJoystick (Part 1 of 3)
+\       Name: HookJoystick (Part 1 of 2)
 \       Type: Subroutine
 \   Category: Extra track data
 \    Summary: Apply enhanced joystick steering to specific track sections
@@ -3528,13 +3354,6 @@ ORG CODE%
 \   Z flag              Set if A = 0
 \
 \ ******************************************************************************
-
-\ EQUB &08, &48, &A4, &6F, &B9, &E8, &88
-\ EQUB &A0, &B5, &C9, &58, &D0, &02, &A0, &D4
-\ EQUB &C9, &40, &D0, &02, &A0, &CD, &C9, &D0
-\ EQUB &D0, &02, &A0, &CA, &98, &4C, &AF, &56
-
-\ LDA &88E8,Y
 
 .HookJoystick
 
@@ -3845,8 +3664,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &20, &7F, &55, &4C, &72, &54
-
 .HookFirstSegment
 
  JSR MoveToNextVector   \ Move to the next to the next segment vector along the
@@ -3932,30 +3749,82 @@ ORG CODE%
  EQUS "Nurburgring"     \ Track name
  EQUB 13
 
- EQUB &00, &00, &00, &00, &00, &00, &00
- EQUB &4C, &00, &57, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &00, &00, &00, &00, &00, &00, &00, &00
- EQUB &92, &5D, &28, &00, &03, &33, &00, &8B
- EQUB &3B, &80, &00, &00, &8B, &3B, &80, &00
- EQUB &00, &8B, &3B, &80, &00, &00, &8B, &47
- EQUB &A0, &00, &00, &8B, &55, &E4, &00, &00
- EQUB &8B, &2F, &EC, &00, &00, &8B, &1D, &5C
- EQUB &00, &00, &8A, &6D, &58, &00, &00, &8A
- EQUB &34, &D8, &00, &00, &8A, &14, &28, &00
- EQUB &00, &8A, &28, &F0, &00, &00, &8A, &22
-
-\ EQUB &E8, &00, &00, &8A, &59, &20, &00, &00
-\ EQUB &8A, &57, &38, &00, &00, &8B, &03, &60
-\ EQUS "NURBURGRING"
-\ EQUB &FF
+ EQUB &00, &00          \ These bytes appear to be unused
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &4C
+ EQUB &00, &57
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &00
+ EQUB &00, &92
+ EQUB &5D, &28
+ EQUB &00, &03
+ EQUB &33, &00
+ EQUB &8B, &3B
+ EQUB &80, &00
+ EQUB &00, &8B
+ EQUB &3B, &80
+ EQUB &00, &00
+ EQUB &8B, &3B
+ EQUB &80, &00
+ EQUB &00, &8B
+ EQUB &47, &A0
+ EQUB &00, &00
+ EQUB &8B, &55
+ EQUB &E4, &00
+ EQUB &00, &8B
+ EQUB &2F, &EC
+ EQUB &00, &00
+ EQUB &8B, &1D
+ EQUB &5C, &00
+ EQUB &00, &8A
+ EQUB &6D, &58
+ EQUB &00, &00
+ EQUB &8A, &34
+ EQUB &D8, &00
+ EQUB &00, &8A
+ EQUB &14, &28
+ EQUB &00, &00
+ EQUB &8A, &28
+ EQUB &F0, &00
+ EQUB &00, &8A
+ EQUB &22
 
 \ ******************************************************************************
 \
