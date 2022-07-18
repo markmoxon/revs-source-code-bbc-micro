@@ -2610,8 +2610,13 @@ ORG CODE%
 
  JMP mods3              \ Jump to part 3
 
- EQUB &3A, &34, &2D, &25, &1E
- EQUB &16, &0E, &1B, &28, &34, &3E, &41, &43
+ EQUB &3A, &34          \ These bytes appear to be unused
+ EQUB &2D, &25
+ EQUB &1E, &16
+ EQUB &0E, &1B
+ EQUB &28, &34
+ EQUB &3E, &41
+ EQUB &43
 
 \ ******************************************************************************
 \
