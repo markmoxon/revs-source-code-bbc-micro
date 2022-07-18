@@ -46,12 +46,14 @@ trackWidth = 154        \ Track width
 
 thisSectionFlags    = &0001
 thisVectorNumber    = &0002
+playerPitchAngle    = &000D
 yStore              = &001B
 horizonLine         = &001F
 frontSegmentIndex   = &0024
 directionFacing     = &0025
 segmentCounter      = &0042
 playerPastSegment   = &0043
+playerHeading       = &0044
 xStore              = &0045
 vergeBufferEnd      = &004B
 horizonListIndex    = &0051
@@ -82,8 +84,12 @@ zTrackSegmentI      = &5600
 xTrackSegmentO      = &5700
 zTrackSegmentO      = &5800
 trackSectionFrom    = &5905
+xVergeRightLo       = &5E40
+xVergeLeftLo        = &5E68
 xVergeRightHi       = &5E90
 xVergeLeftHi        = &5EB8
+vergeDataRight      = &5EE0
+vergeDataLeft       = &5F08
 yVergeRight         = &5F20
 yVergeLeft          = &5F48
 backgroundColour    = &5F60
@@ -466,40 +472,84 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L53E0
+\       Name: HookFlattenHills (Part 2 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Flatten any hills in the verge buffer, calculate the hill height
+\             and track width, cut objects off at the hill height
 \
 \ ------------------------------------------------------------------------------
 \
-\ Not in BH
+\ This part of the routine sets the verge edge to being visible when the car is
+\ pointing along the track and the nose is pointing downwards.
 \
 \ ******************************************************************************
-
-.L53E0
 
 \ EQUB &A5, &44, &20, &50, &34, &C9, &19, &B0
 \ EQUB &07, &A5, &0D, &10, &03, &4C, &55, &56
 \ EQUB &4C, &51, &B4
 
- LDA &44
- JSR Absolute8Bit       \ Same address in C64 and BBC
- CMP #&19
+.hill4
 
-.L53E7
+ LDA playerHeading      \ Set A to the player's heading along the track, which
+                        \ is an angle that represents the direction in which our
+                        \ car is facing with respect to the track, like this:
+                        \
+                        \            0
+                        \      -32   |   +32         Overhead view of car
+                        \         \  |  /
+                        \          \ | /             0 = looking straight ahead
+                        \           \|/              +64 = looking sharp right
+                        \   -64 -----+----- +64      -64 = looking sharp left
+                        \           /|\
+                        \          / | \
+                        \         /  |  \
+                        \      -96   |   +96
+                        \           128
+                        \
+                        \ An angle of 0 means our car is facing forwards along
+                        \ the track, while an angle of +32 means we are facing
+                        \ 45 degrees to the right of straight on, and an angle
+                        \ of 128 means we are facing backwards along the track
 
- BCS L53F0
- LDA &0D
- BPL L53F0
- JMP L5655
+ JSR Absolute8Bit       \ Set A = |A|, which reflects the angle into
+                        \ the right half of the above diagram:
+                        \
+                        \            0
+                        \            |   32
+                        \            |  /
+                        \            | /
+                        \            |/
+                        \            +----- 64
+                        \            |\
+                        \            | \
+                        \            |  \
+                        \            |   96
+                        \           127
 
-.L53F0
+ CMP #25                \ If A >= 25, then the car is pointing to a greater
+ BCS hill5              \ angle than 25 to either side of dead ahead (i.e. it is
+                        \ is pointing outside of the -24 to +24 field of view,
+                        \ or greater than 33 degrees either side of 0), so jump
+                        \ to hill5 to call CheckVergeOnScreen in the usual way
 
-\ &B451 -> &1933 = CheckVergeOnScreen
-\ JMP &B451 -> JMP CheckVergeOnScreen
+ LDA playerPitchAngle   \ If the player's pitch angle is positive, which means
+ BPL hill5              \ the car's nose is pointing up, above the horizontal,
+                        \ then jump to hill5 to call CheckVergeOnScreen in the
+                        \ usual way
 
- JMP CheckVergeOnScreen
+                        \ If we get here then the car nose is pointing downwards
+                        \ and the car is pointing straight along the track,
+                        \ within a -33 to +33 degree field of view
+
+ JMP hill6              \ Jump to part 3
+
+.hill5
+
+ JMP CheckVergeOnScreen \ Implement the call that we overwrote with the call to
+                        \ the hook routine, so we have effectively inserted the
+                        \ above code into the main game (the JMP ensures we
+                        \ return from the subroutine using a tail call)
 
  EQUB &08, &00, &12, &11, &08, &08, &F0
 
@@ -1738,7 +1788,7 @@ ORG CODE%
  LDA #75                \ ?&2772 = 75 (argument in a CMP #75 instruction)
  STA &2772
 
- LDA #&FF               \ THIS ONE IS NEW
+ LDA #&FF               \ ?&298E = &FF (argument in an AND #&FF instruction)
  STA &298E
 
  RTS                    \ Return from the subroutine
@@ -1806,37 +1856,48 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: L5655
+\       Name: HookFlattenHills (Part 3 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Flatten any hills in the verge buffer, calculate the hill height
+\             and track width, cut objects off at the hill height
 \
 \ ------------------------------------------------------------------------------
 \
-\ Not in BH
+\ This part of the routine flags the verge coordinate at index X as being
+\ visible on-screen, but only when the track section at the front of the segment
+\ buffer is one of sections 0 to 5.
 \
 \ ******************************************************************************
 
-.L5655
+.hill6
 
 \ EQUB &AD, &FF, &88
 \ EQUB &C9, &30, &B0, &03, &46, &76, &60, &4C
 \ EQUB &51, &B4
 
-\ LDA &88FF
- LDA &06FF
+ LDA objTrackSection+23 \ Set A to the number * 8 of the track section for the
+                        \ front segment of the track segment buffer
 
- CMP #&30
- BCS L565F
- LSR &76
- RTS
+ CMP #48                \ If A >= 48, i.e. the front segment of the track
+ BCS hill7              \ segment buffer is track section 6 or later, jump to
+                        \ hill7 to call CheckVergeOnScreen
 
-.L565F
+                        \ Otherwise we replace the call to CheckVergeOnScreen
+                        \ with the following, which clears bit 7 of V to flag
+                        \ the verge coordinate at index X as being visible
+                        \ on-screen
 
-\ &B451 -> &1933 = CheckVergeOnScreen
-\ JMP &B451 -> JMP CheckVergeOnScreen
+ LSR V                  \ Clear bit 7 of V
 
- JMP CheckVergeOnScreen
+ RTS                    \ Return from the subroutine
+
+.hill7
+
+ JMP CheckVergeOnScreen \ Implement the call that we overwrote with the call to
+                        \ the hook routine, so we have effectively inserted the
+                        \ above code into the main game (the JMP ensures we
+                        \ return from the subroutine using a tail call)
 
 \ ******************************************************************************
 \
@@ -1871,12 +1932,31 @@ ORG CODE%
 \
 \       Name: HookSectionFrom
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Initialise and calculate the current segment vector
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is called from GetSectionCoords when fetching the coordinates for
+\ a track section. It initialises the segment vector calculation process by
+\ doing the following:
+\
+\   * Fetch the section's yaw angle from the trackYawAngle tables
+\
+\   * Fetch the section's height from the trackHeight table
+\
+\   * Initialise the sub-section and sub-section segment variables
+\
+\   * Modify the GetSectionAngles routine so the horizon level check is skipped
+\     if the section's trackSubConfig has bit 1 set
+\
+\   * If we are facing forwards along the track, calculate and store the current
+\     segment vector
+\
+\ Arguments:
+\
+\   Y                   The number of the track section * 8 whose coordinates we
+\                       want to fetch
 \
 \ ******************************************************************************
 
@@ -1901,150 +1981,294 @@ ORG CODE%
 
 .HookSectionFrom
 
- STY &1B
- LDA trackSectionFrom,Y
- STA &02
- TYA
- LSR A
- LSR A
- LSR A
+ STY yStore             \ Store the section number in yStore, so we can retrieve
+                        \ it at the end of the hook routine
+
+ LDA trackSectionFrom,Y \ Set thisVectorNumber = the Y-th trackSectionFrom, just
+ STA thisVectorNumber   \ like the code that we overwrote with the call to the
+                        \ hook routine
+
+ TYA                    \ Set Y = Y / 8
+ LSR A                  \
+ LSR A                  \ So Y now contains the number of the track section (as
+ LSR A                  \ trackSectionFrom contains the track section * 8)
  TAY
- LDA trackYawAngleLo,Y
- STA yawAngleLo              \ 53FA in BH
+
+ LDA trackYawAngleLo,Y  \ Set (yawAngleHi yawAngleLo) to this section's entry
+ STA yawAngleLo         \ from (trackYawAngleHi trackYawAngleLo)
  LDA trackYawAngleHi,Y
- STA yawAngleHi              \ 53FB in BH
- LDA trackHeight,Y
- STA heightOfTrack              \ 53FC in BH
- LDA trackSubConfig,Y
- LSR A
- ROR A
- STA subSection              \ 53F8 in BH
- LDA #&0E
- ROR A
+ STA yawAngleHi
 
-\ STA &20C0
- STA &23B3
+ LDA trackHeight,Y      \ Set heightOfTrack to this section's entry from
+ STA heightOfTrack      \ trackHeight
 
- LDA #&00
- STA subSectionSegment              \ 53FD in BH
- BIT &25
- BMI L56AA
- JSR SetSegmentVector       \ 55C4 in BH
+ LDA trackSubConfig,Y   \ Set A to this section's configuration byte
 
-.L56AA
+ LSR A                  \ Set A = A >> 2, with bit 6 cleared, bit 7 set to the
+ ROR A                  \ bit 0 of the trackSubConfig entry, and the C flag set
+                        \ to bit 1 of the trackSubConfig entry
 
- LDY &1B
- LDA &02
- RTS
+ STA subSection         \ Store A in subSection, so it contains the index
+                        \ from bits 2-7 of trackSubConfig, and bit 7 is set if
+                        \ bit 0 of trackSubConfig is set
+
+ LDA #14                \ Set A = 7, with bit 7 set to the C flag (so if this
+ ROR A                  \ section's trackSubConfig has bit 1 set, then A is 135,
+                        \ otherwise it is 7)
+
+ STA &23B3              \ Modify the GetSectionAngles routine, at instruction
+                        \ #4 after gsec11, to test prevHorizonIndex against the
+                        \ value we just calculated in A rather than 7
+                        \
+                        \ So if this section's trackSubConfig has bit 1 set, the
+                        \ test becomes prevHorizonIndex <= 135, which is always
+                        \ true, so this modification makes us never set the
+                        \ horizon line to 7 for sections that have bit 1 of
+                        \ trackSubConfig set
+
+ LDA #0                 \ Set subSectionSegment = 0, so we start counting from
+ STA subSectionSegment  \ the first segment in the sub-section
+
+ BIT directionFacing    \ If we are facing backwards along the track, jump to
+ BMI from1              \ from1 to skip the following call to SetSegmentVector
+
+ JSR SetSegmentVector   \ We are facing forwards along the track, so calculate
+                        \ and store the current segment vector
+
+.from1
+
+ LDY yStore             \ Retrieve the section number from yStore
+
+ LDA thisVectorNumber   \ Set A to the Y-th trackSectionFrom that we set above,
+                        \ so the routine sets A to the segment vector number,
+                        \ just like the code that we overwrote with the call to
+                        \ the hook routine
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
-\       Name: L56AF
+\       Name: HookJoystick (Part 2 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Apply enhanced joystick steering to specific track sections
+\
+\ ******************************************************************************
+
+.joys4
+
+                        \ By this point, A contains the scale factor to apply to
+                        \ the steering, which is one of the following values:
+                        \
+                        \   * 181 for a scale factor of 1.00
+                        \
+                        \   * 202 for a scale factor of 1.25
+                        \
+                        \   * 205 for a scale factor of 1.28
+                        \
+                        \   * 212 for a scale factor of1.37
+
+ STA U                  \ Set U = A
+                        \
+                        \ So U = 181, 202, 205 or 212
+
+ PLA                    \ Set A = joystick x-axis high byte, which we stored on
+                        \ the stack at the start of the routine
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = x-axis * A
+
+ PLP                    \ If the joystick x-axis high byte is zero, which we
+ BEQ joys5              \ stored on the stack at the start of the routine, jump
+                        \ to joys5 to return x-axis * scale ^ 2 instead
+
+ STA U                  \ Set U = A
+                        \       = high byte of A * x-axis
+
+ JSR Multiply8x8        \ Set (A T) = A * U
+                        \           = A * A
+                        \           = (A * x-axis) ^ 2
+
+ ASL T                  \ Set (A T) = (A T) * 2
+ ROL A                  \           = 2 * (A * x-axis) ^ 2
+
+                        \ So for A = 212 we have:
+                        \
+                        \   (A T) = 2 * (212/256 * x-axis) ^ 2
+                        \         = 2 * (0.828 * x-axis) ^ 2
+                        \         = 1.37 * x-axis ^ 2
+                        \
+                        \ and for A = 205 we have:
+                        \
+                        \   (A T) = 2 * (205/256 * x-axis) ^ 2
+                        \         = 2 * (0.801 * x-axis) ^ 2
+                        \         = 1.28 * x-axis ^ 2
+                        \
+                        \ and for A = 202 we have:
+                        \
+                        \   (A T) = 2 * (202/256 * x-axis) ^ 2
+                        \         = 2 * (0.789 * x-axis) ^ 2
+                        \         = 1.25 * x-axis ^ 2
+                        \
+                        \ and for A = 181 we have:
+                        \
+                        \   (A T) = 2 * (181/256 * x-axis) ^ 2
+                        \         = 2 * (0.707 * x-axis) ^ 2
+                        \         = 1.00 * x-axis ^ 2
+
+ RTS                    \ Return from the subroutine
+
+\ ******************************************************************************
+\
+\       Name: HookJoystick (Part 3 of 3)
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Apply enhanced joystick steering to specific track sections
+\
+\ ******************************************************************************
+
+.joys5
+
+                        \ If we get here then the joystick x-axis high byte is
+                        \ zero, U contains the scale factor and A contains the
+                        \ top byte of scale * x-axis
+
+ JMP Multiply8x8        \ Calculate:
+                        \
+                        \   (A T) = A * U
+                        \         = scale * scale * x-axis
+                        \
+                        \ and return the high byte in A, returning from the
+                        \ subroutine using a tail call
+
+\ ******************************************************************************
+\
+\       Name: HookFlattenHills (Part 1 of 3)
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Flatten any hills in the verge buffer, calculate the hill height
+\             and track width, cut objects off at the hill height
 \
 \ ------------------------------------------------------------------------------
 \
-\ Different to BH
+\ This routine is called from MapSegmentsToLines to flatten the height of the
+\ verge entries in the verge buffer that are hidden by the nearest hill to the
+\ player, so that the ground behind the nearest hill is effectively levelled
+\ off.
 \
-\ ******************************************************************************
-
-.L56AF
-
- STA &75
- PLA
- JSR Multiply8x8        \ Same address in C64 and BBC
- PLP
- BEQ L56C1
- STA &75
- JSR Multiply8x8        \ Same address in C64 and BBC
- ASL &74
- ROL A
- RTS
-
-\ ******************************************************************************
+\ It also sets horizonTrackWidth to 80% of the track width at the hill crest,
+\ and sets the verge edge to being visible when the car is pointing along the
+\ track and the nose is pointing downwards.
 \
-\       Name: L56C1
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
+\ Arguments:
 \
-\ ------------------------------------------------------------------------------
+\   Y                   Index of the last entry in the track verge buffer - 1:
 \
-\ 
+\                         * segmentListRight - 1 for the right verge
 \
-\ ******************************************************************************
-
-.L56C1
-
- JMP Multiply8x8        \ Same address in C64 and BBC
-
-\ ******************************************************************************
-\
-\       Name: HookFlattenHills
-\       Type: Subroutine
-\   Category: 
-\    Summary: 
-\
-\ ------------------------------------------------------------------------------
-\
-\ L56C8 in BH
+\                         * segmentListPointer - 1 for the left verge
 \
 \ ******************************************************************************
 
 .HookFlattenHills
 
- TYA
- AND #&20
- STA &82
- LDA #&00
+ TYA                    \ Set bit 5 of blockOffset to bit 5 of Y, so blockOffset
+ AND #%00100000         \ is non-zero if Y >= 32 (i.e. Y is pointing to the
+ STA blockOffset        \ verge buffer for the outer verge edges)
 
-.L56CB
+ LDA #0                 \ Set A = 0, so the track line starts at the bottom of
+                        \ the screen
 
- STA &7F
+                        \ We now work our way backwards through the verge buffer
+                        \ from index Y - 1, starting with the closest segments,
+                        \ checking the pitch angles and maintaining a maximum
+                        \ value in topTrackLine
 
-.L56CD
+.hill1
 
- DEY
+ STA topTrackLine       \ Set topTrackLine = A
 
-\ LDA &84E0,Y
- LDA &5F20,Y
+.hill2
 
- CMP &1F
- BCS L56F3
- CMP &7F
- BCS L56CB
- LDA &7F
- ADC #&00
+ DEY                    \ Decrement Y to point to the next entry in the verge
+                        \ buffer, so we are moving away from the player
 
-\ STA &84E0,Y
- STA &5F20,Y
+ LDA yVergeRight,Y      \ Set A to the pitch angle of the current entry in the
+                        \ verge buffer
 
- LDA &82
- BNE L56CD
- LDA &7F
+ CMP horizonLine        \ If A >= horizonLine, then the verge is on or higher
+ BCS hill3              \ than the horizon line, so jump to hill3 to exit the
+                        \ hook routine and rejoin the original game code, as
+                        \ everything beyond this segment in the verge buffer
+                        \ will be hidden
 
-\ STA &1B0C
- STA &1FEA
+ CMP topTrackLine       \ If A >= topTrackLine, jump back to hill1 to set
+ BCS hill1              \ topTrackLine to A and move on to the next segment,
+                        \ so topTrackLine maintains the maximum track line as
+                        \ we work through the verge buffer
 
- INY
+                        \ If we get here then A < horizonLine (so the verge is
+                        \ below the horizon) and A < topTrackLine (so the verge
+                        \ is lower than the highest segment already processed)
+                        \
+                        \ In other words, this segment is lower than the ones
+                        \ before it, so it is hidden by a hill
 
-\ &227E -> &253B = sub_C24F6
-\ JSR &227E
- JSR &253B
+ LDA topTrackLine       \ Set the pitch angle of entry Y to topTrackLine (this
+ ADC #0                 \ ADC instruction has no effect, as we know the C flag
+ STA yVergeRight,Y      \ is clear, so I'm not sure what it's doing here - a
+                        \ bit of debug code, perhaps?)
 
- DEY
- SEC
- ROR &82
- BMI L56CD
+ LDA blockOffset        \ If blockOffset is non-zero, loop back to hill2 to move
+ BNE hill2              \ on to the next segment
 
-.L56F3
+                        \ If we get here then blockOffset = 0, which will only
+                        \ be the case if we are working through the inner verge
+                        \ edges (rather than the outer edges), and we haven't
+                        \ done the following already
+                        \
+                        \ In other words, the following is only done once, for
+                        \ the closest segment whose pitch angle dips below the
+                        \ segment in front of it (i.e. the closest crest of a
+                        \ hill)
 
- LDY &4B
- DEY
- STY &75
- JMP L53E0              \ JMP CheckVergeOnScreen in BH
+ LDA topTrackLine       \ Modify the DrawObject routine at dobj3 instruction #6
+ STA &1FEA              \ so that objects get cut off at track line number
+                        \ topTrackLine instead of horizonLine when they are
+                        \ hidden behind a hill
+
+ INY                    \ Increment Y so the call to gtrm2+6 calculates the
+                        \ track width for the previous (i.e. closer) segment in
+                        \ the verge buffer
+
+ JSR gtrm2+6            \ Call the following routine, which has already been
+                        \ modified by this point to calculate the following for
+                        \ track segment Y (i.e. the segment in front of the
+                        \ current one):
+                        \
+                        \   horizonTrackWidth
+                        \          = 0.8 * |xVergeRightHi - xVergeLeftHi|
+                        \
+                        \ So this sets horizonTrackWidth to 80% of the track
+                        \ width of the crest of the hill
+
+ DEY                    \ Decrement Y back to the correct value for the current
+                        \ entry in the verge buffer
+
+ SEC                    \ Rotate a 1 into bit 7 of blockOffset so it is now
+ ROR blockOffset        \ non-zero, so we only set horizonTrackWidth once as we
+                        \ work through the verge buffer
+
+ BMI hill2              \ Jump back to hill2 (this BMI is effectively a JMP as
+                        \ we just set bit 7 of blockOffset)
+
+.hill3
+
+ LDY vergeBufferEnd     \ Set the values of Y and U so they are the same as they
+ DEY                    \ would be at this point in the original code, without
+ STY U                  \ the above code being run
+
+ JMP hill4              \ Jump to part 2
 
  EQUB &78, &78, &78, &78, &00
 
@@ -2220,12 +2444,25 @@ ORG CODE%
 \
 \       Name: HookFixHorizon
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Apply the horizon line in A instead of horizonLine
 \
 \ ------------------------------------------------------------------------------
 \
-\ 
+\ This routine is called from GetTrackAndMarkers. It does the following:
+\
+\  * Cut objects off at the track line in A rather than horizonLine
+\
+\  * Collapse the left verge of the track into the right verge, but only for a
+\    few entries just in front of the horizon section, i.e. for the track
+\    section list and the first three entries in the track segment list
+\
+\ Arguments:
+\
+\   A                   The updated value of horizonLine
+\
+\   Y                   The horizon section index in the verge buffer from
+\                       horizonListIndex
 \
 \ ******************************************************************************
 
@@ -2255,55 +2492,87 @@ ORG CODE%
 \ LDA &84E0,Y
 \ STA &8508,Y
 \ CPY #&06
-\ BCS L57A5
+\ BCS coll3
 \ LDA #&00
 \ STA &84A0,Y
 \ STA &84C8,Y
-\.L57A5
+\.coll3
 
 .HookFixHorizon
 
- STA &1FEA
- STA &5F48,Y
+ STA &1FEA              \ Modify the DrawObject routine at dobj3 instruction #6
+                        \ so that objects get cut off at the track line number
+                        \ in A instead of horizonLine when they are hidden
+                        \ behind a hill
 
-.L5778
+ STA yVergeLeft,Y       \ Set the pitch angle for the left side of the horizon
+                        \ line in the track verge buffer to the updated value of
+                        \ horizonLine (this is the instruction that we overwrote
+                        \ with the call to the hook routine, so this makes sure
+                        \ we still do this)
 
- LDA &5E40,Y
- SEC
- SBC &5E68,Y
+                        \ We now work through the verge buffer from index Y up
+                        \ to index 8, and do the following for each entry:
+                        \
+                        \   * If xVergeRight < xVergeLeft, set
+                        \     xVergeRight = xVergeLeft
+                        \
+                        \   * Set yVergeRight = yVergeLeft
+                        \
+                        \ This appears to squeeze the left verge of the track
+                        \ into the right verge, but only for a few entries just
+                        \ in front of the horizon section, i.e. for the track
+                        \ section list and the first three entries in the track
+                        \ segment list
 
- LDA &5E90,Y
- SBC &5EB8,Y
+.coll1
 
- BPL L5793
+ LDA xVergeRightLo,Y    \ Set A = xVergeRight - xVergeLeft for the horizon
+ SEC                    \
+ SBC xVergeLeftLo,Y     \ starting with the low bytes
 
- LDA &5E40,Y
- STA &5E68,Y
+ LDA xVergeRightHi,Y    \ And then the high bytes
+ SBC xVergeLeftHi,Y
 
- LDA &5E90,Y
- STA &5EB8,Y
+ BPL coll2              \ If the result is positive, jump to coll2 to skip the
+                        \ following
 
-.L5793
+                        \ If we get here then the result is negative, so
+                        \ xVergeRight < xVergeLeft
 
- LDA &5F20,Y
- STA &5F48,Y
+ LDA xVergeRightLo,Y    \ Set xVergeRight = xVergeLeft
+ STA xVergeLeftLo,Y
+ LDA xVergeRightHi,Y
+ STA xVergeLeftHi,Y
 
- CPY #&06               \ Here to label not in BH
- BCS L57A5
+.coll2
 
- LDA #&00
+ LDA yVergeRight,Y      \ Set yVergeRight = yVergeLeft
+ STA yVergeLeft,Y
 
- STA &5EE0,Y
+                        \ This part is unique to Nurburgring
 
- STA &5F08,Y
+ CPY #6                 \ If the horizon section index >= 6, jump to coll3
+ BCS coll3
 
-.L57A5
+                        \ If we get here then the track section at the horizon
+                        \ one of sections 0 to 5
 
- INY
- CPY #&09
- BCC L5778
- LDY &51
- RTS
+ LDA #0                 \ Zero the vergeDataRight and vergeDataLeft entries for
+ STA vergeDataRight,Y   \ the horizon section index
+ STA vergeDataLeft,Y
+
+.coll3
+
+ INY                    \ Increment the verge buffer index
+
+ CPY #9                 \ Loop back until we have processed up to index 8
+ BCC coll1
+
+ LDY horizonListIndex   \ Restore the value of Y that we had on entering the
+                        \ hook routine
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -3226,14 +3495,37 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: HookJoystick
+\       Name: HookJoystick (Part 1 of 3)
 \       Type: Subroutine
-\   Category: 
-\    Summary: 
+\   Category: Extra track data
+\    Summary: Apply enhanced joystick steering to specific track sections
 \
 \ ------------------------------------------------------------------------------
 \
-\ Not in BH
+\ This routine is called from ProcessDrivingKeys to scale the steering in the
+\ following sections to make it easier to steer when using a joystick:
+\
+\   * Section 8: scale the steering by 1.28
+\
+\   * Section 11: scale the steering by 1.37
+\
+\   * Section 26: scale the steering by 1.25
+\
+\ Specifically, the scaling is applied as follows:
+\
+\   (A T) = scale_factor * x-axis ^ 2
+\
+\ which replaces this existing code in ProcessDrivingKeys:
+\
+\   (A T) = x-axis^2
+\
+\ Arguments:
+\
+\   U                   The joystick x-axis high byte
+\
+\   A                   The joystick x-axis high byte
+\
+\   Z flag              Set if A = 0
 \
 \ ******************************************************************************
 
@@ -3246,33 +3538,41 @@ ORG CODE%
 
 .HookJoystick
 
- PHP
- PHA
- LDY &6F
+ PHP                    \ Store the status flags and A on the stack, so we can
+ PHA                    \ use them in the steering calculation
 
- LDA &06E8,Y
+ LDY currentPlayer      \ Set A to the track section number * 8 for the current
+ LDA objTrackSection,Y  \ player
 
- LDY #&B5
- CMP #&58
- BNE L59E8
- LDY #&D4
+ LDY #181               \ Set Y = 181 so by default we scale the steering by
+                        \ 1.00
 
-.L59E8
+ CMP #88                \ If the track section <> 88 (i.e. section 11), jump to
+ BNE joys1              \ joys1 to keep checking
 
- CMP #&40
- BNE L59EE
- LDY #&CD
+ LDY #212               \ Set Y = 212 so we scale the steering by 1.37
 
-.L59EE
+.joys1
 
- CMP #&D0
- BNE L59F4
- LDY #&CA
+ CMP #64                \ If the track section <> 64 (i.e. section 8), jump to
+ BNE joys2              \ joys2 to keep checking
 
-.L59F4
+ LDY #205               \ Set Y = 205 so we scale the steering by 1.28
 
- TYA
- JMP L56AF
+.joys2
+
+ CMP #208               \ If the track section <> 208 (i.e. section 26), jump to
+ BNE joys3              \ joys3 to keep checking
+
+ LDY #202               \ Set Y = 202 so we scale the steering by 1.25
+
+.joys3
+
+ TYA                    \ Set A = Y
+                        \
+                        \ So A is 181, 202, 205 or 212
+
+ JMP joys4              \ Jump to part 2 to scale the steering
 
  EQUB &B5, &B8          \ These bytes appear to be unused
 

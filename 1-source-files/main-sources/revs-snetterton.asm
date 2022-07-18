@@ -482,10 +482,12 @@ ORG CODE%
                         \   * 181 for a scale factor of 1.00
                         \
                         \   * 195 for a scale factor of 1.16
+                        \
+                        \   * 220 for a scale factor of 1.48
 
  TYA                    \ Set A = Y
                         \
-                        \ So A is 181 or 195
+                        \ So A is 181, 195 or 220
 
  JSR Multiply8x8        \ Set (A T) = A * U
                         \           = A * x-axis
@@ -500,7 +502,13 @@ ORG CODE%
  ASL T                  \ Set (A T) = (A T) * 2
  ROL A                  \           = 2 * (A * x-axis) ^ 2
 
-                        \ So for A = 195 we have:
+                        \ So for A = 220 we have:
+                        \
+                        \   (A T) = 2 * (220/256 * x-axis) ^ 2
+                        \         = 2 * (0.859 * x-axis) ^ 2
+                        \         = 1.48 * x-axis ^ 2
+                        \
+                        \ and for A = 195 we have:
                         \
                         \   (A T) = 2 * (195/256 * x-axis) ^ 2
                         \         = 2 * (0.762 * x-axis) ^ 2
@@ -2442,6 +2450,8 @@ ORG CODE%
 \ In addition, scale the steering in the following sections to make it easier
 \ to steer when using a joystick:
 \
+\   * Section 2: scale the steering by 1.48
+\
 \   * Section 20: scale the steering by 1.16
 \
 \   * Section 21: scale the steering by 1.16
@@ -2481,7 +2491,7 @@ ORG CODE%
 
 .joys1
 
- LDY #220               \ Set Y = 215 so we scale the steering by 1.41
+ LDY #220               \ Set Y = 220 so we scale the steering by 1.48
 
  JMP joys6              \ Jump to part 3 to scale the steering
 
