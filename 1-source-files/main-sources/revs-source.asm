@@ -18797,6 +18797,9 @@ ENDIF
 \   [ yCoord2 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
 \   [ zCoord2 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
 \
+\
+\ The mod 32 part caps the y-coordinate to a maximum of 8192.
+\
 \ Arguments:
 \
 \   X                   The driver number of the car object to build
@@ -18939,7 +18942,8 @@ ENDIF
 
  CPX #1                 \ If X = 1, set A = A mod 32
  BNE bcar4              \                 = ySegmentCoordIHi mod 32
- AND #31
+ AND #31                \
+                        \ This caps the y-coordinate to a maximum of 8192
 
 .bcar4
 
