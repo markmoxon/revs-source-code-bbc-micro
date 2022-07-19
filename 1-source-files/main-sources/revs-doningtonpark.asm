@@ -2001,7 +2001,7 @@ ORG CODE%
 
 .HookUpdateHorizon
 
- PHA                    \ Store A on the stack so we can retrueve it below
+ PHA                    \ Store A on the stack so we can retrieve it below
 
  LDA segmentCounter     \ Set the C flag if segmentCounter >= 12
  CMP #12

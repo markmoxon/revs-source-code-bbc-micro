@@ -1751,7 +1751,7 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &00, &00          \ These bytes appear to be unused
+ EQUB &00, &00          \ These bytes pad the routine out to exactly 40 bytes
  EQUB &00, &00
 
 \ ******************************************************************************
@@ -1964,7 +1964,7 @@ ORG CODE%
 
 .HookUpdateHorizon
 
- PHA                    \ Store A on the stack so we can retrueve it below
+ PHA                    \ Store A on the stack so we can retrieve it below
 
  LDA segmentCounter     \ Set the C flag if segmentCounter >= 12
  CMP #12
