@@ -2237,7 +2237,7 @@ ORG CODE%
  DEX                    \ Decrement the loop counter to move on to the next
                         \ address to modify
 
- BPL mods1              \ Loop back until we have modified all 19 addresses
+ BPL mods1              \ Loop back until we have modified all 20 addresses
 
  LDA #&4C               \ ?&261A = &4C (opcode for a JMP &xxxx instruction)
  STA &261A

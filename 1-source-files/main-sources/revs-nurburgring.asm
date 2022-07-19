@@ -547,10 +547,31 @@ ORG CODE%
                         \ above code into the main game (the JMP ensures we
                         \ return from the subroutine using a tail call)
 
- EQUB &08, &00          \ These bytes appear to be unused
- EQUB &12, &11
- EQUB &08, &08
- EQUB &F0
+\ ******************************************************************************
+\
+\       Name: HookMoveBack
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Only move the player backwards if the player has not yet driven
+\             past the segment
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine is called from MovePlayerSegment to change the behaviour when
+\ moving the player backwards along the track.
+\
+\ Only move the player backwards by one segment if bit 7 of playerPastSegment is
+\ clear (in other words, if the player has not yet driven past the segment).
+\
+\ ******************************************************************************
+
+.HookMoveBack
+
+ BIT playerPastSegment  \ If bit 7 of playerPastSegment is set, return from the
+ BMI HookMoveBack-1     \ subroutine (as HookMoveBack-1 contains an RTS)
+
+ JMP MovePlayerBack     \ Move the player backwards by one segment, returning
+                        \ from the subroutine using a tail call
 
 \ ******************************************************************************
 \
@@ -656,6 +677,8 @@ ORG CODE%
  EQUB &CA               \ !&13CA = HookSegmentVector
  EQUB &27               \ !&1427 = HookSegmentVector
  EQUB &FC               \ !&12FC = HookDataPointers
+ EQUB &1B               \ !&261B = HookUpdateHorizon
+ EQUB &8C               \ !&248C = HookFieldOfView
  EQUB &39               \ !&2539 = HookFixHorizon
  EQUB &94               \ !&1594 = HookJoystick
  EQUB &D1               \ !&4CD1 = xTrackSignVector
@@ -665,11 +688,11 @@ ORG CODE%
  EQUB &D7               \ !&4CD7 = trackSignData
  EQUB &E1               \ !&4CE1 = trackSignData
  EQUB &47               \ !&1947 = HookFlattenHills
+ EQUB &F3               \ !&24F3 = HookMoveBack
+ EQUB &2C               \ !&462C = HookFlipAbsolute
  EQUB &43               \ !&2543 = Hook80Percent
 
- EQUB &33, &3C          \ These bytes pad the block out to exactly 20 bytes
- EQUB &4A, &57
- EQUB &61
+ EQUB &61               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
@@ -687,9 +710,6 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-\ EQUB &11, &12, &13, &13, &12, &22, &15, &4D
-\ EQUB &4D, &4D, &45, &4D, &4D, &B4, &22
-
 .modifyAddressHi
 
  EQUB &12               \ !&1249 = HookSectionFrom
@@ -697,6 +717,8 @@ ORG CODE%
  EQUB &13               \ !&13CA = HookSegmentVector
  EQUB &14               \ !&1427 = HookSegmentVector
  EQUB &12               \ !&12FC = HookDataPointers
+ EQUB &26               \ !&261B = HookUpdateHorizon
+ EQUB &24               \ !&248C = HookFieldOfView
  EQUB &25               \ !&2539 = HookFixHorizon
  EQUB &15               \ !&1594 = HookJoystick
  EQUB &4C               \ !&4CD1 = xTrackSignVector
@@ -706,11 +728,11 @@ ORG CODE%
  EQUB &4C               \ !&4CD7 = trackSignData
  EQUB &4C               \ !&4CE1 = trackSignData
  EQUB &19               \ !&1947 = HookFlattenHills
+ EQUB &24               \ !&24F3 = HookMoveBack
+ EQUB &46               \ !&462C = HookFlipAbsolute
  EQUB &25               \ !&2543 = Hook80Percent
 
- EQUB &2E, &3F          \ These bytes pad the block out to exactly 20 bytes
- EQUB &4F, &57
- EQUB &5B
+ EQUB &5B               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
@@ -770,13 +792,66 @@ ORG CODE%
  EQUB &04               \ Sub-section 43 = &0435 ( 1077)
  EQUB &04               \ Sub-section 44 = &0435 ( 1077)
 
- EQUB &05, &05          \ These bytes appear to be unused
- EQUB &05, &05
- EQUB &05, &05
- EQUB &07, &0B
- EQUB &10, &14
- EQUB &18, &1C
- EQUB &20
+ EQUB &20               \ This byte appears to be ununused
+
+\ ******************************************************************************
+\
+\       Name: HookFieldOfView
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: When populating the verge buffer in GetSegmentAngles, don't give
+\             up so easily when we get segments outside the field of view
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine is called from GetSegmentAngles to change the logic in at label
+\ gseg12, which is applied when a segment is outside the field of view. Note
+\ that in the following, the previous segment is further away than the current
+\ one.
+\
+\ In the original code:
+\
+\   * If previous segment's yaw angle >= 20 then the previous segment was also
+\     outside the field of view, so return from the subroutine.
+\
+\   * Otherwise go to gseg4 to try reducing the size of the segment before
+\     returning.
+\
+\ In the new code:
+\
+\   * If previous segment's yaw angle >= 20 and segmentCounter >= 10, then the
+\     previous segment was also outside the field of view AND we have already
+\     marked at least 10 segments as being visible, so return from the
+\     subroutine.
+\
+\   * Otherwise go to gseg13 to mark this segment as visible and keep checking
+\     segments.
+\
+\ So in the modified version, we keep checking segments until we have reached at
+\ least 10.
+\
+\ Arguments:
+\
+\   A                   Yaw angle for the previous segment's right verge
+\
+\   C flag              Set according to CMP #20
+\
+\ ******************************************************************************
+
+.HookFieldOfView
+
+ BCC fovw1              \ If A < 20, then this segment is within the 20-degree
+                        \ field of view,jump to gseg13 via fovw1
+
+ LDA segmentCounter     \ If segmentCounter < 10, jump to gseg13 via fovw1
+ CMP #10
+ BCC fovw1
+
+ RTS                    \ Return from the subroutine
+
+.fovw1
+
+ JMP gseg13             \ Jump to gseg13
 
 \ ******************************************************************************
 \
@@ -1120,9 +1195,51 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &0C, &08          \ These bytes appear to be unused
- EQUB &03, &FE
- EQUB &FB, &00
+\ ******************************************************************************
+\
+\       Name: HookFlipAbsolute
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Set the sign of A according to the direction we are facing along
+\             the track
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine is called from MovePlayerOnTrack so that the yaw angle of the
+\ closest segment retains the correct sign, like this:
+\
+\   * If we are facing forwards along the track, set A = |A|
+\
+\   * If we are facing backwards along the track, set A = -|A|
+\
+\ ******************************************************************************
+
+.HookFlipAbsolute
+
+ EOR directionFacing    \ Flip the sign bit of A if we are facing backwards
+                        \ along the track
+                        \
+                        \ The Absolute8Bit routine does the following:
+                        \
+                        \   * If A is positive leave it alone
+                        \
+                        \   * If A is negative, set A = -A
+                        \
+                        \ So if bit 7 of directionFacing is set (i.e. we are
+                        \ facing backwards along the track), this flips bit 7 of
+                        \ A, which changes the Absolute8Bit routine to the
+                        \ following (if we consider the original value of A):
+                        \
+                        \   * If A is negative leave it alone
+                        \
+                        \   * If A is positive, set A = -A
+                        \
+                        \ So this sets set A = -|A| instead  of A = |A|
+
+ JSR Absolute8Bit       \ Set A = |A|, unless we are facing backwards along the
+                        \ track, in which case set A = -|A|
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -1148,6 +1265,8 @@ ORG CODE%
  EQUB LO(HookSegmentVector)
  EQUB LO(HookSegmentVector)
  EQUB LO(HookDataPointers)
+ EQUB LO(HookUpdateHorizon)
+ EQUB LO(HookFieldOfView)
  EQUB LO(HookFixHorizon)
  EQUB LO(HookJoystick)
  EQUB LO(xTrackSignVector)
@@ -1157,11 +1276,11 @@ ORG CODE%
  EQUB LO(trackSignData)
  EQUB LO(trackSignData)
  EQUB LO(HookFlattenHills)
+ EQUB LO(HookMoveBack)
+ EQUB LO(HookFlipAbsolute)
  EQUB LO(Hook80Percent)
 
- EQUB &00, &00          \ These bytes pad the block out to exactly 20 bytes
- EQUB &00, &00
- EQUB &00
+ EQUB &00               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
@@ -1187,6 +1306,8 @@ ORG CODE%
  EQUB HI(HookSegmentVector)
  EQUB HI(HookSegmentVector)
  EQUB HI(HookDataPointers)
+ EQUB HI(HookUpdateHorizon)
+ EQUB HI(HookFieldOfView)
  EQUB HI(HookFixHorizon)
  EQUB HI(HookJoystick)
  EQUB HI(xTrackSignVector)
@@ -1196,11 +1317,11 @@ ORG CODE%
  EQUB HI(trackSignData)
  EQUB HI(trackSignData)
  EQUB HI(HookFlattenHills)
+ EQUB HI(HookMoveBack)
+ EQUB HI(HookFlipAbsolute)
  EQUB HI(Hook80Percent)
 
- EQUB &00, &00          \ These bytes pad the block out to exactly 20 bytes
- EQUB &00, &00
- EQUB &00
+ EQUB &00               \ This byte pads the block out to exactly 20 bytes
 
 \ ******************************************************************************
 \
@@ -1696,7 +1817,7 @@ ORG CODE%
 
  RTS                    \ Return from the subroutine
 
- EQUB &6F, &73          \ These bytes appear to be unused
+ EQUB &6F, &73          \ These bytes pad the routine out to exactly 40 bytes
  EQUB &75, &74
  EQUB &6F, &66
  EQUB &5B, &52
@@ -2190,7 +2311,7 @@ ORG CODE%
 
 .ModifyGameCode
 
- LDX #14                \ We are about to modify 15 two-byte addresses in the
+ LDX #18                \ We are about to modify 19 two-byte addresses in the
                         \ main game code, so set a counter in X
 
 .mods1
@@ -2224,13 +2345,13 @@ ORG CODE%
 
  BPL mods1              \ Loop back until we have modified all 19 addresses
 
+ LDA #&4C               \ ?&261A = &4C (opcode for a JMP &xxxx instruction)
+ STA &248B
+
  JMP mods2              \ Jump to part 2
 
- EQUB &AE, &AB          \ These bytes appear to be unused
- EQUB &AA, &AD
- EQUB &B2, &BA
- EQUB &C3, &C6
- EQUB &C8
+ EQUB &BA, &C3          \ These bytes pad the routine out to exactly 40 bytes
+ EQUB &C6, &C8
 
 \ ******************************************************************************
 \
@@ -2290,13 +2411,46 @@ ORG CODE%
  EQUB 21                \ Sub-section 43
  EQUB 4                 \ Sub-section 44
 
- EQUB &57, &57          \ These bytes appear to be unused
- EQUB &57, &57
- EQUB &57, &57
- EQUB &57, &57
- EQUB &57, &56
- EQUB &55, &55
- EQUB &54
+\ ******************************************************************************
+\
+\       Name: HookUpdateHorizon
+\       Type: Subroutine
+\   Category: Extra track data
+\    Summary: Only update the horizon if we have found fewer than 12 visible
+\             segments
+\
+\ ------------------------------------------------------------------------------
+\
+\ This routine is called from GetVergeAndMarkers so that we only store
+\ horizonLine and horizonListIndex when segmentCounter < 12.
+\
+\ ******************************************************************************
+
+.HookUpdateHorizon
+
+ PHA                    \ Store A on the stack so we can retrieve it below
+
+ LDA segmentCounter     \ Set the C flag if segmentCounter >= 12
+ CMP #12
+
+ PLA                    \ Retrieve the value of A from the stack
+
+ BCS upho1              \ If segmentCounter >= 12, jump to upho1 to skip the
+                        \ following two instructions
+
+                        \ Otherwise we set the horizon line and index using the
+                        \ same code that we overwrote with the call to the hook
+                        \ routine
+
+ STA horizonLine        \ This track segment is higher than the current horizon
+                        \ pitch angle, so the track obscures the horizon and we
+                        \ need to update horizonLine to this new pitch angle
+
+ STY horizonListIndex   \ Set horizonListIndex to the track segment number in Y
+
+.upho1
+
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -2605,16 +2759,20 @@ ORG CODE%
  LDA #&EA               \ ?&2545 = &EA (opcode for a NOP instruction)
  STA &2545
 
+ LDA #22                \ ?&4F55 = 22 (argument in a CMP #22 instruction)
+ STA &4F55
+
+ STA &4F59              \ ?&4F59 = 22 (argument in a CMP #22 instruction)
+
+\ LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
+\ STA &24EA
+
  LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
  JMP mods3              \ Jump to part 3
 
- EQUB &3A, &34          \ These bytes appear to be unused
- EQUB &2D, &25
- EQUB &1E, &16
- EQUB &0E, &1B
- EQUB &28, &34
+ EQUB &28, &34          \ These bytes pad the routine out to exactly 40 bytes
  EQUB &3E, &41
  EQUB &43
 
