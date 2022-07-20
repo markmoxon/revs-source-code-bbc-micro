@@ -3475,11 +3475,13 @@ ORG CODE%
 \ If the slowest lap time is a human player, and it's slower than one of these
 \ times, then we change the race class to the relevant difficulty.
 \
+\ This figure is stored in Binary Coded Decimal (BCD).
+\
 \ ******************************************************************************
 
- EQUB 34                \ Set class to Novice if slowest lap time > 1:34
+ EQUB &22               \ Set class to Novice if slowest lap time > 1:22
 
- EQUB 24                \ Set class to Amateur if slowest lap time > 1:24
+ EQUB &18               \ Set class to Amateur if slowest lap time > 1:18
 
  EQUB 0                 \ Otherwise set class to Professional
 
@@ -3498,9 +3500,9 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB 1                 \ Set class to Novice if slowest lap time > 1:34
+ EQUB 1                 \ Set class to Novice if slowest lap time > 1:22
 
- EQUB 1                 \ Set class to Amateur if slowest lap time > 1:24
+ EQUB 1                 \ Set class to Amateur if slowest lap time > 1:18
 
  EQUB 0                 \ Otherwise set class to Professional
 

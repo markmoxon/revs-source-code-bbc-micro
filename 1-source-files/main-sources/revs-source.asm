@@ -16375,7 +16375,7 @@ ENDIF
  LDY segmentCounter     \ Set Y to the number of visible segments we have
                         \ populated so far
 
- CPY #18                \ If Y >= 18, i.e. Y > 17, then Y was 16 before we
+ CPY #18                \ If Y >= 18, i.e. Y > 17, then Y was > 16 before we
  BCS gseg16             \ incremented it, which means we have filled the track
                         \ segment list with 16 visible segments, so we jump to
                         \ gseg16 to return from the subroutine to stop
