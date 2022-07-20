@@ -1,0 +1,14 @@
+
+
+---------------------------------------
+Superior Software Revs
+
+Version: BBC Micro disc
+Variant: Revs+
+
+Contains the Nurburgring track from the
+Commodore 64, backported by Mark Moxon
+
+See revs.bbcelite.com for details
+---------------------------------------
+

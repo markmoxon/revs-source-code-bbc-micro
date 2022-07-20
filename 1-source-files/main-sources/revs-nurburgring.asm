@@ -2346,12 +2346,13 @@ ORG CODE%
  BPL mods1              \ Loop back until we have modified all 19 addresses
 
  LDA #&4C               \ ?&261A = &4C (opcode for a JMP &xxxx instruction)
- STA &248B
+ STA &261A
+
+ STA &248B              \ ?&248B = &4C (opcode for a JMP &xxxx instruction)
 
  JMP mods2              \ Jump to part 2
 
- EQUB &BA, &C3          \ These bytes pad the routine out to exactly 40 bytes
- EQUB &C6, &C8
+ EQUB &C8               \ This byte pads the routine out to exactly 40 bytes
 
 \ ******************************************************************************
 \
@@ -2764,17 +2765,13 @@ ORG CODE%
 
  STA &4F59              \ ?&4F59 = 22 (argument in a CMP #22 instruction)
 
-\ LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
-\ STA &24EA
+ LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
+ STA &24EA
 
  LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
  JMP mods3              \ Jump to part 3
-
- EQUB &28, &34          \ These bytes pad the routine out to exactly 40 bytes
- EQUB &3E, &41
- EQUB &43
 
 \ ******************************************************************************
 \
@@ -3632,11 +3629,13 @@ ORG CODE%
 \ If the slowest lap time is a human player, and it's slower than one of these
 \ times, then we change the race class to the relevant difficulty.
 \
+\ This figure is stored in Binary Coded Decimal (BCD).
+\
 \ ******************************************************************************
 
- EQUB 69                \ Set class to Novice if slowest lap time > 1:69
+ EQUB &45               \ Set class to Novice if slowest lap time > 1:45
 
- EQUB 65                \ Set class to Amateur if slowest lap time > 1:65
+ EQUB &41               \ Set class to Amateur if slowest lap time > 1:41
 
  EQUB 0                 \ Otherwise set class to Professional
 
@@ -3655,9 +3654,9 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB 1                 \ Set class to Novice if slowest lap time > 1:69
+ EQUB 1                 \ Set class to Novice if slowest lap time > 1:45
 
- EQUB 1                 \ Set class to Amateur if slowest lap time > 1:65
+ EQUB 1                 \ Set class to Amateur if slowest lap time > 1:41
 
  EQUB 0                 \ Otherwise set class to Professional
 
