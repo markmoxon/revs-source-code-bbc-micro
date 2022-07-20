@@ -101,17 +101,6 @@ def main():
                         '  -  ',
                         name)
                     )
-                elif name in names2 and os.path.isfile(full_name2):
-                    with open(full_name2, 'rb') as f:
-                        data = f.read()
-                    print('%s  %s  %08x  %5d  %s  %s' % (
-                        '-       ',
-                        '    -',
-                        zlib.crc32(data) & 0xffffffff,
-                        len(data),
-                        '  -  ',
-                        name)
-                    )
         print()
 
 

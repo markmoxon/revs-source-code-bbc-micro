@@ -191,14 +191,9 @@ Results for release: acornsoft
 [--originals--]  [---output----]
 Checksum   Size  Checksum   Size  Match  Filename
 -----------------------------------------------------------
-b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
-18d57479   2000  18d57479   2000   Yes   DoningtonPark.bin
-0f2aa17c   2000  0f2aa17c   2000   Yes   OultonPark.bin
 9ab958e9   1455  9ab958e9   1455   Yes   Revs1.bin
 e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
 0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
-9dcd008c   2000  9dcd008c   2000   Yes   Snetterton.bin
--             -  75798a13   2000    -    Nurburgring.bin
 ```
 
 The compiled binary matches the original, so we know we are producing the same final game as the Acornsoft variant.
@@ -255,7 +250,6 @@ b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
 e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
 0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
 9dcd008c   2000  9dcd008c   2000   Yes   Snetterton.bin
--             -  75798a13   2000    -    Nurburgring.bin
 ```
 
 ### Building the Superior Software variant
@@ -288,7 +282,6 @@ b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
 83e95a44  24064  83e95a44  24064   Yes   Revs2.bin
 0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
 9dcd008c   2000  9dcd008c   2000   Yes   Snetterton.bin
--             -  75798a13   2000    -    Nurburgring.bin
 ```
 
 ### Differences between the variants
