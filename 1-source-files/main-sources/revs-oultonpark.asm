@@ -102,7 +102,7 @@ ORG CODE%
 \
 \       Name: Track section data (Part 1 of 2)
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
 \
@@ -469,7 +469,7 @@ ORG CODE%
 \
 \       Name: Hook80Percent
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
 \             horizon
 \
@@ -501,7 +501,7 @@ ORG CODE%
 \
 \       Name: HookJoystick (Part 2 of 2)
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
 \
 \ ******************************************************************************
@@ -542,7 +542,7 @@ ORG CODE%
 \
 \       Name: subSection
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The number of the current sub-section
 \
 \ ******************************************************************************
@@ -555,7 +555,7 @@ ORG CODE%
 \
 \       Name: trackSubCount
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The total number of sub-sections in the track
 \
 \ ******************************************************************************
@@ -568,7 +568,7 @@ ORG CODE%
 \
 \       Name: yawAngleLo
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Low byte of the current yaw angle of the track, i.e. the angle at
 \             which the track is pointing along the ground
 \
@@ -582,7 +582,7 @@ ORG CODE%
 \
 \       Name: yawAngleHi
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: High byte of the current yaw angle of the track, i.e. the angle at
 \             which the track is pointing along the ground
 \
@@ -596,7 +596,7 @@ ORG CODE%
 \
 \       Name: heightOfTrack
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The height above ground of the current track sub-section
 \
 \ ******************************************************************************
@@ -609,7 +609,7 @@ ORG CODE%
 \
 \       Name: subSectionSegment
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The number of the segment within the current sub-section, counting
 \             from the start of the sub-section
 \
@@ -625,7 +625,7 @@ ORG CODE%
 \
 \       Name: modifyAddressLo
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Low byte of the location in the main game code where we modify a
 \             two-byte address
 \
@@ -666,7 +666,7 @@ ORG CODE%
 \
 \       Name: modifyAddressHi
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: High byte of the location in the main game code where we modify a
 \             two-byte address
 \
@@ -707,7 +707,7 @@ ORG CODE%
 \
 \       Name: trackYawDeltaHi
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: High byte of the change in yaw angle that we apply to each segment
 \             in the specified sub-section when building the track
 \
@@ -807,7 +807,7 @@ ORG CODE%
 \
 \       Name: CalcSegmentVector
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Calculate the segment vector for the current segment
 \
 \ ------------------------------------------------------------------------------
@@ -1072,7 +1072,7 @@ ORG CODE%
 \
 \       Name: Multiply8x8Signed
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Multiply two 8-bit numbers, one of which is signed
 \
 \ ------------------------------------------------------------------------------
@@ -1119,7 +1119,7 @@ ORG CODE%
 \
 \       Name: HookDataPointers
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: If bit 6 of the current section's flags is set, update the data
 \             pointers
 \
@@ -1169,7 +1169,7 @@ ORG CODE%
 \
 \       Name: newContentLo
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Low byte of the two-byte address that we want to poke into the
 \             main game code at the modify location
 \
@@ -1210,7 +1210,7 @@ ORG CODE%
 \
 \       Name: newContentHi
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: High byte of the two-byte address that we want to poke into the
 \             main game code at the modify location
 \
@@ -1251,7 +1251,7 @@ ORG CODE%
 \
 \       Name: trackYawDeltaLo
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Low byte of the change in yaw angle that we apply to each segment
 \             in the specified sub-section when building the track
 \
@@ -1322,7 +1322,7 @@ ORG CODE%
 \
 \       Name: xTrackSignVector
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The x-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
 \
@@ -1351,7 +1351,7 @@ ORG CODE%
 \
 \       Name: HookSegmentVector
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: If bit 6 of the current section's flags is set, move to the next
 \             segment vector, calculate it and store it
 \
@@ -1397,7 +1397,7 @@ ORG CODE%
 \
 \       Name: MoveToNextVector
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Move to the next to the next segment vector along the track and
 \             update the pointers
 \
@@ -1412,7 +1412,7 @@ ORG CODE%
 \
 \       Name: UpdateDataPointers
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Update the sub-section and segment numbers to point to the next
 \             segment along the track in the correct direction
 \
@@ -1538,7 +1538,7 @@ ORG CODE%
 \
 \       Name: HookMoveBack
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Only move the player backwards if the player has not yet driven
 \             past the segment
 \
@@ -1564,7 +1564,7 @@ ORG CODE%
 \
 \       Name: SetSegmentVector
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Add the yaw angle and height deltas to the yaw angle and height
 \             (for curved sections) and calculate the segment vector
 \
@@ -1661,7 +1661,7 @@ ORG CODE%
 \
 \       Name: ModifyGameCode (Part 3 of 3)
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Modify the game code to support the extra track data
 \
 \ ------------------------------------------------------------------------------
@@ -1704,7 +1704,7 @@ ORG CODE%
 \
 \       Name: trackGradient
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The change in height (i.e. the gradient) for each sub-section of
 \             the track
 \
@@ -1775,7 +1775,7 @@ ORG CODE%
 \
 \       Name: yTrackSignVector
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The y-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
 \
@@ -1804,7 +1804,7 @@ ORG CODE%
 \
 \       Name: HookSectionFrom
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Initialise and calculate the current segment vector
 \
 \ ------------------------------------------------------------------------------
@@ -1903,7 +1903,7 @@ ORG CODE%
 \
 \       Name: HookUpdateHorizon
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Only update the horizon if we have found fewer than 12 visible
 \             segments
 \
@@ -1944,7 +1944,7 @@ ORG CODE%
 \
 \       Name: HookFieldOfView
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: When populating the verge buffer in GetSegmentAngles, don't give
 \             up so easily when we get segments outside the field of view
 \
@@ -2003,7 +2003,7 @@ ORG CODE%
 \
 \       Name: HookFlattenHills
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
 \
@@ -2135,7 +2135,7 @@ ORG CODE%
 \
 \       Name: ModifyGameCode (Part 1 of 3)
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Modify the game code to support the extra track data
 \
 \ ------------------------------------------------------------------------------
@@ -2205,7 +2205,7 @@ ORG CODE%
 \
 \       Name: trackSubSize
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The size of each sub-section, i.e. the number of segments in each
 \             sub-section
 \
@@ -2276,7 +2276,7 @@ ORG CODE%
 \
 \       Name: zTrackSignVector
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The z-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
 \
@@ -2305,7 +2305,7 @@ ORG CODE%
 \
 \       Name: HookFixHorizon
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Apply the horizon line in A instead of horizonLine
 \
 \ ------------------------------------------------------------------------------
@@ -2393,7 +2393,7 @@ ORG CODE%
 \
 \       Name: HookJoystick (Part 1 of 2)
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
 \
 \ ------------------------------------------------------------------------------
@@ -2460,7 +2460,7 @@ ORG CODE%
 \
 \       Name: xTrackCurve
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The x-coordinate of the tangent vector (i.e. the curve direction)
 \             at 64 points on a one-eighth circle covering 0 to 45 degrees
 \
@@ -2538,7 +2538,7 @@ ORG CODE%
 \
 \       Name: ModifyGameCode (Part 2 of 3)
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Modify the game code to support the extra track data
 \
 \ ------------------------------------------------------------------------------
@@ -2582,7 +2582,7 @@ ORG CODE%
 \
 \       Name: trackHeight
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The height of the track above ground level for each track section
 \
 \ ******************************************************************************
@@ -2624,7 +2624,7 @@ ORG CODE%
 \
 \       Name: trackYawAngleLo
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The low byte of the yaw angle of the start of each track section
 \             (i.e. the direction of the track at that point)
 \
@@ -2667,7 +2667,7 @@ ORG CODE%
 \
 \       Name: trackYawAngleHi
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The high byte of the yaw angle of the start of each track section
 \             (i.e. the direction of the track at that point)
 \
@@ -2710,7 +2710,7 @@ ORG CODE%
 \
 \       Name: trackSubConfig
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Configuration data for each section that defines the sub-section
 \             numbers, and horizon calculations
 \
@@ -2776,7 +2776,7 @@ ORG CODE%
 \
 \       Name: trackRacingLine
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The optimum racing line for non-player drivers on each track
 \             section
 \  Deep dive: The track data file format
@@ -2820,7 +2820,7 @@ ORG CODE%
 \
 \       Name: zTrackCurve
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The z-coordinate of the tangent vector (i.e. the curve direction)
 \             at 64 points on a one-eighth circle covering 0 to 45 degrees
 \
@@ -2898,7 +2898,7 @@ ORG CODE%
 \
 \       Name: Track section data (Part 2 of 2)
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
 \
@@ -3292,7 +3292,7 @@ ORG CODE%
 \
 \       Name: HookFlipAbsolute
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Set the sign of A according to the direction we are facing along
 \             the track
 \
@@ -3338,7 +3338,7 @@ ORG CODE%
 \
 \       Name: HookSlopeJump
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Jump the car when driving fast over sloping segments
 \
 \ ------------------------------------------------------------------------------
@@ -3405,7 +3405,7 @@ ORG CODE%
 \
 \       Name: trackSectionCount
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The total number of track sections * 8
 \  Deep dive: The track data file format
 \
@@ -3466,7 +3466,7 @@ ORG CODE%
 \
 \       Name: trackLapTimeSec
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Lap times for adjusting the race class (seconds)
 \  Deep dive: The track data file format
 \
@@ -3489,7 +3489,7 @@ ORG CODE%
 \
 \       Name: trackLapTimeMin
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Lap times for adjusting the race class (minutes)
 \  Deep dive: The track data file format
 \
@@ -3510,7 +3510,7 @@ ORG CODE%
 \
 \       Name: trackGearRatio
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The gear ratio for each gear
 \  Deep dive: The track data file format
 \
@@ -3540,7 +3540,7 @@ ORG CODE%
 \
 \       Name: trackGearPower
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The power for each gear
 \  Deep dive: The track data file format
 \
@@ -3570,7 +3570,7 @@ ORG CODE%
 \
 \       Name: trackBaseSpeed
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The base speed for each race class, used when generating the best
 \             racing lines and non-player driver speeds
 \  Deep dive: The track data file format
@@ -3587,7 +3587,7 @@ ORG CODE%
 \
 \       Name: trackStartPosition
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The starting race position of the player during a practice or
 \             qualifying lap
 \  Deep dive: The track data file format
@@ -3600,7 +3600,7 @@ ORG CODE%
 \
 \       Name: trackCarSpacing
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The spacing between the cars at the start of a qualifying lap, in
 \             segments
 \  Deep dive: The track data file format
@@ -3613,7 +3613,7 @@ ORG CODE%
 \
 \       Name: trackTimerAdjust
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Adjustment factor for the speed of the timers to allow for
 \             fine-tuning of time on a per-track basis
 \  Deep dive: The track data file format
@@ -3636,7 +3636,7 @@ ORG CODE%
 \
 \       Name: trackRaceSlowdown
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Slowdown factor for non-player drivers in the race
 \  Deep dive: The track data file format
 \
@@ -3653,7 +3653,7 @@ ORG CODE%
 \
 \       Name: HookFirstSegment
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: Move to the next to the next segment vector along the track and
 \             calculate the segment vector
 \
@@ -3689,7 +3689,7 @@ ORG CODE%
 \
 \       Name: CallTrackHook
 \       Type: Subroutine
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The track file's hook code
 \  Deep dive: The track data file format
 \
@@ -3703,7 +3703,7 @@ ORG CODE%
 \
 \       Name: trackChecksum
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The track file's checksum
 \  Deep dive: The track data file format
 \
@@ -3723,7 +3723,7 @@ ORG CODE%
 \
 \       Name: trackGameName
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The game name
 \  Deep dive: The track data file format
 \
@@ -3742,7 +3742,7 @@ ORG CODE%
 \
 \       Name: trackName
 \       Type: Variable
-\   Category: Extra track data
+\   Category: Extra tracks
 \    Summary: The track name
 \  Deep dive: The track data file format
 \
