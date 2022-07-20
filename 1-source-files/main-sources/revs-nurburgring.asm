@@ -92,9 +92,9 @@ yVergeLeft          = &5F48
 
 \ ******************************************************************************
 \
-\ REVS NURBURGRING TRACK
+\ REVS NÜRBURGRING TRACK
 \
-\ Produces the binary file Nurburgring.bin that contains the Nurburgring track.
+\ Produces the binary file Nurburgring.bin that contains the Nürburgring track.
 \
 \ ******************************************************************************
 
@@ -2554,8 +2554,6 @@ ORG CODE%
 
  LDA yVergeRight,Y      \ Set yVergeRight = yVergeLeft
  STA yVergeLeft,Y
-
-                        \ This part is unique to Nurburgring
 
  CPY #6                 \ If the horizon section index >= 6, jump to coll3
  BCS coll3
