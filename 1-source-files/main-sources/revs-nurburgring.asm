@@ -4,6 +4,9 @@
 \
 \ Revs was written by Geoffrey J Crammond and is copyright Acornsoft 1985
 \
+\ The Nürburgring track, released as part of Revs+ on the Commodore 64, was
+\ written by Geoffrey J Crammond and is copyright Firebird 1987
+\
 \ The code on this site has been reconstructed from a disassembly of the
 \ original game binaries
 \
