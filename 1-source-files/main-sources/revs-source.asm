@@ -19252,7 +19252,7 @@ ENDIF
                         \ and set the object's visibility, scale and type
 
  LDA #22                \ Set objectNumber = 22, to use as then object number
- STA objectNumber       \ for the rear tyres in the four-object car
+ STA objectNumber       \ for the front tyres in the four-object car
 
  LDA #0                 \ Set A = 0, to use as the object type for the rear
                         \ tyres in the four-object car

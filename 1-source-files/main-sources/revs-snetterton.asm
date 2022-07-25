@@ -3718,7 +3718,7 @@ ORG CODE%
 \ The value of the timerAdjust variable in the main game code is incremented on
 \ every iteration of the main driving loop. When it reaches the value in
 \ trackTimerAdjust, the timers adds 18/100 of a second rather than 9/100 of
-\ a second. Decreasing this value therefore speeds up the timers, allowing their
+\ a second. Increasing this value therefore speeds up the timers, allowing their
 \ speed to be adjusted on a per-track basis.
 \
 \ Setting this value to 255 disables the timer adjustment.
