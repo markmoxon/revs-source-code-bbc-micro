@@ -2761,13 +2761,14 @@ ORG CODE%
 
  STA &4F59              \ ?&4F59 = 22 (argument in a CMP #22 instruction)
 
- LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
- STA &24EA
-
  LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
  JMP mods3              \ Jump to part 3
+
+ EQUB &28, &34          \ These bytes pad the routine out to exactly 40 bytes
+ EQUB &3E, &41
+ EQUB &43
 
 \ ******************************************************************************
 \
@@ -3783,7 +3784,7 @@ ORG CODE%
 \ The value of the timerAdjust variable in the main game code is incremented on
 \ every iteration of the main driving loop. When it reaches the value in
 \ trackTimerAdjust, the timers adds 18/100 of a second rather than 9/100 of
-\ a second. Decreasing this value therefore speeds up the timers, allowing their
+\ a second. Increasing this value therefore speeds up the timers, allowing their
 \ speed to be adjusted on a per-track basis.
 \
 \ Setting this value to 255 disables the timer adjustment.
@@ -3792,7 +3793,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB 20
+ EQUB 50
 
 \ ******************************************************************************
 \
