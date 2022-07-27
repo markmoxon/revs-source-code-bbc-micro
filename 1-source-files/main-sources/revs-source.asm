@@ -5643,7 +5643,7 @@ ORG &0B00
 
 .PushCarOffTrack
 
- CPX #20                \ If X >= 20 then this is not a valud driver, so return
+ CPX #20                \ If X >= 20 then this is not a valid driver, so return
  BCS BuildPlayerCar-1   \ from the subroutine (as BuildPlayerCar-1 contains an
                         \ RTS)
 
@@ -40252,14 +40252,14 @@ ENDIF
                         \ For example, for Silverstone:
                         \
                         \   * We will consider setting the class to Novice if
-                        \     the longest lap is > 1:51 and by a human player
+                        \     the longest lap is > 1:33 and by a human player
                         \
                         \   * We will consider setting the class to Amateur if
-                        \     the longest lap is <= 1:51 and > 1:41 and by a
+                        \     the longest lap is <= 1:33 and > 1:29 and by a
                         \     human player
                         \
                         \   * We will consider setting the class to Professional
-                        \     if the longest lap is <= 1:41 and by a human
+                        \     if the longest lap is <= 1:29 and by a human
                         \     player
 
                         \ If we get here, the slowest lap time is quicker than

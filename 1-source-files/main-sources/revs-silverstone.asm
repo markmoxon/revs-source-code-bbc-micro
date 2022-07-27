@@ -61,30 +61,30 @@ ORG CODE%
 \
 \ Silverstone consists of the following track sections:
 \
-\    0   ||   Abbey Curve to Woodcote Corner
-\    1   ->   Woodcote Corner (chicane right)
-\    2   <-   Woodcote Corner (chicane left)
-\    3   ->   Woodcote Corner (chicane right)
-\    4   ||   Home Straight
+\    0   ||   Abbey Curve to Woodcote Corner (2/2)
+\    1   ->   Woodcote Corner (1/3)
+\    2   <-   Woodcote Corner (2/3)
+\    3   ->   Woodcote Corner (3/3)
+\    4   ||   Woodcote Corner to Copse Corner
 \    5   ->   Copse Corner
-\    6   ||   Copse Corner to Maggotts Curve
-\    7   {}   Copse Corner to Maggotts Curve
-\    8   ||   Copse Corner to Maggotts Curve
+\    6   ||   Copse Corner to Maggotts Curve (1/3)
+\    7   {}   Copse Corner to Maggotts Curve (2/3)
+\    8   ||   Copse Corner to Maggotts Curve (3/3)
 \    9   <-   Maggotts Curve
-\   10   ||   Maggotts Curve to Becketts Corner
-\   11   ||   Maggotts Curve to Becketts Corner
+\   10   ||   Maggotts Curve to Becketts Corner (1/2)
+\   11   ||   Maggotts Curve to Becketts Corner (2/2)
 \   12   ->   Becketts Corner
 \   13   ||   Becketts Corner to Chapel Curve
 \   14   <-   Chapel Curve
-\   15   ||   Hangar Straight
-\   16   {}   Hangar Straight
-\   17   ||   Hangar Straight
+\   15   ||   Hangar Straight (1/3)
+\   16   {}   Hangar Straight (2/3)
+\   17   ||   Hangar Straight (3/3)
 \   18   ->   Stowe Corner
 \   19   ||   Stowe Corner to Club Corner
 \   20   ->   Club Corner
 \   21   ||   Club Corner to Abbey Curve
 \   22   <-   Abbey Curve
-\   23   ||   Abbey Curve to Woodcote Corner
+\   23   {}   Abbey Curve to Woodcote Corner (1/2)
 \
 \ where:
 \
@@ -1986,30 +1986,30 @@ ORG CODE%
 \
 \ Silverstone consists of the following track sections:
 \
-\    0   ||   Abbey Curve to Woodcote Corner
-\    1   ->   Woodcote Corner (chicane right)
-\    2   <-   Woodcote Corner (chicane left)
-\    3   ->   Woodcote Corner (chicane right)
-\    4   ||   Home Straight
+\    0   ||   Abbey Curve to Woodcote Corner (2/2)
+\    1   ->   Woodcote Corner (1/3)
+\    2   <-   Woodcote Corner (2/3)
+\    3   ->   Woodcote Corner (3/3)
+\    4   ||   Woodcote Corner to Copse Corner
 \    5   ->   Copse Corner
-\    6   ||   Copse Corner to Maggotts Curve
-\    7   {}   Copse Corner to Maggotts Curve
-\    8   ||   Copse Corner to Maggotts Curve
+\    6   ||   Copse Corner to Maggotts Curve (1/3)
+\    7   {}   Copse Corner to Maggotts Curve (2/3)
+\    8   ||   Copse Corner to Maggotts Curve (3/3)
 \    9   <-   Maggotts Curve
-\   10   ||   Maggotts Curve to Becketts Corner
-\   11   ||   Maggotts Curve to Becketts Corner
+\   10   ||   Maggotts Curve to Becketts Corner (1/2)
+\   11   ||   Maggotts Curve to Becketts Corner (2/2)
 \   12   ->   Becketts Corner
 \   13   ||   Becketts Corner to Chapel Curve
 \   14   <-   Chapel Curve
-\   15   ||   Hangar Straight
-\   16   {}   Hangar Straight
-\   17   ||   Hangar Straight
+\   15   ||   Hangar Straight (1/3)
+\   16   {}   Hangar Straight (2/3)
+\   17   ||   Hangar Straight (3/3)
 \   18   ->   Stowe Corner
 \   19   ||   Stowe Corner to Club Corner
 \   20   ->   Club Corner
 \   21   ||   Club Corner to Abbey Curve
 \   22   <-   Abbey Curve
-\   23   ||   Abbey Curve to Woodcote Corner
+\   23   {}   Abbey Curve to Woodcote Corner (1/2)
 \
 \ where:
 \

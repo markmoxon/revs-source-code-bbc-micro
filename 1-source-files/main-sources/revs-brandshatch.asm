@@ -108,6 +108,59 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ Brands Hatch consists of the following track sections:
+\
+\    0   ->     Clearways to Paddock Bend (3/3)
+\    1   ->     Paddock Bend
+\    2   |->|   Paddock Bend to Druids (1/2)
+\    3   {}     Paddock Bend to Druids (2/2)
+\    4   |->|   Druids
+\    5   ||     Druids to Graham Hill Bend
+\    6   <-     Graham Hill Bend
+\    7   ||     Graham Hill Bend to Surtees (1/3)
+\    8   <-     Graham Hill Bend to Surtees (2/3)
+\    9   <-     Graham Hill Bend to Surtees (3/3)
+\   10   <-     Surtees
+\   11   {}     Surtees to Hawthorns Bend (1/4)
+\   12   |->|   Surtees to Hawthorns Bend (2/4)
+\   13   {}     Surtees to Hawthorns Bend (3/4)
+\   14   {}     Surtees to Hawthorns Bend (4/4)
+\   15   ->     Hawthorns Bend
+\   16   ||     Hawthorns Bend to Westfield
+\   17   ->     Westfield
+\   18   {}     Westfield to Dingle Dell Corner (1/3)
+\   19   ->     Westfield to Dingle Dell Corner (2/3)
+\   20   ||     Westfield to Dingle Dell Corner (3/3)
+\   21   ->     Dingle Dell Corner
+\   22   ||     Dingle Dell Corner to Stirlings
+\   23   <-     Stirlings
+\   24   {}     Stirlings to Clearways (1/2)
+\   25   {}     Stirlings to Clearways (2/2)
+\   26   ->     Clearways
+\   27   ->     Clearways to Paddock Bend (1/3)
+\   28   ->     Clearways to Paddock Bend (2/3)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionData      Various data for the track section:
@@ -2940,6 +2993,59 @@ ORG CODE%
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
+\
+\ Brands Hatch consists of the following track sections:
+\
+\    0   ->     Clearways to Paddock Bend (3/3)
+\    1   ->     Paddock Bend
+\    2   |->|   Paddock Bend to Druids (1/2)
+\    3   {}     Paddock Bend to Druids (2/2)
+\    4   |->|   Druids
+\    5   ||     Druids to Graham Hill Bend
+\    6   <-     Graham Hill Bend
+\    7   ||     Graham Hill Bend to Surtees (1/3)
+\    8   <-     Graham Hill Bend to Surtees (2/3)
+\    9   <-     Graham Hill Bend to Surtees (3/3)
+\   10   <-     Surtees
+\   11   {}     Surtees to Hawthorns Bend (1/4)
+\   12   |->|   Surtees to Hawthorns Bend (2/4)
+\   13   {}     Surtees to Hawthorns Bend (3/4)
+\   14   {}     Surtees to Hawthorns Bend (4/4)
+\   15   ->     Hawthorns Bend
+\   16   ||     Hawthorns Bend to Westfield
+\   17   ->     Westfield
+\   18   {}     Westfield to Dingle Dell Corner (1/3)
+\   19   ->     Westfield to Dingle Dell Corner (2/3)
+\   20   ||     Westfield to Dingle Dell Corner (3/3)
+\   21   ->     Dingle Dell Corner
+\   22   ||     Dingle Dell Corner to Stirlings
+\   23   <-     Stirlings
+\   24   {}     Stirlings to Clearways (1/2)
+\   25   {}     Stirlings to Clearways (2/2)
+\   26   ->     Clearways
+\   27   ->     Clearways to Paddock Bend (1/3)
+\   28   ->     Clearways to Paddock Bend (2/3)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
 \
 \ This part defines the following aspects of these track sections:
 \

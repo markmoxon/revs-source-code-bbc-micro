@@ -111,6 +111,55 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ Donington Park consists of the following track sections:
+\
+\   0    ||     Coppice to Park Chicane (1/2)
+\   1    {}     Coppice to Park Chicane (2/2)
+\   2    |->|   Park Chicane (1/2)
+\   3    <-     Park Chicane (2/2)
+\   4    {}     Park Chicane to Redgate (1/2)
+\   5    |->|   Park Chicane to Redgate (2/2)
+\   6    ->     Redgate
+\   7    |->|   Redgate to Craner Curves
+\   8    ->     Craner Curves
+\   9    {}     Craner Curves to The Old Hairpin (1/3)
+\   10   <-     Craner Curves to The Old Hairpin (2/3)
+\   11   |->|   Craner Curves to The Old Hairpin (3/3)
+\   12   ->     The Old Hairpin
+\   13   ||     The Old Hairpin to Macleans (1/6)
+\   14   <-     The Old Hairpin to Macleans (2/6)
+\   15   |<-|   The Old Hairpin to Macleans (3/6)
+\   16   ||     The Old Hairpin to Macleans (4/6)
+\   17   <-     The Old Hairpin to Macleans (5/6)
+\   18   ->     The Old Hairpin to Macleans (6/6)
+\   19   ->     Macleans
+\   20   {}     Macleans to Coppice (1/2)
+\   21   {}     Macleans to Coppice (2/2)
+\   22   ->     Coppice (1/3)
+\   23   ->     Coppice (2/3)
+\   24   ->     Coppice (3/3)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionData      Various data for the track section:
@@ -3014,6 +3063,55 @@ ORG CODE%
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
+\
+\ Donington Park consists of the following track sections:
+\
+\   0    ||     Coppice to Park Chicane (1/2)
+\   1    {}     Coppice to Park Chicane (2/2)
+\   2    |->|   Park Chicane (1/2)
+\   3    <-     Park Chicane (2/2)
+\   4    {}     Park Chicane to Redgate (1/2)
+\   5    |->|   Park Chicane to Redgate (2/2)
+\   6    ->     Redgate
+\   7    |->|   Redgate to Craner Curves
+\   8    ->     Craner Curves
+\   9    {}     Craner Curves to The Old Hairpin (1/3)
+\   10   <-     Craner Curves to The Old Hairpin (2/3)
+\   11   |->|   Craner Curves to The Old Hairpin (3/3)
+\   12   ->     The Old Hairpin
+\   13   ||     The Old Hairpin to Macleans (1/6)
+\   14   <-     The Old Hairpin to Macleans (2/6)
+\   15   |<-|   The Old Hairpin to Macleans (3/6)
+\   16   ||     The Old Hairpin to Macleans (4/6)
+\   17   <-     The Old Hairpin to Macleans (5/6)
+\   18   ->     The Old Hairpin to Macleans (6/6)
+\   19   ->     Macleans
+\   20   {}     Macleans to Coppice (1/2)
+\   21   {}     Macleans to Coppice (2/2)
+\   22   ->     Coppice (1/3)
+\   23   ->     Coppice (2/3)
+\   24   ->     Coppice (3/3)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
 \
 \ This part defines the following aspects of these track sections:
 \

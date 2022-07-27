@@ -115,6 +115,57 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ The Nürburgring consists of the following track sections:
+\
+\   0    ||     Romer Kurve to Castrol-S (1/2)
+\   1    {}     Romer Kurve to Castrol-S (2/2)
+\   2    |->|   Castrol-S (1/2)
+\   3    <-     Castrol-S (2/2)
+\   4    {}     Castrol-S to Ford Kurve (1/4)
+\   5    {}     Castrol-S to Ford Kurve (2/4)
+\   6    <-     Castrol-S to Ford Kurve (3/4)
+\   7    ||     Castrol-S to Ford Kurve (4/4)
+\   8    ->     Ford Kurve
+\   9    ||     Ford Kurve top Dunlop Kehre (1/2)
+\   10   |<-|   Ford Kurve top Dunlop Kehre (2/2)
+\   11   ->     Dunlop Kehre
+\   12   {}     Dunlop Kehre to Bit Kurve (1/7)
+\   13   <-     Dunlop Kehre to Bit Kurve (2/7)
+\   14   ||     Dunlop Kehre to Bit Kurve (3/7)
+\   15   ->     Dunlop Kehre to Bit Kurve (4/7)
+\   16   {}     Dunlop Kehre to Bit Kurve (5/7)
+\   17   <-     Dunlop Kehre to Bit Kurve (6/7)
+\   18   ||     Dunlop Kehre to Bit Kurve (7/7)
+\   19   ->     Bit Kurve
+\   20   {}     Bit Kurve to Veedol Schikane (1/3)
+\   21   ->     Bit Kurve to Veedol Schikane (2/3)
+\   22   {}     Bit Kurve to Veedol Schikane (3/3)
+\   23   <-     Veedol Schikane (1/2)
+\   24   ->     Veedol Schikane (2/2)
+\   25   {}     Veedol Schikane to Romer Kurve
+\   26   ->     Romer Kurve
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionData      Various data for the track section:
@@ -3095,6 +3146,57 @@ ORG CODE%
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
+\
+\ The Nürburgring consists of the following track sections:
+\
+\   0    ||     Romer Kurve to Castrol-S (1/2)
+\   1    {}     Romer Kurve to Castrol-S (2/2)
+\   2    |->|   Castrol-S (1/2)
+\   3    <-     Castrol-S (2/2)
+\   4    {}     Castrol-S to Ford Kurve (1/4)
+\   5    {}     Castrol-S to Ford Kurve (2/4)
+\   6    <-     Castrol-S to Ford Kurve (3/4)
+\   7    ||     Castrol-S to Ford Kurve (4/4)
+\   8    ->     Ford Kurve
+\   9    ||     Ford Kurve top Dunlop Kehre (1/2)
+\   10   |<-|   Ford Kurve top Dunlop Kehre (2/2)
+\   11   ->     Dunlop Kehre
+\   12   {}     Dunlop Kehre to Bit Kurve (1/7)
+\   13   <-     Dunlop Kehre to Bit Kurve (2/7)
+\   14   ||     Dunlop Kehre to Bit Kurve (3/7)
+\   15   ->     Dunlop Kehre to Bit Kurve (4/7)
+\   16   {}     Dunlop Kehre to Bit Kurve (5/7)
+\   17   <-     Dunlop Kehre to Bit Kurve (6/7)
+\   18   ||     Dunlop Kehre to Bit Kurve (7/7)
+\   19   ->     Bit Kurve
+\   20   {}     Bit Kurve to Veedol Schikane (1/3)
+\   21   ->     Bit Kurve to Veedol Schikane (2/3)
+\   22   {}     Bit Kurve to Veedol Schikane (3/3)
+\   23   <-     Veedol Schikane (1/2)
+\   24   ->     Veedol Schikane (2/2)
+\   25   {}     Veedol Schikane to Romer Kurve
+\   26   ->     Romer Kurve
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
 \
 \ This part defines the following aspects of these track sections:
 \

@@ -113,6 +113,54 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ Snetterton consists of the following track sections:
+\
+\   0    |<-|   Sear to the Esses (3/5)
+\   1    |->|   Sear to the Esses (4/5)
+\   2    {}     Sear to the Esses (5/5)
+\   3    <-     The Esses (1/3)
+\   4    ||     The Esses (2/3)
+\   5    |->|   The Esses (3/3)
+\   6    |->|   The Esses to the Bomb Hole
+\   7    ->     The Bomb Hole
+\   8    ||     The Bomb Hole to Coram (1/2)
+\   9    ||     The Bomb Hole to Coram (2/2)
+\   10   ->     Coram
+\   11   |<-|   Coram to Russell (1/2)
+\   12   |<->|  Coram to Russell (2/2)
+\   13   <-     Russell
+\   14   ->     Russell to Riches (1/4)
+\   15   |->|   Russell to Riches (2/4)
+\   16   {}     Russell to Riches (3/4)
+\   17   ||     Russell to Riches (4/4)
+\   18   ->     Riches
+\   19   ||     Riches to Seer (1/2)
+\   20   ||     Riches to Seer (2/2)
+\   21   ->     Sear
+\   22   ||     Sear to the Esses (1/5)
+\   23   ||     Sear to the Esses (2/5)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionData      Various data for the track section:
@@ -2940,6 +2988,54 @@ ORG CODE%
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
+\
+\ Snetterton consists of the following track sections:
+\
+\   0    |<-|   Sear to the Esses (3/5)
+\   1    |->|   Sear to the Esses (4/5)
+\   2    {}     Sear to the Esses (5/5)
+\   3    <-     The Esses (1/3)
+\   4    ||     The Esses (2/3)
+\   5    |->|   The Esses (3/3)
+\   6    |->|   The Esses to the Bomb Hole
+\   7    ->     The Bomb Hole
+\   8    ||     The Bomb Hole to Coram (1/2)
+\   9    ||     The Bomb Hole to Coram (2/2)
+\   10   ->     Coram
+\   11   |<-|   Coram to Russell (1/2)
+\   12   |<->|  Coram to Russell (2/2)
+\   13   <-     Russell
+\   14   ->     Russell to Riches (1/4)
+\   15   |->|   Russell to Riches (2/4)
+\   16   {}     Russell to Riches (3/4)
+\   17   ||     Russell to Riches (4/4)
+\   18   ->     Riches
+\   19   ||     Riches to Seer (1/2)
+\   20   ||     Riches to Seer (2/2)
+\   21   ->     Sear
+\   22   ||     Sear to the Esses (1/5)
+\   23   ||     Sear to the Esses (2/5)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
 \
 \ This part defines the following aspects of these track sections:
 \

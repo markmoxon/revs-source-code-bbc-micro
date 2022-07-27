@@ -108,6 +108,57 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ Oulton Park consists of the following track sections:
+\
+\   0    |<-|   Lodge to Old Hall (4/4)
+\   1    ->     Old Hall
+\   2    ||     Old Hall to Cascades (1/4)
+\   3    ->     Old Hall to Cascades (2/4)
+\   4    ->     Old Hall to Cascades (3/4)
+\   5    {}     Old Hall to Cascades (4/4)
+\   6    <-     Cascades
+\   7    ||     Cascades to Island Hairpin (1/2)
+\   8    |->|   Cascades to Island Hairpin (2/2)
+\   9    |->|   Island Hairpin
+\   10   {}     Island Hairpin to Knickerbrook (1/4)
+\   11   {}     Island Hairpin to Knickerbrook (2/4)
+\   12   ||     Island Hairpin to Knickerbrook (3/4)
+\   13   {}     Island Hairpin to Knickerbrook (4/4)
+\   14   ->     Knickerbrook
+\   15   |->|   Knickerbrook to Druids (1/4)
+\   16   <-     Knickerbrook to Druids (2/4)
+\   17   |<-|   Knickerbrook to Druids (3/4)
+\   18   |<->|  Knickerbrook to Druids (4/4)
+\   19   ->     Druids
+\   20   |<-|   Druids to Lodge (1/3)
+\   21   ||     Druids to Lodge (2/3)
+\   22   |->|   Druids to Lodge (3/3)
+\   23   ->     Lodge
+\   24   ->     Lodge to Old Hall (1/4)
+\   25   <-     Lodge to Old Hall (2/4)
+\   26   |<-|   Lodge to Old Hall (3/4)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
+\
 \ This part defines the following aspects of these track sections:
 \
 \ trackSectionData      Various data for the track section:
@@ -2903,6 +2954,57 @@ ORG CODE%
 \  Deep dive: The track data file format
 \
 \ ------------------------------------------------------------------------------
+\
+\ Oulton Park consists of the following track sections:
+\
+\   0    |<-|   Lodge to Old Hall (4/4)
+\   1    ->     Old Hall
+\   2    ||     Old Hall to Cascades (1/4)
+\   3    ->     Old Hall to Cascades (2/4)
+\   4    ->     Old Hall to Cascades (3/4)
+\   5    {}     Old Hall to Cascades (4/4)
+\   6    <-     Cascades
+\   7    ||     Cascades to Island Hairpin (1/2)
+\   8    |->|   Cascades to Island Hairpin (2/2)
+\   9    |->|   Island Hairpin
+\   10   {}     Island Hairpin to Knickerbrook (1/4)
+\   11   {}     Island Hairpin to Knickerbrook (2/4)
+\   12   ||     Island Hairpin to Knickerbrook (3/4)
+\   13   {}     Island Hairpin to Knickerbrook (4/4)
+\   14   ->     Knickerbrook
+\   15   |->|   Knickerbrook to Druids (1/4)
+\   16   <-     Knickerbrook to Druids (2/4)
+\   17   |<-|   Knickerbrook to Druids (3/4)
+\   18   |<->|  Knickerbrook to Druids (4/4)
+\   19   ->     Druids
+\   20   |<-|   Druids to Lodge (1/3)
+\   21   ||     Druids to Lodge (2/3)
+\   22   |->|   Druids to Lodge (3/3)
+\   23   ->     Lodge
+\   24   ->     Lodge to Old Hall (1/4)
+\   25   <-     Lodge to Old Hall (2/4)
+\   26   |<-|   Lodge to Old Hall (3/4)
+\
+\ where:
+\
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
+\
+\   {} is a straight in the sense that it doesn't curve to the left or right,
+\      but the gradient differs between sub-sections
+\
+\   -> consists of sub-sections that all curve to the right
+\
+\   <- consists of sub-sections that all curve to the left
+\
+\   |->| consists of both straight sub-sections and sub-sections that curve to
+\        the right
+\
+\   |<-| consists of both straight sub-sections and sub-sections that curve to
+\        the left
+\
+\   |<->| consists of both straight sub-sections, sub-sections that curve to the
+\         right and sub-sections that curve to the left
 \
 \ This part defines the following aspects of these track sections:
 \
