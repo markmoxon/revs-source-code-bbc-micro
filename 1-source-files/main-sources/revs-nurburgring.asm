@@ -145,26 +145,24 @@ ORG CODE%
 \   25   {}     Veedol Schikane to Romer Kurve
 \   26   ->     Romer Kurve
 \
-\ where:
+\ where each section is one of the following shapes:
 \
 \   || is a straight section that doesn't curve to the left or right, and has
 \      the same gradient throughout the whole section
 \
-\   {} is a straight in the sense that it doesn't curve to the left or right,
-\      but the gradient differs between sub-sections
+\   {} is a straight section in the sense that it doesn't curve to the left or
+\      right, but the gradient can differ between sub-sections
 \
 \   -> consists of sub-sections that all curve to the right
 \
 \   <- consists of sub-sections that all curve to the left
 \
-\   |->| consists of both straight sub-sections and sub-sections that curve to
-\        the right
+\   |->| consists of sub-sections that are either straight or curve to the right
 \
-\   |<-| consists of both straight sub-sections and sub-sections that curve to
-\        the left
+\   |<-| consists of sub-sections that are either straight or curve to the left
 \
-\   |<->| consists of both straight sub-sections, sub-sections that curve to the
-\         right and sub-sections that curve to the left
+\   |<->| consists of sub-sections that are either straight or curve to the left
+\         or right
 \
 \ This part defines the following aspects of these track sections:
 \
@@ -3177,26 +3175,24 @@ ORG CODE%
 \   25   {}     Veedol Schikane to Romer Kurve
 \   26   ->     Romer Kurve
 \
-\ where:
+\ where each section is one of the following shapes:
 \
 \   || is a straight section that doesn't curve to the left or right, and has
 \      the same gradient throughout the whole section
 \
-\   {} is a straight in the sense that it doesn't curve to the left or right,
-\      but the gradient differs between sub-sections
+\   {} is a straight section in the sense that it doesn't curve to the left or
+\      right, but the gradient can differ between sub-sections
 \
 \   -> consists of sub-sections that all curve to the right
 \
 \   <- consists of sub-sections that all curve to the left
 \
-\   |->| consists of both straight sub-sections and sub-sections that curve to
-\        the right
+\   |->| consists of sub-sections that are either straight or curve to the right
 \
-\   |<-| consists of both straight sub-sections and sub-sections that curve to
-\        the left
+\   |<-| consists of sub-sections that are either straight or curve to the left
 \
-\   |<->| consists of both straight sub-sections, sub-sections that curve to the
-\         right and sub-sections that curve to the left
+\   |<->| consists of sub-sections that are either straight or curve to the left
+\         or right
 \
 \ This part defines the following aspects of these track sections:
 \

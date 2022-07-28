@@ -16988,17 +16988,17 @@ ENDIF
                         \   * Y = 3 = %011 = black right, red left,   curve
                         \
                         \ So if Y = 0 or 1, then we know that the verge we are
-                        \ processing is black and white, otherwise it is red and
-                        \ white
+                        \ processing is black-and-white, otherwise it is
+                        \ red-and-white
                         \
                         \ These instructions set V to the Y-th entry in the
                         \ vergeColour table, which contains the following:
                         \
-                        \   * 0 when Y = 0 to 1 (black and white verge)
-                        \   * 1 when Y = 2 to 7 (red and white verge)
+                        \   * 0 when Y = 0 to 1 (black-and-white verge)
+                        \   * 1 when Y = 2 to 7 (red-and-white verge)
                         \
-                        \ So V = 0 if this is a black and white verge
-                        \        1 if this is a red and white verge
+                        \ So V = 0 if this is a black-and-white verge
+                        \        1 if this is a red-and-white verge
 
  LDA segmentCounter     \ If segmentCounter >= 3 then jump to gmar3 to process
  CMP #3                 \ the segment's corner markers in part 2

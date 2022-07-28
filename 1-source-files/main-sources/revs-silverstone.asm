@@ -86,17 +86,17 @@ ORG CODE%
 \   22   <-   Abbey Curve
 \   23   {}   Abbey Curve to Woodcote Corner (1/2)
 \
-\ where:
+\ where each section is one of the following shapes:
 \
-\   || is a straight
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
 \
-\   {} is a straight in the sense that it doesn't curve to the left or right,
-\      but because the track elevation changes at this point, it is encoded as
-\      a curve (as it is a curve, just in the y-axis)
+\   {} is a straight section in the sense that it doesn't curve to the left or
+\      right, but the gradient changes within the section
 \
-\   -> is a right corner
+\   -> is a section that curves to the right
 \
-\   <- is a left corner
+\   <- is a section that curves to the left
 \
 \ The track data file format supports up to 26 sections, but Silverstone only
 \ uses 24 of them.
@@ -2011,17 +2011,17 @@ ORG CODE%
 \   22   <-   Abbey Curve
 \   23   {}   Abbey Curve to Woodcote Corner (1/2)
 \
-\ where:
+\ where each section is one of the following shapes:
 \
-\   || is a straight
+\   || is a straight section that doesn't curve to the left or right, and has
+\      the same gradient throughout the whole section
 \
-\   {} is a straight in the sense that it doesn't curve to the left or right,
-\      but because the track elevation changes at this point, it is encoded as
-\      a curve (as it is a curve, just in the y-axis)
+\   {} is a straight section in the sense that it doesn't curve to the left or
+\      right, but the gradient changes within the section
 \
-\   -> is a right corner
+\   -> is a section that curves to the right
 \
-\   <- is a left corner
+\   <- is a section that curves to the left
 \
 \ The track data file format supports up to 26 sections, but Silverstone only
 \ uses 24 of them.
