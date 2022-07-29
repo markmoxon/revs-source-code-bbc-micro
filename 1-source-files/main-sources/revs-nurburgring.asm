@@ -615,7 +615,7 @@ ORG CODE%
 .HookMoveBack
 
  BIT playerPastSegment  \ If bit 7 of playerPastSegment is set, return from the
- BMI HookMoveBack-1     \ subroutine (as HookMoveBack-1 contains an RTS)
+ BMI fovw1-1            \ subroutine (as fovw1-1 contains an RTS)
 
  JMP MovePlayerBack     \ Move the player backwards by one segment, returning
                         \ from the subroutine using a tail call
@@ -839,7 +839,7 @@ ORG CODE%
  EQUB &04               \ Sub-section 43 = &0435 ( 1077)
  EQUB &04               \ Sub-section 44 = &0435 ( 1077)
 
- EQUB &20               \ This byte appears to be ununused
+ EQUB &20               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
