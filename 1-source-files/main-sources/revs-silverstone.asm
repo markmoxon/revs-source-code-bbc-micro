@@ -416,17 +416,12 @@ ORG CODE%
  EQUB &FD               \ zTrackSectionOHi       zTrackSectionO = &FDC5 =   -571
  EQUB 255               \ trackDriverSpeed
 
-                        \ Track section 24
-
  EQUB &03, &D1          \ These bytes appear to be unused (Silverstone only uses
  EQUB &0C, &0F          \ sections 0 to 23)
  EQUB &CF, &60
  EQUB &0F, &88
-
-                        \ Track section 25
-
- EQUB &00, &8E          \ These bytes appear to be unused (Silverstone only uses
- EQUB &41, &40          \ sections 0 to 23)
+ EQUB &00, &8E
+ EQUB &41, &40
  EQUB &00, &00
  EQUB &C9, &54
 
@@ -2373,11 +2368,8 @@ ORG CODE%
  EQUB &80, &A0          \ sections 0 to 23)
  EQUB &C0, &00
  EQUB &94, &63
-
-                        \ Track section 25
-
- EQUB &64, &F0          \ These bytes appear to be unused (Silverstone only uses
- EQUB &00, &00          \ sections 0 to 23)
+ EQUB &64, &F0
+ EQUB &00, &00
  EQUB &48, &00
  EQUB &50, &52
 

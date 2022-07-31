@@ -213,6 +213,17 @@ ORG CODE%
 \ trackDriverSpeed      The maximum speed for non-player drivers on this section
 \                       of the track
 \
+\ Some of the trackDriverSpeed values have been scaled down by a factor of 1.44
+\ from the Commodore 64 version. This applies to sections that are followed by
+\ sections with bit 7 of trackSectionFlag set.
+\
+\ Those sections are 1, 5, 7, 10, 16, 18 and 22, and this scaling is noted in
+\ the comments below.
+\
+\ See part 2 of the track section data for each section's trackSectionFlag,
+\ where Sp=1 denotes sections with bit 7 of trackSectionFlag set (so we scale
+\ trackDriverSpeed in the sections that precede these).
+\
 \ ******************************************************************************
 
                         \ Track section 0
@@ -235,7 +246,7 @@ ORG CODE%
  EQUB &2D               \ xTrackSectionOHi       xTrackSectionO = &2DBF =  11711
  EQUB 77                \ trackSectionTurn
  EQUB &26               \ zTrackSectionOHi       zTrackSectionO = &26E8 =   9960
- EQUB 146               \ trackDriverSpeed
+ EQUB 101               \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 2
 
@@ -279,7 +290,7 @@ ORG CODE%
  EQUB &2A               \ xTrackSectionOHi       xTrackSectionO = &2AF9 =  11001
  EQUB 16                \ trackSectionTurn
  EQUB &71               \ zTrackSectionOHi       zTrackSectionO = &7181 =  29057
- EQUB 181               \ trackDriverSpeed
+ EQUB 125               \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 6
 
@@ -301,7 +312,7 @@ ORG CODE%
  EQUB &1E               \ xTrackSectionOHi       xTrackSectionO = &1E0B =   7691
  EQUB 12                \ trackSectionTurn
  EQUB &7D               \ zTrackSectionOHi       zTrackSectionO = &7DB1 =  32177
- EQUB 121               \ trackDriverSpeed
+ EQUB 84                \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 8
 
@@ -334,7 +345,7 @@ ORG CODE%
  EQUB &14               \ xTrackSectionOHi       xTrackSectionO = &1409 =   5129
  EQUB 88                \ trackSectionTurn
  EQUB &89               \ zTrackSectionOHi       zTrackSectionO = &89A0 = -30304
- EQUB 112               \ trackDriverSpeed
+ EQUB 77                \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 11
 
@@ -400,7 +411,7 @@ ORG CODE%
  EQUB &29               \ xTrackSectionOHi       xTrackSectionO = &291D =  10525
  EQUB 75                \ trackSectionTurn
  EQUB &87               \ zTrackSectionOHi       zTrackSectionO = &876B = -30869
- EQUB 156               \ trackDriverSpeed
+ EQUB 108               \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 17
 
@@ -422,7 +433,7 @@ ORG CODE%
  EQUB &3E               \ xTrackSectionOHi       xTrackSectionO = &3EE4 =  16100
  EQUB 23                \ trackSectionTurn
  EQUB &64               \ zTrackSectionOHi       zTrackSectionO = &6413 =  25619
- EQUB 162               \ trackDriverSpeed
+ EQUB 112               \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 19
 
@@ -466,7 +477,7 @@ ORG CODE%
  EQUB &54               \ xTrackSectionOHi       xTrackSectionO = &5469 =  21609
  EQUB 71                \ trackSectionTurn
  EQUB &38               \ zTrackSectionOHi       zTrackSectionO = &38B0 =  14512
- EQUB 193               \ trackDriverSpeed
+ EQUB 134               \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 23
 
@@ -499,7 +510,7 @@ ORG CODE%
  EQUB &3F               \ xTrackSectionOHi       xTrackSectionO = &3F3D =  16189
  EQUB 26                \ trackSectionTurn
  EQUB &08               \ zTrackSectionOHi       zTrackSectionO = &0828 =   2088
- EQUB 127               \ trackDriverSpeed
+ EQUB 88                \ trackDriverSpeed       scaled by 1.44 from the C64
 
                         \ Track section 26
 
@@ -3022,38 +3033,48 @@ ORG CODE%
 \             section
 \  Deep dive: The track data file format
 \
+\ ------------------------------------------------------------------------------
+\
+\ Some of the trackRacingLine values have been scaled down by a factor of 1.44
+\ from the Commodore 64 version. This applies to sections that have bit 7 of
+\ trackSectionFlag set.
+\
+\ The scaled sections are 2, 6, 8, 11, 17, 19 and 23.
+\
+\ See part 2 of the track section data for each section's trackSectionFlag,
+\ where Sp=1 denotes sections with bit 7 of trackSectionFlag set.
+\
 \ ******************************************************************************
 
 .trackRacingLine
 
  EQUB %00011000         \ Section  0 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section  1 = 000110 0 0 =  +6 * baseSpeed
- EQUB %01100111         \ Section  2 = 011001 1 1 = -25
+ EQUB %01000111         \ Section  2 = 010001 1 1 = -17   (-25 / 1.44)
  EQUB %01001000         \ Section  3 = 010010 0 0 = +18 * baseSpeed
  EQUB %00011001         \ Section  4 = 000110 0 1 =  -6 * baseSpeed
  EQUB %00011001         \ Section  5 = 000110 0 1 =  -6 * baseSpeed
- EQUB %01010010         \ Section  6 = 010100 1 0 = +20
+ EQUB %00111010         \ Section  6 = 001110 1 0 = +14   (+20 / 1.44)
  EQUB %00110000         \ Section  7 = 001100 0 0 = +12 * baseSpeed
- EQUB %01000111         \ Section  8 = 010001 1 1 = -17
+ EQUB %00110011         \ Section  8 = 001100 1 1 = -12   (-17 / 1.44)
  EQUB %00011000         \ Section  9 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section 10 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00111011         \ Section 11 = 001110 1 1 = -14
+ EQUB %00101011         \ Section 11 = 001010 1 1 = -10   (-10 / 1.44)
  EQUB %00011001         \ Section 12 = 000110 0 1 =  -6 * baseSpeed
  EQUB %00111100         \ Section 13 = 001111 0 0 = +15 * baseSpeed
  EQUB %00000000         \ Section 14 = 000000 0 0 =  +0 * baseSpeed
  EQUB %00111101         \ Section 15 = 001111 0 1 = -15 * baseSpeed
  EQUB %00011001         \ Section 16 = 000110 0 1 =  -6 * baseSpeed
- EQUB %01010010         \ Section 17 = 010100 1 0 = +20
+ EQUB %00111010         \ Section 17 = 001110 1 0 = +14   (+20 / 1.44)
  EQUB %01010000         \ Section 18 = 010100 0 0 = +20 * baseSpeed
- EQUB %01010011         \ Section 19 = 010100 1 1 = -20
+ EQUB %00111011         \ Section 19 = 001110 1 1 = -14   (-20 / 1.44)
  EQUB %00011000         \ Section 20 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00111101         \ Section 21 = 001111 0 1 = -15 * baseSpeed
  EQUB %00100001         \ Section 22 = 001000 0 1 =  -8 * baseSpeed
- EQUB %01101010         \ Section 23 = 011010 1 0 = +26
+ EQUB %01001010         \ Section 23 = 010010 1 0 = +18   (+26 / 1.44)
  EQUB %01110001         \ Section 24 = 011100 0 1 = -28 * baseSpeed
  EQUB %00011000         \ Section 25 = 000110 0 0 =  +6 * baseSpeed
- EQUB %01000011         \ Section 26 = 010000 1 1 = -16
-
+ EQUB %00101111         \ Section 26 = 001011 1 1 = -11   (-16 / 1.44)
  EQUB &18, &A9          \ These bytes appear to be unused
  EQUB &AA, &AA
 
@@ -3830,17 +3851,17 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ These figures have been scaled down by a factor of 1.44 from the Commodore 64
-\ track data, to bring them in line with the other BBC Micro tracks. The values
-\ from the Commodore 64 version are 194, 211 and 220.
+\ These figures have been scaled down by a factor of around 2/3 compard to the
+\ Commodore 64 track data, so the race times match those from the Commodore 64.
+\ The values from the Commodore 64 version are 194, 211 and 220.
 \
 \ ******************************************************************************
 
- EQUB 134               \ Base speed for Novice
+ EQUB 130               \ Base speed for Novice
 
- EQUB 146               \ Base speed for Amateur
+ EQUB 140               \ Base speed for Amateur
 
- EQUB 152               \ Base speed for Professional
+ EQUB 145               \ Base speed for Professional
 
 \ ******************************************************************************
 \
