@@ -3074,7 +3074,11 @@ ORG CODE%
 \
 \ trackSectionFrom      The number of the first segment vector in each section,
 \                       which enables us to fetch the segment vectors for a
-\                       given track section
+\                       given track section (note that because the segment
+\                       vectors in this track are dynamically generated, this
+\                       value points to the position in the segment vector
+\                       table where the section's first vector will be stored
+\                       once it is generated)
 \
 \ zTrackSectionOLo      Low byte of the z-coordinate of the starting point of
 \                       the outside verge of each track section
@@ -3720,7 +3724,7 @@ ORG CODE%
 \
 \ The value of the timerAdjust variable in the main game code is incremented on
 \ every iteration of the main driving loop. When it reaches the value in
-\ trackTimerAdjust, the timers adds 18/100 of a second rather than 9/100 of
+\ trackTimerAdjust, the timers add 18/100 of a second rather than 9/100 of
 \ a second. Increasing this value therefore speeds up the timers, allowing their
 \ speed to be adjusted on a per-track basis.
 \
