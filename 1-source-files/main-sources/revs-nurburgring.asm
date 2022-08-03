@@ -535,6 +535,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -612,6 +613,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Only move the player backwards if the player has not yet driven
 \             past the segment
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -859,6 +861,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: When populating the verge buffer in GetSegmentAngles, don't give
 \             up so easily when we get segments outside the field of view
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1212,6 +1215,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: If bit 6 of the current section's flags is set, update the data
 \             pointers
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1260,6 +1264,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Set the sign of A according to the direction we are facing along
 \             the track
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1446,6 +1451,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
 \             horizon
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1556,6 +1562,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: If bit 6 of the current section's flags is set, move to the next
 \             segment vector, calculate it and store it
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1946,6 +1953,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2015,6 +2023,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Initialise and calculate the current segment vector
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2114,6 +2123,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2215,6 +2225,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2477,6 +2488,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Only update the horizon if we have found fewer than 12 visible
 \             segments
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2546,6 +2558,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply the horizon line in A instead of horizonLine
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2556,6 +2569,10 @@ ORG CODE%
 \  * Collapse the left verge of the track into the right verge, but only for a
 \    few entries just in front of the horizon section, i.e. for the track
 \    section list and the first three entries in the track segment list
+\
+\  * If the track section at the horizon is one of sections 0 to 5, zero the
+\    vergeDataRight and vergeDataLeft entries for the horizon section index to
+\    hide the verge
 \
 \ Arguments:
 \
@@ -2622,7 +2639,7 @@ ORG CODE%
  BCS coll3
 
                         \ If we get here then the track section at the horizon
-                        \ one of sections 0 to 5
+                        \ is one of sections 0 to 5
 
  LDA #0                 \ Zero the vergeDataRight and vergeDataLeft entries for
  STA vergeDataRight,Y   \ the horizon section index
@@ -2646,6 +2663,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Jump the car when driving fast over sloping segments
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3605,6 +3623,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3942,6 +3961,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Move to the next to the next segment vector along the track and
 \             calculate the segment vector
+\  Deep dive: Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
