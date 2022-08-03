@@ -55,6 +55,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\             The Silverstone track
 \             Matching the code to the driving model
 \
 \ ------------------------------------------------------------------------------
@@ -433,6 +434,7 @@ ORG CODE%
 \    Summary: The x-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -461,6 +463,7 @@ ORG CODE%
 \    Summary: The z-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -489,6 +492,7 @@ ORG CODE%
 \    Summary: The y-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -517,6 +521,7 @@ ORG CODE%
 \    Summary: Vector x-coordinates between two consecutive segments on the
 \             inside of the track
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -809,6 +814,7 @@ ORG CODE%
 \    Summary: Vector y-coordinates between two consecutive segments on the
 \             inside of the track
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -1101,6 +1107,7 @@ ORG CODE%
 \    Summary: Vector z-coordinates between two consecutive segments on the
 \             inside of the track
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -1393,6 +1400,7 @@ ORG CODE%
 \    Summary: Vector x-coordinates from the inside to the outside of the track
 \             for each segment
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -1685,6 +1693,7 @@ ORG CODE%
 \    Summary: Vector z-coordinates from the inside to the outside of the track
 \             for each segment
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -1976,6 +1985,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2381,6 +2391,7 @@ ORG CODE%
 \    Summary: The optimum racing line for non-player drivers on each track
 \             section
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2432,6 +2443,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Base coordinates and object types for 16 road signs
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2475,6 +2487,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The total number of track sections * 8
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2487,6 +2500,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The total number of segment vectors in the segment vector tables
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2499,6 +2513,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The length of the full track in terms of segments
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2516,6 +2531,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The segment number of the starting line
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2536,6 +2552,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Lap times for adjusting the race class (seconds)
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2559,6 +2576,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Lap times for adjusting the race class (minutes)
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2580,6 +2598,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The gear ratio for each gear
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2610,6 +2629,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The power for each gear
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2641,6 +2661,7 @@ ORG CODE%
 \    Summary: The base speed for each race class, used when generating the best
 \             racing lines and non-player driver speeds
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2658,6 +2679,7 @@ ORG CODE%
 \    Summary: The starting race position of the player during a practice or
 \             qualifying lap
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2671,6 +2693,7 @@ ORG CODE%
 \    Summary: The spacing between the cars at the start of a qualifying lap, in
 \             segments
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2684,6 +2707,7 @@ ORG CODE%
 \    Summary: Adjustment factor for the speed of the timers to allow for
 \             fine-tuning of time on a per-track basis
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2706,6 +2730,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Slowdown factor for non-player drivers in the race
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2728,6 +2753,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The track file's hook code
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2746,6 +2772,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The track file's checksum
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ******************************************************************************
 
@@ -2766,6 +2793,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The game name
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2785,6 +2813,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The track name
 \  Deep dive: The track data file format
+\             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \

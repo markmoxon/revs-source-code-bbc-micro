@@ -110,6 +110,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -486,6 +487,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
 \             horizon
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -517,6 +520,8 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ******************************************************************************
 
@@ -575,6 +580,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -714,14 +721,14 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: heightOfTrack
+\       Name: segmentSlope
 \       Type: Variable
 \   Category: Extra tracks
 \    Summary: The height above ground of the current track sub-section
 \
 \ ******************************************************************************
 
-.heightOfTrack
+.segmentSlope
 
  EQUB 0
 
@@ -891,6 +898,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Base coordinates and object types for 16 road signs
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -919,6 +927,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Calculate the segment vector for the current segment
+\  Deep dive: Dynamic track generation in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1105,21 +1114,21 @@ ORG CODE%
 
                         \ By this point we have the x- and z-coordinates of the
                         \ vector for the track direction in the segment that we
-                        \ want to build, and we already know the height of the
-                        \ track at this point (it's in heightOfTrack)
+                        \ want to build, and we already know the y-coordinate of
+                        \ the vector at this point (it's in segmentSlope)
                         \
                         \ The inner track segment vector at this point is
                         \ therefore:
                         \
-                        \   [       V       ]
-                        \   [ heightOfTrack ]
-                        \   [       W       ]
+                        \   [       V      ]
+                        \   [ segmentSlope ]
+                        \   [       W      ]
                         \
                         \ And we can now store the vector in the track data file
                         \ as follows:
                         \
                         \   * xTrackSegmentI = V
-                        \   * yTrackSegmentI = heightOfTrack
+                        \   * yTrackSegmentI = segmentSlope
                         \   * zTrackSegmentI = W
                         \
                         \ We can also calculate the vector from the inner verge
@@ -1173,8 +1182,8 @@ ORG CODE%
  STA xTrackSegmentO,Y   \ Set the x-coordinate of the Y-th outer track segment
                         \ vector to -W * trackWidth / 256
 
- LDA heightOfTrack      \ Set the y-coordinate of the Y-th track segment vector
- STA yTrackSegmentI,Y   \ to the height of the track
+ LDA segmentSlope       \ Set the y-coordinate of the Y-th track segment vector
+ STA yTrackSegmentI,Y   \ to the slope of the segment
 
  RTS                    \ Return from the subroutine
 
@@ -1230,8 +1239,11 @@ ORG CODE%
 \       Name: HookDataPointers
 \       Type: Subroutine
 \   Category: Extra tracks
-\    Summary: If bit 6 of the current section's flags is set, update the data
+\    Summary: If the current section is dynamically generated, update the data
 \             pointers
+\  Deep dive: An overview of the extra tracks
+\             Dynamic track generation in the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1452,8 +1464,11 @@ ORG CODE%
 \       Name: HookSegmentVector
 \       Type: Subroutine
 \   Category: Extra tracks
-\    Summary: If bit 6 of the current section's flags is set, move to the next
+\    Summary: If the current section is dynamically generated, move to the next
 \             segment vector, calculate it and store it
+\  Deep dive: An overview of the extra tracks
+\             Dynamic track generation in the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1641,6 +1656,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Only move the player backwards if the player has not yet driven
 \             past the segment
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1667,6 +1684,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Add the yaw angle and height deltas to the yaw angle and height
 \             (for curved sections) and calculate the segment vector
+\  Deep dive: Dynamic track generation in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1729,9 +1747,9 @@ ORG CODE%
                         \ And now we add the track gradient (i.e. the height
                         \ delta) to the track height
 
- LDA trackGradient,Y    \ Set A to the gradient of this sub-section (i.e. the
-                        \ change of track height over the course of the
-                        \ sub-section)
+ LDA trackSlopeDelta,Y  \ Set A to the change in slope for this sub-section
+                        \ (i.e. the change in the gradient over the course of
+                        \ each segment in the sub-section)
 
  BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
                         \ call to Absolute8Bit sets the sign of A to
@@ -1741,9 +1759,9 @@ ORG CODE%
                         \ directionFacing, so this negates A if we are facing
                         \ backwards along the track
 
- CLC                    \ Set heightOfTrack = heightOfTrack + A
- ADC heightOfTrack      \                   = heightOfTrack + trackGradient
- STA heightOfTrack
+ CLC                    \ Set segmentSlope = segmentSlope + A
+ ADC segmentSlope       \                  = segmentSlope + trackSlopeDelta
+ STA segmentSlope
 
 .sets1
 
@@ -1802,15 +1820,15 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackGradient
+\       Name: trackSlopeDelta
 \       Type: Variable
 \   Category: Extra tracks
-\    Summary: The change in height (i.e. the gradient) for each sub-section of
-\             the track
+\    Summary: The change in the slope (i.e. the change in the gradient) over the
+\             course of each segment for each sub-section of the track
 \
 \ ******************************************************************************
 
-.trackGradient
+.trackSlopeDelta
 
  EQUB &00               \ Sub-section  0 =   0
  EQUB &00               \ Sub-section  1 =   0
@@ -1868,7 +1886,7 @@ ORG CODE%
 \ ******************************************************************************
 \
 \       Name: yTrackSignVector
-\       Type: Subroutine
+\       Type: Variable
 \   Category: Extra tracks
 \    Summary: The y-coordinate of the track sign vector for each sign, to be
 \             scaled and added to the inner track section vector for the sign
@@ -1900,6 +1918,9 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Initialise and calculate the current segment vector
+\  Deep dive: An overview of the extra tracks
+\             Dynamic track generation in the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -1909,7 +1930,7 @@ ORG CODE%
 \
 \   * Fetch the section's yaw angle from the trackYawAngle tables
 \
-\   * Fetch the section's height from the trackHeight table
+\   * Fetch the section's slope from the trackSlope table
 \
 \   * Initialise the sub-section and sub-section segment variables
 \
@@ -1946,8 +1967,8 @@ ORG CODE%
  LDA trackYawAngleHi,Y
  STA yawAngleHi
 
- LDA trackHeight,Y      \ Set heightOfTrack to this section's entry from
- STA heightOfTrack      \ trackHeight
+ LDA trackSlope,Y       \ Set segmentSlope to this section's entry from
+ STA segmentSlope       \ trackSlope
 
  LDA trackSubConfig,Y   \ Set A to this section's configuration byte
 
@@ -2000,6 +2021,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Only update the horizon if we have found fewer than 12 visible
 \             segments
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2041,6 +2064,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: When populating the verge buffer in GetSegmentAngles, don't give
 \             up so easily when we get segments outside the field of view
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2100,6 +2125,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2394,6 +2421,8 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply the horizon line in A instead of horizonLine
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2482,6 +2511,8 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -2672,14 +2703,14 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackHeight
+\       Name: trackSlope
 \       Type: Variable
 \   Category: Extra tracks
-\    Summary: The height of the track above ground level for each track section
+\    Summary: The slope at the start of each track section
 \
 \ ******************************************************************************
 
-.trackHeight
+.trackSlope
 
  EQUB &00               \ Section  0 =   0
  EQUB &00               \ Section  1 =   0
@@ -2864,6 +2895,7 @@ ORG CODE%
 \    Summary: The optimum racing line for non-player drivers on each track
 \             section
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -2984,6 +3016,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3391,6 +3424,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Set the sign of A according to the direction we are facing along
 \             the track
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3436,6 +3471,8 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Jump the car when driving fast over sloping segments
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3500,6 +3537,8 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ******************************************************************************
 
@@ -3532,6 +3571,8 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Do not update the background colour when the track line above is
 \             showing green for the leftTrackStart verge
+\  Deep dive: An overview of the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3599,6 +3640,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The total number of track sections * 8
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3611,6 +3653,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The total number of segment vectors in the segment vector tables
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3623,6 +3666,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The length of the full track in terms of segments
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3640,6 +3684,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The segment number of the starting line
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3660,6 +3705,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Lap times for adjusting the race class (seconds)
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3683,6 +3729,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Lap times for adjusting the race class (minutes)
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3704,6 +3751,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The gear ratio for each gear
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3734,6 +3782,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The power for each gear
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3765,6 +3814,7 @@ ORG CODE%
 \    Summary: The base speed for each race class, used when generating the best
 \             racing lines and non-player driver speeds
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3782,6 +3832,7 @@ ORG CODE%
 \    Summary: The starting race position of the player during a practice or
 \             qualifying lap
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3795,6 +3846,7 @@ ORG CODE%
 \    Summary: The spacing between the cars at the start of a qualifying lap, in
 \             segments
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3808,6 +3860,7 @@ ORG CODE%
 \    Summary: Adjustment factor for the speed of the timers to allow for
 \             fine-tuning of time on a per-track basis
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3830,6 +3883,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Slowdown factor for non-player drivers in the race
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3847,6 +3901,9 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Move to the next to the next segment vector along the track and
 \             calculate the segment vector
+\  Deep dive: An overview of the extra tracks
+\             Dynamic track generation in the extra tracks
+\             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3883,6 +3940,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The track file's hook code
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3897,6 +3955,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The track file's checksum
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ******************************************************************************
 
@@ -3917,6 +3976,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The game name
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
@@ -3936,6 +3996,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The track name
 \  Deep dive: The track data file format
+\             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
 \
