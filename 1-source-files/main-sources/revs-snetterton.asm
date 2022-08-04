@@ -110,6 +110,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -487,7 +488,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Set the horizonTrackWidth to 80% of the width of the track on the
 \             horizon
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -520,7 +521,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ******************************************************************************
@@ -580,7 +581,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -898,6 +899,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: Base coordinates and object types for 16 road signs
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -1241,7 +1243,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: If the current section is dynamically generated, update the data
 \             pointers
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Dynamic track generation in the extra tracks
 \             Code hooks in the extra tracks
 \
@@ -1466,7 +1468,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: If the current section is dynamically generated, move to the next
 \             segment vector, calculate it and store it
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Dynamic track generation in the extra tracks
 \             Code hooks in the extra tracks
 \
@@ -1656,7 +1658,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Only move the player backwards if the player has not yet driven
 \             past the segment
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -1918,7 +1920,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Initialise and calculate the current segment vector
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Dynamic track generation in the extra tracks
 \             Code hooks in the extra tracks
 \
@@ -2021,7 +2023,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Only update the horizon if we have found fewer than 12 visible
 \             segments
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -2064,7 +2066,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: When populating the verge buffer in GetSegmentAngles, don't give
 \             up so easily when we get segments outside the field of view
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -2125,7 +2127,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Flatten any hills in the verge buffer, calculate the hill height
 \             and track width, cut objects off at the hill height
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -2421,7 +2423,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply the horizon line in A instead of horizonLine
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -2511,7 +2513,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -2895,6 +2897,7 @@ ORG CODE%
 \    Summary: The optimum racing line for non-player drivers on each track
 \             section
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3016,6 +3019,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Data for the track sections
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3424,7 +3428,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Set the sign of A according to the direction we are facing along
 \             the track
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -3471,7 +3475,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Jump the car when driving fast over sloping segments
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -3537,7 +3541,7 @@ ORG CODE%
 \       Type: Subroutine
 \   Category: Extra tracks
 \    Summary: Apply enhanced joystick steering to specific track sections
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ******************************************************************************
@@ -3571,7 +3575,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Do not update the background colour when the track line above is
 \             showing green for the leftTrackStart verge
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Code hooks in the extra tracks
 \
 \ ------------------------------------------------------------------------------
@@ -3640,6 +3644,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The total number of track sections * 8
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3653,6 +3658,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The total number of segment vectors in the segment vector tables
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3666,6 +3672,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The length of the full track in terms of segments
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3684,6 +3691,7 @@ ORG CODE%
 \   Category: Track data
 \    Summary: The segment number of the starting line
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3705,6 +3713,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Lap times for adjusting the race class (seconds)
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3729,6 +3738,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Lap times for adjusting the race class (minutes)
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3751,6 +3761,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The gear ratio for each gear
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3782,6 +3793,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The power for each gear
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3814,6 +3826,7 @@ ORG CODE%
 \    Summary: The base speed for each race class, used when generating the best
 \             racing lines and non-player driver speeds
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3832,6 +3845,7 @@ ORG CODE%
 \    Summary: The starting race position of the player during a practice or
 \             qualifying lap
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3846,6 +3860,7 @@ ORG CODE%
 \    Summary: The spacing between the cars at the start of a qualifying lap, in
 \             segments
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3860,6 +3875,7 @@ ORG CODE%
 \    Summary: Adjustment factor for the speed of the timers to allow for
 \             fine-tuning of time on a per-track basis
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3883,6 +3899,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Slowdown factor for non-player drivers in the race
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3901,7 +3918,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: Move to the next to the next segment vector along the track and
 \             calculate the segment vector
-\  Deep dive: An overview of the extra tracks
+\  Deep dive: Secrets of the extra tracks
 \             Dynamic track generation in the extra tracks
 \             Code hooks in the extra tracks
 \
@@ -3940,6 +3957,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The track file's hook code
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3955,6 +3973,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The track file's checksum
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ******************************************************************************
@@ -3976,6 +3995,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The game name
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
@@ -3996,6 +4016,7 @@ ORG CODE%
 \   Category: Extra tracks
 \    Summary: The track name
 \  Deep dive: The track data file format
+\             The extra tracks data file format
 \             The Snetterton track
 \
 \ ------------------------------------------------------------------------------
