@@ -30418,9 +30418,9 @@ ENDIF
 
  JSR ApplySpinYaw       \ Calculate the following:
                         \
-                        \   xVelocity = xVelocity - (spinYawAngle * 88)
+                        \   xVelocity = xVelocity - (spinYawAngle * 0.34)
                         \
-                        \   xSpinVelocity = spinYawAngle * 132
+                        \   xSpinVelocity = spinYawAngle * 0.52
 
  JSR ApplyGrassOrTrack  \ Apply the effects of driving and braking, depending on
                         \ the current driving surface (grass or track)
@@ -30470,7 +30470,7 @@ ENDIF
  JSR ScaleTyreForces    \ Calculate the following:
                         \
                         \   spinYawDelta = (xTyreForceNose - xTyreForceRear)
-                        \                   * 78
+                        \                   * 0.3
                         \
                         \   xTyreForceNose = xTyreForceNose >> 2
                         \
@@ -30481,10 +30481,10 @@ ENDIF
                         \   zTyreForceRear = zTyreForceRear >> 2
                         \
                         \   xPlayerAccel = (xTyreForceRear * 1.5
-                        \                   + xTyreForceNose) * 410
+                        \                   + xTyreForceNose) * 1.6
                         \
                         \   zPlayerAccel = (zTyreForceRear * 1.5
-                        \                   + zTyreForceNose) * 410
+                        \                   + zTyreForceNose) * 1.6
                         \
                         \   zTyreForceBoth = zPlayerAccelHi
 
@@ -30571,9 +30571,9 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   xVelocity = xVelocity - (spinYawAngle * 88)
+\   xVelocity = xVelocity - (spinYawAngle * 0.34)
 \
-\   xSpinVelocity = spinYawAngle * 132
+\   xSpinVelocity = spinYawAngle * 0.52
 \
 \ ******************************************************************************
 
@@ -30586,16 +30586,19 @@ ENDIF
 
  LDA spinYawAngleTop    \ Set (A T) = (spinYawAngleTop spinYawAngleHi)
 
- JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = spinYawAngle * 88 * abs(spinYawAngle)
-                        \           = spinYawAngle * 88
+ JSR Multiply8x16Signed \ Set:
+                        \
+                        \   (A T) = (A T) * abs(A) * Y / 256
+                        \         = spinYawAngle * abs(spinYawAngle) * 88 / 256
+                        \         = spinYawAngle * 88 / 256
+                        \         = spinYawAngle * 0.34
 
  STA U                  \ Set (U T) = (A T)
-                        \           = spinYawAngle * 88
+                        \           = spinYawAngle * 0.34
 
  LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo)
  SEC                    \           = (xVelocityHi xVelocityLo) - (U T)
- SBC T                  \           = xVelocity - (spinYawAngle * 88)
+ SBC T                  \           = xVelocity - (spinYawAngle * 0.34)
  STA xVelocityLo        \
                         \ starting with the low bytes
 
@@ -30604,11 +30607,11 @@ ENDIF
  STA xVelocityHi
 
  JSR MultiplyBy1Point5  \ Set (A T) = (U T) * 1.5
-                        \           = spinYawAngle * 88 * 1.5
-                        \           = spinYawAngle * 132
+                        \           = spinYawAngle * 0.34 * 1.5
+                        \           = spinYawAngle * 0.52
 
  STA xSpinVelocityHi    \ Set (xSpinVelocityHi xSpinVelocityLo) = (A T)
- LDA T                  \                                   = spinYawAngle * 132
+ LDA T                  \                               = spinYawAngle * 0.52
  STA xSpinVelocityLo
 
  RTS                    \ Return from the subroutine
@@ -30625,17 +30628,17 @@ ENDIF
 \
 \ This routine calculates:
 \
-\   (A T) = (A T) * Y * abs(A)
+\   (A T) = (A T) * abs(A) * Y / 256
 \
 \ where A is the last variable to be loaded before the subroutine call. So if
 \ the call follows an LDA instruction, for example, the following is calculated
 \ if A is positive:
 \
-\   (A T) = (A T) * Y
+\   (A T) = (A T) * Y / 256
 \
 \ and the following is calculated if A is negative:
 \
-\   (A T) = -(A T) * Y
+\   (A T) = -(A T) * Y / 256
 \
 \ Arguments:
 \
@@ -30645,9 +30648,9 @@ ENDIF
 \
 \   N flag              Controls the sign to be applied:
 \
-\                         * N flag clear to calculate (A T) * Y
+\                         * N flag clear to calculate (A T) * Y / 256
 \
-\                         * N flag set to calculate -(A T) * Y
+\                         * N flag set to calculate -(A T) * Y / 256
 \
 \ ******************************************************************************
 
@@ -30662,10 +30665,10 @@ ENDIF
  STY U                  \ Set U = Y
 
  JSR Multiply8x16       \ Set (U T) = U * (V T) / 256
-                        \           = Y * (A T)
+                        \           = Y * (A T) / 256
 
  LDA U                  \ Set (A T) = (U T)
-                        \           = Y * (A T)
+                        \           = Y * (A T) / 256
 
  PLP                    \ Retrieve the N flag from the stack
 
@@ -31008,7 +31011,7 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   spinYawDelta = (xTyreForceNose - xTyreForceRear) * 78
+\   spinYawDelta = (xTyreForceNose - xTyreForceRear) * 0.3
 \
 \   xTyreForceNose = xTyreForceNose >> 2
 \
@@ -31018,9 +31021,9 @@ ENDIF
 \
 \   zTyreForceRear = zTyreForceRear >> 2
 \
-\   xPlayerAccel = (xTyreForceRear * 1.5 + xTyreForceNose) * 410
+\   xPlayerAccel = (xTyreForceRear * 1.5 + xTyreForceNose) * 1.6
 \
-\   zPlayerAccel = (zTyreForceRear * 1.5 + zTyreForceNose) * 410
+\   zPlayerAccel = (zTyreForceRear * 1.5 + zTyreForceNose) * 1.6
 \
 \   zTyreForceBoth = zPlayerAccelHi
 \
@@ -31038,11 +31041,14 @@ ENDIF
  LDA xTyreForceNoseHi   \ And then the high bytes
  SBC xTyreForceRearHi
 
- JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = (xTyreForceNose - xTyreForceRear) * 78
+ JSR Multiply8x16Signed \ Set:
+                        \
+                        \   (A T) = (A T) * abs(A) * Y / 256
+                        \         = (xTyreForceNose - xTyreForceRear) * 78 / 256
+                        \         = (xTyreForceNose - xTyreForceRear) * 0.3
 
  STA spinYawDeltaHi     \ Set spinYawDelta = (A T)
- LDA T                  \           = (xTyreForceNose - xTyreForceRear) * 78
+ LDA T                  \              = (xTyreForceNose - xTyreForceRear) * 0.3
  STA spinYawDeltaLo
 
                         \ We now perform the following shifts, making sure to
@@ -31134,24 +31140,24 @@ ENDIF
  LDA U                  \ And then the high bytes
  ADC xTyreForceNoseHi,X
 
- JSR Multiply8x16Signed \ Set (A T) = (A T) * Y * abs(A)
-                        \           = (zTyreForceRear * 1.5 + zTyreForceNose)
-                        \              * 205
+ JSR Multiply8x16Signed \ Set (A T) = (A T) * abs(A) * Y / 256
+                        \        = (zTyreForceRear * 1.5 + zTyreForceNose)
+                        \            * 205 / 256
+                        \        = (zTyreForceRear * 1.5 + zTyreForceNose) * 0.8
 
  ASL T                  \ Set (A T) = (A T) * 2
- ROL A                  \           = (zTyreForceRear * 1.5 + zTyreForceNose)
-                        \              * 410
+ ROL A                  \        = (zTyreForceRear * 1.5 + zTyreForceNose) * 1.6
 
  LDY G                  \ Set zPlayerAccel = (A T)
- STA xPlayerAccelHi,Y   \           = (zTyreForceRear * 1.5 + zTyreForceNose)
- LDA T                  \              * 410
+ STA xPlayerAccelHi,Y   \        = (zTyreForceRear * 1.5 + zTyreForceNose) * 1.6
+ LDA T
  STA xPlayerAccelLo,Y
 
  DEC G                  \ Decrement G so the next iteration stores the result in
                         \ xPlayerAccel
 
  DEX                    \ Decrement X twice so the next iteration calculates
- DEX                    \ (xTyreForceRear * 1.5 + xTyreForceNose) * 410
+ DEX                    \ (xTyreForceRear * 1.5 + xTyreForceNose) * 1.6
 
  BPL forc4              \ Loop back until we have calculated both zPlayerAccel
                         \ and xPlayerAccel
@@ -37693,13 +37699,13 @@ ORG &5E40
 
 IF _ACORNSOFT OR _4TRACKS
 
- EQUB &6F, &6E
+ EQUB &6F, &6E          \ These values are workspace noise and have no meaning
  EQUB &32, &00
  EQUB &8D, &2B
 
 ELIF _SUPERIOR OR _REVSPLUS
 
- EQUB &30, &18
+ EQUB &30, &18          \ These values are workspace noise and have no meaning
  EQUB &0C, &06
  EQUB &03, &01
 
