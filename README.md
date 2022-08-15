@@ -312,7 +312,7 @@ Checksum   Size  Checksum   Size  Match  Filename
 -----------------------------------------------------------
 b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
 18d57479   2000  18d57479   2000   Yes   DoningtonPark.bin
-c78cf26d   2000  c78cf26d   2000   No    Nurburgring.bin
+8d49adf8   2000  8d49adf8   2000   Yes   Nurburgring.bin
 0f2aa17c   2000  0f2aa17c   2000   Yes   OultonPark.bin
 9ab958e9   1455  9ab958e9   1455   Yes   Revs1.bin
 83e95a44  24064  83e95a44  24064   Yes   Revs2.bin
