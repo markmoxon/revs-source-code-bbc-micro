@@ -36780,169 +36780,260 @@ ENDIF
 
 .trackSectionData
 
- SKIP 1
+ SKIP 1                 \ Various data for the track section:
+                        \
+                        \   * Bits 0-2: Size of the track section list
+                        \
+                        \   * Bits 4-7: Sign number
 
 .xTrackSectionIHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the x-coordinate of the starting point of
+                        \ the inner verge of each track section
 
 .yTrackSectionIHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the y-coordinate of the starting point of
+                        \ the inner verge of each track section
 
 .zTrackSectionIHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the z-coordinate of the starting point of
+                        \ the inner verge of each track section
 
 .xTrackSectionOHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the x-coordinate of the starting point of
+                        \ the outside verge of each track section
 
 .trackSectionTurn
 
- SKIP 1
+ SKIP 1                 \ The number of the segment towards the end of the section
+                        \ where non-player cars should start turning in
+                        \ preparation for the next section
 
 .zTrackSectionOHi
 
- SKIP 1
+ SKIP 1                 \ High byte of the z-coordinate of the starting point of
+                        \ the outside verge of each track section
 
 .trackDriverSpeed
 
- SKIP 1
+ SKIP 1                 \ The maximum speed for non-player drivers on this section
+                        \ of the track
 
- SKIP 8 * 23
-
- SKIP 16
+ SKIP 8 * 25            \ Section data for 25 more sections
 
 .xTrackSignVector
 
- SKIP 16
+ SKIP 16                \ The x-coordinate of the track sign vector for each
+                        \ sign, to be scaled and added to the inner track
+                        \ section vector for the sign
 
 .zTrackSignVector
 
- SKIP 16
+ SKIP 16                \ The z-coordinate of the track sign vector for each
+                        \ sign, to be scaled and added to the inner track
+                        \ section vector for the sign
 
 .yTrackSignVector
 
- SKIP 16
+ SKIP 16                \ The y-coordinate of the track sign vector for each
+                        \ sign, to be scaled and added to the inner track
+                        \ section vector for the sign
 
 .xTrackSegmentI
 
- SKIP 256
+ SKIP 256               \ Vector x-coordinates between two consecutive segments
+                        \ on the inside of the track
 
 .yTrackSegmentI
 
- SKIP 256
+ SKIP 256               \ Vector y-coordinates between two consecutive segments
+                        \ on the inside of the track
 
 .zTrackSegmentI
 
- SKIP 256
+ SKIP 256               \ Vector z-coordinates between two consecutive segments
+                        \ on the inside of the track
 
 .xTrackSegmentO
 
- SKIP 256
+ SKIP 256               \ Vector x-coordinates from the inside to the outside of
+                        \ the track for each segment
 
 .zTrackSegmentO
 
- SKIP 256
+ SKIP 256               \ Vector z-coordinates from the inside to the outside of
+                        \ the track for each segment
 
 .trackSectionFlag
 
- SKIP 1
+ SKIP 1                 \ Various flags for the track section:
+                        \
+                        \   * Bit 0: Section shape (Sh)
+                        \
+                        \     * 0 = straight section (only one segment vector)
+                        \
+                        \     * 1 = curved section (multiple segment vectors)
+                        \
+                        \   * Bit 1: Colour of left verge marks (Vcol)
+                        \
+                        \     * 0 = black-and-white verge marks
+                        \
+                        \     * 1 = red-and-white verge marks
+                        \
+                        \   * Bit 2: Colour of right verge marks (Vcol)
+                        \
+                        \     * 0 = black-and-white verge marks
+                        \
+                        \     * 1 = red-and-white verge marks
+                        \
+                        \   * Bit 3: Show corner markers on right (Mlr)
+                        \
+                        \     * 0 = do not show corner markers to the right of
+                        \           the track
+                        \
+                        \     * 1 = show corner markers to the right of the
+                        \           track
+                        \
+                        \   * Bit 4: Show corner markers on left (Mlr)
+                        \
+                        \     * 0 = do not show corner markers to the left of
+                        \           the track
+                        \
+                        \     * 1 = show corner markers to the left of the track
+                        \
+                        \   * Bit 5: Corner marker colours (Mcol)
+                        \
+                        \     * 0 = show all corner markers in white
+                        \
+                        \     * 1 = show corner markers in red or white, as
+                        \           appropriate
+                        \
+                        \   * Bit 6: In the extra tracks only, nable hooks to
+                        \            generate segment vectors (G)
+                        \
+                        \     * 0 = disable HookDataPointers and
+                        \           HookSegmentVector
+                        \
+                        \     * 1 = enable HookDataPointers and
+                        \           HookSegmentVector
+                        \
+                        \   * Bit 7: Maximum approach speed for next section
+                        \            (Sp)
+                        \
+                        \     * 0 = the next section has no maximum approach
+                        \           speed
+                        \
+                        \     * 1 = the next section has a maximum approach
+                        \           speed
 
 .xTrackSectionILo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the x-coordinate of the starting point of
+                        \ the inner verge of each track section
 
 .yTrackSectionILo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the y-coordinate of the starting point of
+                        \ the inner verge of each track section
 
 .zTrackSectionILo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the z-coordinate of the starting point of
+                        \ the inner verge of each track section
 
 .xTrackSectionOLo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the x-coordinate of the starting point of
+                        \ the outside verge of each track section
 
 .trackSectionFrom
 
- SKIP 1
+ SKIP 1                 \ The number of the first segment vector in each
+                        \ section, which enables us to fetch the segment vectors
+                        \ for a given track section
 
 .zTrackSectionOLo
 
- SKIP 1
+ SKIP 1                 \ Low byte of the z-coordinate of the starting point of
+                        \ the outside verge of each track section
 
 .trackSectionSize
 
- SKIP 1
+ SKIP 1                 \ The length of each track section in terms of segments
 
- SKIP 8 * 23
-
- SKIP 16
+ SKIP 8 * 25            \ Section data for 25 more sections
 
 .trackRacingLine
 
- SKIP 24
+ SKIP 24                \ The optimum racing line for non-player drivers on each
+                        \ track section
 
  SKIP 2
 
 .trackSignData
 
- SKIP 16
+ SKIP 16                \ Base coordinates and object types for 16 road signs
 
 .trackSectionCount
 
- SKIP 1
+ SKIP 1                 \ The total number of track sections * 8
 
 .trackVectorCount
 
- SKIP 1
+ SKIP 1                 \ The total number of segment vectors in the segment
+                        \ vector tables
 
 .trackLength
 
- SKIP 2
+ SKIP 2                 \ The length of the full track in terms of segments
 
 .trackStartLine
 
- SKIP 2
+ SKIP 2                 \ The segment number of the starting line
 
 .trackLapTimeSec
 
- SKIP 3
+ SKIP 3                 \ Lap times for adjusting the race class (seconds)
 
 .trackLapTimeMin
 
- SKIP 3
+ SKIP 3                 \ Lap times for adjusting the race class (minutes)
 
 .trackGearRatio
 
- SKIP 7
+ SKIP 7                 \ The gear ratio for each gear
 
 .trackGearPower
 
- SKIP 7
+ SKIP 7                 \ The power for each gear
 
 .trackBaseSpeed
 
- SKIP 3
+ SKIP 3                 \ The base speed for each race class, used when
+                        \ generating the best racing lines and non-player driver
+                        \ speeds
 
 .trackStartPosition
 
- SKIP 1
+ SKIP 1                 \ The starting race position of the player during a
+                        \ practice or qualifying lap
 
 .trackCarSpacing
 
- SKIP 1
+ SKIP 1                 \ The spacing between the cars at the start of a
+                        \ qualifying lap, in segments
 
 .trackTimerAdjust
 
- SKIP 1
+ SKIP 1                 \ Adjustment factor for the speed of the timers to allow
+                        \ for fine-tuning of time on a per-track basis
 
 .trackRaceSlowdown
 
- SKIP 1
+ SKIP 1                 \ Slowdown factor for non-player drivers in the race
 
  SKIP 7
 
