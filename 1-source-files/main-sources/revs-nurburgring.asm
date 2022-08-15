@@ -2863,14 +2863,14 @@ ORG CODE%
 
  STA &4F59              \ ?&4F59 = 22 (argument in a CMP #22 instruction)
 
+ LDA #13                \ ?&24EA = 13 (argument in a CMP #13 instruction)
+ STA &24EA
+
+
  LDA #&A2               \ ?&1FE9 = &A2 (opcode for a LDX # instruction)
  STA &1FE9
 
  JMP mods3              \ Jump to part 3
-
- EQUB &28, &34          \ These bytes pad the routine out to exactly 40 bytes
- EQUB &3E, &41
- EQUB &43
 
 \ ******************************************************************************
 \
