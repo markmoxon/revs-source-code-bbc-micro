@@ -36762,7 +36762,7 @@ ENDIF
 \ ******************************************************************************
 \
 \       Name: trackData
-\       Type: Variable
+\       Type: Workspace
 \   Category: Track data
 \    Summary: This is where the track data gets loaded
 \  Deep dive: The jigsaw puzzle binary
