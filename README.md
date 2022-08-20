@@ -211,7 +211,7 @@ This repository contains the source code for two different variants of Revs:
 
 * The Acornsoft Revs 4 Tracks variant, which adds four more tracks (Brands Hatch, Donington Park, Oulton Park and Snetterton)
 
-* The Superior Software variant, which includes all five tracks and CAS (Computer Assisted Steering)
+* The Superior Software variant, which includes all five tracks and computer assisted steering (CAS)
 
 * The Revs+ variant, which includes everything from the Superior Software variant, plus the Nürburgring track, backported from the Commodore 64 version
 
@@ -328,7 +328,7 @@ The game code is identical in the Superior Software and Revs+ variants, but Revs
 
 There are two main differences in the game code when comparing the Acornsoft/Revs 4 Tracks variants to the Superior Software/Revs+ variants:
 
-* The Superior Software and Revs+ variants support CAS (Computer Assisted Steering), which isn't present in the original Acornsoft variants.
+* The Superior Software and Revs+ variants support computer assisted steering (CAS), which isn't present in the original Acornsoft variants.
 
 * The Superior Software and Revs+ variants record player drift differently to the original Acornsoft variants. Player drift occurs when the player loses traction when sliding sideways. In the Superior Software and Revs+ variants, drifting is ignored if it occurs in the first three segments of a track section. This difference is implemented in the SetPlayerDriftS routine, which is not present in the original Acornsoft variants (though note that some of the tracks in Revs 4 Tracks do include this feature).
 

@@ -94,7 +94,7 @@ mirror4 = &7670         \ Mirror 4 base address (right mirror, middle segment)
 mirror5 = &7678         \ Mirror 5 base address (right mirror, outer segment)
 
 assistLeft1 = &77DB     \ Centre-bottom of dashboard in screen memory for
-assistLeft2 = &77DC     \ showing the Computer Assisted Steering (CAS)
+assistLeft2 = &77DC     \ showing the computer assisted steering (CAS)
 assistRight1 = &77E3    \ indicator
 assistRight2 = &77E4
 
@@ -1279,12 +1279,13 @@ ORG &0100
                         \   * Bit 4 = affects driving round corners for visible
                         \             cars (see BuildVisibleCar)
                         \
-                        \       * Clear = follow the segment's steering line in
-                        \                 segmentSteering when going fast enough
-                        \                 (carSpeedHi >= 50)
+                        \       * Clear = set carSteering to the segment's
+                        \                 steering line in segmentSteering when
+                        \                 going fast enough (carSpeedHi >= 50)
                         \
-                        \       * Set = do not follow the segment's steering
-                        \               line in segmentSteering
+                        \       * Set = do not set carSteering in the
+                        \               BuildVisibleCar routine (and use the
+                        \               value set by ApplyDriverTactics instead)
                         \
                         \   * Bit 6 = acceleration status
                         \
@@ -1310,7 +1311,8 @@ ORG &0100
                         \
                         \       * Clear = apply steering
                         \
-                        \       * Set = do not apply steering
+                        \       * Set = do not apply steering, but do steer away
+                        \               from the verge if required
                         \
                         \   * Bit 7 = the direction of the steering
                         \
@@ -1585,13 +1587,13 @@ ORG &0380
 
 .configAssist
 
- SKIP 1                 \ A key has been pressed to toggle Computer Assisted
-                        \ Steering (CAS)
+ SKIP 1                 \ A key has been pressed to toggle computer assisted
+                        \ steering (CAS)
                         \
-                        \   * No bits set = disable Computer Assisted Steering
+                        \   * No bits set = disable computer assisted steering
                         \     (SHIFT-f3 pressed)
                         \
-                        \   * Bit 7 set = enable Computer Assisted Steering
+                        \   * Bit 7 set = enable computer assisted steering
                         \     (SHIFT-f6 pressed)
                         \
                         \ Zeroed in SetupGame
@@ -5609,7 +5611,7 @@ ORG &0B00
                         \ qualifying
 
  LDA objectStatus,X     \ If bit 6 of driver X's objectStatus is set, then
- AND #%01000000         \ driver X has finished the racem so jump to fini3
+ AND #%01000000         \ driver X has finished the race, so jump to fini3
  BNE fini3              \ to check the next driver
 
  LDA numberOfLaps       \ If numberOfLaps >= driver X's lap number, jump to
@@ -7595,19 +7597,21 @@ ORG &0B00
  ADC T                  \ Set A = A + T
                         \       = turnCounter - prevDriverSpeed06
                         \                     + turnCounter / 8
+                        \       = (turnCounter * 1.125) - prevDriverSpeed06
 
  LDA #0                 \ Set A = 0
 
  BCS rlin7              \ If the addition overflowed, then because A was
                         \ negative, we must have the following:
                         \
-                        \   A = A + T >= 0
+                        \   (turnCounter * 1.125) - prevDriverSpeed06 >= 0
                         \
                         \ So jump to rlin7 to store 0 in segmentSteering for
                         \ this section and return from the subroutine
                         \
                         \ Otherwise store previousRacingLine in segmentSteering
-                        \ for this section and return from the subroutine
+                        \ for this section with bit 7 flipped, and return from
+                        \ the subroutine
 
 .rlin6
 
@@ -7740,8 +7744,8 @@ ELIF _SUPERIOR OR _REVSPLUS
                         \ and converted into a sign-magnitude number with the
                         \ sign in bit 0 (1 = left, 0 = right)
 
- JMP AssistSteering     \ Jump to AssistSteering to apply Computer Assisted
-                        \ Steering (CAS), which in turn jumps back to keys7 or
+ JMP AssistSteering     \ Jump to AssistSteering to apply computer assisted
+                        \ steering (CAS), which in turn jumps back to keys7 or
                         \ keys11 in part 2
 
  NOP                    \ These instructions are unused, and are included to
@@ -7795,8 +7799,8 @@ ENDIF
                         \
                         \ In the following, we swap the steering change between
                         \ (A T) and (U T) quite a bit, and in the Superior
-                        \ Software variant of the game, we also apply Computer
-                        \ Assisted Steering (CAS)
+                        \ Software variant of the game, we also apply computer
+                        \ assisted steering (CAS)
 
  LDA #3                 \ Set U = 3
  STA U                  \
@@ -13489,11 +13493,11 @@ ENDIF
 \       Name: AssistSteering
 \       Type: Subroutine
 \   Category: Tactics
-\    Summary: Apply Computer Assisted Steering (CAS) when configured
+\    Summary: Apply computer assisted steering (CAS) when configured
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine applies Computer Assisted Steering (CAS) to the joystick and
+\ This routine applies computer assisted steering (CAS) to the joystick and
 \ keyboard, but only if it is enabled and we are already steering (if we are not
 \ steering, then there is no steering to assist).
 \
@@ -13533,7 +13537,7 @@ ENDIF
 \   A                   A is set to steeringLo
 \
 \   (U T)               The new amount of steering to apply, adjusted to add
-\                       Computer Assisted Steering, as a sign-magnitude number
+\                       computer assisted steering, as a sign-magnitude number
 \
 \ Other entry points:
 \
@@ -13546,8 +13550,8 @@ IF _SUPERIOR OR _REVSPLUS
 .AssistSteering
 
  JSR GetSteeringAssist  \ Set X = configAssist, set the C flag to bit 7 of
-                        \ directionFacing, and update the Computer Assisted
-                        \ Steering (CAS) indicator on the dashboard
+                        \ directionFacing, and update the computer assisted
+                        \ steering (CAS) indicator on the dashboard
 
  BNE asst2              \ If CAS is enabled, jump to asst2 to skip the following
                         \ instruction and apply CAS, otherwise we jump to keys11
@@ -13626,7 +13630,7 @@ IF _SUPERIOR OR _REVSPLUS
                         \   * A = 2 if we are steering left
                         \
                         \ We now spend the rest of the routine calculating the
-                        \ amount of Computer Assisted Steering (CAS) to apply,
+                        \ amount of computer assisted steering (CAS) to apply,
                         \ returning the result in the sign-magnitude number
                         \ (U T)
 
@@ -18192,7 +18196,8 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ This part changes each car's speed. It calculates the speed change in (U A),
-\ and then applies it to the car's speed.
+\ and then applies it to the car's speed. It then moves the car round the track
+\ by the speed we just calculated by updating carProgress.
 \
 \ Other entry points:
 \
@@ -18429,6 +18434,30 @@ ENDIF
 
  STA carSpeedHi,X       \ Update the high byte of the car's speed to A
 
+.mcar11
+
+ LDA #1                 \ Set V = 1, so we do the following loop twice, which
+ STA V                  \ updates the car's progress by 2 x carSpeedHi
+
+.mcar12
+
+ LDA carSpeedHi,X       \ Add carSpeedHi to carProgress to move the car along
+ CLC                    \ the track by its speed
+ ADC carProgress,X
+ STA carProgress,X
+
+ BCC mcar13             \ If the addition didn't overflow, jump to mcar13 to do
+                        \ the next loop
+
+ JSR MoveObjectForward  \ The addition overflowed, so carProgress has filled up
+                        \ and we need to move the car forwards by one segment
+
+.mcar13
+
+ DEC V                  \ Decrement the loop counter in V
+
+ BPL mcar12             \ Loop back until we have added carSpeedHi twice
+
 \ ******************************************************************************
 \
 \       Name: MoveCars (Part 2 of 2)
@@ -18465,30 +18494,6 @@ ENDIF
 \     away from the verge by one.
 \
 \ ******************************************************************************
-
-.mcar11
-
- LDA #1                 \ Set V = 1, so we do the following loop twice, which
- STA V                  \ updates the car's progress by 2 x carSpeedHi
-
-.mcar12
-
- LDA carSpeedHi,X       \ Add carSpeedHi to carProgress to move the car along
- CLC                    \ the track by its speed
- ADC carProgress,X
- STA carProgress,X
-
- BCC mcar13             \ If the addition didn't overflow, jump to mcar13 to do
-                        \ the next loop
-
- JSR MoveObjectForward  \ The addition overflowed, so carProgress has filled up
-                        \ and we need to move the car forwards by one segment
-
-.mcar13
-
- DEC V                  \ Decrement the loop counter in V
-
- BPL mcar12             \ Loop back until we have added carSpeedHi twice
 
  LDA objectStatus,X     \ If bit 7 of the driver's car object status byte is
  ASL A                  \ set, then the car is not visible, so jump to mar20 to
@@ -18742,9 +18747,9 @@ ENDIF
                         \ track segment index * 3 of the track segment for the
                         \ car object
 
- LDA carStatus,X        \ If bit 4 of driver X's carStatus is set, jump to
- AND #%00010000         \ BuildCarObjects
- BNE BuildCarObjects
+ LDA carStatus,X        \ If bit 4 of driver X's carStatus is set, then tactics
+ AND #%00010000         \ are not enabled for this car, so jump to
+ BNE BuildCarObjects    \ BuildCarObjects to skip setting the car's steering
 
  LDA carSpeedHi,X       \ If the high byte of driver X's speed is less than 50,
  CMP #50                \ jump to BuildCarObjects
@@ -39877,12 +39882,12 @@ ENDIF
 \       Name: GetSteeringAssist
 \       Type: Subroutine
 \   Category: Tactics
-\    Summary: Fetch the current Computer Assisted Steering (CAS) status and show
+\    Summary: Fetch the current computer assisted steering (CAS) status and show
 \             or hide the CAS indicator
 \
 \ ------------------------------------------------------------------------------
 \
-\ The Computer Assisted Steering (CAS) indicator is in the centre-bottom of the
+\ The computer assisted steering (CAS) indicator is in the centre-bottom of the
 \ rev counter, and is made up of four pixels in colour 2 (white) as follows:
 \
 \   ...xx...
@@ -39900,9 +39905,9 @@ ENDIF
 \
 \   X                   The current value of configAssist:
 \
-\                         * %10000000 if Computer Assisted Steering is enabled
+\                         * %10000000 if computer assisted steering is enabled
 \
-\                         * 0 if Computer Assisted Steering is not enabled
+\                         * 0 if computer assisted steering is not enabled
 \
 \   A                   A is unchanged
 \
@@ -39919,9 +39924,9 @@ IF _SUPERIOR OR _REVSPLUS
 
  LDA configAssist       \ Set A to configAssist, which has the following value:
                         \
-                        \   * %10000000 if Computer Assisted Steering is enabled
+                        \   * %10000000 if computer assisted steering is enabled
                         \
-                        \   * 0 if Computer Assisted Steering is not enabled
+                        \   * 0 if computer assisted steering is not enabled
                         \
                         \ The following updates screen memory to add a small
                         \ "hat" marker to the centre-bottom of the rev counter
@@ -39964,7 +39969,7 @@ IF _SUPERIOR OR _REVSPLUS
 .SuperiorSetupGame
 
 CLEAR &3850, &3880      \ In the Superior Software release of Revs, the routines
-ORG &3850               \ for Computer Assisted Steering (CAS) take up extra
+ORG &3850               \ for computer assisted steering (CAS) take up extra
                         \ memory, so we need to claw back some memory from
                         \ somewhere
                         \
