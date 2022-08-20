@@ -287,20 +287,20 @@ ORG &0000
                         \ segmentListPointer gives us the equivalent index for
                         \ the left side of the track
 
-.previousRacingLine
+.previousSteering
 
- SKIP 1                 \ The previous value of bestRacingLine when calculating
-                        \ the best racing line for a track segment
+ SKIP 1                 \ The previous value of sectionSteering when calculating
+                        \ the optimum steering for a track segment
 
 .turnCounter
 
  SKIP 1                 \ A counter for the length of turn when calculating the
-                        \ best racing line for a track segment
+                        \ optimum steering for a track segment
 
 .prevDriverSpeed06
 
  SKIP 1                 \ Bits 0-6 of the previous value of trackDriverSpeed
-                        \ when calculating the best racing line for a track
+                        \ when calculating the optimum steering for a track
                         \ segment
 
 .gearChange
@@ -367,7 +367,7 @@ ORG &0000
 .prevDriverSpeed7
 
  SKIP 1                 \ The previous value of trackDriverSpeed when
-                        \ calculating the best racing line for a track segment,
+                        \ calculating the optimum steering for a track segment,
                         \ only used for accessing bit 7
 
 .sectionBehind
@@ -1276,7 +1276,7 @@ ORG &0100
                         \
                         \       * Set = do not update carStatus
                         \
-                        \   * Bit 4 = affects driving round corners for visible
+                        \   * Bit 4 = affects driving around corners for visible
                         \             cars (see BuildVisibleCar)
                         \
                         \       * Clear = set carSteering to the segment's
@@ -1324,9 +1324,10 @@ ORG &0100
                         \ where the sign is in bit 7 and the magnitude is in
                         \ bits 0-5
                         \
-                        \ The amount is in terms of the racing line, where the
-                        \ width of the track is 256, so steering by 26 would
-                        \ steer the car sideways by 10% of the track width
+                        \ The amount of steering is stored in terms of the
+                        \ change in racing line, where the width of the track is
+                        \ 256, so steering by 26 would steer the car sideways by
+                        \ 10% of the track width
 
 .driverSpeed
 
@@ -6814,8 +6815,8 @@ ORG &0B00
  JSR GetPlayerIndex     \ Update the index for the segment containing the player
                         \ in the track segment buffer
 
- JSR GetBestRacingLine  \ Set segmentSteering for the new track segment to the
-                        \ best racing line to take at this point in the section
+ JSR GetSegmentSteering \ Set segmentSteering for the new track segment to the
+                        \ optimum steering to apply at this point in the section
 
  RTS                    \ Return from the subroutine
 
@@ -7447,10 +7448,10 @@ ORG &0B00
 
 \ ******************************************************************************
 \
-\       Name: GetBestRacingLine
+\       Name: GetSegmentSteering
 \       Type: Subroutine
 \   Category: Tactics
-\    Summary: Calculate the best racing line to take for the current track
+\    Summary: Calculate the optimum steering to take for the current track
 \             segment
 \
 \ ------------------------------------------------------------------------------
@@ -7460,7 +7461,7 @@ ORG &0B00
 \
 \ ******************************************************************************
 
-.GetBestRacingLine
+.GetSegmentSteering
 
  LDY objTrackSection+23 \ Set Y to the number * 8 of the track section for the
                         \ front segment of the track segment buffer
@@ -7504,7 +7505,7 @@ ORG &0B00
 
 .rlin1
 
- LDA bestRacingLine,X   \ Set A to the best racing line for section X, with
+ LDA sectionSteering,X  \ Set A to the optimum steering for section X, with
  ORA #%01000000         \ bit 6 set, so we do not apply any steering in MoveCars
                         \ but instead just apply acceleration or braking
 
@@ -7528,7 +7529,7 @@ ORG &0B00
 
                         \ If we jump here, then the front segment is past the
                         \ trackSectionTurn point in this section, so we start
-                        \ looking at the next section for the best racing line
+                        \ looking at the next section for the optimum steering
 
  TYA                    \ Set Y = Y + 8
  CLC                    \
@@ -7558,9 +7559,9 @@ ORG &0B00
  AND #%01111111         \ Set prevDriverSpeed06 = bits 0-6 of the track
  STA prevDriverSpeed06  \ section's driver speed
 
- LDA bestRacingLine,X   \ Set A to the best racing line for the track section
+ LDA sectionSteering,X  \ Set A to the optimum steering for the track section
 
- STA previousRacingLine \ Set previousRacingLine to the best racing line for the
+ STA previousSteering   \ Set previousSteering to the optimum steering for the
                         \ track section
 
  JMP rlin7              \ Jump to rlin7 to store A in segmentSteering for this
@@ -7589,7 +7590,7 @@ ORG &0B00
                         \   turnCounter >= prevDriverSpeed06
                         \
                         \ then jump to rlin6 to set segmentSteering to
-                        \ previousRacingLine and return from the subroutine
+                        \ previousSteering and return from the subroutine
 
                         \ If we get here then turnCounter < prevDriverSpeed06
                         \ and A is negative
@@ -7609,13 +7610,13 @@ ORG &0B00
                         \ So jump to rlin7 to store 0 in segmentSteering for
                         \ this section and return from the subroutine
                         \
-                        \ Otherwise store previousRacingLine in segmentSteering
+                        \ Otherwise store previousSteering in segmentSteering
                         \ for this section with bit 7 flipped, and return from
                         \ the subroutine
 
 .rlin6
 
- LDA previousRacingLine \ Set A = previousRacingLine
+ LDA previousSteering   \ Set A = previousSteering
 
  BCS rlin7              \ If the C flag is clear, flip bit 7 of A
  EOR #%10000000
@@ -29141,10 +29142,10 @@ NEXT
 
 \ ******************************************************************************
 \
-\       Name: SetBestRacingLine
+\       Name: GetSectionSteering
 \       Type: Subroutine
 \   Category: Tactics
-\    Summary: Calculate the optimum racing line for each track section
+\    Summary: Calculate the optimum steering for each track section
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29164,7 +29165,7 @@ NEXT
 \
 \ ******************************************************************************
 
-.SetBestRacingLine
+.GetSectionSteering
 
  LDA trackBaseSpeed,X   \ Set baseSpeed = the X-th byte of trackBaseSpeed
  STA baseSpeed          \
@@ -29186,10 +29187,10 @@ NEXT
  TAY
 
                         \ Now we copy Y bytes (one per track section) from
-                        \ trackRacingLine to bestRacingLine, processing each
+                        \ trackSteering to sectionSteering, processing each
                         \ byte as we go (i.e. taking the input from
-                        \ trackRacingLine and storing the result in
-                        \ bestRacingLine):
+                        \ trackSteering and storing the result in
+                        \ sectionSteering):
                         \
                         \   * Bit 7 of the result = bit 0 of the input
                         \
@@ -29200,12 +29201,12 @@ NEXT
                         \     * A >> 2 * U / 256 if bit 1 of the input is clear
                         \     * A >> 2           if bit 1 of the input is set
                         \
-                        \ where A is the input from trackRacingLine and U is the
+                        \ where A is the input from trackSteering and U is the
                         \ base speed from above
 
 .slin1
 
- LDA trackRacingLine,Y  \ Fetch the Y-th byte from trackRacingLine as the input
+ LDA trackSteering,Y    \ Fetch the Y-th byte from trackSteering as the input
 
  LSR A                  \ Shift bit 0 of the input into the C flag and store it
  PHP                    \ on the stack so we can put it into bit 7 of the result
@@ -29225,7 +29226,7 @@ NEXT
  PLP
  ROR A
 
- STA bestRacingLine,Y   \ Store the result in the Y-th byte of bestRacingLine
+ STA sectionSteering,Y  \ Store the result in the Y-th byte of sectionSteering
 
  DEY                    \ Decrement the loop counter
 
@@ -33958,8 +33959,9 @@ ENDIF
 
  STX raceClass          \ Set raceClass = 0 (Novice)
 
- JSR SetBestRacingLine  \ Set up the 24 bytes at bestRacingLine for a Novice
-                        \ race, returning with X unchanged
+ JSR GetSectionSteering \ Set up the optimum steering for each section for a
+                        \ Novice race, storing the results in sectionSteering
+                        \ and returning with X unchanged
 
                         \ The following loop works starts with X = 0, and then
                         \ loops down from 19 to 1, working its way through each
@@ -36813,9 +36815,9 @@ ENDIF
 
 .trackSectionTurn
 
- SKIP 1                 \ The number of the segment towards the end of the section
-                        \ where non-player cars should start turning in
-                        \ preparation for the next section
+ SKIP 1                 \ The number of the segment in the section where
+                        \ non-player drivers should start turning in preparation
+                        \ for the next section
 
 .zTrackSectionOHi
 
@@ -36824,8 +36826,8 @@ ENDIF
 
 .trackDriverSpeed
 
- SKIP 1                 \ The maximum speed for non-player drivers on this section
-                        \ of the track
+ SKIP 1                 \ The maximum speed for non-player drivers on this
+                        \ section of the track
 
  SKIP 8 * 25            \ Section data for 25 more sections
 
@@ -36971,10 +36973,10 @@ ENDIF
 
  SKIP 8 * 25            \ Section data for 25 more sections
 
-.trackRacingLine
+.trackSteering
 
- SKIP 24                \ The optimum racing line for non-player drivers on each
-                        \ track section
+ SKIP 24                \ The optimum steering for non-player drivers to apply
+                        \ on each track section
 
  SKIP 2
 
@@ -37682,14 +37684,14 @@ ORG &5E40
 
 \ ******************************************************************************
 \
-\       Name: bestRacingLine
+\       Name: sectionSteering
 \       Type: Variable
 \   Category: Tactics
-\    Summary: Set to the best racing line for each section
+\    Summary: The optimum steering for each section
 \
 \ ******************************************************************************
 
-.bestRacingLine
+.sectionSteering
 
  SKIP 26                \ One byte for each of the maximum possible 26 track
                         \ sections
@@ -40160,9 +40162,8 @@ ENDIF
 
  STX raceClass          \ Set raceClass to the chosen race class (0 to 2)
 
- JSR SetBestRacingLine  \ Set up the 24 bytes at bestRacingLine according to the
-                        \ race class
-
+ JSR GetSectionSteering \ Set up the optimum steering for each section for this
+                        \ race class, storing the results in sectionSteering
 .game2
 
  LDX #22                \ Print token 22, which shows a menu with the following
@@ -40402,8 +40403,8 @@ ENDIF
 
  LDX raceClass          \ Set X to the race class
 
- JSR SetBestRacingLine  \ Set up the 24 bytes at bestRacingLine according to the
-                        \ race class
+ JSR GetSectionSteering \ Set up the optimum steering for each section for this
+                        \ race class, storing the results in sectionSteering
 
  LDX #26                \ Print token 26, which is a double-height header with
  JSR PrintToken         \ the text "STANDARD OF RACE"

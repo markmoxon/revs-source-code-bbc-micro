@@ -749,7 +749,7 @@ ORG CODE%
  EQUB &D1               \ !&4CD1 = xTrackSignVector
  EQUB &C9               \ !&4CC9 = yTrackSignVector
  EQUB &C1               \ !&4CC1 = zTrackSignVector
- EQUB &D6               \ !&44D6 = trackRacingLine
+ EQUB &D6               \ !&44D6 = trackSteering
  EQUB &D7               \ !&4CD7 = trackSignData
  EQUB &E1               \ !&4CE1 = trackSignData
  EQUB &47               \ !&1947 = HookFlattenHills
@@ -789,7 +789,7 @@ ORG CODE%
  EQUB &4C               \ !&4CD1 = xTrackSignVector
  EQUB &4C               \ !&4CC9 = yTrackSignVector
  EQUB &4C               \ !&4CC1 = zTrackSignVector
- EQUB &44               \ !&44D6 = trackRacingLine
+ EQUB &44               \ !&44D6 = trackSteering
  EQUB &4C               \ !&4CD7 = trackSignData
  EQUB &4C               \ !&4CE1 = trackSignData
  EQUB &19               \ !&1947 = HookFlattenHills
@@ -1347,7 +1347,7 @@ ORG CODE%
  EQUB LO(xTrackSignVector)
  EQUB LO(yTrackSignVector)
  EQUB LO(zTrackSignVector)
- EQUB LO(trackRacingLine)
+ EQUB LO(trackSteering)
  EQUB LO(trackSignData)
  EQUB LO(trackSignData)
  EQUB LO(HookFlattenHills)
@@ -1388,7 +1388,7 @@ ORG CODE%
  EQUB HI(xTrackSignVector)
  EQUB HI(yTrackSignVector)
  EQUB HI(zTrackSignVector)
- EQUB HI(trackRacingLine)
+ EQUB HI(trackSteering)
  EQUB HI(trackSignData)
  EQUB HI(trackSignData)
  EQUB HI(HookFlattenHills)
@@ -3068,11 +3068,10 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackRacingLine
+\       Name: trackSteering
 \       Type: Variable
 \   Category: Extra tracks
-\    Summary: The optimum racing line for non-player drivers on each track
-\             section
+\    Summary: The optimum steering for non-player drivers on each track section
 \  Deep dive: The track data file format
 \             The extra tracks data file format
 \             The Nürburgring track
@@ -3080,7 +3079,7 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
-\ Some of the trackRacingLine values have been scaled down by a factor of 1.44
+\ Some of the trackSteering values have been scaled down by a factor of 1.44
 \ from the Commodore 64 version. This applies to sections that have bit 7 of
 \ trackSectionFlag set.
 \
@@ -3091,7 +3090,7 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-.trackRacingLine
+.trackSteering
 
  EQUB %00011000         \ Section  0 = 000110 0 0 =  +6 * baseSpeed
  EQUB %00011000         \ Section  1 = 000110 0 0 =  +6 * baseSpeed

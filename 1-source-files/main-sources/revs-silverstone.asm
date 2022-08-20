@@ -2385,22 +2385,25 @@ ORG CODE%
 
 \ ******************************************************************************
 \
-\       Name: trackRacingLine
+\       Name: trackSteering
 \       Type: Variable
 \   Category: Track data
-\    Summary: The optimum racing line for non-player drivers on each track
-\             section
+\    Summary: The optimum steering for non-player drivers on each track section
 \  Deep dive: The track data file format
 \             The Silverstone track
 \
 \ ------------------------------------------------------------------------------
 \
-\ The following bytes are copied to bestRacingLine by the SetBestRacingLine
+\ The following bytes are copied to sectionSteering by the GetSectionSteering
 \ routine, and are processed on the way.
 \
-\   * Bit 0 becomes bit 7 of the result
+\   * Bit 0 becomes bit 7 of the result, to determine the direction of steering
 \
-\   * Bit 1 clear means the result is multiplied by baseSpeed
+\   * Bit 1 clear means the result is multiplied by baseSpeed, so steering on
+\     straight sections is proportional to the track speed (steering is sharper
+\     at higher speeds)
+\
+\   * Bits 2 to 7 contain the amount of steering to apply
 \
 \ The processed values are shown below. There are 26 bytes, one for each
 \ section, but the last two bytes are unused, as Silverstone only uses sections
