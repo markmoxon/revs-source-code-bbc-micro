@@ -3079,6 +3079,20 @@ ORG CODE%
 \
 \ ------------------------------------------------------------------------------
 \
+\ The following bytes are copied to sectionSteering by the GetSectionSteering
+\ routine, and are processed on the way.
+\
+\   * Bit 0 becomes bit 7 of the result, to determine the direction of steering
+\     (shown with a directional arrow below)
+\
+\   * Bit 1 clear means the result is multiplied by baseSpeed, so steering on
+\     straight sections is proportional to the track speed (this is shown with
+\     an asterisk * below)
+\
+\   * Bits 2 to 7 contain the amount of steering to apply
+\
+\ The processed values are shown below.
+\
 \ Some of the trackSteering values have been scaled down by a factor of 1.44
 \ from the Commodore 64 version. This applies to sections that have bit 7 of
 \ trackSectionFlag set.
@@ -3092,33 +3106,34 @@ ORG CODE%
 
 .trackSteering
 
- EQUB %00011000         \ Section  0 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00011000         \ Section  1 = 000110 0 0 =  +6 * baseSpeed
- EQUB %01000111         \ Section  2 = 010001 1 1 = -17   (-25 / 1.44)
- EQUB %01001000         \ Section  3 = 010010 0 0 = +18 * baseSpeed
- EQUB %00011001         \ Section  4 = 000110 0 1 =  -6 * baseSpeed
- EQUB %00011001         \ Section  5 = 000110 0 1 =  -6 * baseSpeed
- EQUB %00111010         \ Section  6 = 001110 1 0 = +14   (+20 / 1.44)
- EQUB %00110000         \ Section  7 = 001100 0 0 = +12 * baseSpeed
- EQUB %00110011         \ Section  8 = 001100 1 1 = -12   (-17 / 1.44)
- EQUB %00011000         \ Section  9 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00011000         \ Section 10 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00101011         \ Section 11 = 001010 1 1 = -10   (-10 / 1.44)
- EQUB %00011001         \ Section 12 = 000110 0 1 =  -6 * baseSpeed
- EQUB %00111100         \ Section 13 = 001111 0 0 = +15 * baseSpeed
- EQUB %00000000         \ Section 14 = 000000 0 0 =  +0 * baseSpeed
- EQUB %00111101         \ Section 15 = 001111 0 1 = -15 * baseSpeed
- EQUB %00011001         \ Section 16 = 000110 0 1 =  -6 * baseSpeed
- EQUB %00111010         \ Section 17 = 001110 1 0 = +14   (+20 / 1.44)
- EQUB %01010000         \ Section 18 = 010100 0 0 = +20 * baseSpeed
- EQUB %00111011         \ Section 19 = 001110 1 1 = -14   (-20 / 1.44)
- EQUB %00011000         \ Section 20 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00111101         \ Section 21 = 001111 0 1 = -15 * baseSpeed
- EQUB %00100001         \ Section 22 = 001000 0 1 =  -8 * baseSpeed
- EQUB %01001010         \ Section 23 = 010010 1 0 = +18   (+26 / 1.44)
- EQUB %01110001         \ Section 24 = 011100 0 1 = -28 * baseSpeed
- EQUB %00011000         \ Section 25 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00101111         \ Section 26 = 001011 1 1 = -11   (-16 / 1.44)
+ EQUB %00011000         \ Section  0 = 000110 0 0            <- 6*
+ EQUB %00011000         \ Section  1 = 000110 0 0            <- 6*
+ EQUB %01000111         \ Section  2 = 010001 1 1            -> 17   (25 / 1.44)
+ EQUB %01001000         \ Section  3 = 010010 0 0            <- 18*
+ EQUB %00011001         \ Section  4 = 000110 0 1            -> 6*
+ EQUB %00011001         \ Section  5 = 000110 0 1            -> 6*
+ EQUB %00111010         \ Section  6 = 001110 1 0            <- 14   (20 / 1.44)
+ EQUB %00110000         \ Section  7 = 001100 0 0            <- 12*
+ EQUB %00110011         \ Section  8 = 001100 1 1            -> 12   (17 / 1.44)
+ EQUB %00011000         \ Section  9 = 000110 0 0            <- 6*
+ EQUB %00011000         \ Section 10 = 000110 0 0            <- 6*
+ EQUB %00101011         \ Section 11 = 001010 1 1            -> 10   (14 / 1.44)
+ EQUB %00011001         \ Section 12 = 000110 0 1            -> 6*
+ EQUB %00111100         \ Section 13 = 001111 0 0            <- 15*
+ EQUB %00000000         \ Section 14 = 000000 0 0            <- 0*
+ EQUB %00111101         \ Section 15 = 001111 0 1            -> 15*
+ EQUB %00011001         \ Section 16 = 000110 0 1            -> 6*
+ EQUB %00111010         \ Section 17 = 001110 1 0            <- 14   (20 / 1.44)
+ EQUB %01010000         \ Section 18 = 010100 0 0            <- 20*
+ EQUB %00111011         \ Section 19 = 001110 1 1            -> 14   (20 / 1.44)
+ EQUB %00011000         \ Section 20 = 000110 0 0            <- 6*
+ EQUB %00111101         \ Section 21 = 001111 0 1            -> 15*
+ EQUB %00100001         \ Section 22 = 001000 0 1            -> 8*
+ EQUB %01001010         \ Section 23 = 010010 1 0            <- 18   (26 / 1.44)
+ EQUB %01110001         \ Section 24 = 011100 0 1            -> 28*
+ EQUB %00011000         \ Section 25 = 000110 0 0            <- 6*
+ EQUB %00101111         \ Section 26 = 001011 1 1            -> 11   (16 / 1.44)
+
  EQUB &18, &A9          \ These bytes appear to be unused
  EQUB &AA, &AA
 

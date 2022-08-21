@@ -2398,10 +2398,11 @@ ORG CODE%
 \ routine, and are processed on the way.
 \
 \   * Bit 0 becomes bit 7 of the result, to determine the direction of steering
+\     (shown with a directional arrow below)
 \
 \   * Bit 1 clear means the result is multiplied by baseSpeed, so steering on
-\     straight sections is proportional to the track speed (steering is sharper
-\     at higher speeds)
+\     straight sections is proportional to the track speed (this is shown with
+\     an asterisk * below)
 \
 \   * Bits 2 to 7 contain the amount of steering to apply
 \
@@ -2411,30 +2412,30 @@ ORG CODE%
 \
 \ ******************************************************************************
 
- EQUB %00010100         \ Section  0 = 000101 0 0 =  +5 * baseSpeed
- EQUB %00110011         \ Section  1 = 001100 1 1 = -12
- EQUB %01110010         \ Section  2 = 011100 1 0 = +28
- EQUB %00111011         \ Section  3 = 001110 1 1 = -14
- EQUB %00011000         \ Section  4 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00110011         \ Section  5 = 001100 1 1 = -12
- EQUB %00010101         \ Section  6 = 000101 0 1 =  -5 * baseSpeed
- EQUB %00010101         \ Section  7 = 000101 0 1 =  -5 * baseSpeed
- EQUB %00010101         \ Section  8 = 000101 0 1 =  -5 * baseSpeed
- EQUB %00111100         \ Section  9 = 001111 0 0 = +15 * baseSpeed
- EQUB %00011000         \ Section 10 = 000110 0 0 =  +6 * baseSpeed
- EQUB %00110000         \ Section 11 = 001100 0 0 = +12 * baseSpeed
- EQUB %00110011         \ Section 12 = 001100 1 1 = -12
- EQUB %00111001         \ Section 13 = 001110 0 1 = -14 * baseSpeed
- EQUB %00111000         \ Section 14 = 001110 0 0 = +14 * baseSpeed
- EQUB %00010100         \ Section 15 = 000101 0 0 =  +5 * baseSpeed
- EQUB %00010100         \ Section 16 = 000101 0 0 =  +5 * baseSpeed
- EQUB %00010100         \ Section 17 = 000101 0 0 =  +5 * baseSpeed
- EQUB %00110111         \ Section 18 = 001101 1 1 = -13
- EQUB %00100000         \ Section 19 = 001000 0 0 =  +8 * baseSpeed
- EQUB %01011001         \ Section 20 = 010110 0 1 = -22 * baseSpeed
- EQUB %00101011         \ Section 21 = 001010 1 1 = -10
- EQUB %01010100         \ Section 22 = 010101 0 0 = +21 * baseSpeed
- EQUB %00010100         \ Section 23 = 000101 0 0 =  +5 * baseSpeed
+ EQUB %00010100         \ Section  0 = 000101 0 0            <- 5*
+ EQUB %00110011         \ Section  1 = 001100 1 1            -> 12
+ EQUB %01110010         \ Section  2 = 011100 1 0            <- 28
+ EQUB %00111011         \ Section  3 = 001110 1 1            -> 14
+ EQUB %00011000         \ Section  4 = 000110 0 0            <- 6*
+ EQUB %00110011         \ Section  5 = 001100 1 1            -> 12
+ EQUB %00010101         \ Section  6 = 000101 0 1            -> 5*
+ EQUB %00010101         \ Section  7 = 000101 0 1            -> 5*
+ EQUB %00010101         \ Section  8 = 000101 0 1            -> 5*
+ EQUB %00111100         \ Section  9 = 001111 0 0            <- 15*
+ EQUB %00011000         \ Section 10 = 000110 0 0            <- 6*
+ EQUB %00110000         \ Section 11 = 001100 0 0            <- 12*
+ EQUB %00110011         \ Section 12 = 001100 1 1            -> 12
+ EQUB %00111001         \ Section 13 = 001110 0 1            -> 14*
+ EQUB %00111000         \ Section 14 = 001110 0 0            <- 14*
+ EQUB %00010100         \ Section 15 = 000101 0 0            <- 5*
+ EQUB %00010100         \ Section 16 = 000101 0 0            <- 5*
+ EQUB %00010100         \ Section 17 = 000101 0 0            <- 5*
+ EQUB %00110111         \ Section 18 = 001101 1 1            -> 13
+ EQUB %00100000         \ Section 19 = 001000 0 0            <- 8*
+ EQUB %01011001         \ Section 20 = 010110 0 1            -> 22*
+ EQUB %00101011         \ Section 21 = 001010 1 1            -> 10
+ EQUB %01010100         \ Section 22 = 010101 0 0            <- 21*
+ EQUB %00010100         \ Section 23 = 000101 0 0            <- 5*
 
  EQUB &14, &67          \ These bytes appear to be unused (Silverstone only uses
                         \ sections 0 to 23)
