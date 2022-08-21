@@ -1270,7 +1270,7 @@ ORG &0100
  SKIP 20                \ Each car's status byte
                         \
                         \   * Bit 0 = update this carStatus byte when applying
-                        \             tactics in the ApplyDriverTactics routine
+                        \             tactics in the ProcessOvertaking routine
                         \
                         \       * Clear = do update carStatus
                         \
@@ -1285,7 +1285,7 @@ ORG &0100
                         \
                         \       * Set = do not set carSteering in the
                         \               BuildVisibleCar routine (and use the
-                        \               value set by ApplyDriverTactics instead)
+                        \               value set by ProcessOvertaking instead)
                         \
                         \   * Bit 6 = acceleration status
                         \
@@ -5565,7 +5565,8 @@ ORG &0B00
 
  JSR MoveCars           \ Move the cars around the track, to keep the race going
 
- JSR ApplyDriverTactics \ Apply driving tactics to all the non-player drivers
+ JSR ProcessOvertaking  \ Process overtaking manoeuvres for the non-player
+                        \ drivers
 
  JSR SetPlayerPositions \ Set the current player's position, plus the position
                         \ ahead and the position behind
@@ -5668,9 +5669,9 @@ ORG &0B00
 
  LDA #%10010001         \ Set bits 0, 4 and 7 of the car's status byte, so:
  STA carStatus,X        \
-                        \   * Bit 0 set = update this carStatus byte when
-                        \                 applying tactics in the
-                        \                 ApplyDriverTactics routine
+                        \   * Bit 0 set = do not update this carStatus byte when
+                        \                 in the ProcessOvertaking routine, so
+                        \                 overtaking tactics are disabled
                         \
                         \   * Bit 4 set = do not follow the segment's steering
                         \                 line in segmentSteering, so the car
@@ -17379,7 +17380,8 @@ ENDIF
 
  JSR MoveCars           \ Move the cars around the track
 
- JSR ApplyDriverTactics \ Apply driving tactics to all the non-player drivers
+ JSR ProcessOvertaking  \ Process overtaking manoeuvres for the non-player
+                        \ drivers
 
  JSR HideAllCars        \ Set all the cars to be hidden
 
@@ -17483,11 +17485,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ApplyDriverTactics (Part 1 of 3)
+\       Name: ProcessOvertaking (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Tactics
-\    Summary: Process all cars, checking first to see if the car we are
-\             processing has just overtaken the car in front of it
+\    Summary: Process all cars for overtaking manoeuvres, checking first to see
+\             if the car has just finished overtaking the car in front
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17498,7 +17500,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-.ApplyDriverTactics
+.ProcessOvertaking
 
  LDX currentPosition    \ Set X to the current player's position, to use as a
                         \ loop counter in the following as we work backwards
@@ -17659,11 +17661,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ApplyDriverTactics (Part 2 of 3)
+\       Name: ProcessOvertaking (Part 2 of 3)
 \       Type: Subroutine
 \   Category: Tactics
 \    Summary: The car we are processing has not overtaken the car in front of
-\             it, so apply driving tactics
+\             it, so if applicable, we can keep maneouvring into position
 \
 \ ******************************************************************************
 
@@ -17923,10 +17925,11 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: ApplyDriverTactics (Part 3 of 3)
+\       Name: ProcessOvertaking (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Tactics
-\    Summary: Update the car status and loop back for the next car
+\    Summary: Update the car status (if configured) and loop back for the next
+\             car
 \
 \ ******************************************************************************
 
