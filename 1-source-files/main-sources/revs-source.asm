@@ -1309,10 +1309,10 @@ ORG &0100
                         \   * Bit 6 = controls whether to apply steering in the
                         \             MoveCars routine
                         \
-                        \       * Clear = apply steering
+                        \       * Clear = always apply steering
                         \
-                        \       * Set = do not apply steering, but do steer away
-                        \               from the verge if required
+                        \       * Set = only apply steering if there is enough
+                        \               room on the track
                         \
                         \   * Bit 7 = the direction of the steering
                         \
@@ -1714,9 +1714,10 @@ ORG &0380
                         \   * Bit 6 = controls whether to apply steering in the
                         \             MoveCars routine
                         \
-                        \       * Clear = apply steering
+                        \       * Clear = always apply steering
                         \
-                        \       * Set = do not apply steering
+                        \       * Set = only apply steering if there is enough
+                        \               room on the track
                         \
                         \   * Bit 7 = the direction of the steering
                         \
@@ -5636,6 +5637,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Car geometry
 \    Summary: Push a car off the track and out of the race
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -7456,6 +7458,7 @@ ORG &0B00
 \   Category: Tactics
 \    Summary: Calculate the optimum steering to take for the current track
 \             segment
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -7637,6 +7640,7 @@ ORG &0B00
 \       Type: Subroutine
 \   Category: Keyboard
 \    Summary: Process joystick steering
+\  Deep dive: Computer assisted steering (CAS)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -7764,6 +7768,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Keyboard
 \    Summary: Process keyboard steering
+\  Deep dive: Computer assisted steering (CAS)
 \
 \ ******************************************************************************
 
@@ -13498,6 +13503,8 @@ ENDIF
 \       Type: Subroutine
 \   Category: Tactics
 \    Summary: Apply computer assisted steering (CAS) when configured
+\  Deep dive: Tactics of the non-player drivers
+\             Computer assisted steering (CAS)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -17504,6 +17511,7 @@ ENDIF
 \   Category: Tactics
 \    Summary: Process all cars for overtaking manoeuvres, checking first to see
 \             if the car has just finished overtaking the car in front
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -18212,6 +18220,7 @@ ENDIF
 \   Category: Car geometry
 \    Summary: Move the cars around the track
 \  Deep dive: Placing cars on the track
+\             Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -18485,6 +18494,7 @@ ENDIF
 \   Category: Car geometry
 \    Summary: Move the cars forward around the track, and apply steering
 \  Deep dive: Placing cars on the track
+\             Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -18661,6 +18671,7 @@ ENDIF
 \   Category: 3D objects
 \    Summary: Check the distance to the specified car and build the car object
 \             if it is close enough
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29165,6 +29176,7 @@ NEXT
 \       Type: Subroutine
 \   Category: Tactics
 \    Summary: Calculate the optimum steering for each track section
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -37704,13 +37716,34 @@ ORG &5E40
 \       Type: Variable
 \   Category: Tactics
 \    Summary: The optimum steering for each section
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ******************************************************************************
 
 .sectionSteering
 
- SKIP 26                \ One byte for each of the maximum possible 26 track
-                        \ sections
+ SKIP 26                \ The carSteering value to steer round the corner for a
+                        \ track section
+                        \
+                        \ The various bits are as for carSteering:
+                        \
+                        \   * Bits 0-5 = the amount of steering as a positive
+                        \                value (0 to 31)
+                        \
+                        \   * Bit 6 = controls whether to apply steering in the
+                        \             MoveCars routine
+                        \
+                        \       * Clear = always apply steering
+                        \
+                        \       * Set = only apply steering if there is enough
+                        \               room on the track
+                        \
+                        \   * Bit 7 = the direction of the steering
+                        \
+                        \       * Clear = steer left
+                        \
+                        \       * Set = steer right
+
 
  EQUB &00, &00          \ These bytes appear to be unused
  EQUB &00, &00
@@ -38227,6 +38260,7 @@ ENDIF
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: The low byte of the steering wheel position
+\  Deep dive: Computer assisted steering (CAS)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -38282,6 +38316,7 @@ ENDIF
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: The high byte of the steering wheel position
+\  Deep dive: Computer assisted steering (CAS)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -39613,6 +39648,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drivers
 \    Summary: Set the speed for a specific driver
+\  Deep dive: Tactics of the non-player drivers
 \
 \ ------------------------------------------------------------------------------
 \
@@ -39902,6 +39938,7 @@ ENDIF
 \   Category: Tactics
 \    Summary: Fetch the current computer assisted steering (CAS) status and show
 \             or hide the CAS indicator
+\  Deep dive: Computer assisted steering (CAS)
 \
 \ ------------------------------------------------------------------------------
 \
