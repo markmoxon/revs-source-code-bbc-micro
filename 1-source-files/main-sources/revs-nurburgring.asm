@@ -213,8 +213,8 @@ ORG CODE%
 \ zTrackSectionOHi      High byte of the z-coordinate of the starting point of
 \                       the outside verge of each track section
 \
-\ trackDriverSpeed      The maximum speed for non-player drivers on this section
-\                       of the track
+\ trackDriverSpeed      The maximum speed for non-player drivers on the next
+\                       section of the track
 \
 \ Some of the trackDriverSpeed values have been scaled down by a factor of 1.44
 \ from the Commodore 64 version. This applies to sections that are followed by
@@ -3328,11 +3328,11 @@ ORG CODE%
 \
 \                           * 1 = enable HookDataPointers and HookSegmentVector
 \
-\                         * Bit 7: Maximum approach speed for next section (Sp)
+\                         * Bit 7: Section has a maximum speed (Sp)
 \
-\                           * 0 = the next section has no maximum approach speed
+\                           * 0 = this section has no maximum speed
 \
-\                           * 1 = the next section has a maximum approach speed
+\                           * 1 = this section has a maximum speed
 \
 \ xTrackSectionILo      Low byte of the x-coordinate of the starting point of
 \                       the inner verge of each track section

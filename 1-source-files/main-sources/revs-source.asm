@@ -1409,7 +1409,7 @@ ORG &0100
 
  SKIP 20                \ Set to the driver speed for the next track section,
                         \ which is taken from the track data and used to set the
-                        \ section's approach speed for non-player drivers
+                        \ section's maximum speed for non-player drivers
                         \
                         \ Only applies to sections with bit 7 of the flag byte
                         \ set, in which case carSectionSpeed is set to the
@@ -5661,8 +5661,9 @@ ORG &0B00
                         \
                         \   * Bit 7 clear = veer to the left
                         \
-                        \   * Bit 6 set = do not apply steering in MoveCars,
-                        \                 just keep the car on the track
+                        \   * Bit 6 set = only apply this steering if there is
+                        \                 room to do so, otherwise just keep the
+                        \                 car on the track
                         \
                         \   * Bits 0-5 = set steering amount to at least 5
                         \                (%101)
@@ -5675,7 +5676,8 @@ ORG &0B00
                         \
                         \   * Bit 4 set = do not follow the segment's steering
                         \                 line in segmentSteering, so the car
-                        \                 doesn't steer around corners
+                        \                 doesn't automatically steer around
+                        \                 corners
                         \
                         \   * Bit 7 set = apply brakes
 
@@ -13631,10 +13633,8 @@ IF _SUPERIOR OR _REVSPLUS
                         \
                         \   * A = 2 if we are steering left
                         \
-                        \ We now spend the rest of the routine calculating the
-                        \ amount of computer assisted steering (CAS) to apply,
-                        \ returning the result in the sign-magnitude number
-                        \ (U T)
+                        \ We now set X as a flag for the steering diection, so
+                        \ we can use A for other purposes
 
  LDX #50                \ Set X = 50 to use as the value for steering left
 
@@ -13643,9 +13643,21 @@ IF _SUPERIOR OR _REVSPLUS
 
  LDX #10                \ Set X = 10 to use as the value for steering right
 
+                        \ So we now have the following that we can use to check
+                        \ which direction we are steering:
+                        \
+                        \   * X = 10 if we are steering right
+                        \
+                        \   * X = 50 if we are steering left
+
 .asst6
 
-                        \ We now set the following if we are steering right:
+                        \ We now spend the rest of the routine calculating the
+                        \ amount of computer assisted steering (CAS) to apply,
+                        \ returning the result in the sign-magnitude number
+                        \ (U T)
+                        \
+                        \ First, we set the following if we are steering right:
                         \
                         \   (W V) = (steeringHi steeringLo) + 256
                         \
@@ -13735,12 +13747,14 @@ IF _SUPERIOR OR _REVSPLUS
                         \ following instruction
 
  LDA #0                 \ Set A = 0, so A is always positive, and is zero if we
-                        \ are currently doing more than 60
+                        \ are currently doing more than 60, so:
+                        \
+                        \   A = max(0, 60 - playerSpeedHi)
 
 .asst9
 
- ASL A                  \ Set U = A * 2 + 32
- ADC #32                \       = 32 + (60 - playerSpeedHi) * 2
+ ASL A                  \ Set U = 32 * A * 2
+ ADC #32                \       = 32 + max(0, 60 - playerSpeedHi) * 2
  STA U                  \
                         \ So U is 32 if we are doing more than 60, and higher
                         \ with lower speeds
@@ -13760,7 +13774,7 @@ IF _SUPERIOR OR _REVSPLUS
  CMP #8                 \ If A < 8, jump to asst11 to skip the following
  BCC asst11             \ instruction
 
- LDA #7                 \ A >= 8, so set A = 7
+ LDA #7                 \ A >= 8, so set A = 7, i.e. A = min(A, 7)
 
 .asst11
 
@@ -17879,14 +17893,15 @@ ENDIF
 .tact14
 
  CMP #100               \ If A >= 100, then the cars are far apart in terms of
- BCS tact18             \ left-right spacing, so jump to tact18 to update the
-                        \ car status byte for this driver to N, and then move on
-                        \ to the next driver
+ BCS tact18             \ left-right spacing, so jump to tact18 to skip applying
+                        \ any steering, and instead just update the car status
+                        \ byte for this driver to N, before moving on to the
+                        \ next driver
 
  CMP #80                \ If A >= 80, then the cars are slightly closer, so jump
  BCS tact16             \ to tact16 to set bit 4 of driver X's car status byte
-                        \ (so driver X does not follow the segment's steering
-                        \ line in segmentSteering)
+                        \ (so driver X applies the steering we've been
+                        \ calculating)
 
  CMP #60                \ If A >= 60, then the cars are even closer, so jump to
  BCS tact15             \ tact15 to steer driver X in the direction in T, which
@@ -17915,8 +17930,9 @@ ENDIF
 .tact16
 
  LDA N                  \ Set bit 4 of the car status flag byte we are building
- ORA #%00010000         \ in N, so the car does not follow the segment's
-                        \ steering line in segmentSteering
+ ORA #%00010000         \ in N, so the car does not automatically follow the
+                        \ segment's steering line in segmentSteering, and
+                        \ instead applies the steering we've been calculating
 
 .tact17
 
@@ -18264,7 +18280,7 @@ ENDIF
 
                         \ If we get here then bits 0 and 7 of this section's
                         \ flag byte are both clear, so this is a straight
-                        \ section and there is no maximum approach speed set
+                        \ section and there is no maximum speed set
 
  LDA trackDriverSpeed,Y \ Set carSectionSpeed for this driver to the value of
  STA carSectionSpeed,X  \ trackDriverSpeed for this track section
@@ -36042,7 +36058,7 @@ ENDIF
 
  LDA wheelPixels,X      \ Set A to the number of pixels that would be along the
                         \ long axis of the line if the line went all the way to
-                        \ the centre of the wheel, given the value of Y above
+                        \ the centre of the wheel, given the value of X above
 
  STA SS                 \ Set SS = A to pass to the DrawDashboardLine routine
                         \ as the cumulative amount of slope error that equates
@@ -36930,14 +36946,11 @@ ENDIF
                         \     * 1 = enable HookDataPointers and
                         \           HookSegmentVector
                         \
-                        \   * Bit 7: Maximum approach speed for next section
-                        \            (Sp)
+                        \   * Bit 7: Section has a maximum speed (Sp)
                         \
-                        \     * 0 = the next section has no maximum approach
-                        \           speed
+                        \     * 0 = this section has no maximum speed
                         \
-                        \     * 1 = the next section has a maximum approach
-                        \           speed
+                        \     * 1 = this section has a maximum speed
 
 .xTrackSectionILo
 
@@ -40167,6 +40180,7 @@ ENDIF
 
  JSR GetSectionSteering \ Set up the optimum steering for each section for this
                         \ race class, storing the results in sectionSteering
+
 .game2
 
  LDX #22                \ Print token 22, which shows a menu with the following
