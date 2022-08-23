@@ -8015,9 +8015,9 @@ ENDIF
                         \       = A * 2 + A / 2
                         \       = 2.5 * A
 
- BCS keys14             \ If the addition overflowed, the the joystick has moved
-                        \ a long way from the centre, so jump to keys14 to apply
-                        \ the brakes or throttle at full power
+ BCS keys14             \ If the addition overflowed, then the joystick has
+                        \ moved a long way from the centre, so jump to keys14 to
+                        \ apply the brakes or throttle at full power
 
  CMP #250               \ If A < 250, jump to keys20 to store A in throttleBrake
  BCC keys20             \ and X in throttleBrakeState, so we store the amount of
@@ -8341,7 +8341,7 @@ ENDIF
                         \ here from part 5
 
  JSR ProcessTime        \ Increment the timers and the main loop counter, and
-                        \ set the speed for the next non-player driver
+                        \ set the speed for the next non-player drivers
 
  JSR ShowStartingLights \ If this is a race, show the starting lights on the
                         \ right of the screen
@@ -8363,8 +8363,8 @@ ENDIF
 
  JSR MakeDrivingSounds  \ Make the relevant sounds for the engine and tyres
 
- JSR ResetTrackLines    \ Reset the blocks at leftVergeStart, leftTrackStart,
-                        \ rightVergeStart, rightGrassStart and backgroundColour
+ JSR ResetTrackLines    \ Reset the track lines below the horizon in the track
+                        \ view
 
  JSR DrawTrack          \ Draw the track into the screen buffer
 
@@ -8487,7 +8487,7 @@ ENDIF
 
                         \ If we get here then either:
                         \
-                        \   * We have quit the race or lap by pressing SHIFT-f4
+                        \   * We have quit the race or lap by pressing SHIFT-f7
                         \     (in which case we jumped here from part 5)
                         \
                         \   * This is either an Amateur or a Professional race
@@ -15503,11 +15503,17 @@ ENDIF
 \
 \ Returns:
 \
-\   xVergeRight/Left    Updated yaw angles for the entries in the track section
-\                       list (i.e. indexes 0 to 5)
+\   xVergeRight         Updated yaw angles for the entries in the track section
+\                       list (i.e. indexes 0 to 5) for the right verge
 \
-\   yVergeRight/Left    Updated pitch angles for the entries in the track
-\                       section list (i.e. indexes 0 to 5)
+\   xVergeLeft          Updated yaw angles for the entries in the track section
+\                       list (i.e. indexes 0 to 5) for the left verge
+\
+\   yVergeRight         Updated pitch angles for the entries in the track
+\                       section list (i.e. indexes 0 to 5) for the right verge
+\
+\   yVergeLeft          Updated pitch angles for the entries in the track
+\                       section list (i.e. indexes 0 to 5) for the left verge
 \
 \   horizonLine         Updated to cater for the pitch angles of the updated
 \                       track sections
@@ -15947,8 +15953,11 @@ ENDIF
 \
 \ Returns:
 \
-\   xVergeRight/Left    The difference in the yaw angle between the object and
-\                       the player
+\   xVergeRight         The difference in the yaw angle between the object and
+\                       the player (if Y points to the right verge)
+\
+\   xVergeLeft          The difference in the yaw angle between the object and
+\                       the player (if Y points to the left verge)
 \
 \   (L K)               The distance between the object and the player's car
 \
@@ -16019,11 +16028,11 @@ ENDIF
 \
 \ Returns:
 \
-\   xVergeRight/Left    Updated yaw angles for the entries in the track segment
-\                       list (i.e. indexes 6 to 21)
+\   xVergeRight         Updated yaw angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21) for the right verge
 \
-\   yVergeRight/Left    Updated pitch angles for the entries in the track
-\                       segment list (i.e. indexes 6 to 21)
+\   yVergeLeft          Updated pitch angles for the entries in the track
+\                       segment list (i.e. indexes 6 to 21) for the left verge
 \
 \   edgeDistance        The distance between the player's car and the nearest
 \                       track edge
@@ -16037,18 +16046,28 @@ ENDIF
 \   edgeYawAngle        The yaw angle of the segment that is closest to the
 \                       player's car
 \
-\   xVergeRight/Left    Entries in the second part of the track segment list for
-\                       the coordinates of the outside of the track verge
+\   xVergeRight         Entries in the second part of the track segment list for
+\                       the coordinates of the outside of the right track verge
 \                       (i.e. indexes 22 to 37, which correspond to the yaw
 \                       angles in the track segment list in indexes 6 to 21)
 \
-\   yVergeRight/Left    Pitch angles for the entries in the track segment
-\                       list (i.e. indexes 6 to 21)
+\   xVergeLeft          Entries in the second part of the track segment list for
+\                       the coordinates of the outside of the left track verge
+\                       (i.e. indexes 22 to 37, which correspond to the yaw
+\                       angles in the track segment list in indexes 6 to 21)
+\
+\   yVergeRight         Pitch angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21) for the right verge
+\
+\   yVergeLeft          Pitch angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21) for the left verge
 \
 \   xMarker             Distance in the x-axis between the track edge and the
 \                       corner marker for this segment (if there is one)
 \
-\   vergeDataRight/Left Data (such as colour) for this segment's verge
+\   vergeDataRight      Data (such as colour) for this segment's right verge
+\
+\   vergeDataLeft       Data (such as colour) for this segment's left verge
 \
 \ ******************************************************************************
 
@@ -16924,18 +16943,28 @@ ENDIF
 \
 \ Results:
 \
-\   xVergeRight/Left    Entries in the second part of the track segment list for
-\                       the coordinates of the outside of the track verge
+\   xVergeRight         Entries in the second part of the track segment list for
+\                       the coordinates of the outside of the right track verge
 \                       (i.e. indexes 22 to 37, which correspond to the yaw
 \                       angles in the track segment list in indexes 6 to 21)
 \
-\   yVergeRight/Left    Pitch angles for the entries in the track segment
-\                       list (i.e. indexes 6 to 21)
+\   xVergeLeft          Entries in the second part of the track segment list for
+\                       the coordinates of the outside of the left track verge
+\                       (i.e. indexes 22 to 37, which correspond to the yaw
+\                       angles in the track segment list in indexes 6 to 21)
+\
+\   yVergeRight         Pitch angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21) for the right verge
+\
+\   yVergeLeft          Pitch angles for the entries in the track segment
+\                       list (i.e. indexes 6 to 21) for the left verge
 \
 \   xMarker             Distance in the x-axis between the track edge and the
 \                       corner marker for this segment (if there is one)
 \
-\   vergeDataRight/Left Data (such as colour) for this segment's verge
+\   vergeDataRight      Data (such as colour) for this segment's right verge
+\
+\   vergeDataLeft       Data (such as colour) for this segment's left verge
 \
 \ ******************************************************************************
 
@@ -24184,7 +24213,7 @@ ENDIF
 \
 \ Contains a pixel byte for the white border (colour 2) along the edge of the
 \ left tyre.
-
+\
 \ The tyreEdgeIndex table maps track line numbers to entries in this table.
 \
 \ Each pixel is a colour 2 pixel, so the high nibble contains a 1 and the low
@@ -24427,7 +24456,7 @@ ENDIF
 \
 \ Contains a pixel byte for the white border (colour 2) along the edge of the
 \ right tyre.
-
+\
 \ The tyreEdgeIndex table maps track line numbers to entries in this table.
 \
 \ Each pixel is a colour 2 pixel, so the high nibble contains a 1 and the low
@@ -34733,8 +34762,11 @@ ENDIF
 \ with the following differences:
 \
 \   * Horizontal sync position = 45 instead of 49
+\
 \   * Vertical displayed       = 26 instead of 32
+\
 \   * Vertical sync position   = 32 instead of 34
+\
 \   * Screen memory start      = &5A80 instead of &5800
 \
 \ So essentially it is a shorter mode 5 that takes up less memory, adjusts the
@@ -35040,8 +35072,8 @@ ENDIF
                         \
                         \ So when we are cresting a hill, (U A) is large and so
                         \ is timer 1, and therefore so is the size of the sky
-                        \ above the the horizon in section 2 of the screen, so
-                        \ the horizon dips down
+                        \ above the horizon in section 2 of the screen, so the
+                        \ horizon dips down
                         \
                         \ Conversely, when we are in a dip, (U A) is small and
                         \ and so is timer 1, so the size of the sky section
@@ -35110,7 +35142,7 @@ ENDIF
  BCS ulap1              \ to ulap1 to return from the subroutine
 
  LDA objectStatus,X     \ If bit 6 of the driver's car object status byte is
- ASL A                  \ set, the the car has finished racing, so jump to
+ ASL A                  \ set, then the car has finished racing, so jump to
  BMI ulap1              \ ulap1 to return from the subroutine without updating
                         \ the lap number
 
@@ -42336,11 +42368,11 @@ ENDMACRO
                         \ and replacing them with the pixels from the left edge
                         \ of the dashboard (with ORA leftDashPixels)
 
- LDA dashRightEdge,X    \ Fetch the the track pixel byte that would be shown
-                        \ along the right edge of the dashboard, i.e. the
-                        \ leftmost byte of the right portion of the track line,
-                        \ where the line meets the right border of the central
-                        \ part of the dashboard
+ LDA dashRightEdge,X    \ Fetch the track pixel byte that would be shown along
+                        \ the right edge of the dashboard, i.e. the leftmost
+                        \ byte of the right portion of the track line, where the
+                        \ line meets the right border of the central part of the
+                        \ dashboard
 
  AND rightDashMask,X    \ We now merge the track byte in A with the right edge
  ORA rightDashPixels,X  \ of the dashboard, by masking out the pixels in A that
@@ -42682,10 +42714,10 @@ ENDMACRO
                         \ to fetch the correct entries from leftTyreMask and
                         \ leftTyrePixels
 
- LDA tyreRightEdge,X    \ Fetch the the track pixel byte that would be shown
-                        \ along the right edge of the left tyre, i.e. the
-                        \ leftmost byte of the track line, where the line meets
-                        \ the left tyre
+ LDA tyreRightEdge,X    \ Fetch the track pixel byte that would be shown along
+                        \ the right edge of the left tyre, i.e. the leftmost
+                        \ byte of the track line, where the line meets the left
+                        \ tyre
 
  AND leftTyreMask,Y     \ We now merge the track byte in A with the edge of the
  ORA leftTyrePixels,Y   \ left tyre, by masking out the pixels in A that are
@@ -42769,11 +42801,11 @@ ENDMACRO
                         \ the LDA #0 instruction in the DRAW_BYTE macro
                         \ specified in the table
 
- LDA dashRightEdge,X    \ Fetch the the track pixel byte that would be shown
-                        \ along the right edge of the dashboard, i.e. the
-                        \ leftmost byte of the right portion of the track line,
-                        \ where the line meets the right border of the central
-                        \ part of the dashboard
+ LDA dashRightEdge,X    \ Fetch the track pixel byte that would be shown along
+                        \ the right edge of the dashboard, i.e. the leftmost
+                        \ byte of the right portion of the track line, where the
+                        \ line meets the right border of the central part of the
+                        \ dashboard
 
  AND rightDashMask,X    \ We now merge the track byte in A with the right edge
  ORA rightDashPixels,X  \ of the dashboard, by masking out the pixels in A that
