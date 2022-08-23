@@ -8255,6 +8255,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: Main driving loop: Switch to the track and start the main loop
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -8332,6 +8333,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: Main driving loop: The body of the main loop
+\  Deep dive: Program flow of the main game loop
 \
 \ ******************************************************************************
 
@@ -8412,6 +8414,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: Main driving loop: Process rejoining the race or lap after a crash
+\  Deep dive: Program flow of the main game loop
 \
 \ ******************************************************************************
 
@@ -8480,6 +8483,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: Main driving loop: Leave the track
+\  Deep dive: Program flow of the main game loop
 \
 \ ******************************************************************************
 
@@ -8534,6 +8538,7 @@ ENDIF
 \   Category: Main loop
 \    Summary: Main driving loop: Process driving keys, potentially leaving the
 \             track, and loop back to part 2
+\  Deep dive: Program flow of the main game loop
 \
 \ ******************************************************************************
 
@@ -8621,6 +8626,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drivers
 \    Summary: Add time to the specified timer
+\  Deep dive: Scheduling tasks in the main loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -35518,6 +35524,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: Increment the timers and the main loop counter
+\  Deep dive: Scheduling tasks in the main loop
 \
 \ ******************************************************************************
 
@@ -38948,6 +38955,7 @@ ENDIF
 \   Category: Main loop
 \    Summary: High byte of the main loop counter, which increments on each
 \             iteration of the main driving loop
+\  Deep dive: Scheduling tasks in the main loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40164,6 +40172,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: The main game loop: practice laps
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40216,6 +40225,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: The main game loop: competition setup
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40276,6 +40286,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: The main game loop: qualifying laps
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40369,6 +40380,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: The main game loop: the competition race
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40474,6 +40486,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: The main game loop: the competition race
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40606,6 +40619,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main loop
 \    Summary: The main game loop: race points and competition results
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40682,6 +40696,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Main Loop
 \    Summary: Get the wing settings and start a race, practice or qualifying lap
+\  Deep dive: Program flow of the main game loop
 \
 \ ------------------------------------------------------------------------------
 \
