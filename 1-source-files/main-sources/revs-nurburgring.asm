@@ -4098,13 +4098,13 @@ ORG CODE%
 
 .trackChecksum
 
- EQUB &60               \ Counts the number of data bytes ending in %00
+ EQUB &6B               \ Counts the number of data bytes ending in %00
 
- EQUB &00               \ Counts the number of data bytes ending in %01
+ EQUB &EA               \ Counts the number of data bytes ending in %01
 
- EQUB &00               \ Counts the number of data bytes ending in %10
+ EQUB &5E               \ Counts the number of data bytes ending in %10
 
- EQUB &78               \ Counts the number of data bytes ending in %11
+ EQUB &72               \ Counts the number of data bytes ending in %11
 
 \ ******************************************************************************
 \

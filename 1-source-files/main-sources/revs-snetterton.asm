@@ -3995,7 +3995,7 @@ ORG CODE%
 
 .trackChecksum
 
- EQUB &A2               \ Counts the number of data bytes ending in %00
+ EQUB &A6               \ Counts the number of data bytes ending in %00
 
  EQUB &C2               \ Counts the number of data bytes ending in %01
 
