@@ -10708,7 +10708,9 @@ ENDIF
 .cont5
 
                         \ By this point, (A T) is a measurement of how dangerous
-                        \ the collision was, on a scale of 0 to 16
+                        \ the collision was, on a scale of 0 to 16, so now we
+                        \ convert that into the amount of spin to apply to our
+                        \ car
 
  PLP                    \ Restore the sign of dYawAngle, which we stored on the
                         \ stack above, so the N flag is positive if the other
@@ -10725,9 +10727,14 @@ ENDIF
                         \   * -16 to 0 if the other car is to the left
                         \
                         \   * 0 to +16 if the other car is to the right
+                        \
+                        \ So we can use this to apply spin to our car, so we
+                        \ spin in the correct direction and with an amount
+                        \ that's proportional to the severity of the collision
 
                         \ Fall through into SquealTyres to set spinYawAngleTop
-                        \ and make the sound of squealing tyres
+                        \ to the amount of yaw spin in A and make the sound of
+                        \ squealing tyres
 
 \ ******************************************************************************
 \
