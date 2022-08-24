@@ -22702,7 +22702,7 @@ ENDIF
 \ There is a byte for each track line from 27 (the track line at the top of the
 \ tyres) down to 3 (the lowest track line, just above where the wing mirror
 \ joins the car body). Lines 0 to 2 are not used.
-
+\
 \ ******************************************************************************
 
 .tyreEdgeIndex
@@ -23502,7 +23502,7 @@ ENDIF
 \
 \ Contains a pixel byte for the white border (colour 2) along the left edge of
 \ the dashboard.
-
+\
 \ There is a byte for each track line from 43 (the track line at the top of the
 \ dashboard) down to 3 (the lowest track line, just above where the wing mirror
 \ joins the car body). Lines 0 to 2 are not used.
@@ -42433,7 +42433,7 @@ ENDMACRO
 \ know that high byte is the same throughout the routine. This is why the lookup
 \ tables at staDrawByte and ldaDrawByte only need to store the low bytes of
 \ the addresses for instructions that we need to modify.
-
+\
 \ ******************************************************************************
 
 .byte1
