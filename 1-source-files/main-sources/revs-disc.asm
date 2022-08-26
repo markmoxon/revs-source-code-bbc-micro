@@ -81,5 +81,3 @@ ELIF _REVSPLUS
  PUTFILE "1-source-files/text-files/READMEPLUS.bin", "README", &FFFFFF, &FFFFFF
 
 ENDIF
-
-\PUTFILE "3-assembled-output/Nurburgring.bin", "Silvers", &0070DB, &0070DB
