@@ -78,7 +78,7 @@ ELIF _REVSPLUS
  PUTFILE "3-assembled-output/Silverstone.bin", "SILVER", &0070DB, &0070DB
  PUTFILE "3-assembled-output/Nurburgring.bin", "NURBURG", &0070DB, &0070DB
  PUTFILE "3-assembled-output/Revs2.bin", "REVS2", &001200, &001200
- PUTFILE "1-source-files/text-files/READMEPLUS.txt", "README", &FFFFFF, &FFFFFF
+ PUTFILE "1-source-files/text-files/READMEPLUS.bin", "README", &FFFFFF, &FFFFFF
 
 ENDIF
 
