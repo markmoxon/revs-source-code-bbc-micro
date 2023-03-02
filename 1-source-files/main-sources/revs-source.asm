@@ -15439,9 +15439,14 @@ ENDIF
 
  STY scaleDown          \ Set scaleDown to the number of shifts in Y
 
- TAY                    \ Set scaleUp = arctanP(A)
- LDA arctanP-128,Y      \             = arctanP(|x-delta|)
- STA scaleUp
+ TAY                    \ Set scaleUp = 256 / (1 + (A - 128) / 128)
+ LDA divideX-128,Y      \             = 256 / (1 + (|x-delta| - 128) / 128)
+ STA scaleUp            \
+                        \ We know that A contains the scaled-up |x-delta|, which
+                        \ ranges from 128 (when x-delta is small) to 256 (when
+                        \ x-delta is large), so scaleUp contains the reciprocal
+                        \ of this, i.e. 1/|x-delta|, scaled into the range 256
+                        \ to 128
 
  LDA QQ                 \ Set T = QQ, the low byte of the scaled |y-delta|, to
  STA T                  \ use for rounding the result in Divide8x8
@@ -37936,45 +37941,28 @@ ENDIF
 .arctanY
 
  FOR I%, 0, 255
-  EQUB INT(0.5 + ATN(I% / 256) * 325.95)
+  EQUB INT(0.5 + ATN(I% / 256) * 256 / ATN(1))
  NEXT
 
 \ ******************************************************************************
 \
-\       Name: arctanP
+\       Name: divideX
 \       Type: Variable
-\   Category: Maths (Geometry)
-\    Summary: Table for arctan values when calculating pitch angles
+\   Category: Maths (Arithmetic)
+\    Summary: Division table for calculating scale factors using 1 / |x-delta|
 \  Deep dive: Trigonometry
-\
-\ ------------------------------------------------------------------------------
-\
-\ This is very close to the following calculation:
-\
-\ FOR I%, 0, 127
-\  EQUB INT(0.5 + 776 - 512 * ATN(3.2595 * (I% + 128) / 256))
-\ NEXT
 \
 \ ******************************************************************************
 
-.arctanP
+.divideX
 
- EQUB &FF, &FE, &FC, &FA, &F8, &F6, &F5, &F3
- EQUB &F1, &EF, &ED, &EC, &EA, &E8, &E7, &E5
- EQUB &E4, &E2, &E0, &DF, &DD, &DC, &DA, &D9
- EQUB &D8, &D6, &D5, &D3, &D2, &D1, &CF, &CE
- EQUB &CD, &CC, &CA, &C9, &C8, &C7, &C5, &C4
- EQUB &C3, &C2, &C1, &C0, &BF, &BD, &BC, &BB
- EQUB &BA, &B9, &B8, &B7, &B6, &B5, &B4, &B3
- EQUB &B2, &B1, &B0, &AF, &AE, &AD, &AC, &AC
- EQUB &AB, &AA, &A9, &A8, &A7, &A6, &A5, &A5
- EQUB &A4, &A3, &A2, &A1, &A1, &A0, &9F, &9E
- EQUB &9E, &9D, &9C, &9B, &9B, &9A, &99, &98
- EQUB &98, &97, &96, &96, &95, &94, &94, &93
- EQUB &92, &92, &91, &90, &90, &8F, &8E, &8E
- EQUB &8D, &8D, &8C, &8B, &8B, &8A, &8A, &89
- EQUB &89, &88, &87, &87, &86, &86, &85, &85
- EQUB &84, &84, &83, &83, &82, &82, &81, &81
+ FOR I%, 0, 127
+  IF I% = 0
+   EQUB 255
+  ELSE
+   EQUB INT(0.5 + 256 / (1 + I% / 128))
+  ENDIF
+ NEXT
 
 \ ******************************************************************************
 \
