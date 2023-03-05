@@ -36,7 +36,7 @@ endif
 
 .PHONY:build
 build:
-	echo _VARIANT=$(variant-revs) > 1-source-files/main-sources/revs-header.h.asm
+	echo _VARIANT=$(variant-revs) > 1-source-files/main-sources/revs-build-options.asm
 	$(BEEBASM) -i 1-source-files/main-sources/revs-silverstone.asm -v > 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-brandshatch.asm -v >> 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-doningtonpark.asm -v >> 3-assembled-output/compile.txt

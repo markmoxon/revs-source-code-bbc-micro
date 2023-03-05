@@ -23002,7 +23002,7 @@ Saving file '3-assembled-output/Revs1.bin'
      61FD   FE
      61FE   FF
      61FF   FF
-.arctanP
+.divideX
      6200   FF
      6201   FE
      6202   FC

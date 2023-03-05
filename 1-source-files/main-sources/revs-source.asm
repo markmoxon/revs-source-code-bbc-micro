@@ -24,7 +24,7 @@
 \
 \ ******************************************************************************
 
-INCLUDE "1-source-files/main-sources/revs-header.h.asm"
+INCLUDE "1-source-files/main-sources/revs-build-options.asm"
 
 _ACORNSOFT              = (_VARIANT = 1)
 _SUPERIOR               = (_VARIANT = 2)
