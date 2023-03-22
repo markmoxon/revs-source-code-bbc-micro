@@ -203,7 +203,7 @@ During compilation, details of every step are output in a file called `compile.t
 
 ## Building different variants of Revs
 
-This repository contains the source code for two different variants of Revs:
+This repository contains the source code for four different variants of Revs:
 
 * The Acornsoft variant, which is the original release with the Silverstone track
 
