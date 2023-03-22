@@ -1492,7 +1492,7 @@ ORG &0380
  SKIP 20                \ Minutes of each driver's total race time, stored in
                         \ BCD
                         \
-                        \ Set to &80 in ResetVariables
+                        \ Set to &80 in ResetVariables (80 minutes)
 
 .totalPointsTop
 
@@ -5717,8 +5717,7 @@ ORG &0B00
                         \ instruction
 
  STA totalRaceMinutes,X \ The player didn't finish the race, so set the player's
-                        \ total race time to &C0 minutes, which is negative and
-                        \ therefore not a valid time
+                        \ total race time to &C0 minutes, or 120 minutes
 
 .clap1
 
@@ -6249,7 +6248,7 @@ ORG &0B00
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine increment sectionListValid and sectionListPointer so they move
+\ This routine increments sectionListValid and sectionListPointer so they move
 \ along with the newly shuffled track section list.
 \
 \ ******************************************************************************
@@ -8704,9 +8703,10 @@ ENDIF
  JSR ZeroTimer          \ Otherwise the timer just reached the maximum possible
                         \ value, so wrap it back round to zero
 
- LDY currentPlayer      \ Set the total race time for the current player to -1,
- LDA #&80               \ as otherwise the driver might finish with a very low
- STA totalRaceMinutes,Y \ time just because the race timer looped back to zero
+ LDY currentPlayer      \ Set the total race time for the current player to &80,
+ LDA #&80               \ or 80 minutes (as totalRaceMinutes is BCD), otherwise
+ STA totalRaceMinutes,Y \ the driver might finish with a very low time just
+                        \ because the race timer looped back to zero
 
 .time3
 
@@ -8792,7 +8792,11 @@ ENDIF
                         \ (objectSegmentHi objectSegmentLo), so set up a loop
                         \ counter in X
 
- STX previousSignNumber \ Set previousSignNumber = 23
+ STX previousSignNumber \ Set previousSignNumber = 23 to set the number of the
+                        \ previous sign to the highest possible value (as the
+                        \ track sections are numbered 0 to 23), so we skip the
+                        \ part of BuildRoadSign that reuses the sign from the
+                        \ previous track section
 
 .rese3
 
@@ -8803,10 +8807,13 @@ ENDIF
                         \ between the starting line and the start of section 0,
                         \ counting forwards round the track
 
- LDA #0                 \ Zero the X-th byte of objTrackSection
- STA objTrackSection,X
+ LDA #0                 \ Zero the X-th byte of objTrackSection to put the
+ STA objTrackSection,X  \ object in the first track section, ready for the call
+                        \ to PlaceCarsOnTrack below
 
- STA objSectionSegmt,X  \ Zero the X-th byte of objSectionSegmt
+ STA objSectionSegmt,X  \ Zero the X-th byte of objSectionSegmt to put the
+                        \ object at the first segment in the current track
+                        \ section, ready for the call to PlaceCarsOnTrack below
 
  DEX                    \ Decrement the loop counter
 
@@ -8866,23 +8873,31 @@ ENDIF
  LDA #%10000000         \ Set the X-th byte of objectStatus to %10000000, so the
  STA objectStatus,X     \ object is hidden
 
- STA totalRaceMinutes,X \ Set the X-th byte of totalRaceMinutes to -1
+ STA totalRaceMinutes,X \ Set the X-th byte of totalRaceMinutes to &80, which is
+                        \ 80 minutes as totalRaceMinutes is in BCD
 
- LDA #0                 \ Zero the X-th byte of driverLapNumber
- STA driverLapNumber,X
+ LDA #0                 \ Zero the X-th byte of driverLapNumber, so each driver
+ STA driverLapNumber,X  \ starts at lap 0
 
- STA carSteering,X      \ Zero the X-th byte of carSteering
+ STA carSteering,X      \ Zero the X-th byte of carSteering to set each car's
+                        \ steering to dead ahead
 
- STA carProgress,X      \ Zero the X-th byte of carProgress
+ STA carProgress,X      \ Zero the X-th byte of carProgress to reset each car's
+                        \ progress within the starting segment
 
- STA carSpeedHi,X       \ Zero the X-th byte of carSpeedHi
+ STA carSpeedHi,X       \ Zero the X-th byte of carSpeedHi to reset each car's
+                        \ forward speed
 
- STA carStatus,X        \ Zero the X-th byte of carStatus
+ STA carStatus,X        \ Zero the X-th byte of carStatus so each car is ready
+                        \ to have its status byte updated and is not braking or
+                        \ accelerating
 
- STA carSpeedLo,X       \ Zero the X-th byte of carSpeedLo
+ STA carSpeedLo,X       \ Zero the X-th byte of carSpeedLo to reset each car's
+                        \ forward speed
 
- LDA #255               \ Set the X-th byte of carSectionSpeed to 255
- STA carSectionSpeed,X
+ LDA #255               \ Set the X-th byte of carSectionSpeed to 255, so there
+ STA carSectionSpeed,X  \ is no minimum speed set for the car in the next track
+                        \ section
 
  DEX                    \ Decrement the loop counter
 
@@ -8896,13 +8911,15 @@ ENDIF
                         \ half of the track (which is true for both practice
                         \ and qualifying, as well as the starting grid)
 
- LDX #7                 \ Set oddsOfEngineStart = 7
- STX oddsOfEngineStart
+ LDX #7                 \ Set oddsOfEngineStart = 7, so the odds of the engine
+ STX oddsOfEngineStart  \ starting when revving are 1 in 7
 
- DEX                    \ Set sectionListValid = 6
- STX sectionListValid
+ DEX                    \ Set sectionListValid = 6, to denote that there are no
+ STX sectionListValid   \ valid entries in the track section list
 
- STX sectionListPointer \ Set sectionListPointer = 6
+ STX sectionListPointer \ Set sectionListPointer = 6, to set the current entry
+                        \ to the entry after the end of the list (as the list
+                        \ is empty)
 
  DEX                    \ We now zero the six bytes at mirrorContents to clear
                         \ all six segments of the wing mirrors, so set X = 5 to
@@ -8935,8 +8952,9 @@ ENDIF
  JSR PrintBestLapTime   \ Print the best lap time and the current lap time at
                         \ the top of the screen
 
- LDA #&DF               \ Set firstLapStarted = -33
- STA firstLapStarted
+ LDA #&DF               \ Set firstLapStarted = -33, so that when we add 33 in
+ STA firstLapStarted    \ the UpdateLapTimers routine, we get a value of 0 when
+                        \ we start the first lap
 
  RTS                    \ Return from the subroutine
 
