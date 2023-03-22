@@ -41,7 +41,7 @@ See the [introduction](#introduction) for more information.
 
 This repository contains source code for Revs on the BBC Micro, with every single line documented and (for the most part) explained.
 
-You can build the fully functioning game from this source. [Four variants](#building-different-variants-of-revs) are currently supported: the original 1985 Acornsoft release, the 1985 Revs 4 Tracks release, the 1986 Superior Software release, and release that includes the Nürburgring track, backported from the Commodore 64 version.
+You can build the fully functioning game from this source. [Four variants](#building-different-variants-of-revs) are currently supported: the original 1985 Acornsoft release, the 1985 Revs 4 Tracks release, the 1986 Superior Software release, and a new release that includes the Nürburgring track, backported from the Commodore 64 version.
 
 It is a companion to the [revs.bbcelite.com website](https://revs.bbcelite.com), which contains all the code from this repository, but laid out in a much more human-friendly fashion.
 
@@ -209,7 +209,7 @@ This repository contains the source code for two different variants of Revs:
 
 * The Acornsoft Revs 4 Tracks variant, which adds four more tracks (Brands Hatch, Donington Park, Oulton Park and Snetterton)
 
-* The Superior Software variant, which includes all five tracks and computer assisted steering (CAS)
+* The Superior Software variant, which includes all five tracks, computer assisted steering (CAS) and support for digital joysticks
 
 * The Revs+ variant, which includes everything from the Superior Software variant, plus the Nürburgring track, backported from the Commodore 64 version
 
@@ -324,11 +324,13 @@ The game code is identical in the original Acornsoft and Revs 4 Tracks variants,
 
 The game code is identical in the Superior Software and Revs+ variants, but Revs+ includes the Nürburgring track, backported from the Commodore 64 version.
 
-There are two main differences in the game code when comparing the Acornsoft/Revs 4 Tracks variants to the Superior Software/Revs+ variants:
+There are three main differences in the game code when comparing the Acornsoft/Revs 4 Tracks variants to the Superior Software/Revs+ variants:
 
 * The Superior Software and Revs+ variants support computer assisted steering (CAS), which isn't present in the original Acornsoft variants.
 
 * The Superior Software and Revs+ variants record player drift differently to the original Acornsoft variants. Player drift occurs when the player loses traction when sliding sideways. In the Superior Software and Revs+ variants, drifting is ignored if it occurs in the first three segments of a track section. This difference is implemented in the SetPlayerDriftS routine, which is not present in the original Acornsoft variants (though note that some of the tracks in Revs 4 Tracks do include this feature).
+
+* The Superior Software and Revs+ variants support digital joysticks, as found on the BBC Master Compact.
 
 ---
 
