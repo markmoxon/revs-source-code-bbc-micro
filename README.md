@@ -209,7 +209,7 @@ This repository contains the source code for two different variants of Revs:
 
 * The Acornsoft Revs 4 Tracks variant, which adds four more tracks (Brands Hatch, Donington Park, Oulton Park and Snetterton)
 
-* The Superior Software variant, which includes all five tracks, computer assisted steering (CAS) and support for digital joysticks
+* The Superior Software variant, which includes all five tracks, computer assisted steering (CAS), a tweaked drifting model, and support for digital joysticks
 
 * The Revs+ variant, which includes everything from the Superior Software variant, plus the Nürburgring track, backported from the Commodore 64 version
 
