@@ -36829,12 +36829,15 @@ ENDIF
                         \ applying an EOR to the tyre pixels as follows:
                         \
                         \   1. tyreLeft1, tyreLeft1+2
+                        \
                         \      EOR with mask %11110000 (all four pixels)
                         \
                         \   2. tyreLeft2+3, tyreLeft2+4
+                        \
                         \      EOR with mask %11000000 (left two pixels)
                         \
                         \   3. tyreLeft3 to tyreLeft3+4
+                        \
                         \      EOR with mask from tyreTreadLeft table (a wedge
                         \      shape from all four pixels at the top down to
                         \      just one pixel at the bottom)
@@ -36852,8 +36855,8 @@ ENDIF
                         \                                                3
                         \
                         \ The right tyre uses tyreRight and tyreTreadRight to
-                        \ achieve the same effect in the same loop as the left
-                        \ tyre
+                        \ achieve the same effect, all in the same loop as the
+                        \ left tyre animation for maximum efficiency
 
  LDX #4                 \ Set a loop counter to go from 4 to 0
 
