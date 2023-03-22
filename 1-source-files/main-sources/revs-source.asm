@@ -73,8 +73,8 @@ tyreLeft1 = &6E85       \ The tread on the left tyre in screen memory
 tyreLeft2 = &6E8A
 tyreLeft3 = &6FC0
 
-tyreRight1 = &6FB2      \ The tread on the right tyre in screen memory
-tyreRight2 = &6FBD
+tyreRight1 = &6FBD      \ The tread on the right tyre in screen memory
+tyreRight2 = &6FB2
 tyreRight3 = &70F8
 
 leftSurface = &713D     \ A point in the track view next to the left edge of the
@@ -36787,40 +36787,110 @@ ENDIF
  BEQ tyre4              \ moving so we don't need to animate the tyres, so jump
                         \ to tyre4 to return from the subroutine
 
+                        \ We now flip the black-and-white pixels in the tyre
+                        \ tread at the top of the left and white tyres using an
+                        \ EOR with %10, which flips pixels between %00 (black)
+                        \ and %10 (white)
+                        \
+                        \ The tyre tread spills across three character blocks,
+                        \ with each pixel byte covering four pixels. Taking the
+                        \ left tyre, we have the following blocks:
+                        \
+                        \   * 1. Top-left block: tyreLeft1 to tyreLeft1+2
+                        \
+                        \        Three rows of four pixels at the top-left of
+                        \        the tyre
+                        \
+                        \   * 2. Top-right block: tyreLeft2+3, tyreLeft2+4
+                        \
+                        \        Two rows of two pixels at the top-right of the
+                        \        tyre
+                        \
+                        \   * 3. Bottom-left block: tyreLeft3 to tyreLeft3+4
+                        \
+                        \        Five rows of pixels at the bottom-left of the
+                        \        tyre, covering 4, 4, 2, 2, 1 pixels as we work
+                        \        our way down
+                        \
+                        \ This looks like this, where the number is the block
+                        \ number above (the left side of the following is along
+                        \ the left edge of the screen):
+                        \
+                        \   111122
+                        \   111122
+                        \   1111
+                        \   3333
+                        \   3333
+                        \   33
+                        \   33
+                        \   3
+                        \ 
+                        \ The code below works through the various blocks,
+                        \ applying an EOR to the tyre pixels as follows:
+                        \
+                        \   * 1. tyreLeft1, tyreLeft1+2
+                        \        EOR with mask %11110000 (all four pixels)
+                        \
+                        \   * 2. tyreLeft2+3, tyreLeft2+4
+                        \        EOR with mask %11000000 (left two pixels)
+                        \
+                        \   * 3. tyreLeft3 to tyreLeft3+4
+                        \        EOR with mask from tyreTreadLeft table (a wedge
+                        \        shape from all four pixels at the top down to
+                        \        just one pixel at the bottom)
+                        \
+                        \ A similar process is applied to the right tyre, but
+                        \ with the shape reflected, like this:
+                        \
+                        \                                           221111
+                        \                                           221111
+                        \                                             1111
+                        \                                             3333
+                        \                                             3333
+                        \                                               33
+                        \                                               33
+                        \                                                3
+                        \
+                        \ The right tyre uses tyreRight and tyreTreadRight to
+                        \ achieve the same effect in the same loop as the left
+                        \ tyre
+
  LDX #4                 \ Set a loop counter to go from 4 to 0
 
 .tyre1
 
  LDA tyreLeft3,X        \ Set tyreLeft3 = tyreLeft3 EOR tyreTreadLeft
- EOR tyreTreadLeft,X
+ EOR tyreTreadLeft,X    \ to flip the pixels in the bottom-left of the tyre
  STA tyreLeft3,X
 
  LDA tyreRight3,X       \ Set tyreRight3 = tyreRight3 EOR tyreTreadRight
- EOR tyreTreadRight,X
+ EOR tyreTreadRight,X   \ to flip the pixels in the bottom-right of the tyre
  STA tyreRight3,X
 
  CPX #3                 \ If X >= 3, jump to tyre2 to skip the following
  BCS tyre2
 
- LDA tyreLeft1,X        \ Flip the top four bits of tyreLeft1
- EOR #%11110000
+ LDA tyreLeft1,X        \ Flip all four pixels at tyreLeft1+X, so that's
+ EOR #%11110000         \ tyreLeft1+2, tyreLeft1+1 and tyreLeft1
  STA tyreLeft1,X
 
- LDA tyreRight2,X       \ Flip the top four bits of tyreRight2
- EOR #%11110000
- STA tyreRight2,X
+ LDA tyreRight1,X       \ Flip all four pixels at tyreRight1+X, so that's
+ EOR #%11110000         \ tyreRight1+2, tyreRight1+1 and tyreRight1
+ STA tyreRight1,X
 
- BNE tyre3              \ If A is non-zero, jump to tyre3 to continue the loop
+ BNE tyre3              \ Jump to tyre3 to continue the loop (this BNE is
+                        \ effectively a JMP as A is never zero, because the
+                        \ screen byte in A is a chequered pattern)
 
 .tyre2
 
- LDA tyreLeft2,X        \ Flip bits 6 and 7 of tyreLeft2
- EOR #%11000000
+ LDA tyreLeft2,X        \ Flip the two left pixels at tyreLeft2+X, so that's
+ EOR #%11000000         \ tyreLeft2+4 and tyreLeft2+3
  STA tyreLeft2,X
 
- LDA tyreRight1,X       \ Flip bits 4 and 5 of tyreRight1
- EOR #%00110000
- STA tyreRight1,X
+ LDA tyreRight2,X       \ Flip the two right pixels at tyreRight2+X, so that's
+ EOR #%00110000         \ tyreRight2+4 and tyreRight2+3
+ STA tyreRight2,X
 
 .tyre3
 
@@ -36839,6 +36909,11 @@ ENDIF
 \   Category: Dashboard
 \    Summary: Tyre tread pattern for the left tyre
 \
+\ ------------------------------------------------------------------------------
+\
+\ Contains the shape of the bottom part of the tread on the left tyre, which we
+\ animate when the car is moving.
+\
 \ ******************************************************************************
 
 .tyreTreadLeft
@@ -36855,6 +36930,11 @@ ENDIF
 \       Type: Variable
 \   Category: Dashboard
 \    Summary: Tyre tread pattern for the right tyre
+\
+\ ------------------------------------------------------------------------------
+\
+\ Contains the shape of the bottom part of the tread on the right tyre, which we
+\ animate when the car is moving.
 \
 \ ******************************************************************************
 
