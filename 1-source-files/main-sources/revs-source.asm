@@ -41378,6 +41378,15 @@ ENDIF
 \
 \   * Set 80 bytes at backgroundColour to 0
 \
+\ Setting each of the four verge edges to &80 effectively pushes the edges off
+\ the right edge of the screen, which resets the verge edges on that track line.
+\ By resetting the first horizonLine+1 bytes in each verge edge block, we are
+\ resetting all the edges for track lines below the horizon, i.e. from track
+\ line 0 at the bottom of the screen to track line horizonLine+1 on the horizon.
+\
+\ Setting the 80 bytes at backgroundColour to zero resets the background colour
+\ for all track lines.
+\
 \ ******************************************************************************
 
 .ResetTrackLines
