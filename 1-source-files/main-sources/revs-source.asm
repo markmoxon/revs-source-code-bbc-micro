@@ -36796,21 +36796,21 @@ ENDIF
                         \ with each pixel byte covering four pixels. Taking the
                         \ left tyre, we have the following blocks:
                         \
-                        \   * 1. Top-left block: tyreLeft1 to tyreLeft1+2
+                        \   1. Top-left block: tyreLeft1 to tyreLeft1+2
                         \
-                        \        Three rows of four pixels at the top-left of
-                        \        the tyre
+                        \      Three rows of four pixels at the top-left of the
+                        \      tyre
                         \
-                        \   * 2. Top-right block: tyreLeft2+3, tyreLeft2+4
+                        \   2. Top-right block: tyreLeft2+3, tyreLeft2+4
                         \
-                        \        Two rows of two pixels at the top-right of the
-                        \        tyre
+                        \      Two rows of two pixels at the top-right of the
+                        \      tyre
                         \
-                        \   * 3. Bottom-left block: tyreLeft3 to tyreLeft3+4
+                        \   3. Bottom-left block: tyreLeft3 to tyreLeft3+4
                         \
-                        \        Five rows of pixels at the bottom-left of the
-                        \        tyre, covering 4, 4, 2, 2, 1 pixels as we work
-                        \        our way down
+                        \      Five rows of pixels at the bottom-left of the
+                        \      tyre, covering 4, 4, 2, 2, 1 pixels as we work
+                        \      our way down
                         \
                         \ This looks like this, where the number is the block
                         \ number above (the left side of the following is along
@@ -36828,16 +36828,16 @@ ENDIF
                         \ The code below works through the various blocks,
                         \ applying an EOR to the tyre pixels as follows:
                         \
-                        \   * 1. tyreLeft1, tyreLeft1+2
-                        \        EOR with mask %11110000 (all four pixels)
+                        \   1. tyreLeft1, tyreLeft1+2
+                        \      EOR with mask %11110000 (all four pixels)
                         \
-                        \   * 2. tyreLeft2+3, tyreLeft2+4
-                        \        EOR with mask %11000000 (left two pixels)
+                        \   2. tyreLeft2+3, tyreLeft2+4
+                        \      EOR with mask %11000000 (left two pixels)
                         \
-                        \   * 3. tyreLeft3 to tyreLeft3+4
-                        \        EOR with mask from tyreTreadLeft table (a wedge
-                        \        shape from all four pixels at the top down to
-                        \        just one pixel at the bottom)
+                        \   3. tyreLeft3 to tyreLeft3+4
+                        \      EOR with mask from tyreTreadLeft table (a wedge
+                        \      shape from all four pixels at the top down to
+                        \      just one pixel at the bottom)
                         \
                         \ A similar process is applied to the right tyre, but
                         \ with the shape reflected, like this:
