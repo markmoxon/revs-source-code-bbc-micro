@@ -28,12 +28,12 @@
 \
 \ ******************************************************************************
 
-INCLUDE "1-source-files/main-sources/revs-build-options.asm"
+ INCLUDE "1-source-files/main-sources/revs-build-options.asm"
 
-_ACORNSOFT              = (_VARIANT = 1)
-_SUPERIOR               = (_VARIANT = 2)
-_4TRACKS                = (_VARIANT = 3)
-_REVSPLUS               = (_VARIANT = 4)
+ _ACORNSOFT             = (_VARIANT = 1)
+ _SUPERIOR              = (_VARIANT = 2)
+ _4TRACKS               = (_VARIANT = 3)
+ _REVSPLUS              = (_VARIANT = 4)
 
 IF _ACORNSOFT
 

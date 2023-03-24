@@ -24,14 +24,14 @@
 \
 \ ******************************************************************************
 
-INCLUDE "1-source-files/main-sources/revs-build-options.asm"
+ INCLUDE "1-source-files/main-sources/revs-build-options.asm"
 
-_ACORNSOFT              = (_VARIANT = 1)
-_SUPERIOR               = (_VARIANT = 2)
-_4TRACKS                = (_VARIANT = 3)
-_REVSPLUS               = (_VARIANT = 4)
+ _ACORNSOFT             = (_VARIANT = 1)
+ _SUPERIOR              = (_VARIANT = 2)
+ _4TRACKS               = (_VARIANT = 3)
+ _REVSPLUS              = (_VARIANT = 4)
 
-GUARD &8000             \ Guard against assembling over sideways ROMs
+ GUARD &8000            \ Guard against assembling over sideways ROMs
 
 \ ******************************************************************************
 \
@@ -39,71 +39,71 @@ GUARD &8000             \ Guard against assembling over sideways ROMs
 \
 \ ******************************************************************************
 
-IRQ1V = &0204           \ The IRQ1V vector that we intercept to implement the
+ IRQ1V = &0204          \ The IRQ1V vector that we intercept to implement the
                         \ screen mode
 
-VIA = &FE00             \ Memory-mapped space for accessing internal hardware,
+ VIA = &FE00            \ Memory-mapped space for accessing internal hardware,
                         \ such as the video ULA, 6845 CRTC and 6522 VIAs (also
                         \ known as SHEILA)
 
-OSRDCH = &FFE0          \ The address for the OSRDCH routine
-OSWRCH = &FFEE          \ The address for the OSWRCH routine
-OSBYTE = &FFF4          \ The address for the OSBYTE routine
-OSWORD = &FFF1          \ The address for the OSWORD routine
+ OSRDCH = &FFE0         \ The address for the OSRDCH routine
+ OSWRCH = &FFEE         \ The address for the OSWRCH routine
+ OSBYTE = &FFF4         \ The address for the OSBYTE routine
+ OSWORD = &FFF1         \ The address for the OSWORD routine
 
-CODE% = &0B00           \ The address of the main game code
+ CODE% = &0B00          \ The address of the main game code
 
-LOAD% = &1200           \ The load address of the main code binary
+ LOAD% = &1200          \ The load address of the main code binary
 
-LOAD_END% = &7000       \ The address of the end of the main code binary
+ LOAD_END% = &7000      \ The address of the end of the main code binary
 
-dashData = &3000        \ The address of the first code block that gets swapped
+ dashData = &3000       \ The address of the first code block that gets swapped
                         \ in and out of screen memory, along with parts of the
                         \ dashboard image
 
-trackLoad = &70DB       \ The load address of the track data file
+ trackLoad = &70DB      \ The load address of the track data file
 
-trackChecksum = &7800   \ The address of the checksums in the track data file
+ trackChecksum = &7800  \ The address of the checksums in the track data file
                         \ after it is loaded but before it is moved in memory
 
                         \ The following configuration variables represent screen
                         \ addresses for the custom screen
 
-tyreLeft1 = &6E85       \ The tread on the left tyre in screen memory
-tyreLeft2 = &6E8A
-tyreLeft3 = &6FC0
+ tyreLeft1 = &6E85      \ The tread on the left tyre in screen memory
+ tyreLeft2 = &6E8A
+ tyreLeft3 = &6FC0
 
-tyreRight1 = &6FBD      \ The tread on the right tyre in screen memory
-tyreRight2 = &6FB2
-tyreRight3 = &70F8
+ tyreRight1 = &6FBD     \ The tread on the right tyre in screen memory
+ tyreRight2 = &6FB2
+ tyreRight3 = &70F8
 
-leftSurface = &713D     \ A point in the track view next to the left edge of the
+ leftSurface = &713D    \ A point in the track view next to the left edge of the
                         \ dashboard, which we use to determine the surface under
                         \ the left side of the car
 
-rightSurface = &7205    \ A point in the track view next to the right edge of
+ rightSurface = &7205   \ A point in the track view next to the right edge of
                         \ the dashboard, which we use to determine the surface
                         \ under the left right of the car
 
-mirror0 = &7540         \ Mirror 0 base address (left mirror, outer segment)
-mirror1 = &7548         \ Mirror 1 base address (left mirror, middle segment)
-mirror2 = &7418         \ Mirror 2 base address (left mirror, inner segment)
+ mirror0 = &7540        \ Mirror 0 base address (left mirror, outer segment)
+ mirror1 = &7548        \ Mirror 1 base address (left mirror, middle segment)
+ mirror2 = &7418        \ Mirror 2 base address (left mirror, inner segment)
 
-mirror3 = &7530         \ Mirror 3 base address (right mirror, inner segment)
-mirror4 = &7670         \ Mirror 4 base address (right mirror, middle segment)
-mirror5 = &7678         \ Mirror 5 base address (right mirror, outer segment)
+ mirror3 = &7530        \ Mirror 3 base address (right mirror, inner segment)
+ mirror4 = &7670        \ Mirror 4 base address (right mirror, middle segment)
+ mirror5 = &7678        \ Mirror 5 base address (right mirror, outer segment)
 
-assistLeft1 = &77DB     \ Centre-bottom of dashboard in screen memory for
-assistLeft2 = &77DC     \ showing the computer assisted steering (CAS)
-assistRight1 = &77E3    \ indicator
-assistRight2 = &77E4
+ assistLeft1 = &77DB    \ Centre-bottom of dashboard in screen memory for
+ assistLeft2 = &77DC    \ showing the computer assisted steering (CAS)
+ assistRight1 = &77E3   \ indicator
+ assistRight2 = &77E4
 
                         \ The following configuration variables represent screen
                         \ addresses for mode 7
 
-row2_column1 = &7C79    \ Chequered flag mode 7 screen address
-row18_column5 = &7E85   \ The first entry's number in a mode 7 menu
-row24_column5 = &7FC5   \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
+ row2_column1 = &7C79   \ Chequered flag mode 7 screen address
+ row18_column5 = &7E85  \ The first entry's number in a mode 7 menu
+ row24_column5 = &7FC5  \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
 
 \ ******************************************************************************
 \
@@ -115,7 +115,7 @@ row24_column5 = &7FC5   \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
 \
 \ ******************************************************************************
 
-ORG &0000
+ ORG &0000
 
 .playerMoving
 
@@ -1258,7 +1258,7 @@ ORG &0000
 \
 \ ******************************************************************************
 
-ORG &0100
+ ORG &0100
 
 .positionNumber
 
@@ -1429,7 +1429,7 @@ ORG &0100
 \
 \ ******************************************************************************
 
-ORG &0380
+ ORG &0380
 
 .objYawAngleLo
 
@@ -1759,7 +1759,7 @@ ORG &0380
                         \ Stored as a 16-bit value (lineBufferAddrHi
                         \ lineBufferAddrLo)
 
-ORG &0880
+ ORG &0880
 
 .objSectionSegmt
 
@@ -2098,7 +2098,7 @@ ORG &0880
 \
 \ ******************************************************************************
 
-ORG &1200
+ ORG &1200
 
 .Entry
 
@@ -2119,12 +2119,14 @@ ORG &1200
  JMP SwapCode           \ Jump to the routine that we just moved to continue the
                         \ setup process
 
-\ This code starts out at &1200 and is run there, before it moves itself to
-\ &7900-&790D along with the rest of the page, so the following moves this code
-\ next to the block that runs at &790E-&79FF
+ COPYBLOCK &1200, &120E, &7900      \ This code starts out at &1200 and is run
+                                    \ there, before it duplicates itself to
+                                    \ &7900-&790D along with the rest of the
+                                    \ page, so we need to move this code next to
+                                    \ the block that runs at &790E-&79FF
 
-COPYBLOCK &1200, &120E, &7900
-CLEAR &1200, &120E
+ CLEAR &1200, &120E     \ We also need to clear the code from &1200 so we can
+                        \ assemble more code at the same location
 
 \ ******************************************************************************
 \
@@ -2136,7 +2138,7 @@ CLEAR &1200, &120E
 \
 \ ******************************************************************************
 
-ORG &790E
+ ORG &790E
 
 .SwapCode
 
@@ -2400,7 +2402,9 @@ ENDIF
 
 .blockStartLo
 
- EQUB &80, &D0, &80, &00, &00
+ EQUB &80, &D0
+ EQUB &80, &00
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -2414,7 +2418,9 @@ ENDIF
 
 .blockStartHi
 
- EQUB &5A, &64, &5A, &13, &15
+ EQUB &5A, &64
+ EQUB &5A, &13
+ EQUB &15
 
 \ ******************************************************************************
 \
@@ -2428,7 +2434,9 @@ ENDIF
 
 .blockEndLo
 
- EQUB &40, &00, &5C, &00, &DB
+ EQUB &40, &00
+ EQUB &5C, &00
+ EQUB &DB
 
 \ ******************************************************************************
 \
@@ -2442,7 +2450,9 @@ ENDIF
 
 .blockEndHi
 
- EQUB &5E, &6C, &64, &15, &15
+ EQUB &5E, &6C
+ EQUB &64, &15
+ EQUB &15
 
 \ ******************************************************************************
 \
@@ -2456,7 +2466,9 @@ ENDIF
 
 .blockToLo
 
- EQUB &80, &D0, &00, &00, &00
+ EQUB &80, &D0
+ EQUB &00, &00
+ EQUB &00
 
 \ ******************************************************************************
 \
@@ -2470,7 +2482,9 @@ ENDIF
 
 .blockToHi
 
- EQUB &5A, &5F, &0D, &0B, &70
+ EQUB &5A, &5F
+ EQUB &0D, &0B
+ EQUB &70
 
  EQUB &09, &B9          \ These bytes appear to be unused
  EQUB &02, &50
@@ -2527,7 +2541,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-ORG &0B00
+ ORG &0B00
 
  EQUB &10, &10          \ These bytes appear to be unused
  EQUB &10, &10
@@ -26476,11 +26490,11 @@ ENDIF
 
 .yLookupHi
 
-FOR I%, 0, 31
+ FOR I%, 0, 31
 
- EQUB HI(&5800 + (I% * &140))
+  EQUB HI(&5800 + (I% * &140))
 
-NEXT
+ NEXT
 
 \ ******************************************************************************
 \
@@ -28129,27 +28143,27 @@ ENDIF
 
 .yLookupLo
 
-FOR I%, 0, 7
+ FOR I%, 0, 7
 
- EQUB LO(&5800 + (I% * &140))
+  EQUB LO(&5800 + (I% * &140))
 
-NEXT
-
- EQUB %01110111         \ Clear the first pixel of a mode 5 pixel byte
- EQUB %10111011         \ Clear the second pixel of a mode 5 pixel byte
- EQUB %11011101         \ Clear the third pixel of a mode 5 pixel byte
- EQUB %11101110         \ Clear the fourth pixel of a mode 5 pixel byte
+ NEXT
 
  EQUB %01110111         \ Clear the first pixel of a mode 5 pixel byte
  EQUB %10111011         \ Clear the second pixel of a mode 5 pixel byte
  EQUB %11011101         \ Clear the third pixel of a mode 5 pixel byte
  EQUB %11101110         \ Clear the fourth pixel of a mode 5 pixel byte
 
-FOR I%, 16, 31
+ EQUB %01110111         \ Clear the first pixel of a mode 5 pixel byte
+ EQUB %10111011         \ Clear the second pixel of a mode 5 pixel byte
+ EQUB %11011101         \ Clear the third pixel of a mode 5 pixel byte
+ EQUB %11101110         \ Clear the fourth pixel of a mode 5 pixel byte
 
- EQUB LO(&5800 + (I% * &140))
+ FOR I%, 16, 31
 
-NEXT
+  EQUB LO(&5800 + (I% * &140))
+
+ NEXT
 
  EQUB &81, &81          \ These bytes appear to be unused
  EQUB &81, &81
@@ -37235,8 +37249,8 @@ ENDIF
 \
 \ ******************************************************************************
 
-CLEAR &594A, &5A22      \ The track data is loaded in a separate file that is
-ORG &594A               \ moved to trackData after the game binary has loaded
+ CLEAR &594A, &5A22     \ The track data is loaded in a separate file that is
+ ORG &594A              \ moved to trackData after the game binary has loaded
                         \
                         \ It overwrites part of the dashboard image at that's
                         \ loaded as part of the main game binary at dashdata41,
@@ -37491,7 +37505,7 @@ ORG &594A               \ moved to trackData after the game binary has loaded
 \
 \ ******************************************************************************
 
-ORG &5E40
+ ORG &5E40
 
 .xVergeRightLo
 
@@ -40159,8 +40173,8 @@ IF _SUPERIOR OR _REVSPLUS
 
 .SuperiorSetupGame
 
-CLEAR &3850, &3880      \ In the Superior Software release of Revs, the routines
-ORG &3850               \ for computer assisted steering (CAS) take up extra
+ CLEAR &3850, &3880     \ In the Superior Software release of Revs, the routines
+ ORG &3850              \ for computer assisted steering (CAS) take up extra
                         \ memory, so we need to claw back some memory from
                         \ somewhere
                         \
@@ -40257,7 +40271,7 @@ ELIF _SUPERIOR OR _REVSPLUS
 
  EQUB &FF               \ This byte appears to be unused
 
-ORG SuperiorSetupGame   \ Switch back to the original address, so we can
+ ORG SuperiorSetupGame  \ Switch back to the original address, so we can
                         \ continue with the assembly
 
 ENDIF
@@ -41622,7 +41636,7 @@ ENDIF
 \
 \ ******************************************************************************
 
-ORG &6C00
+ ORG &6C00
 
 .dashData42
 
@@ -41638,7 +41652,7 @@ ORG &6C00
 \
 \ ******************************************************************************
 
-ORG &7B00
+ ORG &7B00
 
 .UpdateMirrors
 
@@ -43118,99 +43132,197 @@ ENDMACRO
 \
 \ ******************************************************************************
 
-\ Step 1: Insert the dashboard image into the game code, split into 18 pieces
+ ORG &9000
 
-ORG &9000
+ INCBIN "1-source-files/images/dashboard.bin"
 
-INCBIN "1-source-files/images/dashboard.bin"
+ COPYBLOCK &9EF6, &9EF6+10, dashData25      \ Step 1: Insert the dashboard image
+ COPYBLOCK &9ECD, &9EF6, dashData26         \ into the game code, split into 18
+ COPYBLOCK &9E99, &9ECD, dashData27         \ pieces
+ COPYBLOCK &9E61, &9E99, dashData28
+ COPYBLOCK &9E25, &9E61, dashData29
+ COPYBLOCK &9DE5, &9E25, dashData30
+ COPYBLOCK &9DA1, &9DE5, dashData31
+ COPYBLOCK &9D58, &9DA1, dashData32
+ COPYBLOCK &9D0B, &9D58, dashData33
+ COPYBLOCK &9CBE, &9D0B, dashData34
+ COPYBLOCK &9C72, &9CBE, dashData35
+ COPYBLOCK &9C38, &9C72, dashData36
+ COPYBLOCK &9C04, &9C38, dashData37
+ COPYBLOCK &9BD0, &9C04, dashData38
+ COPYBLOCK &9B9C, &9BD0, dashData39
+ COPYBLOCK &9B68, &9B9C, dashData40
+ COPYBLOCK &9B25, &9B68, dashData41
+ COPYBLOCK &9000, &9B25, dashData42
 
-COPYBLOCK &9EF6, &9EF6+10, dashData25
-COPYBLOCK &9ECD, &9EF6, dashData26
-COPYBLOCK &9E99, &9ECD, dashData27
-COPYBLOCK &9E61, &9E99, dashData28
-COPYBLOCK &9E25, &9E61, dashData29
-COPYBLOCK &9DE5, &9E25, dashData30
-COPYBLOCK &9DA1, &9DE5, dashData31
-COPYBLOCK &9D58, &9DA1, dashData32
-COPYBLOCK &9D0B, &9D58, dashData33
-COPYBLOCK &9CBE, &9D0B, dashData34
-COPYBLOCK &9C72, &9CBE, dashData35
-COPYBLOCK &9C38, &9C72, dashData36
-COPYBLOCK &9C04, &9C38, dashData37
-COPYBLOCK &9BD0, &9C04, dashData38
-COPYBLOCK &9B9C, &9BD0, dashData39
-COPYBLOCK &9B68, &9B9C, dashData40
-COPYBLOCK &9B25, &9B68, dashData41
-COPYBLOCK &9000, &9B25, dashData42
+ COPYBLOCK &7FCC, &8000, dashData0          \ Step 2: Insert the code that runs
+ COPYBLOCK &7F98, &7FCC, dashData1          \ in screen memory into the game
+ COPYBLOCK &7F64, &7F98, dashData2          \ code, split into 26 pieces
+ COPYBLOCK &7F2A, &7F64, dashData3
+ COPYBLOCK &7EDE, &7F2A, dashData4
+ COPYBLOCK &7E91, &7EDE, dashData5
+ COPYBLOCK &7E44, &7E91, dashData6
+ COPYBLOCK &7DFB, &7E44, dashData7
+ COPYBLOCK &7DB7, &7DFB, dashData8
+ COPYBLOCK &7D77, &7DB7, dashData9
+ COPYBLOCK &7D3B, &7D77, dashData10
+ COPYBLOCK &7D03, &7D3B, dashData11
+ COPYBLOCK &7CCF, &7D03, dashData12
+ COPYBLOCK &7CA6, &7CCF, dashData13
+ COPYBLOCK &7C82, &7CA6, dashData14
+ COPYBLOCK &7C5E, &7C82, dashData15
+ COPYBLOCK &7C3A, &7C5E, dashData16
+ COPYBLOCK &7C16, &7C3A, dashData17
+ COPYBLOCK &7BF2, &7C16, dashData18
+ COPYBLOCK &7BCE, &7BF2, dashData19
+ COPYBLOCK &7BAA, &7BCE, dashData20
+ COPYBLOCK &7B86, &7BAA, dashData21
+ COPYBLOCK &7B62, &7B86, dashData22
+ COPYBLOCK &7B3E, &7B62, dashData23
+ COPYBLOCK &7B1A, &7B3E, dashData24
+ COPYBLOCK &7AF6+10, &7B1A, dashData25+10
 
-\ Step 2: Insert the code that runs in screen memory into the game code, split
-\ into 26 pieces
+ COPYBLOCK &5FD0, &6700, &64D0              \ 3: Split the game code into the
+ COPYBLOCK &0D00, &16DC, &5A80              \ parts that make up the game binary
+ COPYBLOCK &7000, &70DB, &1500              \ file and pack them together in the
+ COPYBLOCK &70DB, &7725, &5300              \ correct order
+ COPYBLOCK &0B00, &0D00, &1300
+ COPYBLOCK &7900, &7A00, &1200
 
-COPYBLOCK &7FCC, &8000, dashData0
-COPYBLOCK &7F98, &7FCC, dashData1
-COPYBLOCK &7F64, &7F98, dashData2
-COPYBLOCK &7F2A, &7F64, dashData3
-COPYBLOCK &7EDE, &7F2A, dashData4
-COPYBLOCK &7E91, &7EDE, dashData5
-COPYBLOCK &7E44, &7E91, dashData6
-COPYBLOCK &7DFB, &7E44, dashData7
-COPYBLOCK &7DB7, &7DFB, dashData8
-COPYBLOCK &7D77, &7DB7, dashData9
-COPYBLOCK &7D3B, &7D77, dashData10
-COPYBLOCK &7D03, &7D3B, dashData11
-COPYBLOCK &7CCF, &7D03, dashData12
-COPYBLOCK &7CA6, &7CCF, dashData13
-COPYBLOCK &7C82, &7CA6, dashData14
-COPYBLOCK &7C5E, &7C82, dashData15
-COPYBLOCK &7C3A, &7C5E, dashData16
-COPYBLOCK &7C16, &7C3A, dashData17
-COPYBLOCK &7BF2, &7C16, dashData18
-COPYBLOCK &7BCE, &7BF2, dashData19
-COPYBLOCK &7BAA, &7BCE, dashData20
-COPYBLOCK &7B86, &7BAA, dashData21
-COPYBLOCK &7B62, &7B86, dashData22
-COPYBLOCK &7B3E, &7B62, dashData23
-COPYBLOCK &7B1A, &7B3E, dashData24
-COPYBLOCK &7AF6+10, &7B1A, dashData25+10
+ CLEAR &645C, &64D0
 
-\ 3: Split the game code into the parts that make up the game binary file and
-\ pack them together in the correct order
+ ORG &15DB
 
-COPYBLOCK &5FD0, &6700, &64D0
-COPYBLOCK &0D00, &16DC, &5A80
-COPYBLOCK &7000, &70DB, &1500
-COPYBLOCK &70DB, &7725, &5300
-COPYBLOCK &0B00, &0D00, &1300
-COPYBLOCK &7900, &7A00, &1200
-CLEAR &645C, &64D0
+ CLEAR &15DB, &16DC
 
-\ 4: Add workspace noise to match the final game binary
+ EQUB &20, &00                              \ 4: Add workspace noise to match
+ EQUB &63, &60                              \ the final game binary
+ EQUB &A6, &03
+ EQUB &10, &03
+ EQUB &20, &CB
+ EQUB &2A, &20
+ EQUB &84, &50
+ EQUB &E4, &4D
+ EQUB &D0, &F6
+ EQUB &A2, &16
+ EQUB &86, &45
+ EQUB &20, &D1
+ EQUB &2A, &CA
+ EQUB &E0, &14
+ EQUB &B0, &F6
+ EQUB &A6, &4D
+ EQUB &20, &CB
+ EQUB &2A, &60
+ EQUB &20, &0E
+ EQUB &2B, &A2
+ EQUB &F4, &20
+ EQUB &CC, &0B
+ EQUB &20, &0E
+ EQUB &2B, &A2
+ EQUB &FD, &20
+ EQUB &CC, &0B
+ EQUB &A9, &14
+ EQUB &85, &42
+ EQUB &A9, &02
+ EQUB &20, &5D
+ EQUB &2A, &A9
+ EQUB &15, &85
+ EQUB &42, &A9
+ EQUB &01, &A2
+ EQUB &F4, &20
+ EQUB &5F, &2A
+ EQUB &A9, &16
+ EQUB &85, &42
+ EQUB &A9, &00
+ EQUB &A2, &FA
+ EQUB &20, &5F
+ EQUB &2A, &A6
+ EQUB &45, &60
+ EQUB &C9, &05
+ EQUB &90, &F9
+ EQUB &BD, &8C
+ EQUB &01, &30
+ EQUB &F4, &FE
+ EQUB &8C, &01
+ EQUB &60, &A2
+ EQUB &FD, &85
+ EQUB &37, &20
+ EQUB &45, &21
+ EQUB &A4, &42
+ EQUB &A5, &8A
+ EQUB &99, &80
+ EQUB &03, &A5
+ EQUB &8B, &99
+ EQUB &98, &03
+ EQUB &20, &B1
+ EQUB &2A, &20
+ EQUB &85, &22
+ EQUB &A4, &42
+ EQUB &B0, &2C
+ EQUB &38, &E9
+ EQUB &01, &30
+ EQUB &27, &99
+ EQUB &B0, &03
+ EQUB &A5, &2B
+ EQUB &38, &E9
+ EQUB &09, &AA
+ EQUB &A5, &2A
+ EQUB &CA, &F0
+ EQUB &0C, &10
+ EQUB &06, &4A
+ EQUB &E8, &D0
+ EQUB &FC, &F0
+ EQUB &04, &0A
+ EQUB &CA, &D0
+ EQUB &FC, &99
+ EQUB &C8, &03
+ EQUB &B9, &8C
+ EQUB &01, &29
+ EQUB &70, &05
+ EQUB &37, &4C
+ EQUB &AD, &2A
+ EQUB &A4, &42
+ EQUB &B9, &8C
+ EQUB &01, &09
+ EQUB &80, &99
+ EQUB &8C, &01
+ EQUB &60, &A0
+ EQUB &25, &20
+ EQUB &A5, &0C
+ EQUB &A5, &7D
+ EQUB &85, &55
+ EQUB &D0, &0E
+ EQUB &C4, &7C
+ EQUB &90, &0A
+ EQUB &C6, &68
+ EQUB &A5, &7C
+ EQUB &85, &41
+ EQUB &A5, &42
+ EQUB &85, &67
+ EQUB &60, &86
+ EQUB &45, &BD
+ EQUB &3C, &01
+ EQUB &AA, &BD
+ EQUB &8C, &01
+ EQUB &30, &35
+ EQUB &29, &0F
+ EQUB &85, &37
+ EQUB &BD, &80
+ EQUB &03, &38
+ EQUB &E5, &0A
+ EQUB &85, &74
+ EQUB &BD, &98
+ EQUB &03, &E5
+ EQUB &0B, &10
+ EQUB &06, &C9
+ EQUB &E0, &90
+ EQUB &1E, &B0
+ EQUB &04, &C9
+ EQUB &20, &B0
+ EQUB &18, &06
+ EQUB &74, &2A
+ EQUB &06, &74
+ EQUB &2A, &18
+ EQUB &69
 
-ORG &15DB
-
-CLEAR &15DB, &16DC
-
- EQUB &20, &00, &63, &60, &A6, &03, &10, &03, &20, &CB, &2A, &20
- EQUB &84, &50, &E4, &4D, &D0, &F6, &A2, &16, &86, &45, &20, &D1
- EQUB &2A, &CA, &E0, &14, &B0, &F6, &A6, &4D, &20, &CB, &2A, &60
- EQUB &20, &0E, &2B, &A2, &F4, &20, &CC, &0B, &20, &0E, &2B, &A2
- EQUB &FD, &20, &CC, &0B, &A9, &14, &85, &42, &A9, &02, &20, &5D
- EQUB &2A, &A9, &15, &85, &42, &A9, &01, &A2, &F4, &20, &5F, &2A
- EQUB &A9, &16, &85, &42, &A9, &00, &A2, &FA, &20, &5F, &2A, &A6
- EQUB &45, &60, &C9, &05, &90, &F9, &BD, &8C, &01, &30, &F4, &FE
- EQUB &8C, &01, &60, &A2, &FD, &85, &37, &20, &45, &21, &A4, &42
- EQUB &A5, &8A, &99, &80, &03, &A5, &8B, &99, &98, &03, &20, &B1
- EQUB &2A, &20, &85, &22, &A4, &42, &B0, &2C, &38, &E9, &01, &30
- EQUB &27, &99, &B0, &03, &A5, &2B, &38, &E9, &09, &AA, &A5, &2A
- EQUB &CA, &F0, &0C, &10, &06, &4A, &E8, &D0, &FC, &F0, &04, &0A
- EQUB &CA, &D0, &FC, &99, &C8, &03, &B9, &8C, &01, &29, &70, &05
- EQUB &37, &4C, &AD, &2A, &A4, &42, &B9, &8C, &01, &09, &80, &99
- EQUB &8C, &01, &60, &A0, &25, &20, &A5, &0C, &A5, &7D, &85, &55
- EQUB &D0, &0E, &C4, &7C, &90, &0A, &C6, &68, &A5, &7C, &85, &41
- EQUB &A5, &42, &85, &67, &60, &86, &45, &BD, &3C, &01, &AA, &BD
- EQUB &8C, &01, &30, &35, &29, &0F, &85, &37, &BD, &80, &03, &38
- EQUB &E5, &0A, &85, &74, &BD, &98, &03, &E5, &0B, &10, &06, &C9
- EQUB &E0, &90, &1E, &B0, &04, &C9, &20, &B0, &18, &06, &74, &2A
- EQUB &06, &74, &2A, &18, &69
-
-SAVE "3-assembled-output/Revs2.bin", LOAD%, LOAD_END%
+ SAVE "3-assembled-output/Revs2.bin", LOAD%, LOAD_END%

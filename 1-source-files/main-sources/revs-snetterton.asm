@@ -24,7 +24,7 @@
 \
 \ ******************************************************************************
 
-GUARD &7C00             \ Guard against assembling over screen memory
+ GUARD &7C00            \ Guard against assembling over screen memory
 
 \ ******************************************************************************
 \
@@ -32,11 +32,11 @@ GUARD &7C00             \ Guard against assembling over screen memory
 \
 \ ******************************************************************************
 
-LOAD% = &70DB           \ The load address of the track binary
+ LOAD% = &70DB          \ The load address of the track binary
 
-CODE% = &5300           \ The assembly address of the track data
+ CODE% = &5300          \ The assembly address of the track data
 
-trackWidth = 132        \ Track width
+ trackWidth = 132       \ Track width
 
 \ ******************************************************************************
 \
@@ -44,52 +44,52 @@ trackWidth = 132        \ Track width
 \
 \ ******************************************************************************
 
-thisSectionFlags    = &0001
-thisVectorNumber    = &0002
-playerPitchAngle    = &000D
-yStore              = &001B
-horizonLine         = &001F
-frontSegmentIndex   = &0024
-directionFacing     = &0025
-segmentCounter      = &0042
-playerPastSegment   = &0043
-playerHeading       = &0044
-xStore              = &0045
-vergeBufferEnd      = &004B
-horizonListIndex    = &0051
-playerSpeedHi       = &0063
-currentPlayer       = &006F
-T                   = &0074
-U                   = &0075
-V                   = &0076
-W                   = &0077
-topTrackLine        = &007F
-blockOffset         = &0082
-objTrackSection     = &06E8
-objSectionSegmt     = &0880
-Multiply8x8         = &0C00
-Absolute16Bit       = &0E40
-UpdateVectorNumber  = &13E0
-MovePlayerBack      = &140B
-CheckVergeOnScreen  = &1933
-gseg13              = &2490
-gtrm2               = &2535
-Absolute8Bit        = &3450
-MultiplyHeight      = &4610
-xTrackSegmentI      = &5400
-yTrackSegmentI      = &5500
-zTrackSegmentI      = &5600
-xTrackSegmentO      = &5700
-zTrackSegmentO      = &5800
-trackSectionFrom    = &5905
-xVergeRightLo       = &5E40
-xVergeLeftLo        = &5E68
-xVergeRightHi       = &5E90
-xVergeLeftHi        = &5EB8
-yVergeRight         = &5F20
-yVergeLeft          = &5F48
-backgroundColour    = &5F60
-playerDrift         = &62FB
+ thisSectionFlags   = &0001
+ thisVectorNumber   = &0002
+ playerPitchAngle   = &000D
+ yStore             = &001B
+ horizonLine        = &001F
+ frontSegmentIndex  = &0024
+ directionFacing    = &0025
+ segmentCounter     = &0042
+ playerPastSegment  = &0043
+ playerHeading      = &0044
+ xStore             = &0045
+ vergeBufferEnd     = &004B
+ horizonListIndex   = &0051
+ playerSpeedHi      = &0063
+ currentPlayer      = &006F
+ T                  = &0074
+ U                  = &0075
+ V                  = &0076
+ W                  = &0077
+ topTrackLine       = &007F
+ blockOffset        = &0082
+ objTrackSection    = &06E8
+ objSectionSegmt    = &0880
+ Multiply8x8        = &0C00
+ Absolute16Bit      = &0E40
+ UpdateVectorNumber = &13E0
+ MovePlayerBack     = &140B
+ CheckVergeOnScreen = &1933
+ gseg13             = &2490
+ gtrm2              = &2535
+ Absolute8Bit       = &3450
+ MultiplyHeight     = &4610
+ xTrackSegmentI     = &5400
+ yTrackSegmentI     = &5500
+ zTrackSegmentI     = &5600
+ xTrackSegmentO     = &5700
+ zTrackSegmentO     = &5800
+ trackSectionFrom   = &5905
+ xVergeRightLo      = &5E40
+ xVergeLeftLo       = &5E68
+ xVergeRightHi      = &5E90
+ xVergeLeftHi       = &5EB8
+ yVergeRight        = &5F20
+ yVergeLeft         = &5F48
+ backgroundColour   = &5F60
+ playerDrift        = &62FB
 
 \ ******************************************************************************
 \
@@ -99,7 +99,7 @@ playerDrift         = &62FB
 \
 \ ******************************************************************************
 
-ORG CODE%
+ ORG CODE%
 
 .trackData
 
@@ -4128,4 +4128,4 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-SAVE "3-assembled-output/Snetterton.bin", CODE%, P%
+ SAVE "3-assembled-output/Snetterton.bin", CODE%, P%

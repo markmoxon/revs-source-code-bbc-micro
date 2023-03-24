@@ -24,7 +24,7 @@
 \
 \ ******************************************************************************
 
-GUARD &7C00             \ Guard against assembling over screen memory
+ GUARD &7C00            \ Guard against assembling over screen memory
 
 \ ******************************************************************************
 \
@@ -32,9 +32,9 @@ GUARD &7C00             \ Guard against assembling over screen memory
 \
 \ ******************************************************************************
 
-LOAD% = &2000           \ The load address of the main code binary
+ LOAD% = &2000          \ The load address of the main code binary
 
-CODE% = &2000           \ The address of the main game code
+ CODE% = &2000          \ The address of the main game code
 
 \ ******************************************************************************
 \
@@ -44,23 +44,23 @@ CODE% = &2000           \ The address of the main game code
 \
 \ ******************************************************************************
 
-osbyte_flush_buffer_class = &0F
+ osbyte_flush_buffer_class = &0F
 
-L0000 = &0000
-L0080 = &0080
-L0100 = &0100
-L0400 = &0400
-L0500 = &0500
-L0600 = &0600
-L0700 = &0700
-L0CFF = &0CFF
-L0D00 = &0D00
-crtc_horz_total = &FE00
-crtc_horz_displayed = &FE01
-osbyte = &FFF4
-oscli = &FFF7
+ L0000 = &0000
+ L0080 = &0080
+ L0100 = &0100
+ L0400 = &0400
+ L0500 = &0500
+ L0600 = &0600
+ L0700 = &0700
+ L0CFF = &0CFF
+ L0D00 = &0D00
+ crtc_horz_total = &FE00
+ crtc_horz_displayed = &FE01
+ osbyte = &FFF4
+ oscli = &FFF7
 
-ORG CODE%
+ ORG CODE%
 
 .Start
 
@@ -271,4 +271,4 @@ ORG CODE%
 \
 \ ******************************************************************************
 
-SAVE "3-assembled-output/Revs1.bin", LOAD%, P%
+ SAVE "3-assembled-output/Revs1.bin", LOAD%, P%
