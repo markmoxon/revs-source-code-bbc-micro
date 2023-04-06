@@ -219,7 +219,17 @@ By default the build process builds the Acornsoft variant, but you can build a s
 
 You can add `variant=acornsoft` to produce the `revs-acornsoft.ssd` file containing the Acornsoft variant, though that's the default value so it isn't necessary.
 
-The verification checksums for this version are shown above.
+The verification checksums for this version are as follows:
+
+```
+Results for release: acornsoft
+[--originals--]  [---output----]
+Checksum   Size  Checksum   Size  Match  Filename
+-----------------------------------------------------------
+9ab958e9   1455  9ab958e9   1455   Yes   Revs1.bin
+e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
+0b090b15   1849  0b090b15   1849   Yes   Silverstone.bin
+```
 
 ### Building the Revs 4 Tracks variant
 
