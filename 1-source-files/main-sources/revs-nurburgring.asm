@@ -35,11 +35,11 @@
 \
 \ ******************************************************************************
 
- LOAD%= &70DB          \ The load address of the track binary
+ LOAD%= &70DB           \ The load address of the track binary
 
- CODE%= &5300          \ The assembly address of the track data
+ CODE%= &5300           \ The assembly address of the track data
 
- trackWidth= 154       \ Track width
+ trackWidth= 154        \ Track width
 
 \ ******************************************************************************
 \
