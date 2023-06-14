@@ -265,7 +265,7 @@
                         \ once it has been populated
                         \
                         \ segmentListRight gives us the equivalent index for the
-                        \ the right side of the track
+                        \ right side of the track
                         \
                         \ The list runs from index 6 upwards
 
@@ -757,7 +757,7 @@
 
 .segmentDirection
 
- SKIP 1                 \ The relative dirction of our car, to use when
+ SKIP 1                 \ The relative direction of our car, to use when
                         \ processing segments in the GetSegmentAngles routine
                         \
                         \   * 0 when our car is facing in the same direction
@@ -960,7 +960,7 @@
                         \
                         \   * Bit 6 set = the one-minute warning has been shown
                         \
-                        \   * Bit 7 set = the time-up watning has been shown
+                        \   * Bit 7 set = the time-up warning has been shown
 
 .updateDrivingInfo
 
@@ -1289,9 +1289,9 @@
                         \
                         \   * Bit 6 = acceleration status
                         \
-                        \       * Clear = do not acclerate car
+                        \       * Clear = do not accelerate car
                         \
-                        \       * Set = acclerate car
+                        \       * Set = accelerate car
                         \
                         \   * Bit 7 = braking status
                         \
@@ -1368,7 +1368,7 @@
                         \ it's in
                         \
                         \ This is effectively a fractional part of the car's
-                        \ progress throught the segment, with 0 being the start
+                        \ progress through the segment, with 0 being the start
                         \ of the segment and 255 the end of the segment
                         \
                         \ When this byte rolls over, we increment the car's
@@ -2230,9 +2230,9 @@
 
  INY                    \ Increment the loop counter
 
- BNE swap2              \ If we have finshed swapping a page of bytes, increment
- INC Q                  \ the high bytes of (Q P) and (S R) to move on to next
- INC S                  \ page
+ BNE swap2              \ If we have finished swapping a whole page of bytes,
+ INC Q                  \ increment the high bytes of (Q P) and (S R) to move
+ INC S                  \ on to the next page
 
 .swap2
 
@@ -3421,9 +3421,9 @@ ENDIF
  INX                    \ Set X = 1 and secondAxis = 0, so we project sin(H G)
  DEC secondAxis         \ into cosYawAngle and cos(H G) into sinYawAngle
 
-                        \ We now enter a loop that sets sinYawAngle+X to
+                        \ We now enter a loop that sets sinYawAngle + X to
                         \ sin(H G) on the first iteration, and sets
-                        \ sinYawAngle+secondAxis to cos(H G) on the second
+                        \ sinYawAngle + secondAxis to cos(H G) on the second
                         \ iteration
                         \
                         \ The commentary is for the sin(H G) iteration, see the
@@ -3589,7 +3589,7 @@ ENDIF
                         \   (U T) = (PI/4 - yawRadians / 2) ^ 2 * 2
                         \         = ((PI/2 - yawRadians) / 2) ^ 2 * 2
                         \
-                        \ If we define x = PI/2 − yawRadians, then we have:
+                        \ If we define x = PI/2 - yawRadians, then we have:
                         \
                         \   (U T) = (x / 2) ^ 2 * 2
                         \         = ((x ^ 2) / (2 ^ 2)) * 2
@@ -3614,11 +3614,11 @@ ENDIF
                         \
                         \ It's a trigonometric identity that:
                         \
-                        \   cos(PI/2 − x) = sin(x)
+                        \   cos(PI/2 - x) = sin(x)
                         \
                         \ so we have:
                         \
-                        \   cos(x) = cos(PI/2 − yawRadians)
+                        \   cos(x) = cos(PI/2 - yawRadians)
                         \          = sin(yawRadians)
                         \
                         \ and we already calculated that:
@@ -3731,7 +3731,7 @@ ENDIF
                         \
                         \ It's a trigonometric identity that:
                         \
-                        \   sin(PI/2 − x) = cos(x)
+                        \   sin(PI/2 - x) = cos(x)
                         \
                         \ so jumping back will, in fact, find the cosine of the
                         \ angle
@@ -4213,7 +4213,7 @@ ENDIF
 \       Name: ScanKeyboard
 \       Type: Subroutine
 \   Category: Keyboard
-\    Summary: Scan the kayboard for a specific key press
+\    Summary: Scan the keyboard for a specific key press
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4224,11 +4224,13 @@ ENDIF
 \
 \ Returns:
 \
-\   Z flag              Set if the key in X is being pressed, in which case BEQ
-\                       will branch
+\   Z flag              The result:
 \
-\                       CLear if the key in X is not being pressed, in which
-\                       case BNE will branch
+\                         * Set if the key in X is being pressed, in which case
+\                           BEQ will branch
+\
+\                         * Clear if the key in X is not being pressed, in which
+\                           case BNE will branch
 \
 \ Other entry points:
 \
@@ -4369,7 +4371,7 @@ ENDIF
 .soun3
 
  STX soundRevCount      \ Store X in soundRevCount, so soundRevCount moves one
-                        \ step closed to soundRevTarget
+                        \ step closer to soundRevTarget
 
                         \ We now do the following, depending on the updated
                         \ value of soundRevCount in X:
@@ -4548,16 +4550,16 @@ ENDIF
                         \ which gives us the offset of key that is being pressed
                         \ within the shiftedKeys table
 
- LDA configKeys,Y       \ Set X to the low nibble for this key's corresonding
+ LDA configKeys,Y       \ Set X to the low nibble for this key's corresponding
  AND #&0F               \ entry in the configKeys, which contains the offset of
  TAX                    \ the configuration byte from the first configuration
                         \ byte at configStop
 
- LDA configKeys,Y       \ Set A to the high nibble for this key's corresonding
+ LDA configKeys,Y       \ Set A to the high nibble for this key's corresponding
  AND #&F0               \ entry in the configKeys, which contains the value that
                         \ we need for the corresponding configuration byte
 
- STA configStop,X       \ Set the coresponding configuration byte to the value
+ STA configStop,X       \ Set the corresponding configuration byte to the value
                         \ in A
 
 .shif3
@@ -4957,7 +4959,7 @@ ENDIF
                         \ top of the screen
 
  JSR UpdatePositionInfo \ Otherwise update the position number and driver names
-                        \ at the top of the screeen
+                        \ at the top of the screen
 
  RTS                    \ Return from the subroutine
 
@@ -5236,7 +5238,7 @@ ENDIF
  TXA                    \ Store X on the stack
  PHA
 
- LDA driversInOrder,X   \ Set X to the number of driver in position X
+ LDA driversInOrder,X   \ Set X to the number of the driver in position X
  TAX
 
  JSR MoveObjectBack     \ Move driver X backwards along the track
@@ -5359,7 +5361,7 @@ ENDIF
 
 .rcar9
 
- LDX driversInOrder,Y   \ Set X to the number of driver in position X
+ LDX driversInOrder,Y   \ Set X to the number of the driver in position X
 
  EOR #&FF               \ Flip A between 80 and 175
 
@@ -5494,7 +5496,7 @@ ENDIF
                         \ in the following loop
 
  LDX #30                \ We now zero all 30 variable bytes from xPlayerSpeedHi
-                        \ to xSteeringForceHi, so so set up a loop counter in X
+                        \ to xSteeringForceHi, so set up a loop counter in X
 
 .cras2
 
@@ -5587,7 +5589,7 @@ ENDIF
                         \ ahead and the position behind
 
  LDX #19                \ We now loop through the drivers, checking whether they
-                        \ have finshed the race, so set a loop counter in X for
+                        \ have finished the race, so set a loop counter in X for
                         \ the driver number
 
  LDA raceStarted        \ If bit 7 of raceStarted is set then this is a race
@@ -5735,7 +5737,7 @@ ENDIF
 
 .clap1
 
- RTS                    \ Return from the subnroutine
+ RTS                    \ Return from the subroutine
 
 \ ******************************************************************************
 \
@@ -6099,7 +6101,7 @@ ENDIF
  LDY #6                 \ Set Y = 6
 
  STY newSectionFetched  \ Set newSectionFetched to a non-zero value to indicate
-                        \ that we have juet fetched a new section (as the
+                        \ that we have just fetched a new section (as the
                         \ GetFirstSegment routine is only called when the
                         \ player's car enters a new section
 
@@ -6354,7 +6356,7 @@ ENDIF
 
 .secp2
 
- CPX #6                 \ If X < 6, then the proposed pointer valus is not past
+ CPX #6                 \ If X < 6, then the proposed pointer value is not past
  BCC secp3              \ the end of the list, so jump to secp3 to skip the
                         \ following
 
@@ -7163,7 +7165,7 @@ ENDIF
 
 .coor3
 
- LDA directionFacing    \ If our car is facing fowards, jump to coor5 to return
+ LDA directionFacing    \ If our car is facing forwards, jump to coor5 to return
  BEQ coor5              \ from the subroutine
 
                         \ We are facing backwards, so we need to negate the
@@ -10180,9 +10182,9 @@ ENDIF
                         \ as we just passed through a BCC)
 
                         \ The following loop uses X as a loop counter to work
-                        \ through through the verge buffer from entry U to the
-                        \ end, setting the background colour if the verge goes
-                        \ off the left of the screen
+                        \ through the verge buffer from entry U to the end,
+                        \ setting the background colour if the verge goes off
+                        \ the left of the screen
 
 .sver1
 
@@ -10463,7 +10465,7 @@ ENDIF
  LDA yVergeRight,X      \ Set yPixelCoord = X-th value from yVergeRight
  STA yPixelCoord        \
                         \ Which is the pitch angle (i.e. y-coordinate) of
-                        \ the verge that has the corner markes
+                        \ the verge that has the corner markers
 
  LDY #2                 \ Set Y = 2 so the following loop shifts (U T) left by
                         \ two places
@@ -10596,7 +10598,7 @@ ENDIF
 \       Name: ProcessContact
 \       Type: Subroutine
 \   Category: Car geometry
-\    Summary: Process collosions between the player and the other cars
+\    Summary: Process collisions between the player and the other cars
 \
 \ ------------------------------------------------------------------------------
 \
@@ -10707,7 +10709,7 @@ ENDIF
 
  BNE cont4              \ Jump to cont4 to leave the speed of the other car
                         \ alone, as it is going faster than the player (this BNE
-                        \ is efftively a JMP, as we know from the above that
+                        \ is effectively a JMP, as we know from the above that
                         \ carSpeedHi,Y < carSpeedHi,X, which implies that the
                         \ value of carSpeedHi,X must be non-zero)
 
@@ -11574,7 +11576,7 @@ ENDIF
                         \
                         \   * A contains the pixel byte we need to use to draw
                         \     this edge (incorporating the previous edge if it's
-                        \     close enough to to be in the same pixel byte)
+                        \     close enough to be in the same pixel byte)
                         \
                         \   * L contains a pixel mask containing set pixels for
                         \     those pixels outside of the object and its fill,
@@ -11819,7 +11821,7 @@ ELIF _SUPERIOR OR _REVSPLUS
                         \ on-screen
 
  CMP #&55               \ If the current byte is not &55, then the current byte
- BNE sraw3              \ in the scren buffer contains something, so jump to
+ BNE sraw3              \ in the screen buffer contains something, so jump to
                         \ sraw3 with the contents in A
 
  LDA I                  \ The current byte in the screen buffer is &55, or
@@ -12453,7 +12455,7 @@ IF _SUPERIOR OR _REVSPLUS
                         \ the next pixel line on-screen
 
  CPY blockOffset        \ If Y = blockOffset then we have reached the bottom of
- BEQ sedg10             \ the objec, so jump back to sedg10 to return from the
+ BEQ sedg10             \ the object, so jump back to sedg10 to return from the
                         \ subroutine
 
 .sedg4
@@ -12656,7 +12658,7 @@ ELIF _SUPERIOR OR _REVSPLUS
                         \ the screen buffer
 
  LDA #0                 \ Set A = 0, so the call to GetTyreDashEdgeSup modifies
-                        \ theFillObject routine to store 0 as the value for
+                        \ the FillObject routine to store 0 as the value for
                         \ colour 0 (instead of the &55 that the screen buffer
                         \ uses to represent black)
 
@@ -12703,7 +12705,7 @@ ENDIF
 \ This routine populates the tyreRightEdge and dashRightEdge tables with the
 \ pixel bytes along the right edge of the left tyre and the right edge of the
 \ dashboard respectively. It also fills the block to the right of the edge with
-\ the appropiate content, so the feathered edges don't fill to the right.
+\ the appropriate content, so the feathered edges don't fill to the right.
 \
 \ ******************************************************************************
 
@@ -12790,7 +12792,7 @@ ENDIF
                         \ concurrently, and add the same value to the offset
                         \ for the bottom line in VV (see the next instruction)
                         \
-                        \ There must be a reason for all this shenanigans, but
+                        \ There must be a reason for all these shenanigans, but
                         \ it's currently eluding me
 
  ADC bottomTrackLine    \ Set VV = T + bottomTrackLine
@@ -13133,7 +13135,7 @@ IF _ACORNSOFT OR _4TRACKS
                         \   * Bit 3 = 0
                         \
                         \ then the colour was set by SetVergeBackground when
-                        \ drawing leftVergeStartor rightVergeStart, so jump to
+                        \ drawing leftVergeStart or rightVergeStart, so jump to
                         \ gcol2
 
  LDA rightGrassStart,Y  \ Set A to the block number containing the right edge of
@@ -13481,7 +13483,7 @@ IF _SUPERIOR OR _REVSPLUS
 
  BCC scol7              \ Jump to scol7 to return the pixel byte for the colour
                         \ in A (this BCC is effectively a JMP as we just passed
-                        \ throuhg a BCS)
+                        \ through a BCS)
 
 .scol2
 
@@ -13685,7 +13687,7 @@ IF _SUPERIOR OR _REVSPLUS
                         \
                         \   * A = 2 if we are steering left
                         \
-                        \ We now set X as a flag for the steering diection, so
+                        \ We now set X as a flag for the steering direction, so
                         \ we can use A for other purposes
 
  LDX #50                \ Set X = 50 to use as the value for steering left
@@ -13971,8 +13973,8 @@ IF _SUPERIOR OR _REVSPLUS
 
  RTS                    \ Return from the subroutine
 
- NOP                    \ These instruction is unused, and is included to
-                        \ pad out the code
+ NOP                    \ This instruction is unused, and is included to pad out
+                        \ the code
 
 ENDIF
 
@@ -14062,8 +14064,8 @@ ENDIF
                         \   * 20-22 = map logical colour 1 to physical colour
                         \             (number of the driver in front) mod 4
                         \
-                        \   * 23 = don't change the palette, i.e use the palette
-                        \          from colourPalette
+                        \   * 23 = don't change the palette, i.e. use the
+                        \          palette from colourPalette
 
  LDA T                  \ Set A = T, so A contains the driver number
 
@@ -14108,7 +14110,7 @@ ENDIF
                         \ following instruction and set lowestTrackLine to 0 (so
                         \ the whole object is drawn)
 
- LDX horizonLine        \ Otherwise the object is further away then the horizon
+ LDX horizonLine        \ Otherwise the object is further away than the horizon
                         \ line, so set X to the track line number of the
                         \ horizon, so the parts of the object below this line do
                         \ not get drawn (as they are below the horizon line, so
@@ -14201,7 +14203,7 @@ ENDIF
                         \ back of the sign, which is blank)
 
  LDA directionFacing    \ If bit 7 of directionFacing is clear, then our car is
- BPL dobj6              \ facing fowards, so loop back to draw the contents of
+ BPL dobj6              \ facing forwards, so loop back to draw the contents of
                         \ the sign in object type objectType
 
 .dobj7
@@ -14554,7 +14556,7 @@ ENDIF
 
  LDA lowestTrackLine    \ Set A = lowestTrackLine, so the minimum track line
                         \ number is set to lowestTrackLine and we only draw the
-                        \ objectdown to the lowest line allowed
+                        \ object down to the lowest line allowed
 
  NOP                    \ These instructions have no effect - presumably they
  NOP                    \ are left over from changes during development
@@ -14880,7 +14882,7 @@ ENDIF
                         \   |z-delta| >= |x-delta|
 
  PHP                    \ Store the status flags on the stack, and in particular
-                        \ the Z flag, which which will be set if the two match,
+                        \ the Z flag, which will be set if the two match,
                         \ i.e. if |z-delta| = |x-delta|
                         \
                         \ In other words, a BEQ would branch with these flags
@@ -15715,7 +15717,7 @@ ENDIF
                         \   * (frontSection - 5) * 8 for entry #0
                         \
                         \ So A now contains the correct section number for
-                        \ entry number number sectionListPointer
+                        \ entry number sectionListPointer
 
  BCS gsec6              \ If the subtraction didn't underflow, jump to gsec6
 
@@ -15744,7 +15746,7 @@ ENDIF
                         \   * (6 + frontSection) * 8 for entry #0
                         \
                         \ So A now contains the correct section number for
-                        \ entry number number sectionListPointer
+                        \ entry number sectionListPointer
 
  CMP trackSectionCount  \ If A < trackSectionCount then A is a valid section
  BCC gsec6              \ number, so jump to gsec6
@@ -16317,7 +16319,7 @@ ENDIF
  CPX #3                 \ If X = 3, we have done all three axes, so jump to
  BEQ gseg8              \ gseg8
 
- STX U                  \ Stote the incremented value in U, so this is the same
+ STX U                  \ Store the incremented value in U, so this is the same
                         \ as incrementing U
 
  LDX W                  \ Set X = W, which we set above to the segment offset
@@ -16937,8 +16939,8 @@ ENDIF
 
  SEC                    \ Set the C flag, so segmentDirection gets set to 1
 
- BNE segd2              \ Jump to segd2 (thie BNE is effectively a JMP as A is
-                        \ never zero
+ BNE segd2              \ Jump to segd2 (this BNE is effectively a JMP as A is
+                        \ never zero)
 
 .segd1
 
@@ -17766,7 +17768,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Tactics
 \    Summary: The car we are processing has not overtaken the car in front of
-\             it, so if applicable, we can keep maneouvring into position
+\             it, so if applicable, we can keep manoeuvring into position
 \
 \ ******************************************************************************
 
@@ -18817,9 +18819,9 @@ ENDIF
 
 .bvis1
 
- JMP HideObject         \ Hide the object in objectNumber, which this hides the
-                        \ car object for driver X, and return from the
-                        \ subroutine using a tail call
+ JMP HideObject         \ Hide the object in objectNumber, which hides the car
+                        \ object for driver X, and return from the subroutine
+                        \ using a tail call
 
 .bvis2
 
@@ -19539,7 +19541,7 @@ ENDIF
                         \ to A << X
 
                         \ Otherwise X < 0, so we calculate A >> X to set as the
-                        \ the object's scaleUp
+                        \ object's scaleUp
 
 .sobj1
 
@@ -20813,7 +20815,7 @@ ENDIF
  CMP #3                 \ If %ab = 3, so the colour to the left of the verge
  BEQ dver21             \ edge is green, jump to dver21 to skip the following
 
-                        \ Otherwise, disable the DrawGreass routines
+                        \ Otherwise, disable the DrawGrass routines
 
  LDA #&60               \ Set A to the opcode for the RTS instruction
 
@@ -21119,7 +21121,7 @@ ENDIF
  SBC SS                 \ If we get here then the cumulative pitch deltas in TT
                         \ have added up to a multiple of the yaw delta in SS, so
                         \ we subtract SS from the slope error (which we can do
-                        \ we we know the C flag is set)
+                        \ as we know the C flag is set)
 
 .shlr4
 
@@ -21232,9 +21234,8 @@ ENDIF
 
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
-                        \ third dash dash data block, or abort the drawing and
-                        \ return to DrawSegmentEdge if we've finished drawing
-                        \ the edge
+                        \ third dash data block, or abort the drawing and return
+                        \ to DrawSegmentEdge if we've finished drawing the edge
 
 .shlr20
 
@@ -21381,13 +21382,13 @@ ENDIF
  SBC SS                 \ If we get here then the cumulative pitch deltas in TT
                         \ have added up to a multiple of the yaw delta in SS, so
                         \ we subtract SS from the slope error (which we can do
-                        \ we we know the C flag is set)
+                        \ as we know the C flag is set)
 
 .shrl4
 
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
-                        \ third dash dash data block
+                        \ third dash data block
                         \
                         \ If we have reached the pitch angle of the current
                         \ segment, then we have reached the end of the edge to
@@ -21626,7 +21627,7 @@ ENDIF
  SBC TT                 \ If we get here then the cumulative yaw deltas in SS
                         \ have added up to a multiple of the pitch delta in TT,
                         \ so we subtract TT from the slope error (which we can
-                        \ do we we know the C flag is set)
+                        \ do as we know the C flag is set)
 
 .stlr3
 
@@ -21703,9 +21704,8 @@ ENDIF
 
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
-                        \ third dash dash data block, or abort the drawing and
-                        \ return to DrawSegmentEdge if we've finished drawing
-                        \ the edge
+                        \ third dash data block, or abort the drawing and return
+                        \ to DrawSegmentEdge if we've finished drawing the edge
 
  ADC SS                 \ Repeat the slope error calculation for pixel 2
  BCC stlr9              \ of the second dash data block
@@ -21804,7 +21804,7 @@ ENDIF
 
  LDX #3                 \ Draw the edge in pixel 3 of the second dash data block
  JSR DrawVergeByteRight \ (the rightmost pixel) and draw a fill byte in the
-                        \ third dash dash data block
+                        \ third dash data block
                         \
                         \ If we have reached the pitch angle of the current
                         \ segment, then we have reached the end of the edge to
@@ -21829,7 +21829,7 @@ ENDIF
  SBC TT                 \ If we get here then the cumulative yaw deltas in SS
                         \ have added up to a multiple of the pitch delta in TT,
                         \ so we subtract TT from the slope error (which we can
-                        \ do we we know the C flag is set)
+                        \ do as we know the C flag is set)
 
 .strl3
 
@@ -22160,7 +22160,7 @@ ENDIF
                         \ to verl6 to merge our edge with the existing pixels
 
  LDA objectPalette,X    \ Set A to the X-th entry from the object palette, which
-                        \ contains a background colour bytes with the first X
+                        \ contains a background colour byte with the first X
                         \ pixels in the foreground colour
 
 .verl3
@@ -22376,7 +22376,7 @@ ENDIF
                         \ to verb6 to merge our edge with the existing pixels
 
  LDA objectPalette,X    \ Set A to the X-th entry from the object palette, which
-                        \ contains a background colour bytes with the first X
+                        \ contains a background colour byte with the first X
                         \ pixels in the foreground colour
 
 .verb3
@@ -23360,7 +23360,7 @@ ENDIF
 
  ROR pressingShiftArrow \ Shift the C flag into bit 7 of pressingShiftArrow
 
- JMP MainLoop           \ Jump to the start of the main gane loop to restart the
+ JMP MainLoop           \ Jump to the start of the main game loop to restart the
                         \ game
 
 .rest1
@@ -25371,7 +25371,7 @@ ENDIF
 .pnum1
 
  CLC                    \ Print the high nibble in A as a digit (or, if the high
- ADC #'0'               \ nibble is zero, print a capitel "O" or a space, as per
+ ADC #'0'               \ nibble is zero, print a capital "O" or a space, as per
  JSR PrintCharacter     \ the above)
 
                         \ Now for the second digit
@@ -26480,7 +26480,7 @@ ENDIF
 \ pixel row is row 0), and the second points to the 18th pixel row. There are
 \ eight pixels in each character row, so this prints the first row of text so
 \ that it has a one-pixel margin between the top of the text and the top of the
-\ screen, and i prints the second row so that it has a one-pixel margin between
+\ screen, and it prints the second row so that it has a one-pixel margin between
 \ the top of the text and the bottom of the line above.
 \
 \ I don't know why this table starts at &5800 and not &5A80, but that's how it
@@ -27366,7 +27366,7 @@ ENDIF
 
 .fenc1
 
- LDX T                  \ If X = 40 then we have drawn the fencs across all the
+ LDX T                  \ If X = 40 then we have drawn the fence across all the
  CPX #40                \ dash data blocks, so return from the subroutine (as
  BEQ DrawFence-1        \ DrawFence-1 contains an RTS)
 
@@ -27719,7 +27719,7 @@ ENDIF
 \       Name: SetRowColours
 \       Type: Subroutine
 \   Category: Text
-\    Summary: Set the foreground and background colorus for a table row
+\    Summary: Set the foreground and background colours for a table row
 \
 \ ------------------------------------------------------------------------------
 \
@@ -29368,7 +29368,7 @@ ENDIF
 \
 \   * Horizon goes down when we are not in reverse, we are applying the throttle
 \     and engine torque is non-zero (i.e. we pull the nose of the car up by
-\     by incrementing liftFromTorque, to a maximum of 3)
+\     incrementing liftFromTorque, to a maximum of 3)
 \
 \   * Horizon goes up when we are not in reverse, we are applying the brakes and
 \     we are moving (i.e. we push the nose of the car down by decrementing
@@ -30830,7 +30830,7 @@ ENDIF
  ROR A                  \ Shift A to the right, inserting the C flag into bit 7
                         \ to retain the correct sign
 
- PHA                    \ Store the regult on the stack, so the stack contains
+ PHA                    \ Store the result on the stack, so the stack contains
                         \ the top byte of (U T), shifted right by one place
 
  LDA T                  \ Set A = T, the low byte of (U T)
@@ -30872,7 +30872,7 @@ ENDIF
 \
 \     * Call ApplyTyreForces
 \
-\     * If either bits 6 or 7 are set in tyreSqueal for tyre X:
+\     * If either bit 6 or 7 is set in tyreSqueal for tyre X, then:
 \
 \         * Call ApplySkidForces and make the tyres squeal
 \
@@ -33526,7 +33526,7 @@ ENDIF
 
  LDX #1                 \ We now run the following loop, once for each wing
                         \ setting, so set X to use as a loop counter, from 1
-                        \ (for the front wing) to 0 (for the read wing)
+                        \ (for the front wing) to 0 (for the rear wing)
 
 .gras5
 
@@ -33643,7 +33643,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine calcvulates the following:
+\ This routine calculates the following:
 \
 \   xPlayerAccel = xPlayerAccel - scaledSpeed * xPrevVelocityHi
 \
@@ -33884,7 +33884,7 @@ ENDIF
                         \ xRoadSignCoord for the second variable, so we
                         \ calculate the yaw and pitch angles for an object at
                         \ the following 3D coordinates (if we just consider the
-                        \ the x-axis, for clarity):
+                        \ x-axis, for clarity):
                         \
                         \    xCoord2 - xRoadSignCoord
                         \  = xTrackSectionI - (xPlayerCoord - xTrackSignVector)
@@ -35004,13 +35004,13 @@ ENDIF
 
  LDA #%01000000         \ Set 6522 User VIA interrupt enable register IER
  STA VIA+&6E            \ (SHEILA &4E) bit 6 (i.e. disable the Timer1 interrupt
-                        \ from the User VIA, as we no longer neeed it)
+                        \ from the User VIA, as we no longer need it)
 
  CLI                    \ Re-enable interrupts
 
  JSR FlushSoundBuffers  \ Flush all four sound channel buffers
 
-                        \ Fall througn into SetScreenMode7 to switch to mode 7
+                        \ Fall through into SetScreenMode7 to switch to mode 7
 
 \ ******************************************************************************
 \
@@ -35126,8 +35126,8 @@ ENDIF
                         \ horizon dips down
                         \
                         \ Conversely, when we are in a dip, (U A) is small and
-                        \ and so is timer 1, so the size of the sky section
-                        \ above the horizon is smaller, so the horizon rises up
+                        \ so is timer 1, so the size of the sky section above
+                        \ the horizon is smaller, so the horizon rises up
                         \
                         \ The range of screenTimer1 values from the following
                         \ calculation is therefore:
@@ -36100,7 +36100,7 @@ ENDIF
 
  STY T                  \ Set T = Y (in the range 37 to 16) to pass to the
                         \ DrawDashboardLine routine as the amount of slope error
-                        \ for each step slong the main axis
+                        \ for each step along the main axis
 
  LDX wheelPixels,Y      \ Set X to the number of pixels that would be along the
                         \ long axis of the line if the line went all the way to
@@ -36124,7 +36124,7 @@ ENDIF
 
  STX T                  \ Set T = X (in the range 0 to 37) to pass to the
                         \ DrawDashboardLine routine as the amount of slope error
-                        \ for each step slong the main axis
+                        \ for each step along the main axis
 
  LDA V                  \ Flip bit 0 of V, to flip it from the first half of the
  EOR #1                 \ quadrant to the second half
@@ -37119,7 +37119,7 @@ ENDIF
                         \     * 1 = show corner markers in red or white, as
                         \           appropriate
                         \
-                        \   * Bit 6: In the extra tracks only, nable hooks to
+                        \   * Bit 6: In the extra tracks only, enable hooks to
                         \            generate segment vectors (G)
                         \
                         \     * 0 = disable HookDataPointers and
@@ -37262,9 +37262,9 @@ ENDIF
                         \ data is moved
                         \
                         \ These lines rewind BeebAsm's assembly back to
-                        \ dashData41 (which is at address &594A), and clear the
-                        \ block from that point to CallTrackHook, so we can
-                        \ can set the correct address for dashData41 while also
+                        \ dashData41 (which is at address &594A), and clear
+                        \ the block from that point to CallTrackHook, so we can
+                        \ set the correct address for dashData41 while also
                         \ retaining the addresses we just set up for the track
                         \ data
 .dashData41
@@ -39705,7 +39705,7 @@ ENDIF
  BEQ text9
 
  CMP #' '               \ If a control character was entered (i.e. with an ASCII
- BCC text2              \ code less than tyat of " "), jump back to text2 to
+ BCC text2              \ code less than that of " "), jump back to text2 to
                         \ ignore it and wait for another key press
 
  BNE text3              \ If a key other than SPACE was pressed, jump to text3
@@ -39971,7 +39971,7 @@ ENDIF
  ROL T                  \ Shift bit 7 of T into the C flag, and because T = A,
                         \ this puts bit 7 of A into the C flag
 
- ROR A                  \ Shift A right while inserting a copt of bit 7 into
+ ROR A                  \ Shift A right while inserting a copy of bit 7 into
                         \ bit 7, so this effectively divides A by two while
                         \ keeping the sign intact:
                         \
@@ -40149,8 +40149,8 @@ IF _SUPERIOR OR _REVSPLUS
                         \
                         \ The following updates screen memory to add a small
                         \ "hat" marker to the centre-bottom of the rev counter
-                        \ when CAS is enabled (or to to remove the marker when
-                        \ it isn't enabled)
+                        \ when CAS is enabled (or to remove the marker when it
+                        \ isn't enabled)
 
  STA assistRight1       \ Set assistRight1 = 0 or %10000000
 
@@ -40654,7 +40654,7 @@ ENDIF
 
 .game10
 
- LDA driversInOrder,Y   \ Copy the Y-th positon from driversInOrder to
+ LDA driversInOrder,Y   \ Copy the Y-th position from driversInOrder to
  STA driversInOrder2,Y  \ driversInOrder2, setting A to the number of the driver
                         \ in position Y
 
@@ -40724,7 +40724,7 @@ ENDIF
 
 .game14
 
- LDA driversInOrder2,X  \ Restore the X-th positon from driversInOrder2 to
+ LDA driversInOrder2,X  \ Restore the X-th position from driversInOrder2 to
  STA driversInOrder,X   \ driversInOrder
 
  DEX                    \ Decrement the counter
@@ -40843,8 +40843,8 @@ ENDIF
 
  STA raceStarting       \ Set raceStarting to the value of A, which will be 128
                         \ if this is a race, so the starting lights get shown
-                        \ rand the estrictions of the starting grid (can't move
-                        \ the car, timers are disabled) are applied
+                        \ and the restrictions of the starting grid are applied
+                        \ (i.e. can't move the car, timers are disabled)
                         \
                         \ If this not a race then we clear bit 7 of raceStarting
                         \ so the restrictions are not applied
@@ -40869,7 +40869,7 @@ ENDIF
                         \ If we get here then bit 6 of configStop is clear and
                         \ bit 7 of configStop is set, which means we presses
                         \ SHIFT and right arrow to exit the main driving loop,
-                        \ which is the key combination for resarting the whole
+                        \ which is the key combination for restarting the whole
                         \ game
 
  JSR RestartGame        \ Jump to RestartGame to restart the game, which removes
@@ -41326,7 +41326,7 @@ ENDIF
  LDA raceStarted        \ If bit 7 of raceStarted is clear, that means the
  BPL dtab7              \ results are from qualifying or practice, so jump to
                         \ dtab7 to skip the following so we do not print the
-                        \ race class above ths table
+                        \ race class above the table
 
                         \ We now print the race class and number of laps in the
                         \ gap between the page header and the top of the table
@@ -42312,7 +42312,7 @@ ENDIF
 \                       update (i.e. the screen address of the pixel byte to
 \                       draw in the first character block on the line, so this
 \                       is the address of the start of the horizontal line that
-\                       the seqential macros draw)
+\                       the sequential macros draw)
 \
 \   (S R)               Contains (Q P) + &100, to be used instead of (Q P) for
 \                       pixel bytes 32 to 39
@@ -42419,7 +42419,7 @@ ENDMACRO
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine modifes the DrawTrackBytes routine so that it draws all the
+\ This routine modifies the DrawTrackBytes routine so that it draws all the
 \ remaining lines in the track view so they fit around the shape of the
 \ dashboard.
 \
@@ -42705,7 +42705,7 @@ ENDMACRO
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine modifes the DrawTrackBytes routine so that it draws all the
+\ This routine modifies the DrawTrackBytes routine so that it draws all the
 \ remaining lines in the track view so they fit around the shape of the
 \ dashboard and the tyres.
 \

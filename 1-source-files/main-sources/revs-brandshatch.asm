@@ -1472,7 +1472,7 @@
                         \ subtraction
 
  BIT directionFacing    \ If we are facing backwards along the track, jump to
- BMI upda1              \ upda1 to move to the nect segment in that direction
+ BMI upda1              \ upda1 to move to the next segment in that direction
 
                         \ If we get here then we are facing forwards along the
                         \ track, so we increment subSectionSegment to point to
@@ -2039,7 +2039,7 @@
 .HookFieldOfView
 
  BCC fovw1              \ If A < 20, then this segment is within the 20-degree
-                        \ field of view,jump to gseg13 via fovw1
+                        \ field of view, jump to gseg13 via fovw1
 
  LDA segmentCounter     \ If segmentCounter < 10, jump to gseg13 via fovw1
  CMP #10

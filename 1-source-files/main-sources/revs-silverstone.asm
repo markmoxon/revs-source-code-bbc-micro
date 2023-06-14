@@ -20,7 +20,7 @@
 \
 \ This source file produces the following binary file:
 \
-\   * Silvers.bin
+\   * Silverstone.bin
 \
 \ ******************************************************************************
 

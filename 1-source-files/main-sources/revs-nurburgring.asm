@@ -588,9 +588,9 @@
 
  CMP #25                \ If A >= 25, then the car is pointing to a greater
  BCS hill5              \ angle than 25 to either side of dead ahead (i.e. it is
-                        \ is pointing outside of the -24 to +24 field of view,
-                        \ or greater than 33 degrees either side of 0), so jump
-                        \ to hill5 to call CheckVergeOnScreen in the usual way
+                        \ pointing outside of the -24 to +24 field of view, or
+                        \ greater than 33 degrees either side of 0), so jump to
+                        \ hill5 to call CheckVergeOnScreen in the usual way
 
  LDA playerPitchAngle   \ If the player's pitch angle is positive, which means
  BPL hill5              \ the car's nose is pointing up, above the horizontal,
@@ -908,7 +908,7 @@
 .HookFieldOfView
 
  BCC fovw1              \ If A < 20, then this segment is within the 20-degree
-                        \ field of view,jump to gseg13 via fovw1
+                        \ field of view, jump to gseg13 via fovw1
 
  LDA segmentCounter     \ If segmentCounter < 10, jump to gseg13 via fovw1
  CMP #10
@@ -1653,7 +1653,7 @@
                         \ subtraction
 
  BIT directionFacing    \ If we are facing backwards along the track, jump to
- BMI upda1              \ upda1 to move to the nect segment in that direction
+ BMI upda1              \ upda1 to move to the next segment in that direction
 
                         \ If we get here then we are facing forwards along the
                         \ track, so we increment subSectionSegment to point to
@@ -2148,10 +2148,10 @@
 \ ------------------------------------------------------------------------------
 \
 \ This part of the routine scales the steering, but if the joystick x-axis high
-\ byte is zero, then the scaling is applied in a different way. Instad of this:
+\ byte is zero, then the scaling is applied in a different way. Instead of this:
 \
 \     2 * (scale * x-axis) ^ 2
-\  = 2 * scale ^2 * x-axis ^2
+\   = 2 * scale ^2 * x-axis ^2
 \
 \ we return this:
 \
@@ -3938,7 +3938,7 @@
 \
 \ ------------------------------------------------------------------------------
 \
-\ These figures have been scaled down by a factor of around 2/3 compard to the
+\ These figures have been scaled down by a factor of around 2/3 compared to the
 \ Commodore 64 track data, so the race times match those from the Commodore 64.
 \ The values from the Commodore 64 version are 194, 211 and 220.
 \
