@@ -34372,7 +34372,7 @@ ENDIF
 \
 \ Returns:
 \
-\    screenSection      screenSection is set to -2, so the interrupt handler at
+\   screenSection       screenSection is set to -2, so the interrupt handler at
 \                       ScreenHandler does not do anything straight away, but
 \                       leaves the palette mapped to black, so the screen is
 \                       blank
