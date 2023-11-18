@@ -9306,7 +9306,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Check whether a verge coordinate is on-screen
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9364,7 +9364,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Map verges in the track segment list to track lines in the track
 \             view
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9676,7 +9676,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw one of the four track verge edges into the screen buffer
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -9950,7 +9950,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw the track into the screen buffer
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -10133,7 +10133,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Update the background colour table for any verges that overlap the
 \             left edge of the screen
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -19930,7 +19930,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a single segment's edge as part of a whole track verge edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20126,7 +20126,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Set up the edge's gradient
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20349,7 +20349,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Modify the drawing routines according to the edge gradient
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20517,7 +20517,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Set variables to use when updating the background colour
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20683,7 +20683,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Calculate the dash data block and screen addresses for the edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20788,7 +20788,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Calculate the dash data block for the edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20960,7 +20960,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Save the angles for the next call to DrawSegmentEdge and return
 \             from the subroutine
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21007,7 +21007,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a shallow gradient from left to right
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21268,7 +21268,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a shallow gradient from right to left
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21534,7 +21534,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a steep gradient from left to right
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -21736,7 +21736,7 @@ ENDIF
 \       Type: Subroutine
 \   Category: Drawing the track
 \    Summary: Draw a verge edge with a steep gradient from right to left
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22073,7 +22073,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw two bytes into the screen buffer in the first and second dash
 \             data blocks for the edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22289,7 +22289,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw two bytes into the screen buffer in the second and third dash
 \             data blocks for the edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22467,7 +22467,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw a green byte into the screen buffer in the second dash data
 \             block for the edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -22534,7 +22534,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Draw a green byte into the screen buffer in the first dash data
 \             block for the edge
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ------------------------------------------------------------------------------
 \
@@ -27690,7 +27690,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawShallowToRight
 \             routine
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -27836,7 +27836,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawSteepToRight
 \             routine
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -27858,7 +27858,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawSteepToLeft
 \             routine
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ******************************************************************************
 
@@ -28226,7 +28226,7 @@ ENDIF
 \   Category: Drawing the track
 \    Summary: Branch labels for self-modifying code in the DrawShallowToLeft
 \             routine
-\  Deep Dive: Drawing the track verges
+\  Deep dive: Drawing the track verges
 \
 \ ******************************************************************************
 
