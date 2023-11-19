@@ -16785,6 +16785,14 @@ ENDIF
 \  Deep dive: The track verges
 \             Corner markers
 \
+\ ------------------------------------------------------------------------------
+\
+\ Other entry points:
+\
+\   gtrm2+6             Calculate the following for segment Y:
+\
+\                         horizonTrackWidth = |xVergeRightHi - xVergeLeftHi| / 2
+\
 \ ******************************************************************************
 
 .GetTrackAndMarkers
@@ -30097,6 +30105,11 @@ ENDIF
 \ Returns:
 \
 \   N flag              Set according to the result in A
+\
+\ Other entry points:
+\
+\   MultiplyHeight+11   Set A = A * U while retaining the sign in A (the sign of
+\                       A must be on the stack before calling this entry point)
 \
 \ ******************************************************************************
 

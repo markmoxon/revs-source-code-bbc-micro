@@ -903,6 +903,10 @@
 \
 \   C flag              Set according to CMP #20
 \
+\ Other entry points:
+\
+\   fovw1-1             Contains an RTS
+\
 \ ******************************************************************************
 
 .HookFieldOfView
