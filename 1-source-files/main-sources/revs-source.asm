@@ -18914,7 +18914,6 @@ ENDIF
 \   [ yCoord2 ] = [ ySegmentCoordI mod 32 ] + [ yTrackSegmentI ] * carProgress
 \   [ zCoord2 ]   [ zSegmentCoordI        ]   [ zTrackSegmentI ]
 \
-\
 \ The mod 32 part caps the y-coordinate to a maximum of 8192.
 \
 \ Arguments:
@@ -30358,7 +30357,6 @@ ENDIF
 \   A                   The number to be scaled
 \
 \   Y                   Called with Y = 136 or 186
-\
 \
 \ Returns:
 \
