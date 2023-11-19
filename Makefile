@@ -11,7 +11,7 @@ PYTHON?=python
 #
 # So, for example:
 #
-#   make encrypt verify variant=superior
+#   make build verify variant=superior
 #
 # will build the variant from the Superior Software release. If you
 # omit the variant parameter, it will build the Acornsoft variant.
