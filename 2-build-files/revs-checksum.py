@@ -44,7 +44,7 @@ for track_name in track_names:
 
     for i in range(0, 4):
         checksum[i] = checksum[i] % 256
-        print("Commander checksum", i, "=", hex(checksum[i]))
+        print("Track data checksum", i, "=", hex(checksum[i]))
         data_block[checksum_offset + i] = checksum[i]
 
     # Write updated track
