@@ -7785,6 +7785,19 @@ ENDIF
 \    Summary: Process keyboard steering
 \  Deep dive: Computer assisted steering (CAS)
 \
+\ ------------------------------------------------------------------------------
+\
+\ Other entry points:
+\
+\   keys7               Re-entry point for the AssistSteering routine when no
+\                       joystick steering is being applied
+\
+\   keys10              Re-entry point for the AssistSteering routine when CAS
+\                       is being applied to the steering
+\
+\   keys11              Re-entry point for the AssistSteering routine if CAS is
+\                       not enabled or the car is facing backwards
+\
 \ ******************************************************************************
 
 .keys2
@@ -11907,6 +11920,13 @@ ENDIF
 \    Summary: Fill the object if required and loop back for the next edge
 \  Deep dive: Creating objects from edges
 \
+\ ------------------------------------------------------------------------------
+\
+\ Other entry points:
+\
+\   draw29              Fill the inside of the object part from the previous
+\                       block to the current one
+\
 \ ******************************************************************************
 
 .draw29
@@ -12571,7 +12591,8 @@ ENDIF
  CPY blockOffset        \ If Y <> blockOffset then loop back to draw the next
  BNE dred1              \ byte, as we haven't reached the bottom track line
 
- JMP draw29             \ Jump to draw29
+ JMP draw29             \ Jump to draw29 to fill the inside of the object part
+                        \ from the previous block to the current one
 
 \ ******************************************************************************
 \
@@ -21775,6 +21796,11 @@ ENDIF
 \
 \   (NN MM)             Address of the third dash data block in this sequence,
 \                       i.e. the first memory page of the next dash data block
+\
+\ Other entry points:
+\
+\   strl10              Finish drawing the verge edge by updating the background
+\                       table for this track line
 \
 \ ******************************************************************************
 
@@ -33072,6 +33098,12 @@ ENDIF
 \
 \                         * 3 = zTyreForceRear
 \
+\ Other entry points:
+\
+\   lims1               Skip applying the maximum value to variableG, so we set:
+\
+\                         variableG = (A T) * abs(H)
+\
 \ ******************************************************************************
 
 .ApplyLimitAndSign
@@ -42577,6 +42609,10 @@ ENDMACRO
 \ know that high byte is the same throughout the routine. This is why the lookup
 \ tables at staDrawByte and ldaDrawByte only need to store the low bytes of
 \ the addresses for instructions that we need to modify.
+\
+\ Other entry points:
+\
+\   byte2               Only draw pixel bytes 26 to 39
 \
 \ ******************************************************************************
 
