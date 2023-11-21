@@ -2,7 +2,7 @@
 
 This folder contains the text files from the BBC Micro disc version of Revs.
 
-* [READMEPLUS.bin](READMEPLUS.bin) is the README file for Revs Plus on the BBC Micro
+* [READMEPLUS.bin](READMEPLUS.bin) is the README file for Revs+ on the BBC Micro
 
 ---
 

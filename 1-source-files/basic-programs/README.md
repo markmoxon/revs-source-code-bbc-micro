@@ -8,7 +8,7 @@ This folder contains the BASIC programs from the BBC Micro disc version of Revs.
 
 * [$.REVSMEN.bin]($.REVSMEN.bin) shows the loading screen and track menu for the 1986 Superior Software release
 
-* [$.REVSPLUS.bin]($.REVSPLUS.bin) shows the game menu for the Revs Plus release
+* [$.REVSPLUS.bin]($.REVSPLUS.bin) shows the game menu for the Revs+ release
 
 ---
 

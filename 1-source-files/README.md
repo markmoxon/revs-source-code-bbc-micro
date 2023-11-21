@@ -10,7 +10,7 @@ This folder contains the source files for the BBC Micro disc version of Revs.
 
 * [main-sources](main-sources) contains the annotated source code
 
-* [text-files](text-files) contains a text file for the Revs Plus README file
+* [text-files](text-files) contains a text file for the Revs+ README file
 
 ---
 

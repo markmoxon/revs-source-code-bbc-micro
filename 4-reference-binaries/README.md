@@ -8,7 +8,7 @@ This folder contains the binaries from the game disc for the BBC Micro disc vers
 
 * [superior](superior) contains the binaries from the 1986 Superior Software release
 
-* [revsplus](revsplus) contains the binaries from a new release of Revs Plus that includes the Nürburgring track, backported from the Commodore 64 version
+* [revsplus](revsplus) contains the binaries from a new release of Revs+ that includes the Nürburgring track, backported from the Commodore 64 version
 
 ---
 
