@@ -23,9 +23,9 @@ See the [introduction](#introduction) for more information.
 * [Building Revs from the source](#building-revs-from-the-source)
 
   * [Requirements](#requirements)
-  * [Build targets](#build-targets)
   * [Windows](#windows)
   * [Mac and Linux](#mac-and-linux)
+  * [Build options](#build-options)
   * [Verifying the output](#verifying-the-output)
   * [Log files](#log-files)
 
@@ -109,6 +109,8 @@ There are five main folders in this repository, which reflect the order of the b
 
 ## Building Revs from the source
 
+Builds are supported for both Windows and Mac/Linux systems. In all cases the build process is defined in the `Makefile` provided.
+
 ### Requirements
 
 You will need the following to build Revs from the source:
@@ -121,22 +123,14 @@ You will need the following to build Revs from the source:
 
 Let's look at how to build Revs from the source.
 
-### Build targets
-
-There is one main build target available:
-
-* `build` - A version that exactly matches the original binaries
-
-Builds are supported for both Windows and Mac/Linux systems. In all cases the build process is defined in the `Makefile` provided.
-
 ### Windows
 
 For Windows users, there is a batch file called `make.bat` to which you can pass one of the build targets above. Before this will work, you should edit the batch file and change the values of the `BEEBASM` and `PYTHON` variables to point to the locations of your `beebasm.exe` and `python.exe` executables. You also need to change directory to the repository folder (i.e. the same folder as `make.bat`).
 
-All being well, doing the following:
+All being well, entering the following into a command window:
 
 ```
-make.bat build
+make.bat
 ```
 
 will produce a file called `revs-acornsoft.ssd` in the `5-compiled-game-discs` folder that contains the Acornsoft variant, which you can then load into an emulator, or into a real BBC Micro using a device like a Gotek.
@@ -145,45 +139,42 @@ will produce a file called `revs-acornsoft.ssd` in the `5-compiled-game-discs` f
 
 The build process uses a standard GNU `Makefile`, so you just need to install `make` if your system doesn't already have it. If BeebAsm or Python are not on your path, then you can either fix this, or you can edit the `Makefile` and change the `BEEBASM` and `PYTHON` variables in the first two lines to point to their locations. You also need to change directory to the repository folder (i.e. the same folder as `Makefile`).
 
-All being well, doing the following:
+All being well, entering the following into a terminal window:
 
 ```
-make build
+make
 ```
 
 will produce a file called `revs-acornsoft.ssd` in the `5-compiled-game-discs` folder that contains the Acornsoft variant, which you can then load into an emulator, or into a real BBC Micro using a device like a Gotek.
 
+### Build options
+
+By default the build process will create a typical Acornsoft Revs game disc with verified binaries. There are various arguments you can pass to the build to change how it works. They are:
+
+* `variant=<name>` - Build the specified variant:
+
+  * `variant=acornsoft` (default)
+  * `variant=4tracks`
+  * `variant=superior`
+  * `variant=revsplus`
+
+* `verify=no` - Disable crc32 verification of the game binaries
+
+So, for example:
+
+`make variant=revsplus verify=no`
+
+will build the Revs+ variant with no crc32 verification.
+
+See below for more on the verification process.
+
 ### Verifying the output
 
-The build process also supports a verification target that prints out checksums of all the generated files, along with the checksums of the files from the original sources.
-
-You can run this verification step on its own, or you can run it once a build has finished. To run it on its own, use the following command on Windows:
-
-```
-make.bat verify
-```
-
-or on Mac/Linux:
-
-```
-make verify
-```
-
-To run a build and then verify the results, you can add two targets, like this on Windows:
-
-```
-make.bat build verify
-```
-
-or this on Mac/Linux:
-
-```
-make build verify
-```
+The default build process prints out checksums of all the generated files, along with the checksums of the files from the original sources. You can disable verification by passing `verify=no` to the build.
 
 The Python script `crc32.py` in the `2-build-files` folder does the actual verification, and shows the checksums and file sizes of both sets of files, alongside each other, and with a Match column that flags any discrepancies.
 
-The binaries in the `4-reference-binaries` folder are those extracted from the released version of the game, while those in the `3-assembled-output` folder are produced by the build process. For example, if you don't make any changes to the code and build the project with `make build verify`, then this is the output of the verification process:
+The binaries in the `4-reference-binaries` folder are those extracted from the released version of the game, while those in the `3-assembled-output` folder are produced by the build process. For example, if you don't make any changes to the code and build the project with `make`, then this is the output of the verification process:
 
 ```
 Results for release: acornsoft
@@ -236,13 +227,13 @@ e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
 You can build the Revs 4 Tracks variant by appending `variant=4tracks` to the `make` command, like this on Windows:
 
 ```
-make.bat build verify variant=4tracks
+make.bat variant=4tracks
 ```
 
 or this on a Mac or Linux:
 
 ```
-make build verify variant=4tracks
+make variant=4tracks
 ```
 
 This will produce a file called `revs-4tracks.ssd` in the `5-compiled-game-discs` folder that contains the Revs 4 Tracks variant.
@@ -268,13 +259,13 @@ e22a0a93  24064  e22a0a93  24064   Yes   Revs2.bin
 You can build the Superior Software variant by appending `variant=superior` to the `make` command, like this on Windows:
 
 ```
-make.bat build verify variant=superior
+make.bat variant=superior
 ```
 
 or this on a Mac or Linux:
 
 ```
-make build verify variant=superior
+make variant=superior
 ```
 
 This will produce a file called `revs-superior.ssd` in the `5-compiled-game-discs` folder that contains the Superior Software variant.
@@ -300,13 +291,13 @@ b367ef0f   2000  b367ef0f   2000   Yes   BrandsHatch.bin
 You can build the Revs+ variant by appending `variant=revsplus` to the `make` command, like this on Windows:
 
 ```
-make.bat build verify variant=revsplus
+make.bat variant=revsplus
 ```
 
 or this on a Mac or Linux:
 
 ```
-make build verify variant=revsplus
+make variant=revsplus
 ```
 
 This will produce a file called `revs-plus.ssd` in the `5-compiled-game-discs` folder that contains the Revs+ variant.

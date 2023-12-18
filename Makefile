@@ -19,7 +19,7 @@ PYTHON?=python
 #
 #   make variant=revsplus verify=no
 #
-# will build an the Revs+ variant with no crc32 verification
+# will build the Revs+ variant with no crc32 verification
 
 ifeq ($(variant), superior)
   variant-revs=2
