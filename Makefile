@@ -1,20 +1,25 @@
 BEEBASM?=beebasm
 PYTHON?=python
 
-# You can set the variant that gets built by adding 'variant=<rel>' to
-# the make command, where <rel> is one of:
+# A make command with no arguments will build the Acornsoft variant with
+# crc32 verification of the game binaries
 #
-#   acornsoft
-#   4tracks
-#   superior
-#   revsplus
+# Optional arguments for the make command are:
+#
+#   variant=<release>   Build the specified variant:
+#
+#                         acornsoft (default)
+#                         4tracks
+#                         superior
+#                         revsplus
+#
+#   verify=no           Disable crc32 verification of the game binaries
 #
 # So, for example:
 #
-#   make build verify variant=superior
+#   make variant=revsplus verify=no
 #
-# will build the variant from the Superior Software release. If you
-# omit the variant parameter, it will build the Acornsoft variant.
+# will build an the Revs+ variant with no crc32 verification
 
 ifeq ($(variant), superior)
   variant-revs=2
@@ -34,8 +39,8 @@ else
   suffix-revs=-acornsoft
 endif
 
-.PHONY:build
-build:
+.PHONY:all
+all:
 	echo _VARIANT=$(variant-revs) > 1-source-files/main-sources/revs-build-options.asm
 	$(BEEBASM) -i 1-source-files/main-sources/revs-silverstone.asm -v > 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-brandshatch.asm -v >> 3-assembled-output/compile.txt
@@ -47,7 +52,6 @@ build:
 	$(BEEBASM) -i 1-source-files/main-sources/revs-source.asm -v >> 3-assembled-output/compile.txt
 	$(PYTHON) 2-build-files/revs-checksum.py
 	$(BEEBASM) -i 1-source-files/main-sources/revs-disc.asm -do 5-compiled-game-discs/revs$(suffix-revs).ssd -opt 3 -title "CAR"
-
-.PHONY:verify
-verify:
+ifneq ($(verify), no)
 	@$(PYTHON) 2-build-files/crc32.py 4-reference-binaries$(folder-revs) 3-assembled-output
+endif
