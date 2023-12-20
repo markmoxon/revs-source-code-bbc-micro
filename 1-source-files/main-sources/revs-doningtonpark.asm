@@ -646,6 +646,8 @@
 \ This routine is called from MovePlayerSegment to move the player forward by an
 \ extra segment if required.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The value of edgeSegmentNumber
@@ -1980,6 +1982,8 @@
 \   * If we are facing forwards along the track, calculate and store the current
 \     segment vector
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   The number of the track section * 8 whose coordinates we
@@ -2135,6 +2139,8 @@
 \ So in the modified version, we keep checking segments until we have reached at
 \ least 10.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Yaw angle for the previous segment's right verge
@@ -2176,6 +2182,8 @@
 \ off.
 \
 \ It also sets horizonTrackWidth to 80% of the track width at the hill crest.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -2476,6 +2484,8 @@
 \ This routine is called from GetTrackAndMarkers to cut objects off at the track
 \ line in A rather than horizonLine.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The updated value of horizonLine
@@ -2543,6 +2553,8 @@
 \ which replaces this existing code in ProcessDrivingKeys:
 \
 \   (A T) = x-axis^2
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -3549,6 +3561,8 @@
 \                                      + 172
 \
 \ So driving fast over sloping segments can make the car jump.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \

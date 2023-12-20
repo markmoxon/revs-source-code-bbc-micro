@@ -897,11 +897,15 @@
 \ So in the modified version, we keep checking segments until we have reached at
 \ least 10.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Yaw angle for the previous segment's right verge
 \
 \   C flag              Set according to CMP #20
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -2066,6 +2070,8 @@
 \   * If we are facing forwards along the track, calculate and store the current
 \     segment vector
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   The number of the track section * 8 whose coordinates we
@@ -2263,6 +2269,8 @@
 \ and sets the verge edge to being visible when the car is pointing along the
 \ track and the nose is pointing downwards (though the latter part is only done
 \ if we are looking at track sections 0 to 5 down the hill).
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -2601,6 +2609,8 @@
 \    vergeDataRight and vergeDataLeft entries for the horizon section index to
 \    hide the verge
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The updated value of horizonLine
@@ -2708,6 +2718,8 @@
 \                                      + 172
 \
 \ So driving fast over sloping segments can make the car jump.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -3691,6 +3703,8 @@
 \ which replaces this existing code in ProcessDrivingKeys:
 \
 \   (A T)= x-axis^2
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \

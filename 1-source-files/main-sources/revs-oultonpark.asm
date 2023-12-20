@@ -1895,6 +1895,8 @@
 \   * If we are facing forwards along the track, calculate and store the current
 \     segment vector
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   The number of the track section * 8 whose coordinates we
@@ -2050,6 +2052,8 @@
 \ So in the modified version, we keep checking segments until we have reached at
 \ least 10.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Yaw angle for the previous segment's right verge
@@ -2091,6 +2095,8 @@
 \ off.
 \
 \ It also sets horizonTrackWidth to 80% of the track width at the hill crest.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -2396,6 +2402,8 @@
 \    few entries just in front of the horizon section, i.e. for the track
 \    section list and the first three entries in the track segment list
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The updated value of horizonLine
@@ -2494,6 +2502,8 @@
 \ which replaces this existing code in ProcessDrivingKeys:
 \
 \   (A T) = x-axis^2
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -3512,6 +3522,8 @@
 \                                      + 172
 \
 \ So driving fast over sloping segments can make the car jump.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \

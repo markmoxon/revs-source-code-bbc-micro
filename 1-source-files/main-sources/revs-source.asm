@@ -2631,6 +2631,8 @@ ENDIF
 \                       number (the latter is used for sound #3 only, and is
 \                       always set to envelope 1, which is the only envelope)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   MakeSound-3         Make the sound at the current volume level
@@ -2698,6 +2700,8 @@ ENDIF
 \   A                   The offset of the sound envelope data in envelopeData:
 \
 \                         * A = 0 for the first (and only) envelope definition
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -2939,6 +2943,8 @@ ENDIF
 \   vectorX = vectorY + [ (TT U) ]
 \                       [ (UU V) ]
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The offset of the vectorX variable to update:
@@ -3015,9 +3021,13 @@ ENDIF
 \
 \   (A T) = A * U
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   X                   X is unchanged
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -3114,6 +3124,8 @@ ENDIF
 \ the largest possible multiple of the divisor (V) after each shift; each bit of
 \ A where we can subtract Q gives a 1 the answer to the division, otherwise it
 \ gives a 0.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -3237,6 +3249,8 @@ ENDIF
 \ close to being orthogonal to each other) and larger yaw angles (when their
 \ relative positions are closer to the diagonal). This is a guess, though.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   (J I)               max(|x-delta|, |z-delta|)
@@ -3245,6 +3259,8 @@ ENDIF
 \
 \   M                   The smaller yaw angle of the object, where 0 to 255
 \                       represents 0 to 45 degrees, so 103 = 18.2 degrees
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -3341,6 +3357,8 @@ ENDIF
 \
 \ We can use these to create a rotation matrix that rotates the yaw angle from
 \ the player's frame of reference into the global 3D coordinate system.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -3844,6 +3862,8 @@ ENDIF
 \
 \   (A T)               A yaw angle in Revs format (-128 to +127)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   (U A)               The angle, reduced to a quarter circle, converted to
@@ -3997,6 +4017,8 @@ ENDIF
 \
 \ which is the algorithm that is implemented in this routine.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   (QQ PP)             16-bit signed integer
@@ -4005,6 +4027,8 @@ ENDIF
 \                       of RR
 \
 \   H                   The sign to apply to the result (in bit 7)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -4148,6 +4172,8 @@ ENDIF
 \
 \ It can also return (A T) * abs(n), where A is given the sign of n.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   (A T)               The number to make positive
@@ -4188,6 +4214,8 @@ ENDIF
 \
 \ This routine negates the 16-bit number (A T).
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   Negate16Bit+2       Set (A T) = -(U T)
@@ -4222,6 +4250,8 @@ ENDIF
 \   X                   The negative inkey value of the key to scan for (in the
 \                       range &80 to &FF)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   Z flag              The result:
@@ -4231,6 +4261,8 @@ ENDIF
 \
 \                         * Clear if the key in X is not being pressed, in which
 \                           case BNE will branch
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -4264,9 +4296,13 @@ ENDIF
 \ This routine flushes the specified sound channel buffer, but only if that
 \ channel's soundBuffer value is non-zero.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The number of the sound channel buffer to flush (0 to 3)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -4693,6 +4729,8 @@ ENDIF
 \ this is only done when showing the driver table between races, that doesn't
 \ matter.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Determines the order of the sorted list to create:
@@ -4702,6 +4740,8 @@ ENDIF
 \                           * Bit 6 set = accumulated points
 \
 \                           * Bit 7 set = total race times
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -5134,6 +5174,8 @@ ENDIF
 \ alternating sides, and populates the track segment buffer so the first entry
 \ is 32 segments in front of the current player, and the whole buffer is full
 \ of buffered segments.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -5754,6 +5796,8 @@ ENDIF
 \
 \   playerYawAngle      The yaw angle of the player's car around the y-axis
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   BuildPlayerCar-1    Contains an RTS
@@ -5858,6 +5902,8 @@ ENDIF
 \   Y-th (yTrackSectionIHi yTrackSectionILo) to (yCoord2Hi yCoord2Lo)
 \   Y-th (zTrackSectionIHi zTrackSectionILo) to (zCoord2Hi zCoord2Lo)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   The number of the track section * 8 whose coordinates we
@@ -5944,6 +5990,8 @@ ENDIF
 \   (ySegmentCoordOHi ySegmentCoordOLo)
 \   (zSegmentCoordOHi zSegmentCoordOLo)
 \   thisVectorNumber
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -6065,6 +6113,8 @@ ENDIF
 \ populate the front track segment with the data from the start of the new
 \ track section.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   sectionBehind       The number * 8 of the track section behind us, for when
@@ -6072,6 +6122,8 @@ ENDIF
 \
 \   frontSegmentIndex   The index * 3 of the new front track segment in the
 \                       track segment buffer
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -7025,6 +7077,8 @@ ENDIF
 \   X                   The number of track segments to initialise in the new
 \                       direction
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   directionFacing     Bit 7 is flipped to point us in the opposite direction
@@ -7117,6 +7171,8 @@ ENDIF
 \ Arguments:
 \
 \   Y                   The index of the coordinate in the track data blocks
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -7222,12 +7278,16 @@ ENDIF
 \ Also updates the lap number and lap time, but only if this is a driver and bit
 \ 7 of updateLapTimes is clear.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   Driver number (0-23)
 \
 \   updateLapTimes      If bit 7 is set, the call to UpdateLaps has no effect,
 \                       so we do not update the lap number or lap time
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -7334,9 +7394,13 @@ ENDIF
 \
 \ Also updates the lap number if this is the current player.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   Object number (0-23)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -8668,6 +8732,8 @@ ENDIF
 \                         * 1 = the lap timer
 \                               (lapMinutes lapSeconds lapTenths)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   C flag              Denotes whether the number of seconds has changed:
@@ -9338,6 +9404,8 @@ ENDIF
 \
 \   0 < x < 40
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The index within the track verge buffer of the verge to
@@ -9346,6 +9414,8 @@ ENDIF
 \                         * horizonListIndex + 40 for the left verge
 \
 \                         * horizonListIndex      for the right verge
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -9404,6 +9474,8 @@ ENDIF
 \ numbers are at the bottom of the screen (i.e. close), high numbers are up
 \ the screen (i.e. further away).
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The low byte of the table address to populate:
@@ -9423,6 +9495,8 @@ ENDIF
 \                         * horizonListIndex      for the right verge
 \
 \                         * horizonListIndex + 40 for the left verge
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -10154,6 +10228,8 @@ ENDIF
 \ checks whether the verge crosses the left edge of the screen, updating the
 \ relevant entry in the background colour table if it does.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Index of the first entry to check in the verge buffer,
@@ -10167,6 +10243,8 @@ ENDIF
 \                         * %000 10 1 00 (after drawing the right verge)
 \
 \                       Only bits 2-4 of this are used
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -10825,6 +10903,8 @@ ENDIF
 \ the block number and pixel x-coordinate of the next edge (if there is one), so
 \ we can use them in the next call to DrawObjectEdge.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   topTrackLine        Top track line of the edge (higher value, 0 to 79)
@@ -10907,6 +10987,8 @@ ENDIF
 \                         * Non-zero = the pixel mask of the edge that was drawn
 \                                      into rightOfEdge in the previous call
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   blockNumber         The dash data block number that was drawn into
@@ -10946,6 +11028,8 @@ ENDIF
 \                           DrawObjectEdge needs to insert the next edge into
 \                           the pixel byte in rightOfEdge, using the pixel
 \                           mask in edgePixelMask)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -12040,6 +12124,8 @@ ENDIF
 \
 \ Modify the FillAfterObject routine before calling it.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   Sets the destination address for the copy
@@ -12331,6 +12417,8 @@ ENDIF
 \
 \ Modify the FillAfterObject routine before calling it.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   Sets the destination address for the copy
@@ -12563,6 +12651,8 @@ ENDIF
 \
 \ This routine rejoins the DrawObjectEdge routine to move on to the next edge in
 \ the current object part.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -13050,6 +13140,8 @@ ENDIF
 \   (Q P)               The address of the dash data block containing the pixel
 \                       byte we want to check
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   A                   The colour of this pixel byte in the screen buffer
@@ -13388,11 +13480,15 @@ ENDIF
 \   * The Y-th byte in the dash data block at (Q P) is set to the marker &AA if
 \     blockOffset <= Y < V and it is currently zero
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   A track line number
 \
 \   X                   Index of an entry in the verge buffer (SetMarker only)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -13456,6 +13552,8 @@ ENDIF
 \   Y                   The track line number of the pixel byte to check
 \
 \   blockNumber         The dash data block number of the pixel byte to check
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -13588,6 +13686,8 @@ ENDIF
 \
 \   * keys10 (keyboard, or joystick with CAS applied)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   (U T)               The amount of steering currently being applied by the
@@ -13611,12 +13711,16 @@ ENDIF
 \
 \                         * V = 0 if neither is being pressed
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   A                   A is set to steeringLo
 \
 \   (U T)               The new amount of steering to apply, adjusted to add
 \                       computer assisted steering, as a sign-magnitude number
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -13921,6 +14025,8 @@ ENDIF
 \
 \   C flag              The result of CMP steeringHi
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   (A T)               A is set to |steeringHi steeringLo|
@@ -14011,6 +14117,8 @@ ENDIF
 \ This routine is used to draw objects such as road signs, corner markers and
 \ cars.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   objectType          The type of object to draw (0 to 12)
@@ -14039,6 +14147,8 @@ ENDIF
 \                                   as above)
 \
 \                         * 23 = stick with the palette in colourPalette
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -14258,6 +14368,8 @@ ENDIF
 \ The value in scaleDown is the denominator of the scale factor, which scales
 \ the scaffold down, so bigger values of scaleDown give smaller objects.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   QQ                  Index of the first objectScaffold entry for this object
@@ -14268,6 +14380,8 @@ ENDIF
 \   scaleUp             Numerator scale factor
 \
 \   scaleDown           Denominator scale factor
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -14479,6 +14593,8 @@ ENDIF
 \ This routine is used to draw road signs, corner markers and cars. They are
 \ drawn as edges - specifically the left and right edges - into the screen
 \ buffer in the dash data blocks.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -14752,6 +14868,8 @@ ENDIF
 \
 \                         * 6 = xRoadSignCoord
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   (JJ II)             The yaw angle of the object
@@ -14764,6 +14882,8 @@ ENDIF
 \                       represents 0 to 45 degrees
 \
 \   X                   X is preserved
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -15315,6 +15435,8 @@ ENDIF
 \   (L K)               The result from GetObjectDistance, which is called
 \                       between GetObjYawAngle and GetObjPitchAngle
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   LL                  The pitch angle of the object
@@ -15333,6 +15455,8 @@ ENDIF
 \
 \   N flag              Set according to the y-coordinate, so a BPL following
 \                       the call will branch if the y-coordinate is positive
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -15574,6 +15698,8 @@ ENDIF
 \     * Part 3: Store the yaw and pitch angles for this section in the
 \       xVergeRight/Left and yVergeRight/Left tables
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   xVergeRight         Updated yaw angles for the entries in the track section
@@ -15594,6 +15720,8 @@ ENDIF
 \   horizonListIndex    Updated to the index of the track section that contains
 \                       the horizon (i.e. the index within the track section
 \                       list)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -15984,6 +16112,8 @@ ENDIF
 \   segmentListPointer  The index of the segment in the track segment list to
 \                       use for calculations
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   (L K)               The distance between the object and the player's car
@@ -16017,12 +16147,16 @@ ENDIF
 \ This routine is typically used to calculate the difference in yaw angle
 \ between a track section and the player.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   Index from xVergeRight to store the difference in yaw
 \                       angle between the object and the player
 \
 \   (JJ II)             The yaw angle of the object
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -16073,6 +16207,8 @@ ENDIF
 \ for each segment as we go, up to a maximum of 16 segments (which is the
 \ capacity of the track segment list).
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The index of the first segment to update in the track
@@ -16098,6 +16234,8 @@ ENDIF
 \                         * 0 when our car is facing in the same direction
 \
 \                         * 1 when our car is facing the opposite direction
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -16925,6 +17063,8 @@ ENDIF
 \                       In other words, fetch the track segments from the right
 \                       or left verges, according to the way we are facing
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   segmentOffset       The offset to use for this segment:
@@ -17005,6 +17145,8 @@ ENDIF
 \ This routine calculates the verge colours and the coordinates of the outside
 \ of the verge, and it also calculates the coordinates and colours of the corner
 \ markers for this track segment.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -17587,6 +17729,8 @@ ENDIF
 \
 \   Y                   The second position
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   X                   The number of the driver now at position X
@@ -18116,6 +18260,8 @@ ENDIF
 \ numbers used in the calculations, depending on the cars' progress within their
 \ current segments.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The number of driver X
@@ -18165,6 +18311,8 @@ ENDIF
 \
 \                         * For a 24-bit calculation, contains the carry from
 \                           CompareCarSegments above
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -18337,6 +18485,8 @@ ENDIF
 \ This part changes each car's speed. It calculates the speed change in (U A),
 \ and then applies it to the car's speed. It then moves the car round the track
 \ by the speed we just calculated by updating carProgress.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -18945,6 +19095,8 @@ ENDIF
 \
 \ The mod 32 part caps the y-coordinate to a maximum of 8192.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The driver number of the car object to build
@@ -18953,6 +19105,8 @@ ENDIF
 \
 \   Y                   The index * 3 of the track segment to use for the
 \                       calculation
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -19466,6 +19620,8 @@ ENDIF
 \
 \                         * &FD = xCoord2
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   GetObjectAngles-2   Use xCoord2 for the object's 3D coordinates in the call
@@ -19676,6 +19832,8 @@ ENDIF
 \
 \   objectNumber        The number of the object being checked for contact
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   CheckForContact-2   Set Y = 37, so we make contact if (L K) <= 37
@@ -19731,6 +19889,8 @@ ENDIF
 \
 \   X                   The race position of the car to draw
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   X                   X is preserved
@@ -19763,6 +19923,8 @@ ENDIF
 \
 \ This routine is used to draw road signs and cars.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The car or sign to draw:
@@ -19781,6 +19943,8 @@ ENDIF
 \                         * 23 = Draw the road sign
 \
 \   xStoreDraw          The value to restore into X at the end of the routine
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -19870,6 +20034,8 @@ ENDIF
 \   [ (SS T) ]   [ (SS T) ]
 \   [ (TT U) ] = [ (TT U) ] / 2
 \   [ (UU V) ]   [ (UU V) ]
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -19966,6 +20132,8 @@ ENDIF
 \ partially on-screen, and stores the yaw and pitch angles of the edge in W and
 \ RR respectively.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Index into the vergePixelMask table for the pixel bytes
@@ -19997,6 +20165,8 @@ ENDIF
 \   prevYawIndex        Same as X for the first call, or the yaw angle index of
 \                       the previous call (i.e. the previous segment) if this is
 \                       not the first call
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -21797,6 +21967,8 @@ ENDIF
 \   (NN MM)             Address of the third dash data block in this sequence,
 \                       i.e. the first memory page of the next dash data block
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   strl10              Finish drawing the verge edge by updating the background
@@ -22115,6 +22287,8 @@ ENDIF
 \ the right, in the second dash data block, using the fill colour so the screen
 \ gets filled to the right of the verge edge.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The pixel number of the edge within the pixel byte, with
@@ -22136,6 +22310,8 @@ ENDIF
 \
 \   (Q P)               Address of the second dash data block in the memory page
 \                       containing the pixels at the start of the previous edge
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -22331,6 +22507,8 @@ ENDIF
 \ the right, in the third dash data block, using the fill colour so the screen
 \ gets filled to the right of the verge edge.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The pixel number of the edge within the pixel byte, with
@@ -22352,6 +22530,8 @@ ENDIF
 \
 \   (NN MM)             Address of the third dash data block in this sequence,
 \                       i.e. the first memory page of the next dash data block
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -22517,6 +22697,8 @@ ENDIF
 \   (Q P)               Address of the second dash data block in the memory page
 \                       containing the pixels at the start of the previous edge
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   X                   128
@@ -22584,6 +22766,8 @@ ENDIF
 \   (S R)               Address of the first dash data block in the memory page
 \                       containing the pixels at the start of the previous edge
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   X                   128
@@ -22639,11 +22823,15 @@ ENDIF
 \ This routine checks whether an index in Y, which is relative to the start of a
 \ dash data block, is pointing to dash data within the block.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   UU                  Dash data block number (0 to 39)
 \
 \   Y                   The index from the start of the dash data block
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -23452,6 +23640,8 @@ ENDIF
 \
 \   U                   The second digit of the number, as text
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   A                   The numerical value of the number
@@ -23806,6 +23996,8 @@ ENDIF
 \
 \ It can also return A * abs(n), where A is given the sign of n.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The number to make positive
@@ -24010,6 +24202,8 @@ ENDIF
 \                         * Bit 7 clear = wait for SPACE to be pressed
 \
 \                         * Bit 7 set = wait for SPACE or RETURN to be pressed
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -25357,11 +25551,15 @@ ENDIF
 \                         * Bit 6: clear = print second digit
 \                                  set = do not print second digit
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   G                   G is shifted left by two places, so bits 4 and 5 will be
 \                       used to determine the printing style in the next call to
 \                       Print2DigitBCD
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -27207,9 +27405,13 @@ ENDIF
 \ The first block is at driverNames1, so we add them together to arrive at the
 \ calculation above.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The driver number (0 to 19)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -27344,6 +27546,8 @@ ENDIF
 \ Arguments:
 \
 \   A                   The number of spaces to print (1 to 39)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -28475,6 +28679,8 @@ ENDIF
 \     White on magenta
 \     15 spaces
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The number of the token to print as a double-height
@@ -28920,9 +29126,13 @@ ENDIF
 \ Print (totalPointsHi totalPointsLo) for driver X as a 4-digit number, followed
 \ by a space. The second digit is always printed.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   Always called with totalPointsHi,X
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -29301,6 +29511,8 @@ ENDIF
 \                         * 1 = Amateur
 \
 \                         * 2 = Professional
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -30122,15 +30334,21 @@ ENDIF
 \
 \ flipping the sign if we are facing backwards.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The number to multiply the height by
 \
 \   Y                   Index of the segment vector to multiply
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   N flag              Set according to the result in A
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -30391,11 +30609,15 @@ ENDIF
 \   26 <= A < 46    A' = 4 * A + 52         156 to 232
 \   A >= 46         A' = A + 190            236 to 253
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The number to be scaled
 \
 \   Y                   Called with Y = 136 or 186
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -30451,9 +30673,13 @@ ENDIF
 \   26 <= A < 46    A' = 4 * A + 52         156 to 232
 \   A >= 46         A' = A + 190            236 to 253
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   A is in the range 0 to 63
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -30793,6 +31019,8 @@ ENDIF
 \
 \   (A T) = -(A T) * Y / 256
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   (A T)               A 16-bit signed number
@@ -30841,6 +31069,8 @@ ENDIF
 \ Calculate the following:
 \
 \   (A T) = (U T) * 1.5
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -30916,6 +31146,8 @@ ENDIF
 \       otherwise:
 \
 \         * On every other main loop iteration, stop the tyres from squealing
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -31357,6 +31589,8 @@ ENDIF
 \
 \     variableK = variableK - variableN * variableX
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   N                   Offset of the 16-bit signed number to multiply:
@@ -31413,6 +31647,8 @@ ENDIF
 \                           * 0 = do not negate the multiplication
 \
 \                           * 1 = negate the multiplication
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -31501,6 +31737,8 @@ ENDIF
 \
 \   variableY = variableY + (U T)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   N flag              Determines the action:
@@ -31536,6 +31774,8 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ This routine adds (U T) to the specified 16-bit variable.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -31703,6 +31943,8 @@ ENDIF
 \   variableA+1 = variableY+1 * cosYawAngle + variableY * sinYawAngle
 \
 \ For it to work, the routine must be called with bit 6 of X set.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -32687,6 +32929,8 @@ ENDIF
 \
 \     * Set if A > wingForce for tyre X
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The set of tyres to process:
@@ -32917,6 +33161,8 @@ ENDIF
 \
 \         xTyreForceNose or xTyreForceRear = 0
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The set of tyres to process:
@@ -33047,6 +33293,8 @@ ENDIF
 \
 \   variableG = max((A T), (NN MM)) * abs(H)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   G                   Offset of the variable to set:
@@ -33086,6 +33334,8 @@ ENDIF
 \
 \   variableG = max((A T), (NN MM)) * abs(H)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   G                   Offset of the variable to set:
@@ -33097,6 +33347,8 @@ ENDIF
 \                         * 2 = zTyreForceNose
 \
 \                         * 3 = zTyreForceRear
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -33142,6 +33394,8 @@ ENDIF
 \ Scale up a 16-bit value by 2^5, capping the result at the maximum possible
 \ positive value of &7Fxx, and ensuring that the result is positive.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   Y                   The offset of the variable to scale
@@ -33149,6 +33403,8 @@ ENDIF
 \                         * 8 = xVelocity
 \
 \                         * 9 = zVelocity
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -33245,6 +33501,8 @@ ENDIF
 \
 \ The routine also sets G to 2 or 3 (for the front or rear tyres).
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The set of tyres to process:
@@ -33252,6 +33510,8 @@ ENDIF
 \                         * 0 = front tyres
 \
 \                         * 1 = rear tyres
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -34027,6 +34287,8 @@ ENDIF
 \ The value of Y can be varied between calls to change the scale factor on a
 \ per-axis basis.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The relevant from xTrackSignVector, yTrackSignVector,
@@ -34186,6 +34448,8 @@ ENDIF
 \
 \   X                   The token number (0 to 54)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   PrintFirstLine+2    Print the token on the second text line at the top of
@@ -34228,6 +34492,8 @@ ENDIF
 \   * 160-199   Print n - 160 spaces (0 to 39)
 \   * 200-254   Print token n - 200 (0 to 54)
 \   * 255       End of token
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -34592,6 +34858,8 @@ ENDIF
 \ The screen handler starts a new screen with screenSection = -1, and then
 \ increments it through 0, 1, 2, 3, 4 and 5, at which point this handler stops
 \ doing anything.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -35218,6 +35486,8 @@ ENDIF
 \
 \ If these conditions are met, then the lap is incremented.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   Driver number (only drivers 0 to 19 have lap times)
@@ -35432,6 +35702,8 @@ ENDIF
 \                         * 1 = the lap timer
 \                               (lapMinutes lapSeconds lapTenths)
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   A                   A = 0 and the Z flag is set (so a BEQ will branch)
@@ -35498,6 +35770,8 @@ ENDIF
 \   * Seconds: Leading zeroes, print both digits
 \   * Tenths: Do not print tenths of a second
 \
+\ ------------------------------------------------------------------------------
+\
 \ Other entry points:
 \
 \   PrintLapTime+2      Format the lap time using the format value in A (see
@@ -35538,6 +35812,8 @@ ENDIF
 \ stick being at the centre point, and -127 and +127 representing the left/right
 \ or up/down values.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The ADC channel to read:
@@ -35545,6 +35821,8 @@ ENDIF
 \                         * 1 = joystick X
 \
 \                         * 2 = joystick Y
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -35765,9 +36043,13 @@ ENDIF
 \                       character column and yCursor is the pixel row of the
 \                       bottom of the character
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   A                   A is unchanged
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -35945,6 +36227,8 @@ ENDIF
 \
 \   Y                   The screen y-coordinate in pixels
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   (Q P)               The address of the character block containing the screen
@@ -35952,6 +36236,8 @@ ENDIF
 \
 \   Y                   The pixel row within the character block containing the
 \                       screen coordinates
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -36476,6 +36762,8 @@ ENDIF
 \
 \ This routine is a mode 5 Bresenham line-drawing routine, which modifies itself
 \ to cater for lines of different slopes.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -37399,6 +37687,8 @@ ENDIF
 \       (U T) = (numberOfPlayers - 1) * 2
 \
 \ I have no idea why the algorithm works like this. It needs more analysis!
+\
+\ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
@@ -39702,11 +39992,15 @@ ENDIF
 \ The DELETE key is supported, leading spaces are ignored, and the ESCAPE key is
 \ trapped and has no effect.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   (Y A)               The address where the string should be stored
 \
 \   X                   The length of string that we require
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -39862,6 +40156,8 @@ ENDIF
 \ Arguments:
 \
 \   setSpeedForDriver   The number of the driver to set the speed for
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -40162,6 +40458,8 @@ ENDIF
 \
 \ This routine shows or hides the indicator according to the current setting of
 \ configAssist, returning the value of configAssist in X.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -40937,6 +41235,8 @@ ENDIF
 \
 \   X                   The number of entries in the menu
 \
+\ ------------------------------------------------------------------------------
+\
 \ Returns:
 \
 \   X                   The chosen option, zero-based (so the first option is 0,
@@ -41093,9 +41393,13 @@ ENDIF
 \ This routine converts a number in the range 0 to 19 into a BCD number in the
 \ range 1 to 20, so the number can be printed.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   A                   The number to be converted into BCD (0 to 19)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -41160,6 +41464,8 @@ ENDIF
 \
 \ The routine also waits for SPACE or RETURN to be pressed before returning.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   X                   The number of the token to print as the header (see
@@ -41184,6 +41490,8 @@ ENDIF
 \   positionNumber      A list of position numbers (for race tables only), which
 \                       contains the numbers 0 to 19 in sequence, with tied
 \                       positions represented by shared position numbers
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -41444,6 +41752,8 @@ ENDIF
 \ Arguments:
 \
 \   Y                   The position of the driver whose name we print
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
@@ -42340,6 +42650,8 @@ ENDIF
 \ As it is copied, the source dash data byte is zeroed, so the macro effectively
 \ moves a byte into screen memory, clearing it in the process.
 \
+\ ------------------------------------------------------------------------------
+\
 \ Arguments:
 \
 \   I%                  The pixel byte number (0 to 39)
@@ -42609,6 +42921,8 @@ ENDMACRO
 \ know that high byte is the same throughout the routine. This is why the lookup
 \ tables at staDrawByte and ldaDrawByte only need to store the low bytes of
 \ the addresses for instructions that we need to modify.
+\
+\ ------------------------------------------------------------------------------
 \
 \ Other entry points:
 \
@@ -43076,6 +43390,8 @@ ENDMACRO
 \
 \   A                   End offset within the segment for the car lines (or 0 to
 \                       clear the mirror segment)
+\
+\ ------------------------------------------------------------------------------
 \
 \ Returns:
 \
