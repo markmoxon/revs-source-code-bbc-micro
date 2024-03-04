@@ -47,8 +47,11 @@
                         \ known as SHEILA)
 
  OSRDCH = &FFE0         \ The address for the OSRDCH routine
+
  OSWRCH = &FFEE         \ The address for the OSWRCH routine
+
  OSBYTE = &FFF4         \ The address for the OSBYTE routine
+
  OSWORD = &FFF1         \ The address for the OSWORD routine
 
  CODE% = &0B00          \ The address of the main game code
@@ -69,13 +72,17 @@
                         \ The following configuration variables represent screen
                         \ addresses for the custom screen
 
- tyreLeft1 = &6E85      \ The tread on the left tyre in screen memory
- tyreLeft2 = &6E8A
- tyreLeft3 = &6FC0
+ tyreLeft1 = &6E85      \ The tread on the left tyre in screen memory (part 1)
 
- tyreRight1 = &6FBD     \ The tread on the right tyre in screen memory
- tyreRight2 = &6FB2
- tyreRight3 = &70F8
+ tyreLeft2 = &6E8A      \ The tread on the left tyre in screen memory (part 2)
+
+ tyreLeft3 = &6FC0      \ The tread on the left tyre in screen memory (part 3)
+
+ tyreRight1 = &6FBD     \ The tread on the right tyre in screen memory (part 1)
+
+ tyreRight2 = &6FB2     \ The tread on the right tyre in screen memory (part 2)
+
+ tyreRight3 = &70F8     \ The tread on the right tyre in screen memory (part 3)
 
  leftSurface = &713D    \ A point in the track view next to the left edge of the
                         \ dashboard, which we use to determine the surface under
@@ -86,23 +93,40 @@
                         \ under the left right of the car
 
  mirror0 = &7540        \ Mirror 0 base address (left mirror, outer segment)
+
  mirror1 = &7548        \ Mirror 1 base address (left mirror, middle segment)
+
  mirror2 = &7418        \ Mirror 2 base address (left mirror, inner segment)
 
  mirror3 = &7530        \ Mirror 3 base address (right mirror, inner segment)
+
  mirror4 = &7670        \ Mirror 4 base address (right mirror, middle segment)
+
  mirror5 = &7678        \ Mirror 5 base address (right mirror, outer segment)
 
  assistLeft1 = &77DB    \ Centre-bottom of dashboard in screen memory for
- assistLeft2 = &77DC    \ showing the computer assisted steering (CAS)
- assistRight1 = &77E3   \ indicator
- assistRight2 = &77E4
+                        \ showing the computer assisted steering (CAS)
+                        \ indicator (part 1)
+
+ assistLeft2 = &77DC    \ Centre-bottom of dashboard in screen memory for
+                        \ showing the computer assisted steering (CAS)
+                        \ indicator (part 2)
+
+ assistRight1 = &77E3   \ Centre-bottom of dashboard in screen memory for
+                        \ showing the computer assisted steering (CAS)
+                        \ indicator (part 3)
+
+ assistRight2 = &77E4   \ Centre-bottom of dashboard in screen memory for
+                        \ showing the computer assisted steering (CAS)
+                        \ indicator (part 4)
 
                         \ The following configuration variables represent screen
                         \ addresses for mode 7
 
  row2_column1 = &7C79   \ Chequered flag mode 7 screen address
+
  row18_column5 = &7E85  \ The first entry's number in a mode 7 menu
+
  row24_column5 = &7FC5  \ Location of "PRESS SPACE BAR TO CONTINUE" prompt
 
 \ ******************************************************************************
