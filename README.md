@@ -4,7 +4,7 @@
 
 ![Screenshot of Revs on the BBC Micro](https://revs.bbcelite.com/images/github/Revs.png)
 
-This repository contains source code for Revs on the BBC Micro, with every single line documented and (for the most part) explained.
+This repository contains source code for Revs on the BBC Micro, with every single line documented and (for the most part) explained. It has been reconstructed by hand from a disassembly of the original game binaries.
 
 It is a companion to the [revs.bbcelite.com website](https://revs.bbcelite.com).
 
