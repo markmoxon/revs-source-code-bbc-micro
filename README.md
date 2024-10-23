@@ -1,6 +1,6 @@
 # Fully documented source code for Revs on the BBC Micro
 
-[BBC Micro cassette Elite](https://github.com/markmoxon/elite-source-code-bbc-micro-cassette) | [BBC Micro disc Elite](https://github.com/markmoxon/elite-source-code-bbc-micro-disc) | [6502 Second Processor Elite](https://github.com/markmoxon/elite-source-code-6502-second-processor) | [BBC Master Elite](https://github.com/markmoxon/elite-source-code-bbc-master) | [Acorn Electron Elite](https://github.com/markmoxon/elite-source-code-acorn-electron) | [NES Elite](https://github.com/markmoxon/elite-source-code-nes) | [Elite-A](https://github.com/markmoxon/elite-a-source-code-bbc-micro) | [Teletext Elite](https://github.com/markmoxon/teletext-elite) | [Elite Universe Editor](https://github.com/markmoxon/elite-universe-editor) | [Elite Compendium (BBC Master)](https://github.com/markmoxon/elite-compendium-bbc-master) | [Elite Compendium (BBC Micro)](https://github.com/markmoxon/elite-compendium-bbc-micro) | [Elite over Econet](https://github.com/markmoxon/elite-over-econet) | [Flicker-free Commodore 64 Elite](https://github.com/markmoxon/c64-elite-flicker-free) | [BBC Micro Aviator](https://github.com/markmoxon/aviator-source-code-bbc-micro) | **BBC Micro Revs** | [Archimedes Lander](https://github.com/markmoxon/lander-source-code-acorn-archimedes)
+[BBC Micro cassette Elite](https://github.com/markmoxon/elite-source-code-bbc-micro-cassette) | [BBC Micro disc Elite](https://github.com/markmoxon/elite-source-code-bbc-micro-disc) | [6502 Second Processor Elite](https://github.com/markmoxon/elite-source-code-6502-second-processor) | [BBC Master Elite](https://github.com/markmoxon/elite-source-code-bbc-master) | [Acorn Electron Elite](https://github.com/markmoxon/elite-source-code-acorn-electron) | [Commodore 64 Elite](https://github.com/markmoxon/elite-source-code-commodore-64) | [Apple II Elite](https://github.com/markmoxon/elite-source-code-apple-ii) | [NES Elite](https://github.com/markmoxon/elite-source-code-nes) | [Elite-A](https://github.com/markmoxon/elite-a-source-code-bbc-micro) | [Teletext Elite](https://github.com/markmoxon/teletext-elite) | [Elite Universe Editor](https://github.com/markmoxon/elite-universe-editor) | [Elite Compendium (BBC Master)](https://github.com/markmoxon/elite-compendium-bbc-master) | [Elite Compendium (BBC Micro)](https://github.com/markmoxon/elite-compendium-bbc-micro) | [Elite over Econet](https://github.com/markmoxon/elite-over-econet) | [Flicker-free Commodore 64 Elite](https://github.com/markmoxon/c64-elite-flicker-free) | [BBC Micro Aviator](https://github.com/markmoxon/aviator-source-code-bbc-micro) | **BBC Micro Revs** | [Archimedes Lander](https://github.com/markmoxon/lander-source-code-acorn-archimedes)
 
 ![Screenshot of Revs on the BBC Micro](https://revs.bbcelite.com/images/github/Revs.png)
 
@@ -49,9 +49,9 @@ It is a companion to the [revs.bbcelite.com website](https://revs.bbcelite.com),
 
 * If you want to browse the source and read about how Revs works under the hood, you will probably find [the website](https://revs.bbcelite.com) is a better place to start than this repository.
 
-* If you would rather explore the source code in your favourite IDE, then the [annotated source](1-source-files/main-sources/revs-source.asm) is what you're looking for. It contains the exact same content as the website, so you won't be missing out (the website is generated from the source files, so they are guaranteed to be identical). You might also like to read the section on [Browsing the source in an IDE](#browsing-the-source-in-an-ide) for some tips.
+* If you would rather explore the source code in your favourite IDE, then the [annotated source](1-source-files/main-sources/revs-source.asm) is what you're looking for. It contains the exact same content as the website, so you won't be missing out (the website is generated from the source files, so they are guaranteed to be identical). You might also like to read the section on [browsing the source in an IDE](#browsing-the-source-in-an-ide) for some tips.
 
-* If you want to build Revs from the source on a modern computer, to produce a working game disc that can be loaded into a BBC Micro or an emulator, then you want the section on [Building Revs from the source](#building-revs-from-the-source).
+* If you want to build Revs from the source on a modern computer, to produce a working game disc that can be loaded into a BBC Micro or an emulator, then you want the section on [building Revs from the source](#building-revs-from-the-source).
 
 My hope is that this repository will be useful for those who want to learn more about Revs and what makes it tick. It is provided on an educational and non-profit basis, with the aim of helping people appreciate the magic of Geoff Crammond's epic racing simulator, and the grandfather of modern sim racing.
 
@@ -119,7 +119,7 @@ You will need the following to build Revs from the source:
 
 * BeebAsm, which can be downloaded from the [BeebAsm repository](https://github.com/stardot/beebasm). Mac and Linux users will have to build their own executable with `make code`, while Windows users can just download the `beebasm.exe` file.
 
-* Python. The build process has only been tested on 3.x, but 2.7 should work.
+* Python. The build process has only been tested on 3.x, but 2.7 might work.
 
 * Mac and Linux users may need to install `make` if it isn't already present (for Windows users, `make.exe` is included in this repository).
 
