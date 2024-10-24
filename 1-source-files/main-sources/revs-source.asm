@@ -39,8 +39,23 @@
 \
 \ ******************************************************************************
 
+ CODE% = &0B00          \ The address of the main game code
+
+ LOAD% = &1200          \ The load address of the main code binary
+
  IRQ1V = &0204          \ The IRQ1V vector that we intercept to implement the
                         \ screen mode
+
+ dashData = &3000       \ The address of the first code block that gets swapped
+                        \ in and out of screen memory, along with parts of the
+                        \ dashboard image
+
+ LOAD_END% = &7000      \ The address of the end of the main code binary
+
+ trackLoad = &70DB      \ The load address of the track data file
+
+ trackChecksum = &7800  \ The address of the checksums in the track data file
+                        \ after it is loaded but before it is moved in memory
 
  VIA = &FE00            \ Memory-mapped space for accessing internal hardware,
                         \ such as the video ULA, 6845 CRTC and 6522 VIAs (also
@@ -53,21 +68,6 @@
  OSBYTE = &FFF4         \ The address for the OSBYTE routine
 
  OSWORD = &FFF1         \ The address for the OSWORD routine
-
- CODE% = &0B00          \ The address of the main game code
-
- LOAD% = &1200          \ The load address of the main code binary
-
- LOAD_END% = &7000      \ The address of the end of the main code binary
-
- dashData = &3000       \ The address of the first code block that gets swapped
-                        \ in and out of screen memory, along with parts of the
-                        \ dashboard image
-
- trackLoad = &70DB      \ The load address of the track data file
-
- trackChecksum = &7800  \ The address of the checksums in the track data file
-                        \ after it is loaded but before it is moved in memory
 
                         \ The following configuration variables represent screen
                         \ addresses for the custom screen

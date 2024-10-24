@@ -32,9 +32,9 @@
 \
 \ ******************************************************************************
 
- LOAD% = &2000          \ The load address of the main code binary
-
  CODE% = &2000          \ The address of the main game code
+
+ LOAD% = &2000          \ The load address of the main code binary
 
 \ ******************************************************************************
 \
