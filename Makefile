@@ -22,26 +22,26 @@ PYTHON?=python
 # will build the Revs+ variant with no crc32 verification
 
 ifeq ($(variant), superior)
-  variant=2
+  variant-number=2
   folder=superior
   suffix=-superior
 else ifeq ($(variant), 4tracks)
-  variant=3
+  variant-number=3
   folder=4tracks
   suffix=-4tracks
 else ifeq ($(variant), revsplus)
-  variant=4
+  variant-number=4
   folder=revsplus
   suffix=-plus
 else
-  variant=1
+  variant-number=1
   folder=acornsoft
   suffix=-acornsoft
 endif
 
 .PHONY:all
 all:
-	echo _VARIANT=$(variant) > 1-source-files/main-sources/revs-build-options.asm
+	echo _VARIANT=$(variant-number) > 1-source-files/main-sources/revs-build-options.asm
 	$(BEEBASM) -i 1-source-files/main-sources/revs-silverstone.asm -v > 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-brandshatch.asm -v >> 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-doningtonpark.asm -v >> 3-assembled-output/compile.txt
