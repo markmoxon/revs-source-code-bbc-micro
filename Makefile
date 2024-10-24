@@ -22,26 +22,26 @@ PYTHON?=python
 # will build the Revs+ variant with no crc32 verification
 
 ifeq ($(variant), superior)
-  variant-revs=2
-  folder-revs=/superior
-  suffix-revs=-superior
+  variant=2
+  folder=superior
+  suffix=-superior
 else ifeq ($(variant), 4tracks)
-  variant-revs=3
-  folder-revs=/4tracks
-  suffix-revs=-4tracks
+  variant=3
+  folder=4tracks
+  suffix=-4tracks
 else ifeq ($(variant), revsplus)
-  variant-revs=4
-  folder-revs=/revsplus
-  suffix-revs=-plus
+  variant=4
+  folder=revsplus
+  suffix=-plus
 else
-  variant-revs=1
-  folder-revs=/acornsoft
-  suffix-revs=-acornsoft
+  variant=1
+  folder=acornsoft
+  suffix=-acornsoft
 endif
 
 .PHONY:all
 all:
-	echo _VARIANT=$(variant-revs) > 1-source-files/main-sources/revs-build-options.asm
+	echo _VARIANT=$(variant) > 1-source-files/main-sources/revs-build-options.asm
 	$(BEEBASM) -i 1-source-files/main-sources/revs-silverstone.asm -v > 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-brandshatch.asm -v >> 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-doningtonpark.asm -v >> 3-assembled-output/compile.txt
@@ -51,7 +51,7 @@ all:
 	$(BEEBASM) -i 1-source-files/main-sources/revs-loader.asm -v >> 3-assembled-output/compile.txt
 	$(BEEBASM) -i 1-source-files/main-sources/revs-source.asm -v >> 3-assembled-output/compile.txt
 	$(PYTHON) 2-build-files/revs-checksum.py
-	$(BEEBASM) -i 1-source-files/main-sources/revs-disc.asm -do 5-compiled-game-discs/revs$(suffix-revs).ssd -opt 3 -title "CAR"
+	$(BEEBASM) -i 1-source-files/main-sources/revs-disc.asm -do 5-compiled-game-discs/revs$(suffix).ssd -opt 3 -title "CAR"
 ifneq ($(verify), no)
-	@$(PYTHON) 2-build-files/crc32.py 4-reference-binaries$(folder-revs) 3-assembled-output
+	@$(PYTHON) 2-build-files/crc32.py 4-reference-binaries/$(folder) 3-assembled-output
 endif
