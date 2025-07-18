@@ -18,6 +18,10 @@
 \
 \ ------------------------------------------------------------------------------
 \
+\ This source file contains the game loader for Revs on the BBC Micro.
+\
+\ ------------------------------------------------------------------------------
+\
 \ This source file produces the following binary file:
 \
 \   * Revs1.bin

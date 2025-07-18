@@ -21,6 +21,11 @@
 \
 \ ------------------------------------------------------------------------------
 \
+\ This source file contains the track data for the Nürburgring track, which has
+\ been backported from the Commodore 64 version of Revs+.
+\
+\ ------------------------------------------------------------------------------
+\
 \ This source file produces the following binary file:
 \
 \   * Nurburgring.bin

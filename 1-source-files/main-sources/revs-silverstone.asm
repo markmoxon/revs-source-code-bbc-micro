@@ -18,6 +18,11 @@
 \
 \ ------------------------------------------------------------------------------
 \
+\ This source file contains the track data for the Silverstone track, which is
+\ the only track in the original release of Revs on the BBC Micro.
+\
+\ ------------------------------------------------------------------------------
+\
 \ This source file produces the following binary file:
 \
 \   * Silverstone.bin

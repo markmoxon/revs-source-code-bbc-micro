@@ -18,6 +18,11 @@
 \
 \ ------------------------------------------------------------------------------
 \
+\ This source file contains the track data for the Donington Park track, which
+\ is one of the tracks in the Revs 4 Tracks expansion pack.
+\
+\ ------------------------------------------------------------------------------
+\
 \ This source file produces the following binary file:
 \
 \   * DoningtonPark.bin
