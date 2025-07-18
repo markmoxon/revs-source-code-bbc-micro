@@ -60,7 +60,7 @@
  osbyte = &FFF4
  oscli = &FFF7
 
- ORG CODE%
+ ORG CODE%              \ Set the assembly address to CODE%
 
 .Start
 

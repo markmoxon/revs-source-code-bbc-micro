@@ -139,7 +139,7 @@
 \
 \ ******************************************************************************
 
- ORG &0000
+ ORG &0000              \ Set the assembly address to &0000
 
 .playerMoving
 
@@ -1282,7 +1282,7 @@
 \
 \ ******************************************************************************
 
- ORG &0100
+ ORG &0100              \ Set the assembly address to &0100
 
 .positionNumber
 
@@ -1453,7 +1453,7 @@
 \
 \ ******************************************************************************
 
- ORG &0380
+ ORG &0380              \ Set the assembly address to &0380
 
 .objYawAngleLo
 
@@ -1783,7 +1783,7 @@
                         \ Stored as a 16-bit value (lineBufferAddrHi
                         \ lineBufferAddrLo)
 
- ORG &0880
+ ORG &0880              \ Set the assembly address to &0880
 
 .objSectionSegmt
 
@@ -2122,7 +2122,7 @@
 \
 \ ******************************************************************************
 
- ORG &1200
+ ORG &1200              \ Set the assembly address to &1200
 
 .Entry
 
@@ -2162,7 +2162,7 @@
 \
 \ ******************************************************************************
 
- ORG &790E
+ ORG &790E              \ Set the assembly address to &790E
 
 .SwapCode
 
@@ -2565,7 +2565,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- ORG &0B00
+ ORG &0B00              \ Set the assembly address to &0B00
 
  EQUB &10, &10          \ These bytes appear to be unused
  EQUB &10, &10
@@ -37866,7 +37866,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- ORG &5E40
+ ORG &5E40              \ Set the assembly address to &5E40
 
 .xVergeRightLo
 
@@ -42027,7 +42027,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- ORG &6C00
+ ORG &6C00              \ Set the assembly address to &6C00
 
 .dashData42
 
@@ -42043,7 +42043,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- ORG &7B00
+ ORG &7B00              \ Set the assembly address to &7B00
 
 .UpdateMirrors
 
@@ -43533,7 +43533,7 @@ ENDMACRO
 \
 \ ******************************************************************************
 
- ORG &9000
+ ORG &9000              \ Set the assembly address to &9000
 
  INCBIN "1-source-files/images/dashboard.bin"
 
@@ -43592,7 +43592,7 @@ ENDMACRO
 
  CLEAR &645C, &64D0
 
- ORG &15DB
+ ORG &15DB              \ Set the assembly address to &15DB
 
  CLEAR &15DB, &16DC
 
