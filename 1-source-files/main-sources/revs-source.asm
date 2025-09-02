@@ -26,6 +26,10 @@
 \
 \   * Revs2.bin
 \
+\ after reading in the following file:
+\
+\   * dashboard.bin
+\
 \ ******************************************************************************
 
  INCLUDE "1-source-files/main-sources/revs-build-options.asm"
