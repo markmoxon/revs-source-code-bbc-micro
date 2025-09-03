@@ -55,3 +55,8 @@ all:
 ifneq ($(verify), no)
 	@$(PYTHON) 2-build-files/crc32.py 4-reference-binaries/$(folder) 3-assembled-output
 endif
+
+.PHONY:b2
+b2:
+	curl -G "http://localhost:48075/reset/b2"
+	curl -H "Content-Type:application/binary" --upload-file "5-compiled-game-discs/revs$(suffix).ssd" "http://localhost:48075/run/b2?name=revs$(suffix).ssd"
