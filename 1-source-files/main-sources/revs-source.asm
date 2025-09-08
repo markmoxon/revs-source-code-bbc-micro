@@ -2139,6 +2139,7 @@
                         \   * &1200-&12FF is copied to &7900-&79FF
                         \
                         \ so set up a byte counter in Y
+
 .entr1
 
  LDA &1200,Y            \ Copy the Y-th byte of &1200 to the Y-th byte of &7900
@@ -35229,7 +35230,7 @@ ENDIF
                         \ This is the "vertical sync position" register, which
                         \ determines the vertical sync position with respect to
                         \ the reference, programmed in character row times. For
-                        \ comparison this is 34 for mode 5, but needs to be
+                        \ comparison this is 34 for mode 5, but it needs to be
                         \ adjusted for our custom screen's vertical sync
 
  EQUB %00000001         \ Set 6845 register R8 = %00000001
