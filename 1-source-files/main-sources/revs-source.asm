@@ -34831,14 +34831,14 @@ ENDIF
                         \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
                         \ interrupt from the System VIA)
 
- LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter to
+ LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter
  STA SHEILA+&64         \ (SHEILA &64) to &D4 (so this sets the low-order
                         \ counter but does not start counting until the
                         \ high-order counter is set)
 
  LDA #&11               \ Set 6522 User VIA T1C-H timer 1 high-order counter
  STA SHEILA+&65         \ (SHEILA &45) to &11 to start the T1 counter
-                        \ counting down from &1164 (4452) at a rate of 1 MHz
+                        \ counting down from &11D4 (4464) at a rate of 1 MHz
 
  LDA #&01               \ Set 6522 System VIA T1L-L timer 1 low-order latches
  STA SHEILA+&46         \ to &01 (so this sets the low-order counter but does
