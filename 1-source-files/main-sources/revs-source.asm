@@ -65,7 +65,7 @@
  trackChecksum = &7800  \ The address of the checksums in the track data file
                         \ after it is loaded but before it is moved in memory
 
- VIA = &FE00            \ Memory-mapped space for accessing internal hardware,
+ SHEILA = &FE00         \ Memory-mapped space for accessing internal hardware,
                         \ such as the video ULA, 6845 CRTC and 6522 VIAs (also
                         \ known as SHEILA)
 
@@ -4398,7 +4398,7 @@ ENDIF
                         \ crash/contact sound and make the sound of the tyres
                         \ squealing
 
- LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDA SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
@@ -18148,7 +18148,7 @@ ENDIF
 
                         \ If we get here then driver X is not visible
 
- LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDA SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
@@ -32333,7 +32333,7 @@ ENDIF
                         \ If we get here then then the engine is not running and
                         \ "T" is being pressed
 
- LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDA SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
@@ -32448,7 +32448,7 @@ ENDIF
 
  STA T                  \ Store A in T
 
- LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDA SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
@@ -33799,7 +33799,7 @@ ENDIF
                         \ side of the car, and W = &FF if there is grass under
                         \ both sides
 
- LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDA SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
@@ -34741,11 +34741,11 @@ ENDIF
 
 .cust1
 
- STX VIA+&00            \ Put register number X into SHEILA &00, so we can now
+ STX SHEILA+&00         \ Put register number X into SHEILA &00, so we can now
                         \ set the value of this 6845 register
 
  LDA screenRegisters,X  \ Set register X to the X-th value of screenRegisters
- STA VIA+&01
+ STA SHEILA+&01
 
  DEX                    \ Decrement the register counter
 
@@ -34787,7 +34787,7 @@ ENDIF
 
 .cust2
 
- STA VIA+&21            \ Send A to SHEILA &21 to send the palette byte in A to
+ STA SHEILA+&21         \ Send A to SHEILA &21 to send the palette byte in A to
                         \ the Video ULA
 
  ADC #&10               \ Set A = A + &10
@@ -34807,7 +34807,7 @@ ENDIF
 
 .cust3
 
- BIT VIA+&4D            \ Read the 6522 System VIA interrupt flag register IFR
+ BIT SHEILA+&4D         \ Read the 6522 System VIA interrupt flag register IFR
                         \ (SHEILA &4D), which has bit 1 set if vertical sync
                         \ has occurred on the video system
 
@@ -34815,56 +34815,56 @@ ENDIF
                         \ until the vertical sync occurs
 
  LDA #%01000000         \ Set 6522 User VIA auxiliary control register ACR
- STA VIA+&6B            \ (SHEILA &6B) bits 7 and 6 to disable PB7 (which is one
+ STA SHEILA+&6B         \ (SHEILA &6B) bits 7 and 6 to disable PB7 (which is one
                         \ of the pins on the user port) and set continuous
                         \ interrupts for timer 1
 
- ORA VIA+&4B            \ Set 6522 System VIA auxiliary control register ACR
- STA VIA+&4B            \ (SHEILA &6B) bit 6 to set continuous interrupts for
+ ORA SHEILA+&4B         \ Set 6522 System VIA auxiliary control register ACR
+ STA SHEILA+&4B         \ (SHEILA &6B) bit 6 to set continuous interrupts for
                         \ timer 1
 
  LDA #%11000000         \ Set 6522 User VIA interrupt enable register IER
- STA VIA+&6E            \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
+ STA SHEILA+&6E         \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
                         \ interrupt from the User VIA)
 
- STA VIA+&4E            \ Set 6522 System VIA interrupt enable register IER
+ STA SHEILA+&4E         \ Set 6522 System VIA interrupt enable register IER
                         \ (SHEILA &4E) bits 6 and 7 (i.e. enable the Timer1
                         \ interrupt from the System VIA)
 
  LDA #&D4               \ Set 6522 User VIA T1C-L timer 1 low-order counter to
- STA VIA+&64            \ (SHEILA &64) to &D4 (so this sets the low-order
+ STA SHEILA+&64         \ (SHEILA &64) to &D4 (so this sets the low-order
                         \ counter but does not start counting until the
                         \ high-order counter is set)
 
  LDA #&11               \ Set 6522 User VIA T1C-H timer 1 high-order counter
- STA VIA+&65            \ (SHEILA &45) to &11 to start the T1 counter
+ STA SHEILA+&65         \ (SHEILA &45) to &11 to start the T1 counter
                         \ counting down from &1164 (4452) at a rate of 1 MHz
 
  LDA #&01               \ Set 6522 System VIA T1L-L timer 1 low-order latches
- STA VIA+&46            \ to &01 (so this sets the low-order counter but does
+ STA SHEILA+&46         \ to &01 (so this sets the low-order counter but does
                         \ not start counting until the high-order counter is
                         \ set)
 
  LDA #&3D               \ Set 6522 System VIA T1C-H timer 1 high-order counter
- STA VIA+&45            \ to &3D, to start the T1 counter counting down from
+ STA SHEILA+&45         \ to &3D, to start the T1 counter counting down from
                         \ &3D01
 
  LDA #&1E               \ Set 6522 System VIA T1L-L timer 1 low-order latches
- STA VIA+&46            \ to &1E (so this sets the low-order counter but does
+ STA SHEILA+&46         \ to &1E (so this sets the low-order counter but does
                         \ not start counting until the high-order counter is
                         \ set)
 
- STA VIA+&66            \ Set 6522 User VIA T1L-L timer 1 low-order latches
+ STA SHEILA+&66         \ Set 6522 User VIA T1L-L timer 1 low-order latches
                         \ to &1E (so this sets the low-order counter but does
                         \ not start counting until the high-order counter is
                         \ set)
 
  LDA #&4E               \ Set 6522 System VIA T1L-H timer 1 high-order latches
- STA VIA+&47            \ to &4E (so this sets the timer to &4E1E (19998) but
+ STA SHEILA+&47         \ to &4E (so this sets the timer to &4E1E (19998) but
                         \ does not start counting until the current timer has
                         \ run down)
 
- STA VIA+&67            \ Set 6522 User VIA T1L-H timer 1 high-order latches
+ STA SHEILA+&67         \ Set 6522 User VIA T1L-H timer 1 high-order latches
                         \ to &4E (so this sets the timer to &4E1E (19998) but
                         \ does not start counting until the current timer has
                         \ run down)
@@ -34905,7 +34905,7 @@ ENDIF
 
 .ScreenHandler
 
- LDA VIA+&6D            \ Set A to the 6522 User VIA interrupt flag register IFR
+ LDA SHEILA+&6D         \ Set A to the 6522 User VIA interrupt flag register IFR
                         \ (SHEILA &46D)
 
  AND #%01000000         \ Extract bit 6, which is set when 6522 User VIA timer 1
@@ -34915,7 +34915,7 @@ ENDIF
                         \ ScreenHandler-3 as we do not need to do anything at
                         \ this point
 
- STA VIA+&6D            \ Set bit 6 of the 6522 User VIA interrupt flag register
+ STA SHEILA+&6D         \ Set bit 6 of the 6522 User VIA interrupt flag register
                         \ IFR (SHEILA &6D) to clear the timer 1 interrupt (the
                         \ timer will already have restarted as we set it to
                         \ continuous interrupts in SetCustomScreen)
@@ -34948,7 +34948,7 @@ ENDIF
                         \ of text (where the race information is printed)
 
  LDA #%10001000         \ Set the Video ULA control register (SHEILA &20) to
- STA VIA+&20            \ %10001000, which is the same as switching to mode 4
+ STA SHEILA+&20         \ %10001000, which is the same as switching to mode 4
 
  LDX #15                \ We now send the 16 palette bytes at paletteSection0 to
                         \ the Video ULA palette in SHEILA &21, so set a loop
@@ -34958,7 +34958,7 @@ ENDIF
 .hand2
 
  LDA paletteSection0,X  \ Set the X-th byte of paletteSection0 to the Video ULA
- STA VIA+&21            \ palette
+ STA SHEILA+&21         \ palette
 
  DEX                    \ Decrement the loop counter
 
@@ -34997,7 +34997,7 @@ ENDIF
                         \ of the screen and the car and track at the bottom
 
  LDA #%11000100         \ Set the Video ULA control register (SHEILA &20) to
- STA VIA+&20            \ %11000100, which is the same as switching to mode 5
+ STA SHEILA+&20         \ %11000100, which is the same as switching to mode 5
 
  CLC                    \ Clear the C flag for the additions in the following
                         \ loop
@@ -35014,7 +35014,7 @@ ENDIF
 
 .hand6
 
- STA VIA+&21            \ Send A to SHEILA &21 to send the palette byte in A to
+ STA SHEILA+&21         \ Send A to SHEILA &21 to send the palette byte in A to
                         \ the Video ULA
 
  ADC #&10               \ Set A = A + &10
@@ -35051,7 +35051,7 @@ ENDIF
 .hand8
 
  LDA paletteSection2,X  \ Set the X-th byte of paletteSection2 to the Video ULA
- STA VIA+&21            \ palette
+ STA SHEILA+&21         \ palette
 
  DEX                    \ Decrement the loop counter
 
@@ -35076,7 +35076,7 @@ ENDIF
 .hand10
 
  LDA paletteSection3,X  \ Set the X-th byte of paletteSection2 to the Video ULA
- STA VIA+&21            \ palette
+ STA SHEILA+&21         \ palette
 
  DEX                    \ Decrement the loop counter
 
@@ -35101,7 +35101,7 @@ ENDIF
 .hand12
 
  LDA paletteSection4,X  \ Set the X-th byte of paletteSection2 to the Video ULA
- STA VIA+&21            \ palette
+ STA SHEILA+&21         \ palette
 
  DEX                    \ Decrement the loop counter
 
@@ -35113,7 +35113,7 @@ ENDIF
  JSR AnimateTyres       \ Animate the tyres on either side of the screen
 
  LDA #&FF               \ Set 6522 User VIA T2C-H timer 2 high-order counter
- STA VIA+&69            \ (SHEILA &69) to &FF to start the T2 counter
+ STA SHEILA+&69         \ (SHEILA &69) to &FF to start the T2 counter
                         \ counting down from &FFxx at a rate of 1 MHz
 
  LDA #&16               \ Set (X A) = &0B16 to latch into the User VIA timer 1,
@@ -35122,8 +35122,8 @@ ENDIF
 
 .hand13
 
- STX VIA+&67            \ Set 6522 User VIA T1L-H and T1L-L to set both timer 1
- STA VIA+&66            \ latches (so this sets the timer to (X A) but does not
+ STX SHEILA+&67         \ Set 6522 User VIA T1L-H and T1L-L to set both timer 1
+ STA SHEILA+&66         \ latches (so this sets the timer to (X A) but does not
                         \ start counting until the current timer has run down)
 
  INC screenSection      \ Increment the screen section counter to move on to the
@@ -35347,7 +35347,7 @@ ENDIF
  STA IRQ1V+1
 
  LDA #%01000000         \ Set 6522 User VIA interrupt enable register IER
- STA VIA+&6E            \ (SHEILA &4E) bit 6 (i.e. disable the Timer1 interrupt
+ STA SHEILA+&6E         \ (SHEILA &4E) bit 6 (i.e. disable the Timer1 interrupt
                         \ from the User VIA, as we no longer need it)
 
  CLI                    \ Re-enable interrupts
@@ -40210,7 +40210,7 @@ ENDIF
                         \ determine the speed for this driver, with a higher
                         \ figure in A giving the car a higher speed in the race
 
- LDA VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDA SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
@@ -43473,7 +43473,7 @@ ENDMACRO
                         \ pixels are black, so this part simulates the mirror
                         \ shuddering when the engine is on)
 
- LDX VIA+&68            \ Read 6522 User VIA T1C-L timer 2 low-order counter
+ LDX SHEILA+&68         \ Read 6522 User VIA T1C-L timer 2 low-order counter
                         \ (SHEILA &68), which decrements one million times a
                         \ second and will therefore be pretty random
 
