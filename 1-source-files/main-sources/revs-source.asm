@@ -903,7 +903,6 @@
                         \
                         \   * Bit 7 set = clutch is not fully engaged
 
-
 .revsOnGearChange
 
  SKIP 1                 \ The rev count when the gear was last changed
@@ -3870,7 +3869,6 @@ ENDIF
                         \ So playerYawAngle is in the bottom half of the above
                         \ diagram, where the y-coordinates are negative, so we
                         \ need to negate the y-coordinate
-
 
  LDA #1                 \ Negate cosYawAngle by setting bit 0 of the low byte,
  ORA cosYawAngleLo      \ as cosYawAngle is a sign-magnitude number
@@ -9182,7 +9180,6 @@ ENDIF
                         \     the backgroundColour table by the SetBackground
                         \     routine
 
-
  BNE bgnd2              \ Jump to bgnd2 (this BNE is effectively a JMP as A is
                         \ never zero)
 
@@ -12389,7 +12386,6 @@ IF _ACORNSOFT OR _4TRACKS
                         \ for the edge we are drawing, i.e. load the Y-th byte
                         \ of dash data block blockNumber
 
-
  BEQ edge7              \ If the next byte down the screen is zero, then loop
                         \ back to edge7 to draw the edge in this byte as well,
                         \ so we keep drawing the edge downwards while the
@@ -12616,7 +12612,6 @@ IF _SUPERIOR OR _REVSPLUS
                         \
                         \   * BNE sedg8 when GetTyreDashEdge is called with
                         \               Y = &09
-
 
  JSR GetColourSup       \ The current byte in the screen buffer is zero, which
                         \ means it should inherit the colour of the byte to the
@@ -16815,7 +16810,6 @@ ENDIF
                         \            |  \       <-- C flag and bit 7 set
                         \            |   192
                         \           254
-
 
  EOR directionFacing    \ If we are facing forwards, leave A alone, but if we
                         \ are currently facing backwards, flip bit 7 of A
@@ -29435,7 +29429,6 @@ ENDIF
 
                         \ Object type 6 = 16, 10, 1
 
-
  EQUB %00000011         \ 0 0 000 011    c = 3
                         \                1/2^1                      = 16/32
  EQUB %10100110         \ 1 0 100 110    a = 0   b = 4   c = 6
@@ -29444,7 +29437,6 @@ ENDIF
                         \                1/2^5                      =  1/32
 
                         \ Object type 7 = 28, 20, 18, 16, 8
-
 
  EQUB %11100101         \ 1 1 100 101    a = 1   b = 4   c = 5
                         \                1/2   + 1/2^2 + 1/2^3      = 28/32
@@ -34944,7 +34936,6 @@ ENDIF
                         \ the Video ULA palette in SHEILA &21, so set a loop
                         \ counter in X
 
-
 .hand2
 
  LDA paletteSection0,X  \ Set the X-th byte of paletteSection0 to the Video ULA
@@ -38269,7 +38260,6 @@ ENDIF
                         \       * Clear = steer left
                         \
                         \       * Set = steer right
-
 
  EQUB &00, &00          \ These bytes appear to be unused
  EQUB &00, &00
