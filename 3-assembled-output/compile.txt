@@ -12591,7 +12591,7 @@ Saving file '3-assembled-output/Revs1.bin'
      0C43   6A         ROR A
      0C44   66 74      ROR &74
      0C46   60         RTS
-.Divide8x8
+.Divide16x16
      0C47   06 74      ASL &74
      0C49   2A         ROL A
      0C4A   B0 04      BCS &0C50

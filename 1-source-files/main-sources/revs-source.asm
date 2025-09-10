@@ -3144,42 +3144,41 @@ ENDIF
 
 \ ******************************************************************************
 \
-\       Name: Divide8x8
+\       Name: Divide16x16
 \       Type: Subroutine
 \   Category: Maths (Arithmetic)
-\    Summary: Calculate T = 256 * A / V
+\    Summary: Calculate T = 256 * (A T) / (V 0)
 \
 \ ------------------------------------------------------------------------------
 \
 \ In the same way that shift-and-add implements a binary version of the manual
 \ long multiplication process, shift-and-subtract implements long division. We
-\ shift bits out of the left end of the number being divided (A), subtracting
-\ the largest possible multiple of the divisor (V) after each shift; each bit of
-\ A where we can subtract Q gives a 1 the answer to the division, otherwise it
-\ gives a 0.
+\ shift bits out of the left end of the number being divided (A T), subtracting
+\ the largest possible multiple of the divisor (V 0) after each shift; each bit
+\ of (A T) where we can subtract Q gives a 1 the answer to the division,
+\ otherwise it gives a 0.
 \
 \ ------------------------------------------------------------------------------
 \
 \ Arguments:
 \
-\   T                   This has something to do with rounding the result
+\   (A T)               Unsigned integer
 \
-\   A                   Unsigned integer
-\
-\   V                   Unsigned integer
+\   (V 0)                Unsigned integer
 \
 \ ******************************************************************************
 
-.Divide8x8
+.Divide16x16
 
  ASL T                  \ Shift T left, which clears bit 0 of T, ready for us to
-                        \ start building the result
+                        \ start building the result in T at the same time as we
+                        \ shift the low byte of (A T) out to the left
 
-                        \ We now repeat the following five instruction block
+                        \ We now repeat the following seven-instruction block
                         \ eight times, one for each bit in T
 
- ROL A                  \ Shift A to the left to extract the next bit from the
-                        \ number being divided
+ ROL A                  \ Shift the high byte of (A T) to the left to extract
+                        \ the next bit from the number being divided
 
  BCS P%+6               \ If we just shifted a 1 out of A, skip the next two
                         \ instructions and jump straight to the subtraction
@@ -3190,7 +3189,8 @@ ENDIF
  SBC V                  \ A >= V, so set A = A - V and set the C flag so we
  SEC                    \ shift a 1 into the result in T
 
- ROL T                  \ Shift T to the left, pulling the C flag into bit 0
+ ROL T                  \ Shift the result in T to the left, pulling the C flag
+                        \ into bit 0
 
  ROL A                  \ Repeat the shift-and-subtract loop for bit 1
  BCS P%+6
@@ -15142,25 +15142,21 @@ ENDIF
                         \ So by this point, (A PP) and (UU RR) have both been
                         \ scaled by the same number of shifts
 
- STA V                  \ Set V = A, the high byte of the scaled |x-delta|
+ STA V                  \ Set V = A
+                        \       = the high byte of the scaled |x-delta|
 
- LDA RR                 \ Set T = RR, the low byte of the scaled |z-delta|, to
- STA T                  \ use for rounding the result in Divide8x8
-
- LDA UU                 \ Set A = UU, the high byte of the scaled |z-delta|
+ LDA RR                 \ Set (A T) = (UU RR)
+ STA T                  \           = scaled |z-delta|
+ LDA UU
 
  CMP V                  \ If A = V then the high bytes of the scaled values
  BEQ rotn9              \ match, so jump to rotn9, which deals with the case
                         \ when the xVector and zVector values are equal
 
-                        \ We have scaled both values, so now for the division of
-                        \ the high bytes
+                        \ We have scaled both values, so now for the division
 
- JSR Divide8x8          \ Set T = 256 * A / V
+ JSR Divide16x16        \ Set T = 256 * (A T) / (V 0)
                         \       = 256 * |z-delta| / |x-delta|
-                        \
-                        \ using the lower byte of the |z-delta| numerator for
-                        \ rounding
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
@@ -15361,25 +15357,21 @@ ENDIF
                         \ So by this point, (A RR) and (SS PP) have both been
                         \ scaled by the same number of shifts
 
- STA V                  \ Set V = A, the high byte of the scaled |z-delta|
+ STA V                  \ Set V = A
+                        \       = the high byte of the scaled |z-delta|
 
- LDA PP                 \ Set T = PP, the low byte of the scaled |x-delta|, to
- STA T                  \ use for rounding the result in Divide8x8
-
- LDA SS                 \ Set A = SS, the high byte of the scaled |x-delta|
+ LDA PP                 \ Set (A T) = (SS PP)
+ STA T                  \           = scaled |x-delta|
+ LDA SS
 
  CMP V                  \ If A = V then the high bytes of the scaled values
  BEQ rotn9              \ match, so jump to rotn9, which deals with the case
                         \ when the xVector and zVector values are equal
 
-                        \ We have scaled both values, so now for the division of
-                        \ the high bytes
+                        \ We have scaled both values, so now for the division
 
- JSR Divide8x8          \ Set T = 256 * A / V
+ JSR Divide16x16        \ Set T = 256 * (A T) / (V 0)
                         \       = 256 * |x-delta| / |z-delta|
-                        \
-                        \ using the lower byte of the |x-delta| numerator for
-                        \ rounding
 
  LDA #0                 \ Set II = 0 to use as the low byte for the final yaw
  STA II                 \ angle
@@ -15646,7 +15638,9 @@ ENDIF
                         \ So by this point, (A K) and (TT QQ) have both been
                         \ scaled by the same number of shifts
 
- STA V                  \ Set V = A, the high byte of the scaled |x-delta|,
+ STA V                  \ Set V = A
+                        \       = high byte of the scaled |x-delta|
+                        \
                         \ which we know is at least 128 (as bit 7 is set)
 
  STY scaleDown          \ Set scaleDown to the number of shifts in Y
@@ -15660,16 +15654,12 @@ ENDIF
                         \ of this, i.e. 1/|x-delta|, scaled into the range 256
                         \ to 128
 
- LDA QQ                 \ Set T = QQ, the low byte of the scaled |y-delta|, to
- STA T                  \ use for rounding the result in Divide8x8
+ LDA QQ                 \ Set (A T) = (TT QQ)
+ STA T                  \           = scaled |y-delta| / 8
+ LDA TT
 
- LDA TT                 \ Set A = TT, the high byte of the scaled |y-delta|
-
- JSR Divide8x8          \ Set T = 256 * A / V
+ JSR Divide16x16        \ Set T = 256 * (A T) / (V 0)
                         \       = 256 * (|y-delta| / 8) / |x-delta|
-                        \
-                        \ using the lower byte of the |y-delta| numerator for
-                        \ rounding
 
  LDA T                  \ If T >= 128, jump to pang8 to return from the
  CMP #128               \ subroutine with the C flag set
