@@ -2738,7 +2738,7 @@ ENDIF
 \
 \ Returns:
 \
-\   X                   X is unchanged
+\   X                   X is preserved
 \
 \ ******************************************************************************
 
@@ -3058,7 +3058,7 @@ ENDIF
 \
 \ Returns:
 \
-\   X                   X is unchanged
+\   X                   X is preserved
 \
 \ ------------------------------------------------------------------------------
 \
@@ -4339,9 +4339,9 @@ ENDIF
 \
 \ Returns:
 \
-\   X                   X is unchanged
+\   X                   X is preserved
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \ ******************************************************************************
 
@@ -20203,9 +20203,9 @@ ENDIF
 \
 \ Returns:
 \
-\   X                   X is unchanged
+\   X                   X is preserved
 \
-\   Y                   Y is unchanged
+\   Y                   Y is preserved
 \
 \   M                   Set to 128 + edge's yaw angle * 4, to carry through to
 \                       the next call to DrawSegmentEdge
@@ -22354,7 +22354,7 @@ ENDIF
 \                       verge goes (decremented if the verge goes down,
 \                       incremented is it goes up)
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \ ******************************************************************************
 
@@ -22574,7 +22574,7 @@ ENDIF
 \                       verge goes (decremented if the verge goes down,
 \                       incremented is it goes up)
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \ ******************************************************************************
 
@@ -22736,7 +22736,7 @@ ENDIF
 \
 \   X                   128
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \   C flag              Clear
 \
@@ -22805,7 +22805,7 @@ ENDIF
 \
 \   X                   128
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \   C flag              Clear
 \
@@ -22874,9 +22874,9 @@ ENDIF
 \
 \                         * Set if offset Y does point to dash data
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
-\   X                   X is unchanged
+\   X                   X is preserved
 \
 \ ******************************************************************************
 
@@ -29549,7 +29549,7 @@ ENDIF
 \
 \ Returns:
 \
-\   X                   X is unchanged
+\   X                   X is preserved
 \
 \ ******************************************************************************
 
@@ -36080,7 +36080,7 @@ ENDIF
 \
 \ Returns:
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \ ------------------------------------------------------------------------------
 \
@@ -40502,7 +40502,7 @@ ENDIF
 \
 \                         * 0 if computer assisted steering is not enabled
 \
-\   A                   A is unchanged
+\   A                   A is preserved
 \
 \   C flag              Set to bit 7 of directionFacing (clear if our car is
 \                       facing forwards, set if we are facing backwards)
@@ -43428,7 +43428,7 @@ ENDMACRO
 \
 \ Returns:
 \
-\   Y                   Y is unchanged
+\   Y                   Y is preserved
 \
 \ ******************************************************************************
 
