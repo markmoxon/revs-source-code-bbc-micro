@@ -10811,7 +10811,8 @@ ENDIF
  ASL A                  \       = dYawAngle * 4
 
  PHP                    \ Push the N flag onto the stack, which contains the
-                        \ sign of dYawAngle
+                        \ sign of dYawAngle (so the N flag is set if dYawAngle
+                        \ is negative, or clear if dYawAngle is positive)
 
  LDA carSpeedHi,Y       \ Set A to the high byte of the player's speed
 
@@ -10868,11 +10869,11 @@ ENDIF
                         \ car
 
  PLP                    \ Restore the sign of dYawAngle, which we stored on the
-                        \ stack above, so the N flag is positive if the other
-                        \ car's yaw angle is larger (i.e. the other car is to
-                        \ the right of the player's car), or negative if the
-                        \ other car's yaw angle is smaller (i.e. the other car
-                        \ is to the left of the player's car)
+                        \ stack above, so the N flag is clear if the other car's
+                        \ yaw angle is larger (i.e. the other car is to the
+                        \ right of the player's car), or set if the other car's
+                        \ yaw angle is smaller (i.e. the other car is to the
+                        \ left of the player's car)
 
  JSR Absolute16Bit      \ Set the sign of (A T) to match the result of the
                         \ subtraction above, so A is now in the range -16 to
