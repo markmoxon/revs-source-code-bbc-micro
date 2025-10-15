@@ -2555,9 +2555,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Sound data. To make a sound, the MakeSound passes the bytes in this table to
-\ OSWORD 7. These bytes are the OSWORD equivalents of the parameters passed to
-\ the SOUND keyword in BASIC. The parameters have these meanings:
+\ Sound data. To make a sound, the MakeSound routine passes the bytes in this
+\ table to OSWORD 7. These bytes are the OSWORD equivalents of the parameters
+\ passed to the SOUND keyword in BASIC. The parameters have these meanings:
 \
 \   channel/flush, amplitude (or envelope number if 1-4), pitch, duration
 \
@@ -2749,7 +2749,8 @@ ENDIF
 
  CLC                    \ Set (Y X) = envelopeData + A
  ADC #LO(envelopeData)  \
- TAX                    \ starting with the low byte
+ TAX                    \ starting with the low byte (we set the high byte in
+                        \ MakeSoundEnvelope)
 
  LDA #8                 \ Set A = 8 for the OSWORD command to define an envelope
 
@@ -2770,7 +2771,7 @@ ENDIF
 \
 \   A                   The action:
 \
-\                         * A = 7 make a sound
+\                         * A = 7 to make a sound
 \
 \                         * A = 8 to define a sound envelope
 \
@@ -2782,9 +2783,10 @@ ENDIF
 
 .MakeSoundEnvelope
 
- LDY #HI(soundData)     \ Set y to the high byte of the soundData block
-                        \ address, so (Y X) now points to the relevant envelope
-                        \ or sound data block
+ LDY #HI(soundData)     \ Set Y to the high byte of the soundData block address,
+                        \ which is the same as the high byte of the envelopeData
+                        \ block address, so (Y X) now points to the relevant
+                        \ envelope or sound or sound data block
 
  JSR OSWORD             \ Call OSWORD with action A, as follows:
                         \
