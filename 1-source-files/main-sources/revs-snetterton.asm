@@ -986,7 +986,7 @@
  ROL A                  \ Set bits 0-2 of U to bits 5-7 of yawAngleHi (i.e. the
  ROL A                  \ top three bits), so this is equivalent to:
  ROL A                  \
- AND #%00000111         \   U = (yawAngleHi yawAngleLo) DIV 8192
+ AND #%00000111         \   U = (yawAngleHi yawAngleLo) div 8192
  STA U                  \
                         \ We will use U to work out the direction of the track
                         \ that we are building
@@ -1019,7 +1019,7 @@
 
                         \ By this point, we have:
                         \
-                        \   X = (yawAngleHi yawAngleLo) MOD 8192
+                        \   X = (yawAngleHi yawAngleLo) mod 8192
                         \
                         \ This is the corresponding point in the curve tables
                         \ for the track direction, reduced to one-eighth of a
