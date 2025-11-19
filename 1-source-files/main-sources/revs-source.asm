@@ -9158,10 +9158,10 @@ ENDIF
                         \
                         \   * xVergeLeftHi + 20 is negative
                         \
-                        \ Adding 20 degrees to the yaw angles will move them to
-                        \ the right by half the screen width, so this is the
-                        \ same as moving the angles from the left edge of the
-                        \ screen to the middle
+                        \ Adding 20 to the yaw angles will move them to the
+                        \ right by half the screen width, so this is the same as
+                        \ moving the angles from the left edge of the screen to
+                        \ the middle
                         \
                         \ We then check whether moving the angles to the centre
                         \ pushes the rightmost verge edge in A past the centre
@@ -9424,8 +9424,8 @@ ENDIF
 \ This routine tests whether the magnitude of a signed yaw angle is < 20. In
 \ other words, given a signed yaw angle x, this tests whether |x| < 20.
 \
-\ As the field of view in Revs is 20 degrees, this tests whether or not a yaw
-\ angle is visible on-screen.
+\ As the field of view in Revs is 20 yaw angle units in either direction, this
+\ tests whether or not a yaw angle is visible on-screen.
 \
 \ It does this by adding 20 and then testing against 40, which gives the result
 \ we want as the following are all equivalent:
@@ -9435,6 +9435,9 @@ ENDIF
 \   -20 + 20 < x < 20 + 20
 \
 \   0 < x < 40
+\
+\ A yaw angle of 20 is equivalent to 28.125 degrees, or 360 * 20 / 256. So the
+\ whole field of view in Revs is 56.25 degrees across.
 \
 \ ------------------------------------------------------------------------------
 \
@@ -10365,10 +10368,10 @@ ENDIF
                         \
                         \   * W + 20 is negative
                         \
-                        \ Adding 20 degrees to the yaw angles will move them to
-                        \ the right by half the screen width, so this is the
-                        \ same as moving the angles from the left edge of the
-                        \ screen to the middle
+                        \ Adding 20 to the yaw angles will move them to the
+                        \ right by half the screen width, so this is the same as
+                        \ moving the angles from the left edge of the screen to
+                        \ the middle
                         \
                         \ We then check whether moving the angles to the centre
                         \ pushes the rightmost verge edge in A past the centre
@@ -16598,8 +16601,9 @@ ENDIF
 
                         \ If we get here then we have gone past the closest
                         \ segment to the player, so we need to check whether the
-                        \ segment is within the 20-degree field of view, and
-                        \ stop when the segments become hidden from view
+                        \ segment is within the field of view (which is 20 yaw
+                        \ angle units to each side, or 28.125 degrees), and stop
+                        \ when the segments become hidden from view
 
  LDY segmentListPointer \ Set Y to the segment list pointer
 
@@ -16611,7 +16615,7 @@ ENDIF
 
 .gseg11
 
- CMP #20                \ If A < 20, then the segment is within the 20-degree
+ CMP #20                \ If A < 20, then the segment is within the 20-yaw-angle
  BCC gseg13             \ field of view, so jump to gseg13 to keep checking
                         \ segments
 
@@ -16624,13 +16628,14 @@ ENDIF
 .gseg12
 
  CMP #20                \ If A >= 20, then the previous segment was also outside
- BCS gseg16             \ the 20-degree field of view, so jump to gseg16 to
+ BCS gseg16             \ the 20-yaw-angle field of view, so jump to gseg16 to
                         \ return from the subroutine
 
  JMP gseg4              \ If we get here then the current segment is outside the
-                        \ 20-degree field of view, but the previous one wasn't,
-                        \ so we jump to gseg4 to try processing a segment that's
-                        \ one-quarter of the size, in case that fits
+                        \ 20-yaw-angle field of view, but the previous one
+                        \ wasn't, so we jump to gseg4 to try processing a
+                        \ segment that's one-quarter of the size, in case that
+                        \ fits
 
 .gseg13
 
@@ -20236,9 +20241,10 @@ ENDIF
 
  CMP #20                \ If A >= 20, set the C flag, otherwise clear the C flag
                         \
-                        \ Because the field of view is 20 degrees, the C flag is
-                        \ now set if the verge edge is off-screen, or clear if
-                        \ it is on-screen
+                        \ Because the field of view is 20 yaw angle units to
+                        \ each side (or 28.125 degrees), the C flag is now set
+                        \ if the verge edge is off-screen, or clear if it is
+                        \ on-screen
 
 .dver2
 
