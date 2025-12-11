@@ -23491,7 +23491,7 @@ ENDIF
  JMP fenc1              \ Loop back to part 1 to draw the fence in the next dash
                         \ data block
 
- EQUB 0                 \ This byte appears to be unused
+ EQUB &00               \ This byte appears to be unused
 
 \ ******************************************************************************
 \
