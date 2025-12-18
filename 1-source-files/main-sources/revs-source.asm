@@ -2573,7 +2573,7 @@ ENDIF
 \
 \ ******************************************************************************
 
- ORG &0B00              \ Set the assembly address to &0B00
+ ORG CODE%              \ Set the assembly address to &0B00
 
  EQUB &10, &10          \ These bytes appear to be unused
  EQUB &10, &10
