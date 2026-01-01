@@ -21141,7 +21141,7 @@ ENDIF
 .dver23
 
                         \ If we get here then SS >= TT, so the edge has a
-                        \ gradient shallow
+                        \ shallow gradient
 
  LDA VV                 \ If VV is positive, jump to dver25 to draw the edge
  BPL dver25             \ from left to right
