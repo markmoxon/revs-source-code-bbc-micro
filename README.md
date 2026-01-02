@@ -93,7 +93,7 @@ If you want to browse the source in an IDE, you might find the following useful.
 
 * The most interesting files are in the [main-sources](1-source-files/main-sources) folder:
 
-  * The main game's source code is in the [revs-source.asm](1-source-files/main-sources/revs-source.asm) file - this is the motherlode and probably contains all the stuff you're interested in. It produces a file called `Revs?` that contains the game code.
+  * The main game's source code is in the [revs-source.asm](1-source-files/main-sources/revs-source.asm) file - this is the motherlode and probably contains all the stuff you're interested in. It produces a file called `Revs2.bin` that contains the game code.
 
   * The data for the Silverstone track file is in the [revs-silverstone.asm](1-source-files/main-sources/revs-silverstone.asm) file. This produces a file called `Silvers` that gets loaded by the loader before the main game code is run.
 
