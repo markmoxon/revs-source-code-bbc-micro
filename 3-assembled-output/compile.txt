@@ -24572,6 +24572,7 @@ End macro DRAW_BYTE
      7FFC   A4 78      LDY &78
      7FFE   60         RTS
      7FFF   FF
+     9000   00 00 00 ... INCBIN "1-source-files/images/dashboard.bin"
      15DB   20
      15DC   00
      15DD   63
