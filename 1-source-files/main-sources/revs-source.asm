@@ -1452,9 +1452,9 @@
 
 \ ******************************************************************************
 \
-\       Name: Main variable workspace
+\       Name: Main variable workspace (Part 1 of 4)
 \       Type: Workspace
-\    Address: &0380 to &07F8 and &0880 to &0AFF
+\    Address: &0380 to &03DF
 \   Category: Workspaces
 \    Summary: The main block of game variables
 \
@@ -1483,7 +1483,17 @@
  SKIP 24                \ The size of each of the objects (i.e. the scaled value
                         \ of scaleUp for the object)
 
- SKIP 32                \ These bytes appear to be unused
+\ ******************************************************************************
+\
+\       Name: Main variable workspace (Part 2 of 4)
+\       Type: Workspace
+\    Address: &0400 to &07FF
+\   Category: Workspaces
+\    Summary: The main block of game variables
+\
+\ ******************************************************************************
+
+ ORG &0400              \ Set the assembly address to &0400
 
 .leftSegment
 
@@ -1790,6 +1800,18 @@
                         \ Stored as a 16-bit value (lineBufferAddrHi
                         \ lineBufferAddrLo)
 
+ SKIP 8                 \ These bytes appear to be unused
+
+\ ******************************************************************************
+\
+\       Name: Main variable workspace (Part 3 of 4)
+\       Type: Workspace
+\    Address: &0880 to &08BF
+\   Category: Workspaces
+\    Summary: The main block of game variables
+\
+\ ******************************************************************************
+
  ORG &0880              \ Set the assembly address to &0880
 
 .objSectionSegmt
@@ -1822,7 +1844,17 @@
                         \
                         \ Indexed by driver number (0 to 19)
 
- SKIP 16                \ These bytes appear to be unused
+\ ******************************************************************************
+\
+\       Name: Main variable workspace (Part 4 of 4)
+\       Type: Workspace
+\    Address: &08D0 to &0AFF
+\   Category: Workspaces
+\    Summary: The main block of game variables
+\
+\ ******************************************************************************
+
+ ORG &08D0              \ Set the assembly address to &08D0
 
 .objectSegmentLo
 

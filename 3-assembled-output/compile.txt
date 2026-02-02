@@ -12039,7 +12039,6 @@ Saving file '3-assembled-output/Revs1.bin'
      03B0
 .objectSize
      03C8
-     03E0
 .leftSegment
      0400
 .rightSegment
@@ -12115,13 +12114,13 @@ Saving file '3-assembled-output/Revs1.bin'
      07A8
 .lineBufferAddrHi
      07D0
+     07F8
 .objSectionSegmt
      0880
 .totalRaceTenths
      0898
 .totalRaceSeconds
      08AC
-     08C0
 .objectSegmentLo
      08D0
 .objectSegmentHi
