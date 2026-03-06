@@ -15729,7 +15729,7 @@ ENDIF
 \       Name: GetSectionAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track geometry
-\    Summary: Get the yaw and pitch angles for the inner and outer track
+\    Summary: Get the pitch and yaw angles for the inner and outer track
 \             sections
 \  Deep dive: Data structures for the track calculations
 \             The track verges
@@ -15751,7 +15751,7 @@ ENDIF
 \     * Part 2: Calculate the track section number for this entry, relative to
 \       the front segment in the track segment buffer
 \
-\     * Part 3: Store the yaw and pitch angles for this section in the
+\     * Part 3: Store the pitch and yaw angles for this section in the
 \       xVergeRight/Left and yVergeRight/Left tables
 \
 \ ------------------------------------------------------------------------------
@@ -15967,14 +15967,14 @@ ENDIF
 \       Name: GetSectionAngles (Part 3 of 3)
 \       Type: Subroutine
 \   Category: Track geometry
-\    Summary: Calculate the yaw and pitch angles for the track section entry
+\    Summary: Calculate the pitch and yaw angles for the track section entry
 \             that we want to update
 \  Deep dive: Data structures for the track calculations
 \             The track verges
 \
 \ ------------------------------------------------------------------------------
 \
-\ This part of the routine sets the yaw and pitch angles for this track section
+\ This part of the routine sets the pitch and yaw angles for this track section
 \ in the xVergeRight/Left and yVergeRight/Left tables.
 \
 \ ******************************************************************************
@@ -16252,7 +16252,7 @@ ENDIF
 \       Name: GetSegmentAngles (Part 1 of 3)
 \       Type: Subroutine
 \   Category: Track geometry
-\    Summary: Get the yaw and pitch angles for the inner or outer track segments
+\    Summary: Get the pitch and yaw angles for the inner or outer track segments
 \  Deep dive: Data structures for the track calculations
 \             The track verges
 \
@@ -17016,7 +17016,7 @@ ENDIF
  LDA #0                 \ Set horizonLine = 0, so we can calculate a new pitch
  STA horizonLine        \ angle for the horizon in the following process
 
- JSR GetSectionAngles   \ Get the yaw and pitch angles for the inner and outer
+ JSR GetSectionAngles   \ Get the pitch and yaw angles for the inner and outer
                         \ track sections in the track section list and store the
                         \ results in xVergeRight/Left and yVergeRight/Left
 
@@ -17030,7 +17030,7 @@ ENDIF
  LDA #0                 \ Fetch the index details of the right track segments
  JSR GetSegmentDetails
 
- LDA #6                 \ Get the yaw and pitch angles for the segments (and the
+ LDA #6                 \ Get the pitch and yaw angles for the segments (and the
  JSR GetSegmentAngles   \ verge marks and corner markers) along the right side
                         \ of the track and store the results in xVergeRight,
                         \ yVergeRight, xMarker and vergeDataRight
@@ -17043,7 +17043,7 @@ ENDIF
  LDA #%10000000         \ Fetch the index details of the left track segments
  JSR GetSegmentDetails
 
- LDA #46                \ Get the yaw and pitch angles for the segments (and the
+ LDA #46                \ Get the pitch and yaw angles for the segments (and the
  JSR GetSegmentAngles   \ verge marks and corner markers) along the left side
                         \ of the track and store the results in xVergeLeft,
                         \ yVergeLeft, xMarker and vergeDataLeft
@@ -19140,7 +19140,7 @@ ENDIF
 \
 \   * xSegmentCoordI is the coordinate for the start of the car's track segment
 \
-\ The routine then calculates the yaw and pitch angles for the car object (or
+\ The routine then calculates the pitch and yaw angles for the car object (or
 \ objects).
 \
 \ This part calculates the 3D coordinate of the car along the inside edge of
@@ -19458,7 +19458,7 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ Now that we have the car's 3D coordinates in xCoord2, we calculate the car's
-\ yaw and pitch angles, and use them to create either one car object, or four
+\ pitch and yaw angles, and use them to create either one car object, or four
 \ car objects if this is the four-object car.
 \
 \ If this is the four-object car (i.e. the car is directly in front of us, is
@@ -19485,7 +19485,7 @@ ENDIF
                         \ start with the object type of the standard car, and
                         \ change this later if required)
 
- JSR GetObjectAngles-2  \ Calculate the object's yaw and pitch angles, using the
+ JSR GetObjectAngles-2  \ Calculate the object's pitch and yaw angles, using the
                         \ coordinates in xCoord2, and set the object's
                         \ visibility, scale and type
 
@@ -19580,7 +19580,7 @@ ENDIF
 
                         \ Now that we have the 3D coordinates of the extra three
                         \ parts of the four-object car, we can calculate the
-                        \ object's yaw and pitch angles, and store the details
+                        \ object's pitch and yaw angles, and store the details
                         \ in objects 20, 21 and 22 (for the rear tyres,
                         \ body/helmet and front tyres respectively)
 
@@ -19590,7 +19590,7 @@ ENDIF
  LDA #2                 \ Set A = 2, to use as the object type for the rear
                         \ tyres in the four-object car
 
- JSR GetObjectAngles-2  \ Calculate the object's yaw and pitch angles, using the
+ JSR GetObjectAngles-2  \ Calculate the object's pitch and yaw angles, using the
                         \ coordinates of the rear tyres in xCoord2, and set the
                         \ object's visibility, scale and type
 
@@ -19603,7 +19603,7 @@ ENDIF
  LDX #&F4               \ Set X = &F4 so the call to GetObjectAngles uses
                         \ xHelmetCoord
 
- JSR GetObjectAngles    \ Calculate the object's yaw and pitch angles, using the
+ JSR GetObjectAngles    \ Calculate the object's pitch and yaw angles, using the
                         \ coordinates of the body and helmet in xHelmetCoord,
                         \ and set the object's visibility, scale and type
 
@@ -19616,7 +19616,7 @@ ENDIF
  LDX #&FA               \ Set X = &FA so the call to GetObjectAngles uses
                         \ xCoord1
 
- JSR GetObjectAngles    \ Calculate the object's yaw and pitch angles, using the
+ JSR GetObjectAngles    \ Calculate the object's pitch and yaw angles, using the
                         \ coordinates of the front tyres using xCoord1, and set
                         \ the object's visibility, scale and type
 
@@ -19658,7 +19658,7 @@ ENDIF
 \       Name: GetObjectAngles
 \       Type: Subroutine
 \   Category: 3D objects
-\    Summary: Calculate the object's yaw and pitch angles, and set the object's
+\    Summary: Calculate the object's pitch and yaw angles, and set the object's
 \             visibility, scale and type
 \  Deep dive: Pitch and yaw angles
 \
@@ -20186,8 +20186,8 @@ ENDIF
 \ ------------------------------------------------------------------------------
 \
 \ This part of the routine checks whether the edge is on-screen, off-screen or
-\ partially on-screen, and stores the yaw and pitch angles of the edge in W and
-\ RR respectively.
+\ partially on-screen, and stores the pitch and yaw angles of the edge in RR and
+\ W respectively.
 \
 \ ------------------------------------------------------------------------------
 \
@@ -20340,7 +20340,7 @@ ENDIF
                         \ off-screen but this one is on-screen
 
                         \ We now swap the values of M and W, and the values of
-                        \ N and RR, which sets W and RR to the yaw and pitch
+                        \ N and RR, which sets RR and W to the pitch and yaw
                         \ angles of the previous edge
 
  LDX M                  \ Set X = M and Y = N
@@ -34173,7 +34173,7 @@ ENDIF
                         \ player's coordinates to get the sign's vector relative
                         \ to the player (i.e. relative to the camera)
                         \
-                        \ We then calculate the yaw and pitch angles and store
+                        \ We then calculate the pitch and yaw angles and store
                         \ them in object 23, so it can be drawn by the call to
                         \ DrawCarOrSign from the main driving loop
 
@@ -34241,7 +34241,7 @@ ENDIF
 
  LDY #6                 \ Set Y = 6 so the call to GetObjYawAngle uses
                         \ xRoadSignCoord for the second variable, so we
-                        \ calculate the yaw and pitch angles for an object at
+                        \ calculate the pitch and yaw angles for an object at
                         \ the following 3D coordinates (if we just consider the
                         \ x-axis, for clarity):
                         \
