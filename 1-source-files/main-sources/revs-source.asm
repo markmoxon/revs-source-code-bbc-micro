@@ -452,7 +452,7 @@
 .vergeType
 
  SKIP 1                 \ The type of verge that is currently being drawn in
-                        \ the DrawTrack routine:
+                        \ the DrawTrack routine
                         \
                         \   * 0 = leftVergeStart, the left edge of the left
                         \         verge
@@ -987,7 +987,7 @@
 .qualifyTimeEnding
 
  SKIP 1                 \ Determines whether the time warnings have been shown
-                        \ at the end of the qualifying time:
+                        \ at the end of the qualifying time
                         \
                         \   * Bit 6 set = the one-minute warning has been shown
                         \
