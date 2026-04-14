@@ -8909,7 +8909,7 @@ ENDIF
 \
 \       Name: ResetVariables
 \       Type: Subroutine
-\   Category: Main Loop
+\   Category: Main loop
 \    Summary: Reset a number of variables for driving, and print the top two
 \             text lines
 \
@@ -41214,7 +41214,7 @@ ENDIF
 \
 \       Name: HeadToTrack
 \       Type: Subroutine
-\   Category: Main Loop
+\   Category: Main loop
 \    Summary: Get the wing settings and start a race, practice or qualifying lap
 \  Deep dive: Program flow of the main game loop
 \
