@@ -36815,8 +36815,8 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ This routine is a mode 5 Bresenham line-drawing routine, which modifies itself
-\ to cater for lines of different slopes.
+\ This routine is a mode 5 line-drawing routine, which modifies itself to cater
+\ for lines of different slopes.
 \
 \ ------------------------------------------------------------------------------
 \
