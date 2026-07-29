@@ -3310,10 +3310,34 @@ ENDIF
 \ This appears to set the distance between the object and the player's car, for
 \ the purposes of determining whether contact has been made.
 \
-\ I suspect the calculation is an approximation of Pythagoras that is much
-\ faster to calculate, split into small yaw angles (when the objects are
-\ close to being orthogonal to each other) and larger yaw angles (when their
-\ relative positions are closer to the diagonal). This is a guess, though.
+\ This looks like an implementation of the "alpha max plus beta min" algorithm,
+\ which approximates the Pythagoran distance as follows:
+\
+\   |z| =  SQRT(a^2 + b^2)
+\       =~ alpha * max(a, b) + beta * min(a, b)
+\
+\ where alpha and beta are carefully chosen constants that produce optimal
+\ approximations.
+\
+\ You can read all about this algorithm and the choice of constants in this
+\ Wikipedia article:
+\
+\   https://en.wikipedia.org/wiki/Alpha_max_plus_beta_min_algorithm
+\
+\ When the smaller yaw angle is < 18.2 degrees, the constants are:
+\
+\   * alpha = 1
+\
+\   * beta = 1/8
+\
+\ When the smaller yaw angle is >= 18.2 degrees, the constants are:
+\
+\   * alpha = 7/8
+\
+\   * beta = 1/2
+\
+\ This algorithm is a lot faster than a full Pythagoras calculation, especially
+\ in 8-bit 6502 assembly code.
 \
 \ ------------------------------------------------------------------------------
 \
