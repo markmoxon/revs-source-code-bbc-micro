@@ -227,8 +227,7 @@
                         \
                         \ This is the left-right rotation of the player's car
                         \
-                        \ Stored as a 16-bit value (playerYawAngleHi
-                        \ playerYawAngleLo)
+                        \ Stored as a 16-bit value playerYawAngle(Hi Lo)
 
 .playerYawAngleHi
 
@@ -236,8 +235,7 @@
                         \
                         \ This is the left-right rotation of the player's car
                         \
-                        \ Stored as a 16-bit value (playerYawAngleHi
-                        \ playerYawAngleLo)
+                        \ Stored as a 16-bit value (playerYawAngle(Hi Lo)
 
 .vectorNumber
 
@@ -275,16 +273,14 @@
  SKIP 1                 \ Low byte of the distance between the player's car and
                         \ the nearest track edge
                         \
-                        \ Stored as a 16-bit value (edgeDistanceHi
-                        \ edgeDistanceLo)
+                        \ Stored as a 16-bit value edgeDistance(Hi Lo)
 
 .edgeDistanceHi
 
  SKIP 1                 \ High byte of the distance between the player's car and
                         \ the nearest track edge
                         \
-                        \ Stored as a 16-bit value (edgeDistanceHi
-                        \ edgeDistanceLo)
+                        \ Stored as a 16-bit value edgeDistance(Hi Lo)
 
 .segmentListPointer
 
@@ -513,8 +509,7 @@
                         \ containing the miles per hour, and the low byte
                         \ containing a fraction
                         \
-                        \ Stored as a 16-bit value (playerSpeedHi
-                        \ playerSpeedLo)
+                        \ Stored as a 16-bit value playerSpeed(Hi Lo)
 
 .positionChangeBCD
 
@@ -605,8 +600,7 @@
                         \ model calculations (i.e. the velocity from the last
                         \ iteration of the main loop)
                         \
-                        \ Stored as a 16-bit value (xPrevVelocityHi
-                        \ xPrevVelocityLo)
+                        \ Stored as a 16-bit value xPrevVelocity(Hi Lo)
 
 .xPrevVelocityHi
 
@@ -615,24 +609,21 @@
                         \ model calculations (i.e. the velocity from the last
                         \ iteration of the main loop)
                         \
-                        \ Stored as a 16-bit value (xPrevVelocityHi
-                        \ xPrevVelocityLo)
+                        \ Stored as a 16-bit value xPrevVelocity(Hi Lo)
 
 .xSpinVelocityLo
 
  SKIP 1                 \ Used to store the low byte of the scaled spin yaw
                         \ angle during the driving model calculations
                         \
-                        \ Stored as a 16-bit value (xSpinVelocityHi
-                        \ xSpinVelocityLo)
+                        \ Stored as a 16-bit value xSpinVelocity(Hi Lo)
 
 .xSpinVelocityHi
 
  SKIP 1                 \ Used to store the high byte of the scaled spin yaw
                         \ angle during the driving model calculations
                         \
-                        \ Stored as a 16-bit value (xSpinVelocityHi
-                        \ xSpinVelocityLo)
+                        \ Stored as a 16-bit value xSpinVelocity(Hi Lo)
 
 .revCount
 
@@ -675,8 +666,7 @@
                         \ If a car's objectDistanceHi is >= 5, then it is drawn
                         \ as a distant car
                         \
-                        \ Stored as a 16-bit value (objectDistanceHi
-                        \ objectDistanceLo)
+                        \ Stored as a 16-bit value objectDistance(Hi Lo)
 
 .colourScheme
 
@@ -876,8 +866,7 @@
                         \ If a car's objectDistanceHi is >= 5, then it is drawn
                         \ as a distant car
                         \
-                        \ Stored as a 16-bit value (objectDistanceHi
-                        \ objectDistanceLo)
+                        \ Stored as a 16-bit value objectDistance(Hi Lo)
 
 .markerNumber
 
@@ -972,8 +961,7 @@
                         \ containing the miles per hour, and the low byte
                         \ containing a fraction
                         \
-                        \ Stored as a 16-bit value (playerSpeedHi
-                        \ playerSpeedLo)
+                        \ Stored as a 16-bit value playerSpeed(Hi Lo)
 
 .printMode
 
@@ -1032,8 +1020,7 @@
  SKIP 1                 \ Low byte of the main loop counter, which increments on
                         \ each iteration of the main driving loop
                         \
-                        \ Stored as a 16-bit value (mainLoopCounterHi
-                        \ mainLoopCounterLo)
+                        \ Stored as a 16-bit value mainLoopCounter(Hi Lo)
 
 .startingStack
 
@@ -1391,7 +1378,7 @@
 
  SKIP 20                \ High byte of each car's forward speed
                         \
-                        \ Stored as an 8-bit value (carSpeedHi carSpeedLo)
+                        \ Stored as an 8-bit value carSpeed(Hi Lo)
 
 .carProgress
 
@@ -1403,8 +1390,8 @@
                         \ of the segment and 255 the end of the segment
                         \
                         \ When this byte rolls over, we increment the car's
-                        \ segment number in (objectSegmentHi objectSegmentLo) to
-                        \ move on to the next segment
+                        \ segment number in objectSegment(Hi Lo) to move on to
+                        \ the next segment
 
 .carRacingLine
 
@@ -1466,13 +1453,13 @@
 
  SKIP 24                \ Low byte of each object's yaw angle
                         \
-                        \ Stored as a 16-bit value (objYawAngleHi objYawAngleLo)
+                        \ Stored as a 16-bit value objYawAngle(Hi Lo)
 
 .objYawAngleHi
 
  SKIP 24                \ High byte of each object's yaw angle
                         \
-                        \ Stored as a 16-bit value (objYawAngleHi objYawAngleLo)
+                        \ Stored as a 16-bit value objYawAngle(Hi Lo)
 
 .objectPitchAngle
 
@@ -1543,8 +1530,7 @@
                         \
                         \ Gets set to 0 in InitialiseDrivers
                         \
-                        \ Stored as a 24-bit value (totalPointsTop totalPointsHi
-                        \ totalPointsLo)
+                        \ Stored as a 24-bit value totalPoints(Top Hi Lo)
 
 .tyreRightEdge
 
@@ -1789,16 +1775,14 @@
  SKIP 40                \ The low byte of the screen address of each pixel in
                         \ the line buffer
                         \
-                        \ Stored as a 16-bit value (lineBufferAddrHi
-                        \ lineBufferAddrLo)
+                        \ Stored as a 16-bit value lineBufferAddr(Hi Lo)
 
 .lineBufferAddrHi
 
  SKIP 40                \ The low byte of the screen address of each pixel in
                         \ the line buffer
                         \
-                        \ Stored as a 16-bit value (lineBufferAddrHi
-                        \ lineBufferAddrLo)
+                        \ Stored as a 16-bit value lineBufferAddr(Hi Lo)
 
  SKIP 8                 \ These bytes appear to be unused
 
@@ -1870,8 +1854,7 @@
                         \
                         \ The Silverstone track has a total of 1024 segments
                         \
-                        \ Stored as a 16-bit value (objectSegmentHi
-                        \ objectSegmentLo)
+                        \ Stored as a 16-bit value objectSegment(Hi Lo)
 
 .objectSegmentHi
 
@@ -1887,32 +1870,28 @@
                         \
                         \ The Silverstone track has a total of 1024 segments
                         \
-                        \ Stored as a 16-bit value (objectSegmentHi
-                        \ objectSegmentLo)
+                        \ Stored as a 16-bit value objectSegment(Hi Lo)
 
 .xSegmentCoordILo
 
  SKIP 1                 \ The low byte of the 3D x-coordinate for an inner track
                         \ segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (xSegmentCoordIHi
-                        \ xSegmentCoordILo)
+                        \ Stored as a 16-bit value xSegmentCoordI(Hi Lo)
 
 .ySegmentCoordILo
 
  SKIP 1                 \ The low byte of the 3D y-coordinate for an inner track
                         \ segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (ySegmentCoordIHi
-                        \ ySegmentCoordILo)
+                        \ Stored as a 16-bit value ySegmentCoordI(Hi Lo)
 
 .zSegmentCoordILo
 
  SKIP 1                 \ The low byte of the 3D z-coordinate for an inner track
                         \ segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (zSegmentCoordIHi
-                        \ zSegmentCoordILo)
+                        \ Stored as a 16-bit value zSegmentCoordI(Hi Lo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1923,24 +1902,21 @@
  SKIP 1                 \ The low byte of the 3D x-coordinate for an outer track
                         \ segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (xSegmentCoordOHi
-                        \ xSegmentCoordOLo)
+                        \ Stored as a 16-bit value xSegmentCoordO(Hi Lo)
 
 .ySegmentCoordOLo
 
  SKIP 1                 \ The low byte of the 3D y-coordinate for an outer track
                         \ segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (ySegmentCoordOHi
-                        \ ySegmentCoordOLo)
+                        \ Stored as a 16-bit value ySegmentCoordO(Hi Lo)
 
 .zSegmentCoordOLo
 
  SKIP 1                 \ The low byte of the 3D z-coordinate for an outer track
                         \ segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (zSegmentCoordOHi
-                        \ zSegmentCoordOLo)
+                        \ Stored as a 16-bit value zSegmentCoordO(Hi Lo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -1953,24 +1929,21 @@
  SKIP 1                 \ Low byte of the x-coordinate of the body/helmet object
                         \ in the four-object car
                         \
-                        \ Stored as a 16-bit value (xHelmetCoordHi
-                        \ xHelmetCoordLo)
+                        \ Stored as a 16-bit value xHelmetCoord(Hi Lo)
 
 .yHelmetCoordLo
 
  SKIP 1                 \ Low byte of the y-coordinate of the body/helmet object
                         \ in the four-object car
                         \
-                        \ Stored as a 16-bit value (yHelmetCoordHi
-                        \ yHelmetCoordLo)
+                        \ Stored as a 16-bit value yHelmetCoord(Hi Lo)
 
 .zHelmetCoordLo
 
  SKIP 1                 \ Low byte of the z-coordinate of the body/helmet object
                         \ in the four-object car
                         \
-                        \ Stored as a 16-bit value (zHelmetCoordHi
-                        \ zHelmetCoordLo)
+                        \ Stored as a 16-bit value zHelmetCoord(Hi Lo)
 
  SKIP 3                 \ These bytes appear to be unused
 
@@ -1979,66 +1952,63 @@
  SKIP 1                 \ The low byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
                         \
-                        \ Stored as a 16-bit value (xCoord1Hi xCoord1Lo)
+                        \ Stored as a 16-bit value xCoord1(Hi Lo)
 
 .yCoord1Lo
 
  SKIP 1                 \ The low byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
                         \
-                        \ Stored as a 16-bit value (yCoord1Hi yCoord1Lo)
+                        \ Stored as a 16-bit value yCoord1(Hi Lo)
 
 .zCoord1Lo
 
  SKIP 1                 \ The low byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
                         \
-                        \ Stored as a 16-bit value (zCoord1Hi zCoord1Lo)
+                        \ Stored as a 16-bit value zCoord1(Hi Lo)
 
 .xCoord2Lo
 
  SKIP 1                 \ The low byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
                         \
-                        \ Stored as a 16-bit value (xCoord2Hi xCoord2Lo)
+                        \ Stored as a 16-bit value xCoord2(Hi Lo)
 
 .yCoord2Lo
 
  SKIP 1                 \ The low byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
                         \
-                        \ Stored as a 16-bit value (yCoord2Hi yCoord2Lo)
+                        \ Stored as a 16-bit value yCoord2(Hi Lo)
 
 .zCoord2Lo
 
  SKIP 1                 \ The low byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
                         \
-                        \ Stored as a 16-bit value (zCoord2Hi zCoord2Lo)
+                        \ Stored as a 16-bit value zCoord2(Hi Lo)
 
 .xSegmentCoordIHi
 
  SKIP 1                 \ The high byte of the 3D x-coordinate for an inner
                         \ track segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (xSegmentCoordIHi
-                        \ xSegmentCoordILo)
+                        \ Stored as a 16-bit value xSegmentCoordI(Hi Lo)
 
 .ySegmentCoordIHi
 
  SKIP 1                 \ The high byte of the 3D y-coordinate for an inner
                         \ track segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (ySegmentCoordIHi
-                        \ ySegmentCoordILo)
+                        \ Stored as a 16-bit value ySegmentCoordI(Hi Lo)
 
 .zSegmentCoordIHi
 
  SKIP 1                 \ The high byte of the 3D z-coordinate for an inner
                         \ track segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (zSegmentCoordIHi
-                        \ zSegmentCoordILo)
+                        \ Stored as a 16-bit value zSegmentCoordI(Hi Lo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -2049,24 +2019,21 @@
  SKIP 1                 \ The high byte of the 3D x-coordinate for an outer
                         \ track segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (xSegmentCoordOHi
-                        \ xSegmentCoordOLo)
+                        \ Stored as a 16-bit value xSegmentCoordO(Hi Lo)
 
 .ySegmentCoordOHi
 
  SKIP 1                 \ The high byte of the 3D y-coordinate for an outer
                         \ track segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (ySegmentCoordOHi
-                        \ ySegmentCoordOLo)
+                        \ Stored as a 16-bit value ySegmentCoordO(Hi Lo)
 
 .zSegmentCoordOHi
 
  SKIP 1                 \ The high byte of the 3D z-coordinate for an outer
                         \ track segment in the track segment buffer
                         \
-                        \ Stored as a 16-bit value (zSegmentCoordOHi
-                        \ zSegmentCoordOLo)
+                        \ Stored as a 16-bit value zSegmentCoordO(Hi Lo)
 
  SKIP 39 * 3            \ The track segment buffer contains data for 40 track
                         \ segments, with three bytes per segment, so this
@@ -2079,24 +2046,21 @@
  SKIP 1                 \ High byte of the x-coordinate of the body/helmet
                         \ object in the four-object car
                         \
-                        \ Stored as a 16-bit value (xHelmetCoordHi
-                        \ xHelmetCoordLo)
+                        \ Stored as a 16-bit value xHelmetCoord(Hi Lo)
 
 .yHelmetCoordHi
 
  SKIP 1                 \ High byte of the y-coordinate of the body/helmet
                         \ object in the four-object car
                         \
-                        \ Stored as a 16-bit value (yHelmetCoordHi
-                        \ yHelmetCoordLo)
+                        \ Stored as a 16-bit value yHelmetCoord(Hi Lo)
 
 .zHelmetCoordHi
 
  SKIP 1                 \ High byte of the z-coordinate of the body/helmet
                         \ object in the four-object car
                         \
-                        \ Stored as a 16-bit value (yHelmetCoordHi
-                        \ yHelmetCoordLo)
+                        \ Stored as a 16-bit value yHelmetCoord(Hi Lo)
 
  SKIP 3                 \ These bytes appear to be unused
 
@@ -2105,42 +2069,42 @@
  SKIP 1                 \ The high byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
                         \
-                        \ Stored as a 16-bit value (xCoord1Hi xCoord1Lo)
+                        \ Stored as a 16-bit value xCoord1(Hi Lo)
 
 .yCoord1Hi
 
  SKIP 1                 \ The high byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
                         \
-                        \ Stored as a 16-bit value (yCoord1Hi yCoord1Lo)
+                        \ Stored as a 16-bit value yCoord1(Hi Lo)
 
 .zCoord1Hi
 
  SKIP 1                 \ The high byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord1, yCoord1, zCoord1)
                         \
-                        \ Stored as a 16-bit value (zCoord1Hi zCoord1Lo)
+                        \ Stored as a 16-bit value zCoord1(Hi Lo)
 
 .xCoord2Hi
 
  SKIP 1                 \ The high byte of the x-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
                         \
-                        \ Stored as a 16-bit value (xCoord2Hi xCoord2Lo)
+                        \ Stored as a 16-bit value xCoord2(Hi Lo)
 
 .yCoord2Hi
 
  SKIP 1                 \ The high byte of the y-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
                         \
-                        \ Stored as a 16-bit value (yCoord2Hi yCoord2Lo)
+                        \ Stored as a 16-bit value yCoord2(Hi Lo)
 
 .zCoord2Hi
 
  SKIP 1                 \ The high byte of the z-coordinate of the temporary
                         \ coordinate variable (xCoord2, yCoord2, zCoord2)
                         \
-                        \ Stored as a 16-bit value (zCoord2Hi zCoord2Lo)
+                        \ Stored as a 16-bit value zCoord2(Hi Lo)
 
 \ ******************************************************************************
 \
@@ -2340,11 +2304,11 @@
 .MoveCode
 
                         \ We are going to process the five memory blocks defined
-                        \ in (blockStartHi blockStartLo)-(blockEndHi blockEndLo)
+                        \ in blockStart(Hi Lo) - blockEnd(Hi Lo)
                         \
                         \ We will either zero the memory block (for the first
                         \ block in the table), or move the block to the address
-                        \ in (blockToHi blockToLo)
+                        \ in blockTo(Hi Lo)
                         \
                         \ We work through the blocks from the last entry to the
                         \ first, so we end up doing this:
@@ -2363,13 +2327,13 @@
 
 .move1
 
- LDA blockStartLo,X     \ Set (Q P) to the X-th address from (blockStartHi
- STA P                  \ blockStartLo)
+ LDA blockStartLo,X     \ Set (Q P) to the X-th address from blockStart(Hi Lo)
+ STA P
  LDA blockStartHi,X
  STA Q
 
- LDA blockToLo,X        \ Set (S R) to the X-th address from (blockToHi
- STA R                  \ blockToLo)
+ LDA blockToLo,X        \ Set (S R) to the X-th address from blockTo(Hi Lo)
+ STA R
  LDA blockToHi,X
  STA S
 
@@ -2396,8 +2360,8 @@
 
 .move4
 
- LDA P                  \ If (Q P) <> (blockEndHi blockEndLo) then jump back to
- CMP blockEndLo,X       \ move2 to process the next byte in the block
+ LDA P                  \ If (Q P) <> blockEnd(Hi Lo) then jump back to move2 to
+ CMP blockEndLo,X       \ process the next byte in the block
  BNE move2
  LDA Q
  CMP blockEndHi,X
@@ -3452,7 +3416,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   (A X)               Player yaw angle in (playerYawAngleHi playerYawAngleLo)
+\   (A X)               Player yaw angle in playerYawAngle(Hi Lo)
 \
 \ ******************************************************************************
 
@@ -3640,7 +3604,7 @@ ENDIF
                         \
                         \   (A T) = sin(yawRadians)
 
- STA sinYawAngleHi,X    \ Set (sinYawAngleHi sinYawAngleLo) = (A T)
+ STA sinYawAngleHi,X    \ Set sinYawAngle(Hi Lo) = (A T)
  LDA T                  \
  AND #%11111110         \ with the sign bit cleared in bit 0 of sinYawAngleLo to
  STA sinYawAngleLo,X    \ denote a positive result
@@ -5974,22 +5938,22 @@ ENDIF
 \
 \ Specifically, this copies data from the Y-th track section entry:
 \
-\   (xTrackSectionIHi xTrackSectionILo)
-\   (yTrackSectionIHi yTrackSectionILo)
-\   (zTrackSectionIHi zTrackSectionILo)
+\   xTrackSectionI(Hi Lo)
+\   yTrackSectionI(Hi Lo)
+\   zTrackSectionI(Hi Lo)
 \
 \ and stores it in the X-th track segment:
 \
-\   (xSegmentCoordIHi xSegmentCoordILo)
-\   (ySegmentCoordIHi ySegmentCoordILo)
-\   (zSegmentCoordIHi zSegmentCoordILo)
+\   xSegmentCoordI(Hi Lo)
+\   ySegmentCoordI(Hi Lo)
+\   zSegmentCoordI(Hi Lo)
 \
 \ This routine is also called with X = &FD, in which case it copies the
 \ following:
 \
-\   Y-th (xTrackSectionIHi xTrackSectionILo) to (xCoord2Hi xCoord2Lo)
-\   Y-th (yTrackSectionIHi yTrackSectionILo) to (yCoord2Hi yCoord2Lo)
-\   Y-th (zTrackSectionIHi zTrackSectionILo) to (zCoord2Hi zCoord2Lo)
+\   Y-th xTrackSectionI(Hi Lo) to xCoord2(Hi Lo)
+\   Y-th yTrackSectionI(Hi Lo) to yCoord2(Hi Lo)
+\   Y-th zTrackSectionI(Hi Lo) to zCoord2(Hi Lo)
 \
 \ ------------------------------------------------------------------------------
 \
@@ -6062,22 +6026,22 @@ ENDIF
 \
 \ Specifically, this copies data from the Y-th track section entry:
 \
-\   (xTrackSectionIHi xTrackSectionILo)
-\   (yTrackSectionIHi yTrackSectionILo)
-\   (zTrackSectionIHi zTrackSectionILo)
-\   (xTrackSectionOHi xTrackSectionOLo)
-\   (yTrackSectionIHi yTrackSectionILo)
-\   (zTrackSectionOHi zTrackSectionOLo)
+\   xTrackSectionI(Hi Lo)
+\   yTrackSectionI(Hi Lo)
+\   zTrackSectionI(Hi Lo)
+\   xTrackSectionO(Hi Lo)
+\   yTrackSectionI(Hi Lo)
+\   zTrackSectionO(Hi Lo)
 \   trackSectionFrom
 \
 \ and stores it in the X-th track segment:
 \
-\   (xSegmentCoordIHi xSegmentCoordILo)
-\   (ySegmentCoordIHi ySegmentCoordILo)
-\   (zSegmentCoordIHi zSegmentCoordILo)
-\   (xSegmentCoordOHi xSegmentCoordOLo)
-\   (ySegmentCoordOHi ySegmentCoordOLo)
-\   (zSegmentCoordOHi zSegmentCoordOLo)
+\   xSegmentCoordI(Hi Lo)
+\   ySegmentCoordI(Hi Lo)
+\   zSegmentCoordI(Hi Lo)
+\   xSegmentCoordO(Hi Lo)
+\   ySegmentCoordO(Hi Lo)
+\   zSegmentCoordO(Hi Lo)
 \   thisVectorNumber
 \
 \ ------------------------------------------------------------------------------
@@ -6140,8 +6104,7 @@ ENDIF
 \
 \ Arguments:
 \
-\   X                   Copy X-th (ySegmentCoordIHi ySegmentCoordILo) to
-\                       (ySegmentCoordOHi ySegmentCoordOLo)
+\   X                   Copy X-th ySegmentCoordI(Hi Lo) to ySegmentCoordO(Hi Lo)
 \
 \ ******************************************************************************
 
@@ -7437,10 +7400,10 @@ ENDIF
  STA objSectionSegmt,X  \ Set the track section counter to the new value
 
                         \ We now need to increment the object's segment number
-                        \ in (objectSegmentHi objectSegmentLo)
+                        \ in objectSegment(Hi Lo)
 
- INC objectSegmentLo,X  \ Increment (objectSegmentHi objectSegmentLo) for object
-                        \ X, starting with the low byte
+ INC objectSegmentLo,X  \ Increment objectSegment(Hi Lo) for object X, starting
+                        \ with the low byte
 
  BNE fore3              \ And then the high byte, if the low byte overflows
  INC objectSegmentHi,X
@@ -7455,8 +7418,8 @@ ENDIF
  BNE fore4
 
  LDA #0                 \ The object has just reached the end of the track, so
- STA objectSegmentLo,X  \ set (objectSegmentHi objectSegmentLo) = 0 to wrap
- STA objectSegmentHi,X  \ round to the start again
+ STA objectSegmentLo,X  \ set objectSegment(Hi Lo) = 0 to wrap around to the
+ STA objectSegmentHi,X  \ start again
 
  JSR UpdateLaps         \ Increment the lap number and lap times for object X,
                         \ for when this object is a car
@@ -7570,7 +7533,7 @@ ENDIF
 .back3
 
                         \ We now need to decrement the object's segment number
-                        \ in (objectSegmentHi objectSegmentLo)
+                        \ in objectSegment(Hi Lo)
 
  LDA objectSegmentLo,X  \ If the low byte of objectSegment for object X is
  BNE back4              \ non-zero, then jump to back4 to decrement the low
@@ -7582,10 +7545,9 @@ ENDIF
                         \ decrement the low byte to &FF, and we are done
 
                         \ If we get here then we just decremented the 16-bit
-                        \ value in (objectSegmentHi objectSegmentLo) into
-                        \ negative territory, so the object just moved
-                        \ backwards across the starting line, into the previous
-                        \ lap
+                        \ value in objectSegment(Hi Lo) into negative territory,
+                        \ so the object just moved backwards across the starting
+                        \ line and into the previous lap
 
  LDA trackLength        \ Set objectSegment for driver X = trackLength
  STA objectSegmentLo,X  \
@@ -7815,7 +7777,7 @@ ENDIF
 \ This routine scans for key presses, or joystick (when configured), and updates
 \ the following variables accordingly:
 \
-\   * Steering: (steeringHi steeringLo)
+\   * Steering: steering(Hi Lo)
 \
 \   * Brake/throttle: throttleBrakeState, throttleBrake
 \
@@ -7909,7 +7871,7 @@ IF _ACORNSOFT OR _4TRACKS
  PLA                    \ Retrieve the value of A that we stored on the stack
 
  JMP keys11             \ Jump to the end of part 2 to update the steering value
-                        \ in (steeringHi steeringLo) to (A T)
+                        \ in steering(Hi Lo) to (A T)
 
 ELIF _SUPERIOR OR _REVSPLUS
 
@@ -7983,9 +7945,8 @@ ENDIF
                         \   * V = 0 if neither is being pressed
                         \
                         \ We now calculate the amount of steering change into
-                        \ (A T), so we can apply it to (steeringHi steeringLo),
-                        \ which is a sign-magnitude number with the sign bit in
-                        \ bit 0
+                        \ (A T), so we can apply it to steering(Hi Lo), which is
+                        \ a sign-magnitude number with the sign bit in bit 0
                         \
                         \ In the following, we swap the steering change between
                         \ (A T) and (U T) quite a bit, and in the Superior
@@ -8057,8 +8018,8 @@ ENDIF
  AND #1
  BEQ keys9
 
- JSR Negate16Bit+2      \ Otherwise (steeringHi steeringLo) is negative, so
-                        \ set (A T) = -(U T)
+ JSR Negate16Bit+2      \ Otherwise steering(Hi Lo) is negative, so set
+                        \ (A T) = -(U T)
 
  JMP keys8              \ Jump to keys8 to store the negated value in (U T)
 
@@ -8070,8 +8031,7 @@ ENDIF
  AND #%11110000
  STA T
 
- LDA xTyreForceNoseHi   \ Set (A T) = (xTyreForceNoseHi xTyreForceNoseLo)
-                        \                                       AND %11110000
+ LDA xTyreForceNoseHi   \ Set (A T) = xTyreForceNose(Hi Lo) AND %11110000
                         \           = xTyreForceNose AND %11110000
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
@@ -8123,7 +8083,7 @@ ENDIF
 
 .keys10
 
- SEC                    \ Set (A T) = (steeringHi steeringLo) - (U T)
+ SEC                    \ Set (A T) = steering(Hi Lo) - (U T)
  SBC T                  \
  STA T                  \ starting with the low bytes
 
@@ -8155,7 +8115,7 @@ ENDIF
 
 .keys12
 
- STA steeringHi         \ Set (steeringHi steeringLo) = (A T)
+ STA steeringHi         \ Set steering(Hi Lo) = (A T)
  LDA T
  STA steeringLo
 
@@ -8973,8 +8933,7 @@ ENDIF
 
  LDX #23                \ We now zero the 24-byte blocks at objTrackSection and
                         \ objSectionSegmt, and initialise all 24 bytes in
-                        \ (objectSegmentHi objectSegmentLo), so set up a loop
-                        \ counter in X
+                        \ objectSegment(Hi Lo), so set up a loop counter in X
 
  STX previousSignNumber \ Set previousSignNumber = 23 to set the number of the
                         \ previous sign to the highest possible value (as the
@@ -8984,12 +8943,12 @@ ENDIF
 
 .rese3
 
- LDA trackStartLine+1   \ Set the X-th byte of (objectSegmentHi objectSegmentLo)
- STA objectSegmentHi,X  \ to the value of trackStartLine, which is 843 for the
- LDA trackStartLine     \ Silverstone track and contains the segment number of
- STA objectSegmentLo,X  \ the starting line, expressed as the number of segments
-                        \ between the starting line and the start of section 0,
-                        \ counting forwards round the track
+ LDA trackStartLine+1   \ Set the X-th byte of objectSegment(Hi Lo) to the value
+ STA objectSegmentHi,X  \ trackStartLine, which is 843 for the Silverstone track
+ LDA trackStartLine     \ and contains the segment number of the starting line,
+ STA objectSegmentLo,X  \ expressed as the number of segments between the
+                        \ starting line and the start of section 0, counting
+                        \ forwards around the track
 
  LDA #0                 \ Zero the X-th byte of objTrackSection to put the
  STA objTrackSection,X  \ object in the first track section, ready for the call
@@ -9047,7 +9006,7 @@ ENDIF
                         \ the track if this is a qualifying lap
 
  LDX #19                \ We now zero the 20-byte blocks at driverLapNumber,
-                        \ carSteering, carProgress, (carSpeedHi carSpeedLo) and
+                        \ carSteering, carProgress, carSpeed(Hi Lo) and
                         \ carStatus, and initialise the 20-byte blocks at
                         \ objectStatus, totalRaceMinutes and carSectionSpeed,
                         \ so set up a loop counter in X
@@ -10602,7 +10561,7 @@ ENDIF
 
 .corn2
 
- LDA xMarkerHi,Y        \ Set (U A) = (xMarkerHi xMarkerLo) for marker Y
+ LDA xMarkerHi,Y        \ Set (U A) = xMarker(Hi Lo) for marker Y
  STA U                  \
  LDA xMarkerLo,Y        \ So (U A) contains the x-axis distance between the
                         \ track edge and the marker
@@ -10805,10 +10764,10 @@ ENDIF
 
  LDA #37                \ Set A = 37 - objectDistanceLo
  SEC                    \
- SBC objectDistanceLo   \ The value of (objectDistanceHi objectDistanceLo) is
-                        \ left over from the last call to CheckForContact, which
-                        \ was last called for the nearest car in front of us
-                        \ when building object for the five cars in front of us,
+ SBC objectDistanceLo   \ The value of objectDistance(Hi Lo) is left over from
+                        \ the last call to CheckForContact, which was last
+                        \ called for the nearest car in front of us when
+                        \ building the object for the five cars in front of us,
                         \ from furthest to nearest, as part of this chain of
                         \ routines:
                         \
@@ -13928,13 +13887,13 @@ IF _SUPERIOR OR _REVSPLUS
                         \
                         \ First, we set the following if we are steering right:
                         \
-                        \   (W V) = (steeringHi steeringLo) + 256
+                        \   (W V) = steering(Hi Lo) + 256
                         \
                         \ or the following if we are steering left:
                         \
-                        \   (W V) = (steeringHi steeringLo) - 256
+                        \   (W V) = steering(Hi Lo) - 256
                         \
-                        \ by first converting (steeringHi steeringLo) from a
+                        \ by first converting steering(Hi Lo) from a
                         \ sign-magnitude number to a signed 16-bit number and
                         \ then doing the addition or subtraction
 
@@ -13945,14 +13904,14 @@ IF _SUPERIOR OR _REVSPLUS
 
  LDA steeringHi         \ Set A = steeringHi
                         \
-                        \ So (A V) = (steeringHi steeringLo)
+                        \ So (A V) = steering(Hi Lo)
 
- BCC asst7              \ If the C flag is clear then (steeringHi steeringLo) is
+ BCC asst7              \ If the C flag is clear then steering(Hi Lo) is
                         \ positive, so jump to asst7 as (A V) already has the
                         \ correct sign
 
-                        \ Otherwise (steeringHi steeringLo) is negative, so we
-                        \ need to negate (A V)
+                        \ Otherwise steering(Hi Lo) is negative, so we need to
+                        \ negate (A V)
 
  LDA #0                 \ Set (A V) = 0 - (A V)
  SEC                    \
@@ -13965,7 +13924,7 @@ IF _SUPERIOR OR _REVSPLUS
 .asst7
 
  CLC                    \ Set (A V) = (A V) + 256
- ADC #1                 \           = (steeringHi steeringLo) + 256
+ ADC #1                 \           = steering(Hi Lo) + 256
 
  CPX #50                \ If X <> 50, then we are steering right, so jump to
  BNE asst8              \ asst8
@@ -13973,8 +13932,8 @@ IF _SUPERIOR OR _REVSPLUS
  SBC #2                 \ X = 50, so we are steering left, so set:
                         \
                         \   (A V) = (A V) - 2 * 256
-                        \         = (steeringHi steeringLo) + 256 - 2 * 256
-                        \         = (steeringHi steeringLo) - 256
+                        \         = steering(Hi Lo) + 256 - 2 * 256
+                        \         = steering(Hi Lo) - 256
 
 .asst8
 
@@ -13982,13 +13941,13 @@ IF _SUPERIOR OR _REVSPLUS
                         \
                         \ So if we are steering right, we have:
                         \
-                        \   (W V) = (steeringHi steeringLo) + 256
+                        \   (W V) = steering(Hi Lo) + 256
                         \
                         \ and if we are steering left we have:
                         \
-                        \   (W V) = (steeringHi steeringLo) - 256
+                        \   (W V) = steering(Hi Lo) - 256
 
- LDA xVergeRightLo,X    \ Set (A T) = X-th (xVergeRightHi xVergeRightLo) - (W V)
+ LDA xVergeRightLo,X    \ Set (A T) = X-th xVergeRight(Hi Lo) - (W V)
  SEC                    \
  SBC V                  \ starting with the low bytes
  STA T
@@ -14135,8 +14094,8 @@ IF _SUPERIOR OR _REVSPLUS
  AND #%11111110
  STA T
 
- LDA steeringHi         \ Set A = steeringHi, so (A T) = (steeringHi steeringLo)
-                        \ with the sign bit in bit 0 cleared
+ LDA steeringHi         \ Set A = steeringHi, so (A T) = steering(Hi Lo) with
+                        \ the sign bit in bit 0 cleared
 
 .slim1
 
@@ -16389,30 +16348,29 @@ ENDIF
                         \ with the details of the track edge
 
  CMP edgeDistanceHi     \ If A < edgeDistanceHi, then we know that (A K) and
- BCC gseg2              \ therefore (L K) < (edgeDistanceHi edgeDistanceLo),
-                        \ so jump to gseg2 to set (L K) as the new minimum
-                        \ distance to the verge
+ BCC gseg2              \ therefore (L K) < edgeDistance(Hi Lo), so jump to
+                        \ gseg2 to set (L K) as the new minimum distance to the
+                        \ verge
 
  BNE gseg3              \ If A <> edgeDistanceHi, i.e. A > edgeDistanceHi,
-                        \ then (L K) > (edgeDistanceHi edgeDistanceLo), so
-                        \ jump to gseg3 as (L K) is not a new minimum verge
-                        \ distance
+                        \ then (L K) > edgeDistance(Hi Lo), so jump to gseg3 as
+                        \ (L K) is not a new minimum verge distance
 
                         \ We now compare the high bytes
 
  LDA edgeDistanceLo     \ If edgeDistanceLo < K, then we know that
- CMP K                  \ (L K) > (edgeDistanceHi edgeDistanceLo), so jump to
- BCC gseg3              \ gseg3 as (L K) is not a new minimum verge distance
+ CMP K                  \ (L K) > edgeDistance(Hi Lo), so jump to gseg3 as (L K)
+ BCC gseg3              \ is not a new minimum verge distance
 
 .gseg2
 
                         \ If we get here then we know that
-                        \ (L K) <= (edgeDistanceHi edgeDistanceLo), so we now
-                        \ set (L K) as the new minimum distance to the verge,
-                        \ and set a number of variables so we can refer to this
-                        \ nearest track edge in places like the crash routine
+                        \ (L K) <= edgeDistance(Hi Lo), so we now set (L K) as
+                        \ the new minimum distance to the verge, and set a
+                        \ number of variables so we can refer to this nearest
+                        \ track edge in places like the crash routine
 
- LDA L                  \ Set (edgeDistanceHi edgeDistanceLo) = (L K)
+ LDA L                  \ Set edgeDistance(Hi Lo) = (L K)
  STA edgeDistanceHi
  LDA K
  STA edgeDistanceLo
@@ -17519,7 +17477,7 @@ ENDIF
                         \ the verge)
 
  LDA xVergeRightLo,Y    \ Set (xVergeRightHi+16 xVergeRightLo+16)
- CLC                    \      = (xVergeRightHi xVergeRightLo) + (U T)
+ CLC                    \      = xVergeRight(Hi Lo) + (U T)
  ADC T                  \
  STA xVergeRightLo+16,Y \ starting with the low bytes
 
@@ -17574,10 +17532,10 @@ ENDIF
 
 .gmar8
 
- LDA T                  \ Set (xMarkerHi xMarkerLo) for marker Y to (U T), so
- STA xMarkerLo,Y        \ xMarker contains the width of the verge (halved if
- LDA U                  \ this is a corner), which we can use as the x-axis
- STA xMarkerHi,Y        \ distance from the track verge to the marker
+ LDA T                  \ Set xMarker(Hi Lo) for marker Y to (U T), so xMarker
+ STA xMarkerLo,Y        \ contains the width of the verge (halved if this is a
+ LDA U                  \ corner), which we can use as the x-axis distance from
+ STA xMarkerHi,Y        \ the track verge to the marker
 
  INC markersToDraw      \ Increment markersToDraw, as we have just added a new
                         \ marker to the list
@@ -18785,7 +18743,7 @@ ENDIF
  ASL A
  ROL U
 
- CLC                    \ Set (A carSpeedLo) = (carSpeedHi carSpeedLo) + (U A)
+ CLC                    \ Set (A carSpeedLo) = carSpeed(Hi Lo) + (U A)
  ADC carSpeedLo,X       \
  STA carSpeedLo,X       \ starting with the low bytes
 
@@ -19308,10 +19266,9 @@ ENDIF
                         \ then we add ySegmentCoordIHi mod 32 instead of
                         \ ySegmentCoordIHi
 
- CLC                    \ Set (xCoord2Hi xCoord2Lo)
- ADC xSegmentCoordILo,Y \     = (xSegmentCoordIHi xSegmentCoordILo) + (V A)
- STA xCoord2Lo,X        \
-                        \ starting with the low bytes
+ CLC                    \ Set xCoord2(Hi Lo) = xSegmentCoordI(Hi Lo) + (V A)
+ ADC xSegmentCoordILo,Y \     
+ STA xCoord2Lo,X        \ starting with the low bytes
 
  LDA xSegmentCoordIHi,Y \ And then the high bytes (though with a short interlude
                         \ for when X = 1, when we add ySegmentCoordIHi mod 32
@@ -19445,10 +19402,9 @@ ENDIF
  ASL A
  ROL V
 
- CLC                    \ Set (xCoord2Hi xCoord2Lo) = (xCoord2Hi xCoord2Lo)
- ADC xCoord2Lo,X        \                              + (V A)
- STA xCoord2Lo,X        \
-                        \ starting with the low bytes
+ CLC                    \ Set xCoord2(Hi Lo) = xCoord2(Hi Lo) + (V A)
+ ADC xCoord2Lo,X        \                              
+ STA xCoord2Lo,X        \ starting with the low bytes
 
  LDA xCoord2Hi,X        \ And then the high bytes
  ADC V
@@ -19462,7 +19418,7 @@ ENDIF
 
                         \ Finally, we add 144 to the y-coordinate
 
- LDA yCoord2Lo          \ Set (yCoord2Hi yCoord2Lo) += 144
+ LDA yCoord2Lo          \ Set yCoord2(Hi Lo) += 144
  CLC                    \
  ADC #144               \ starting with the low bytes
  STA yCoord2Lo
@@ -19723,8 +19679,8 @@ ENDIF
 
  LDY objectNumber       \ Set Y to the number of the object we are processing
 
- LDA II                 \ Set the yaw angle for this object in (objYawAngleHi
- STA objYawAngleLo,Y    \ objYawAngleLo) to (JJ II)
+ LDA II                 \ Set the yaw angle for this object in
+ STA objYawAngleLo,Y    \ objYawAngle(Hi Lo) to (JJ II)
  LDA JJ
  STA objYawAngleHi,Y
 
@@ -19947,7 +19903,7 @@ ENDIF
                         \ check for contact between this car and the player's
                         \ car in the ProcessContact routine
 
- LDA K                  \ Set (objectDistanceHi objectDistanceLo) = (L K)
+ LDA K                  \ Set objectDistance(Hi Lo) = (L K)
  STA objectDistanceLo
 
  LDA objectNumber       \ Store the number of the other object in
@@ -25798,7 +25754,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as an 8-bit value (carSpeedHi carSpeedLo).
+\ Stored as an 8-bit value carSpeed(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -25836,7 +25792,7 @@ ENDIF
 \
 \ Gets set in InitialiseDrivers.
 \
-\ Stored as a 24-bit value (totalPointsTop totalPointsHi totalPointsLo).
+\ Stored as a 24-bit value totalPoints(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -25871,7 +25827,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (racePointsHi racePointsLo).
+\ Stored as a 16-bit value racePoints(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -26424,7 +26380,7 @@ ENDIF
 \
 \ Gets set in InitialiseDrivers.
 \
-\ Stored as a 24-bit value (totalPointsTop totalPointsHi totalPointsLo).
+\ Stored as a 24-bit value totalPoints(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -26444,7 +26400,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (racePointsHi racePointsLo).
+\ Stored as a 16-bit value racePoints(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -29164,9 +29120,9 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Print (totalPointsHi totalPointsLo) for driver X as a four-digit number,
-\ followed by a space. The first two digits are printed as spaces if the high
-\ byte is zero, and the third digit is printed as a space if applicable.
+\ Print totalPoints(Hi Lo) for driver X as a four-digit number, followed by a
+\ space. The first two digits are printed as spaces if the high byte is zero,
+\ and the third digit is printed as a space if applicable.
 \
 \ ******************************************************************************
 
@@ -29181,8 +29137,7 @@ ENDIF
  LDA totalPointsHi,X    \ Set A to the X-th totalPointsHi value
 
  BNE Print4DigitBCD     \ If A is non-zero, jump to Print4DigitBCD to print the
-                        \ (totalPointsHi totalPointsLo) for driver X as a
-                        \ four-digit number
+                        \ totalPoints(Hi Lo) for driver X as a four-digit number
 
  LDA #2                 \ Otherwise print two spaces for the first two digits,
  JSR PrintSpaces        \ as the high byte is zero
@@ -29205,8 +29160,8 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Print (totalPointsHi totalPointsLo) for driver X as a 4-digit number, followed
-\ by a space. The second digit is always printed.
+\ Print totalPoints(Hi Lo) for driver X as a 4-digit number, followed by a
+\ space. The second digit is always printed.
 \
 \ ------------------------------------------------------------------------------
 \
@@ -30269,10 +30224,10 @@ ENDIF
 \
 \ Calculate the following:
 \
-\   * (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
-\                                        + carProgress * yTrackSegmentI
-\                                        + heightAboveTrack * 4
-\                                        + 172
+\   * yPlayerCoord(Top Hi) =   ySegmentCoordI(Hi Lo)
+\                            + carProgress * yTrackSegmentI
+\                            + playerSpeedHi * yTrackSegmentI * 4
+\                            + 172
 \
 \   * carSpeedHi for the player's car = playerSpeedHi * 2.13
 \
@@ -30341,7 +30296,7 @@ ENDIF
                         \ We now calculate the following for the y-coordinate of
                         \ the player's 3D coordinates:
                         \
-                        \   (yPlayerCoordTop yPlayerCoordHi)
+                        \   yPlayerCoord(Top Hi)
                         \
                         \     =   A
                         \       + (W V)
@@ -30359,7 +30314,7 @@ ENDIF
                         \    =   carProgress * yTrackSegmentI
                         \      + 172
                         \      + heightAboveTrack * 4
-                        \      + (ySegmentCoordIHi ySegmentCoordILo)
+                        \      + ySegmentCoordI(Hi Lo)
                         \
                         \ with all the correct carry bits included
 
@@ -30819,7 +30774,7 @@ ENDIF
 
 .ApplyDrivingModel
 
- LDA playerYawAngleHi   \ Set (A X) = (playerYawAngleHi playerYawAngleLo)
+ LDA playerYawAngleHi   \ Set (A X) = playerYawAngle(Hi Lo)
  LDX playerYawAngleLo
 
  JSR GetRotationMatrix  \ Calculate the rotation matrix for rotating the
@@ -30841,39 +30796,36 @@ ENDIF
                         \ We ignore the y-coordinate as the calculations are
                         \ all done along the ground
 
- LDA xVelocityLo        \ Set (xPrevVelocityHi xPrevVelocityLo)
- STA xPrevVelocityLo    \           = (xVelocityHi xVelocityLo)
+ LDA xVelocityLo        \ Set xPrevVelocity(Hi Lo) = xVelocity(Hi Lo)
+ STA xPrevVelocityLo
  LDA xVelocityHi
  STA xPrevVelocityHi
 
- LDA zVelocityLo        \ Set (A T) = (zVelocityHi zVelocityLo)
+ LDA zVelocityLo        \ Set (A T) = zVelocity(Hi Lo)
  STA T
  LDA zVelocityHi
 
  JSR Absolute16Bit      \ Set (A T) = |A T|
                         \           = |zVelocity|
 
- STA playerSpeedHi      \ Set (playerSpeedHi playerSpeedLo) = (A T)
- LDA T                  \                                   = |zVelocity|
+ STA playerSpeedHi      \ Set playerSpeed(Hi Lo) = (A T)
+ LDA T                  \                        = |zVelocity|
  STA playerSpeedLo
 
- LDY playerSpeedHi      \ Set Y to the high byte of (playerSpeedHi
-                        \ playerSpeedLo)
+ LDY playerSpeedHi      \ Set Y to the high byte of playerSpeed(Hi Lo)
 
  BNE dmod1              \ If the high byte is non-zero, jump to dmod1 to skip
                         \ the following
 
  AND #%11110000         \ A contains playerSpeedLo, so this sets Y to the high
- TAY                    \ nibble of the low byte of (playerSpeedHi
-                        \ playerSpeedLo)
+ TAY                    \ nibble of the low byte of playerSpeed(Hi Lo)
 
 .dmod1
 
  STY playerMoving       \ Store Y in playerMoving, which is zero if the player
                         \ is not moving, non-zero if they are, so this denotes
-                        \ the player as moving if (playerSpeedHi playerSpeedLo)
-                        \ is non-zero, ignoring the bottom nibble of the
-                        \ low byte
+                        \ the player as moving if playerSpeed(Hi Lo) is
+                        \ non-zero, ignoring the bottom nibble of the low byte
 
  JSR ApplySpinYaw       \ Calculate the following:
                         \
@@ -30892,15 +30844,15 @@ ENDIF
  JSR ApplyTyresAndSkids \ Calculate the forces on the rear tyres and apply skid
                         \ forces and sound effects where applicable
 
- LDA xPrevVelocityLo    \ Set (xVelocityHi xVelocityLo) to the x-coordinate of
- STA xVelocityLo        \ the velocity vector from the previous iteration of the
- LDA xPrevVelocityHi    \ main loop, which we stored in (xPrevVelocityHi
- STA xVelocityHi        \ xPrevVelocityLo)
+ LDA xPrevVelocityLo    \ Set xVelocity(Hi Lo) to the x-coordinate of the
+ STA xVelocityLo        \ velocity vector from the previous iteration of the
+ LDA xPrevVelocityHi    \ main loop, which we stored in xPrevVelocity(Hi Lo)
+ STA xVelocityHi
 
- LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo)
- CLC                    \                   += (xSpinVelocityHi xSpinVelocityLo)
- ADC xSpinVelocityLo    \
- STA xVelocityLo        \ starting with the low bytes
+ LDA xVelocityLo        \ Set xVelocity(Hi Lo) += xSpinVelocity(Hi Lo)
+ CLC                    \                   
+ ADC xSpinVelocityLo    \ starting with the low bytes
+ STA xVelocityLo
 
  LDA xVelocityHi        \ And then the high bytes
  ADC xSpinVelocityHi
@@ -30961,7 +30913,7 @@ ENDIF
 
 .dmod2
 
- STA spinYawDeltaLo,X   \ Zero the X-th byte of (spinYawDeltaHi spinYawDeltaLo)
+ STA spinYawDeltaLo,X   \ Zero the X-th byte of spinYawDelta(Hi Lo)
  STA spinYawDeltaHi,X
 
  DEX                    \ Decrement the variable counter
@@ -31043,7 +30995,7 @@ ENDIF
 
  LDY #88                \ Set Y = 88
 
- LDA spinYawAngleTop    \ Set (A T) = (spinYawAngleTop spinYawAngleHi)
+ LDA spinYawAngleTop    \ Set (A T) = spinYawAngle(Top Hi)
 
  JSR Multiply8x16Signed \ Set:
                         \
@@ -31055,10 +31007,11 @@ ENDIF
  STA U                  \ Set (U T) = (A T)
                         \           = spinYawAngle * 0.34
 
- LDA xVelocityLo        \ Set (xVelocityHi xVelocityLo)
- SEC                    \           = (xVelocityHi xVelocityLo) - (U T)
- SBC T                  \           = xVelocity - (spinYawAngle * 0.34)
- STA xVelocityLo        \
+ LDA xVelocityLo        \ Set:
+ SEC                    \
+ SBC T                  \  xVelocity(Hi Lo) = xVelocity(Hi Lo) - (U T)
+ STA xVelocityLo        \                   = xVelocity - (spinYawAngle * 0.34)
+                        \
                         \ starting with the low bytes
 
  LDA xVelocityHi        \ And then the high bytes
@@ -31069,8 +31022,8 @@ ENDIF
                         \           = spinYawAngle * 0.34 * 1.5
                         \           = spinYawAngle * 0.52
 
- STA xSpinVelocityHi    \ Set (xSpinVelocityHi xSpinVelocityLo) = (A T)
- LDA T                  \                               = spinYawAngle * 0.52
+ STA xSpinVelocityHi    \ Set xSpinVelocity(Hi Lo) = (A T)
+ LDA T                  \                          = spinYawAngle * 0.52
  STA xSpinVelocityLo
 
  RTS                    \ Return from the subroutine
@@ -31305,8 +31258,8 @@ ENDIF
 .ApplySteeringSpeed
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords+7 we use
-                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
-                        \ value to multiply
+                        \ steering(Hi Lo) as the 16-bit sign-magnitude value to
+                        \ multiply
 
  LDY #9                 \ Set Y = 9, so in the call to MultiplyCoords+7 we use
                         \ zVelocity as the 16-bit signed number
@@ -31327,8 +31280,8 @@ ENDIF
                         \   xSteeringForce = -zVelocity * steering
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords+7 we use
-                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
-                        \ value to multiply
+                        \ steering(Hi Lo) as the 16-bit sign-magnitude value to
+                        \ multiply
 
  LDY #8                 \ Set Y = 8, so in the call to MultiplyCoords+7 we use
                         \ xVelocity as the 16-bit signed number
@@ -31378,8 +31331,8 @@ ENDIF
 .ApplySteeringForce
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
-                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
-                        \ value to multiply
+                        \ steering(Hi Lo) as the 16-bit sign-magnitude value to
+                        \ multiply
 
  LDY #12                \ Set Y = 12, so in the call to MultiplyCoords we use
                         \ zTyreForceNose as the 16-bit signed number
@@ -31400,8 +31353,8 @@ ENDIF
                         \   xSteeringForce = zTyreForceNose * steering
 
  LDX #2                 \ Set X = 2, so in the call to MultiplyCoords we use
-                        \ (steeringHi steeringLo) as the 16-bit sign-magnitude
-                        \ value to multiply
+                        \ steering(Hi Lo) as the 16-bit sign-magnitude value to
+                        \ multiply
 
  LDY #10                \ Set Y = 10, so in the call to MultiplyCoords we use
                         \ xTyreForceNose as the 16-bit signed number
@@ -31451,9 +31404,9 @@ ENDIF
 
 .AddSteeringForce
 
- LDA xPlayerSpeedHi,X   \ Add (xSteeringForceHi xSteeringForceLo) to the
- CLC                    \ variable at offset X from (xPlayerSpeedTop
- ADC xSteeringForceLo   \ xPlayerSpeedHi), starting with the low bytes
+ LDA xPlayerSpeedHi,X   \ Add xSteeringForce(Hi Lo) to the variable at offset X
+ CLC                    \ from xPlayerSpeed(Top Hi), starting with the low bytes
+ ADC xSteeringForceLo
  STA xPlayerSpeedHi,X
 
  LDA xPlayerSpeedTop,X  \ And then the high bytes
@@ -31697,7 +31650,7 @@ ENDIF
 \
 \                         * 1 = cosYawAngle
 \
-\                         * 2 = (steeringHi steeringLo)
+\                         * 2 = steering(Hi Lo)
 \
 \   K                   Offset of the variable to store the result in:
 \
@@ -31877,7 +31830,7 @@ ENDIF
 
 .AddCoords
 
- LDA xPlayerSpeedHi,Y   \ Add (U T) to (xPlayerSpeedTop xPlayerSpeedHi)
+ LDA xPlayerSpeedHi,Y   \ Add (U T) to xPlayerSpeed(Top Hi)
  CLC                    \
  ADC T                  \ starting with the low bytes
  STA xPlayerSpeedHi,Y
@@ -32669,7 +32622,7 @@ ENDIF
                         \ is on the track, so we need to calculate the engine
                         \ torque and revs
 
- LDA playerSpeedLo      \ Set (A T) = (playerSpeedHi playerSpeedLo)
+ LDA playerSpeedLo      \ Set (A T) = playerSpeed(Hi Lo)
  STA T
  LDA playerSpeedHi
 
@@ -33030,7 +32983,7 @@ ENDIF
  PHP                    \ on the stack, which will be zero if both the high and
                         \ low bytes of xVelocity are zero, i.e. if xVelocity = 0
 
- LDA xVelocityHi        \ Set (A T) = (xVelocityHi xVelocityLo)
+ LDA xVelocityHi        \ Set (A T) = xVelocity(Hi Lo)
 
  JSR Negate16Bit        \ Set (A T) = -(A T)
                         \           = -xVelocity
@@ -34478,8 +34431,8 @@ ENDIF
                         \ It also decrements X to the next driver number and
                         \ updates setSpeedForDriver accordingly
 
- LDA #0                 \ Zero (totalPointsTop totalPointsHi totalPointsLo) for
- STA totalPointsLo,X    \ driver X
+ LDA #0                 \ Zero totalPoints(Top Hi Lo) for driver X
+ STA totalPointsLo,X
  STA totalPointsHi,X
  STA totalPointsTop,X
 
@@ -34563,8 +34516,8 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Addresses of token strings are in the (tokenHi tokenLo) table. Tokens are
-\ numbered from 0 to 54.
+\ Addresses of token strings are in the token(Hi Lo) table. Tokens are numbered
+\ from 0 to 54.
 \
 \ Each token's string contains bytes that are printed as follows:
 \
@@ -34590,7 +34543,7 @@ ENDIF
 
 .toke1
 
- LDA tokenHi,X          \ Set (S R) = the X-th entry in (tokenHi tokenLo), which
+ LDA tokenHi,X          \ Set (S R) = the X-th entry in token(Hi Lo), which
  STA S                  \ points to the string of bytes in token X
  LDA tokenLo,X
  STA R
@@ -36019,8 +35972,8 @@ ENDIF
 
 .tick3
 
- INC mainLoopCounterLo  \ Increment the main loop counter in (mainLoopCounterHi
-                        \ mainLoopCounterLo), starting with the low byte
+ INC mainLoopCounterLo  \ Increment the main loop counter in
+                        \ mainLoopCounter(Hi Lo), starting with the low byte
 
  BNE tick4              \ And then the high byte, if the low byte overflowed
  INC mainLoopCounterHi
@@ -36351,11 +36304,11 @@ ENDIF
  LSR A                  \ so X is the character row number for this coordinate
  TAX
 
-                        \ The X-th entry in the (yLookupHi yLookupLo) table
-                        \ contains the screen address of the start of character
-                        \ row X in the custom screen, so we now add this to
-                        \ (Q P) to get the screen address of the correct
-                        \ character block on this row
+                        \ The X-th entry in the yLookup(Hi Lo) table contains
+                        \ the screen address of the start of character row X in
+                        \ the custom screen, so we now add this to (Q P) to get
+                        \ the screen address of the correct character block on
+                        \ this row
 
  LDA yLookupLo,X        \ Set (Q P) = (Q P) + X-th yLookup entry
  CLC                    \
@@ -36460,7 +36413,7 @@ ENDIF
  STA V                  \ Set V = A, which we will pass to the DrawDashboardLine
                         \ routine
 
- LDA steeringHi         \ Set A = steeringHi, so (A T) = (steeringHi steeringLo)
+ LDA steeringHi         \ Set A = steeringHi, so (A T) = steering(Hi Lo)
 
  ASL T                  \ Set (A T) = (A T) << 1
  ROL A                  \
@@ -37129,8 +37082,8 @@ ENDIF
 
  ORA P                  \ Store the address we are about to overwrite in the
  STA lineBufferAddrLo,X \ next empty space at the end of the line buffer, i.e.
-                        \ the X-th byte of (lineBufferAddrHi lineBufferAddrLo),
-                        \ starting with the low byte of the address
+                        \ the X-th byte of lineBufferAddr(Hi Lo), starting with
+                        \ the low byte of the address
 
  LDA Q                  \ And then the high byte of the address
  STA lineBufferAddrHi,X
@@ -37782,8 +37735,8 @@ ENDIF
 
 .AwardRacePoints
 
- LDA #0                 \ Zero the points in (racePointsHi racePointsLo) for
- STA racePointsLo,X     \ race position X
+ LDA #0                 \ Zero the points in racePoints(Hi Lo) for race position
+ STA racePointsLo,X     \ X
  STA racePointsHi,X
 
  STA U                  \ Set U = 0, to act as the high byte of (U T)
@@ -37884,8 +37837,8 @@ ENDIF
 .poin6
 
  LDA pointsForPlace,X   \ Add the X-th entry in pointsForPlace to the X-th entry
- CLC                    \ in (racePointsHi racePointsLo),  starting with the low
- ADC racePointsLo,X     \ bytes
+ CLC                    \ in racePoints(Hi Lo), starting with the low bytes
+ ADC racePointsLo,X
  STA racePointsLo,X
 
  LDA racePointsHi,X     \ And then the high bytes
@@ -37918,7 +37871,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xVergeRightHi xVergeRightLo).
+\ Stored as a 16-bit value xVergeRight(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -37938,7 +37891,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xVergeLeftHi xVergeLeftLo).
+\ Stored as a 16-bit value xVergeLeft(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -37956,7 +37909,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xVergeRightHi xVergeRightLo).
+\ Stored as a 16-bit value xVergeRight(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -37974,7 +37927,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xVergeLeftHi xVergeLeftLo).
+\ Stored as a 16-bit value xVergeLeft(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38514,8 +38467,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (xPlayerCoordTop xPlayerCoordHi
-\ xPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in xPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38532,8 +38484,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (yPlayerCoordTop yPlayerCoordHi
-\ yPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in yPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38550,8 +38501,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (zPlayerCoordTop zPlayerCoordHi
-\ zPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in zPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38568,8 +38518,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (xPlayerCoordTop xPlayerCoordHi
-\ xPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in xPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38586,8 +38535,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (yPlayerCoordTop yPlayerCoordHi
-\ yPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in yPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38604,8 +38552,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (zPlayerCoordTop zPlayerCoordHi
-\ zPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in zPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38622,7 +38569,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xRoadSignCoordHi xRoadSignCoordLo).
+\ Stored as a 16-bit value xRoadSignCoord(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38639,7 +38586,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (yRoadSignCoordHi yRoadSignCoordLo).
+\ Stored as a 16-bit value yRoadSignCoord(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38656,7 +38603,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zRoadSignCoordHi zRoadSignCoordLo).
+\ Stored as a 16-bit value zRoadSignCoord(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38674,7 +38621,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xRoadSignCoordHi xRoadSignCoordLo).
+\ Stored as a 16-bit value xRoadSignCoord(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38692,7 +38639,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (yRoadSignCoordHi yRoadSignCoordLo).
+\ Stored as a 16-bit value yRoadSignCoord(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38710,7 +38657,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zRoadSignCoordHi zRoadSignCoordLo).
+\ Stored as a 16-bit value zRoadSignCoord(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38804,7 +38751,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (sinYawAngleHi sinYawAngleLo).
+\ Stored as a 16-bit value sinYawAngle(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38821,7 +38768,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (cosYawAngleHi cosYawAngleLo).
+\ Stored as a 16-bit value cosYawAngle(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38839,8 +38786,8 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The steering wheel position is stored as (steeringHi steeringLo), with the
-\ sign bit in bit 0 of steeringLo, so it's a sign-magnitude number.
+\ The steering wheel position is stored as steering(Hi Lo), with the sign bit in
+\ bit 0 of steeringLo, so it's a sign-magnitude number.
 \
 \ Negative (bit 0 set) means we are steering left, positive (bit 0 clear) means
 \ we are steering right.
@@ -38860,7 +38807,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (sinYawAngleHi sinYawAngleLo).
+\ Stored as a 16-bit value sinYawAngle(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38877,7 +38824,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (cosYawAngleHi cosYawAngleLo).
+\ Stored as a 16-bit value cosYawAngle(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -38895,8 +38842,8 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The steering wheel position is stored as (steeringHi steeringLo), with the
-\ sign bit in bit 0 of steeringLo, so it's a sign-magnitude number.
+\ The steering wheel position is stored as steering(Hi Lo), with the sign bit in
+\ bit 0 of steeringLo, so it's a sign-magnitude number.
 \
 \ Negative (bit 0 set) means we are steering left, positive (bit 0 clear) means
 \ we are steering right.
@@ -38981,8 +38928,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed is stored as a 24-bit number in (xPlayerSpeedTop xPlayerSpeedHi
-\ xPlayerSpeedLo).
+\ The speed is stored as a 24-bit number in xPlayerSpeed(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39000,8 +38946,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed is stored as a 24-bit number in (zPlayerSpeedTop zPlayerSpeedHi
-\ zPlayerSpeedLo).
+\ The speed is stored as a 24-bit number in zPlayerSpeed(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39019,8 +38964,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
-\ spinYawAngleLo).
+\ The spin is stored as a 24-bit number in spinYawAngle(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39037,8 +38981,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (xPlayerCoordTop xPlayerCoordHi
-\ xPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in xPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39055,8 +38998,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (yPlayerCoordTop yPlayerCoordHi
-\ yPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in yPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39073,8 +39015,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The coordinate is stored as a 24-bit number in (zPlayerCoordTop zPlayerCoordHi
-\ zPlayerCoordLo).
+\ The coordinate is stored as a 24-bit number in zPlayerCoord(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39108,7 +39049,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xMarkerHi xMarkerLo).
+\ Stored as a 16-bit value xMarker(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39128,7 +39069,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xMarkerHi xMarkerLo).
+\ Stored as a 16-bit value xMarker(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39223,8 +39164,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed is stored as a 24-bit number in (xPlayerSpeedTop xPlayerSpeedHi
-\ xPlayerSpeedLo).
+\ The speed is stored as a 24-bit number in xPlayerSpeed(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39242,8 +39182,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed is stored as a 24-bit number in (zPlayerSpeedTop zPlayerSpeedHi
-\ zPlayerSpeedLo).
+\ The speed is stored as a 24-bit number in zPlayerSpeed(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39261,8 +39200,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
-\ spinYawAngleLo).
+\ The spin is stored as a 24-bit number in spinYawAngle(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39280,7 +39218,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xAccelerationHi xAccelerationLo).
+\ Stored as a 16-bit value xAcceleration(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39298,7 +39236,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zAccelerationHi zAccelerationLo).
+\ Stored as a 16-bit value zAcceleration(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39315,7 +39253,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (spinYawDeltaHi spinYawDeltaLo).
+\ Stored as a 16-bit value spinYawDelta(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39333,7 +39271,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xPlayerAccelHi xPlayerAccelLo).
+\ Stored as a 16-bit value xPlayerAccel(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39351,7 +39289,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zPlayerAccelHi zPlayerAccelLo).
+\ Stored as a 16-bit value zPlayerAccel(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39369,7 +39307,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xVelocityHi xVelocityLo).
+\ Stored as a 16-bit value xVelocity(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39387,7 +39325,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zVelocityHi zVelocityLo).
+\ Stored as a 16-bit value zVelocity(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39405,7 +39343,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xTyreForceNoseHi xTyreForceNoseLo).
+\ Stored as a 16-bit value xTyreForceNose(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39423,7 +39361,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xTyreForceRearHi xTyreForceRearLo).
+\ Stored as a 16-bit value xTyreForceRear(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39441,7 +39379,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zTyreForceNoseHi zTyreForceNoseLo).
+\ Stored as a 16-bit value zTyreForceNose(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39459,7 +39397,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zTyreForceRearHi zTyreForceRearLo).
+\ Stored as a 16-bit value zTyreForceRear(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39476,7 +39414,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xSteeringForceHi xSteeringForceLo).
+\ Stored as a 16-bit value xSteeringForce(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39495,7 +39433,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (mainLoopCounterHi mainLoopCounterLo).
+\ Stored as a 16-bit value mainLoopCounter(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39513,8 +39451,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed is stored as a 24-bit number in (xPlayerSpeedTop xPlayerSpeedHi
-\ xPlayerSpeedLo).
+\ The speed is stored as a 24-bit number in xPlayerSpeed(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39532,8 +39469,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The speed is stored as a 24-bit number in (zPlayerSpeedTop zPlayerSpeedHi
-\ zPlayerSpeedLo).
+\ The speed is stored as a 24-bit number in zPlayerSpeed(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39551,8 +39487,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ The spin is stored as a 24-bit number in (spinYawAngleTop spinYawAngleHi
-\ spinYawAngleLo).
+\ The spin is stored as a 24-bit number in spinYawAngle(Top Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39570,7 +39505,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xAccelerationHi xAccelerationLo).
+\ Stored as a 16-bit value xAcceleration(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39588,7 +39523,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zAccelerationHi zAccelerationLo).
+\ Stored as a 16-bit value zAcceleration(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39605,7 +39540,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (spinYawDeltaHi spinYawDeltaLo).
+\ Stored as a 16-bit value spinYawDelta(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39623,7 +39558,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xPlayerAccelHi xPlayerAccelLo).
+\ Stored as a 16-bit value xPlayerAccel(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39641,7 +39576,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zPlayerAccelHi zPlayerAccelLo).
+\ Stored as a 16-bit value zPlayerAccel(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39659,7 +39594,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xVelocityHi xVelocityLo).
+\ Stored as a 16-bit value xVelocity(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39677,7 +39612,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zVelocityHi zVelocityLo).
+\ Stored as a 16-bit value zVelocity(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39695,7 +39630,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xTyreForceNoseHi xTyreForceNoseLo).
+\ Stored as a 16-bit value xTyreForceNose(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39713,7 +39648,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xTyreForceRearHi xTyreForceRearLo).
+\ Stored as a 16-bit value xTyreForceRear(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39731,7 +39666,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zTyreForceNoseHi zTyreForceNoseLo).
+\ Stored as a 16-bit value zTyreForceNose(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39749,7 +39684,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (zTyreForceRearHi zTyreForceRearLo).
+\ Stored as a 16-bit value zTyreForceRear(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -39766,7 +39701,7 @@ ENDIF
 \
 \ ------------------------------------------------------------------------------
 \
-\ Stored as a 16-bit value (xSteeringForceHi xSteeringForceLo).
+\ Stored as a 16-bit value xSteeringForce(Hi Lo).
 \
 \ ******************************************************************************
 
@@ -41902,8 +41837,8 @@ ENDIF
                         \ Decimal (BCD)
 
  LDA totalPointsLo,Y    \ Add (0 racePointsHi racePointsLo) for position X to
- CLC                    \ (totalPointsTop totalPointsHi totalPointsLo) for
- ADC racePointsLo,X     \ driver Y, starting with the low bytes
+ CLC                    \ totalPoints(Top Hi Lo) for driver Y, starting with the
+ ADC racePointsLo,X     \ low bytes
  STA totalPointsLo,Y
 
  LDA totalPointsHi,Y    \ And then the high bytes

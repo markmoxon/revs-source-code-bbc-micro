@@ -856,7 +856,7 @@
 \
 \ This routine calculates the segment vector for the current segment, by
 \ converting the direction of the track at this point, which is stored in the
-\ yaw angle in (yawAngleHi yawAngleLo), into a direction vector to store in the
+\ yaw angle in yawAngle(Hi Lo), into a direction vector to store in the
 \ (xTrackSegmentI yTrackSegmentI zTrackSegmentI) tables in the track data file.
 \
 \ We also calculate the outer track segment vector (i.e. the vector across the
@@ -891,7 +891,7 @@
                         \ currently pointing, so we can set the correct signs
                         \ and axes for the segment vector
 
- LDA yawAngleLo         \ Set A = (yawAngleHi yawAngleLo) << 1
+ LDA yawAngleLo         \ Set A = yawAngle(Hi Lo) << 1
  ASL A                  \
  LDA yawAngleHi         \ Keeping the high byte only and rotating bit 7 into
  ROL A                  \ the C flag
@@ -902,7 +902,7 @@
  ROL A                  \ Set bits 0-2 of U to bits 5-7 of yawAngleHi (i.e. the
  ROL A                  \ top three bits), so this is equivalent to:
  ROL A                  \
- AND #%00000111         \   U = (yawAngleHi yawAngleLo) div 8192
+ AND #%00000111         \   U = yawAngle(Hi Lo) div 8192
  STA U                  \
                         \ We will use U to work out the direction of the track
                         \ that we are building
@@ -916,10 +916,10 @@
                         \ first reduce the yaw angle into that range by reducing
                         \ our 32-bit angle into this range
                         \
-                        \ The 32-bit angle in (yawAngleHi yawAngleLo) cover a
-                        \ whole circle, so 0 to 65536 represents 0 to 360
-                        \ degrees, so one-eighth of a circle, or 45 degrees, is
-                        \ represented by 65536 / 8 = 8192
+                        \ The 32-bit angle in yawAngle(Hi Lo) covers a whole
+                        \ circle, so 0 to 65536 represents 0 to 360 degrees, so
+                        \ one-eighth of a circle, or 45 degrees, is represented
+                        \ by 65536 / 8 = 8192
                         \
                         \ So we reduce the 32-bit value into the range 0 to 8192
                         \ so we can map it to the curve in the curve tables
@@ -935,7 +935,7 @@
 
                         \ By this point, we have:
                         \
-                        \   X = (yawAngleHi yawAngleLo) mod 8192
+                        \   X = yawAngle(Hi Lo) mod 8192
                         \
                         \ This is the corresponding point in the curve tables
                         \ for the track direction, reduced to one-eighth of a
@@ -1651,8 +1651,8 @@
 
                         \ We start by adding the yaw delta to the yaw angle
 
- LDA trackYawDeltaLo,Y  \ Set (A T) = (trackYawDeltaHi trackYawDeltaLo) for this
- STA T                  \ sub-section
+ LDA trackYawDeltaLo,Y  \ Set (A T) = trackYawDelta(Hi Lo) for this sub-section
+ STA T
  LDA trackYawDeltaHi,Y
 
  BIT directionFacing    \ Set the N flag to the sign of directionFacing, so the
@@ -1664,8 +1664,8 @@
                         \ facing backwards along the track
 
  STA U                  \ Set (U T) = (A T)
-                        \           = signed (trackYawDeltaHi trackYawDeltaLo)
-                        \             for this sub-section
+                        \           = signed trackYawDelta(Hi Lo) for this
+                        \             sub-section
 
  LDA T                  \ Set yawAngle = yawAngle + (U T)
  CLC                    \              = yawAngle + trackYawDelta
@@ -1902,8 +1902,8 @@
  LSR A                  \ trackSectionFrom contains the track section * 8)
  TAY
 
- LDA trackYawAngleLo,Y  \ Set (yawAngleHi yawAngleLo) to this section's entry
- STA yawAngleLo         \ from (trackYawAngleHi trackYawAngleLo)
+ LDA trackYawAngleLo,Y  \ Set yawAngle(Hi Lo) to this section's entry from
+ STA yawAngleLo         \ trackYawAngle(Hi Lo)
  LDA trackYawAngleHi,Y
  STA yawAngleHi
 
@@ -2207,11 +2207,11 @@
 \
 \ The code modifications are done in three parts.
 \
-\ The (modifyAddressHi modifyAddressLo) table contains the locations in the main
-\ game code that we want to modify.
+\ The modifyAddress(Hi Lo) table contains the locations in the main game code
+\ that we want to modify.
 \
-\ The (newContentHi newContentLo) table contains the new two-byte addresses that
-\ we want to poke into the main game code at the modify locations.
+\ The newContent(Hi Lo) table contains the new two-byte addresses that we want
+\ to poke into the main game code at the modify locations.
 \
 \ This part also does a couple of single-byte modifications.
 \
@@ -2236,10 +2236,10 @@
  LDY #0                 \ We now modify two bytes, so set an index in Y
 
  LDA newContentLo,X     \ We want to modify the two-byte address at location
-                        \ (U T), setting it to the new address in the
-                        \ (newContentHi newContentLo) table, so set A to the
-                        \ low byte of the X-th entry from the table, i.e. to
-                        \ the low byte of the new address
+                        \ (U T), setting it to the new address from the
+                        \ newContent(Hi Lo) table, so set A to the low byte of
+                        \ the X-th entry from the table, i.e. to the low byte of
+                        \ the new address
 
  STA (T),Y              \ Modify the byte at (U T) to the low byte of the new
                         \ address in A
@@ -3532,10 +3532,10 @@
 \ car's y-coordinate calculation with playerSpeedHi * yTrackSegmentI * 4, to
 \ give:
 \
-\   (yPlayerCoordTop yPlayerCoordHi) =   (ySegmentCoordIHi ySegmentCoordILo)
-\                                      + carProgress * yTrackSegmentI
-\                                      + playerSpeedHi * yTrackSegmentI * 4
-\                                      + 172
+\   yPlayerCoord(Top Hi) =   ySegmentCoordI(Hi Lo)
+\                          + carProgress * yTrackSegmentI
+\                          + playerSpeedHi * yTrackSegmentI * 4
+\                          + 172
 \
 \ So driving fast over sloping segments can make the car jump.
 \
